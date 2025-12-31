@@ -2,7 +2,7 @@
   "id": "cp2020",
   "title": "Cyberpunk 2020",
   "description": "A system for playing the R. Talsorian Games' Cyberpunk 2020 in the Foundry Virtual Tabletop environment.",
-  "background": "systems/cyberpunk2020/img/cyberpunk2020-background.webp",
+  "background": "systems/cp2020/img/system-background.webp",
   "version": "1.0.0",
   "compatibility": {
     "minimum": "13",
@@ -25,8 +25,8 @@
     }
   ],
   "scripts": [],
-  "esmodules": ["module/cyberpunk2020.js"],
-  "styles": ["css/cyberpunk2020.css"],
+  "esmodules": ["module/cp2020.js"],
+  "styles": ["css/cp2020.css"],
   "packs": [
     {
       "name": "roll-tables",
@@ -116,7 +116,7 @@
       "name": "fashion",
       "label": "Fashion",
       "path": "./packs/fashion.db",
-      "system": "cyberpunk2020",
+      "system": "cp2020",
       "type": "Item"
     },
     {
@@ -144,14 +144,14 @@
       "name": "security",
       "label": "Security",
       "path": "./packs/security.db",
-      "system": "cyberpunk2020",
+      "system": "cp2020",
       "type": "Item"
     },
     {
       "name": "surveillance",
       "label": "Surveillance",
       "path": "./packs/surveillance.db",
-      "system": "cyberpunk2020",
+      "system": "cp2020",
       "type": "Item"
     },
     {

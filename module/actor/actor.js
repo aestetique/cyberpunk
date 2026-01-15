@@ -350,27 +350,6 @@ export class CyberpunkActor extends Actor {
     return combat.rollInitiative([combatant.id]);
   }  
 
-  rollStunDeath(modificator) {
-    let rolls = new Multiroll(localize("StunDeathSave"), localize("UnderThresholdMessage"));
-
-    const integerRegex = /^-?\d+$/;
-    if(modificator && !integerRegex.test(modificator)){
-      return
-    }
-
-    const rollType = "1d10"
-    rolls.addRoll(new Roll(modificator ? `${rollType} + ${modificator}` : rollType), {
-      name: localize("Save")
-    });
-    rolls.addRoll(new Roll(`${this.stunThreshold()}`), {
-      name: "Stun Threshold"
-    });
-    rolls.addRoll(new Roll(`${this.deathThreshold()}`), {
-      name: "Death Threshold"
-    });
-    rolls.defaultExecute({}, this);
-  }
-
   /**
    * Roll a Stun Save (Shock Save)
    * Must roll UNDER the threshold to succeed
@@ -428,7 +407,7 @@ export class CyberpunkActor extends Actor {
     const speaker = ChatMessage.getSpeaker({ actor: this });
 
     new Multiroll(localize("InitiativeRoll"))
-      .addRoll(roll, { name: localize("Initiative") })
+      .addRoll(roll, { name: "1d10" })
       .execute(speaker, "systems/cp2020/templates/chat/initiative.hbs", {
         refValue: ref
       });

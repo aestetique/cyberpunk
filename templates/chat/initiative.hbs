@@ -1,14 +1,46 @@
 <div class="cyberpunk-card cyberpunk-card--initiative">
-    {{!-- Header --}}
-    {{> "systems/cp2020/templates/chat/partials/card-header.hbs"}}
+    {{!-- Section Bar: Initiative Roll with Icon --}}
+    {{> (CPTemplate "chat/partials/section-bar.hbs") label=(CPLocal "InitiativeRoll") icon="initiative"}}
 
-    {{!-- Section Bar: Initiative Roll --}}
-    {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="initiative" label=(CPLocal "InitiativeRoll")}}
+    {{!-- Roll Results --}}
+    {{#each rolls}}
+    {{!-- Collapsible Roll Container --}}
+    <div class="roll-container roll-container--collapsed">
+        {{!-- Expandable Details (hidden by default) --}}
+        <div class="roll-expandable">
+            <div class="roll-expandable__inner">
+                {{!-- Formula Bar --}}
+                <div class="formula-bar">
+                    <span class="formula-bar__text">{{cleanFormula roll._formula}}</span>
+                </div>
 
-    {{!-- Result Row: Total --}}
-    {{#each rolls as |rollData|}}
-    <div class="result-row result-row--neutral">
-        <span class="result-row__value">{{rollData.roll.total}}</span>
+                {{!-- Roll Details --}}
+                <div class="roll-details">
+                    <div class="roll-details__row">
+                        <span class="roll-details__label">{{#if name}}{{name}}{{else}}1d10{{/if}}</span>
+                        <span class="roll-details__value">
+                            <span class="roll-details__value-text">{{roll.total}}</span>
+                        </span>
+                    </div>
+                    {{#if diceInfo}}
+                    <div class="roll-details__row roll-details__row--dice">
+                        {{#each diceInfo}}
+                        {{#each this.subrolls}}
+                        <div class="dice-badge dice-badge--d{{../faces}} {{this.classes}}">
+                            <span class="dice-badge__value">{{{this.result}}}</span>
+                        </div>
+                        {{/each}}
+                        {{/each}}
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+
+        {{!-- Result Row (always visible, clickable to expand) --}}
+        <div class="result-row result-row--{{#if isCrit}}success{{else if isFumble}}failure{{else}}neutral{{/if}} roll-toggle">
+            <span class="result-row__value">{{roll.total}}</span>
+        </div>
     </div>
     {{/each}}
 </div>

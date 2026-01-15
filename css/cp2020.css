@@ -636,6 +636,9 @@ div.statderive .value.rightborder {
   background-position: center top;
   background-size: 100% auto;
 }
+.cp2020-message.message.whisper {
+  background-color: #06060F;
+}
 .cp2020-message .message-content {
   padding: 0;
   margin: 0;
@@ -1136,6 +1139,18 @@ div.statderive .value.rightborder {
 .dice-badge--d100.max, .dice-badge--d100.exploded {
   background-image: url("../img/dice/d100green.png");
 }
+.dice-badge--d10.save-inverted.min {
+  background-image: url("../img/dice/d10green.png");
+}
+.dice-badge--d10.save-inverted.max {
+  background-image: url("../img/dice/d10red.png");
+}
+.dice-badge--d10.save-success {
+  background-image: url("../img/dice/d10green.png");
+}
+.dice-badge--d10.save-failure {
+  background-image: url("../img/dice/d10red.png");
+}
 .dice-badge__value {
   font-family: var(--font-blender);
   font-weight: 700;
@@ -1206,10 +1221,16 @@ div.statderive .value.rightborder {
   align-items: center;
   justify-content: center;
 }
-.result-row__icon img {
+.result-row__icon img, .result-row__icon svg {
   width: 20px;
   height: 20px;
   object-fit: contain;
+}
+.result-row__icon--success {
+  color: #1A804D;
+}
+.result-row__icon--failure {
+  color: #86223D;
 }
 
 .result-row__value {

@@ -8,12 +8,17 @@
             <div class="field">
                 <input class="roll-initiative-modificator" value="{{initiativeMod}}" placeholder="Modifier">
             </div>
-            <div class="field stun-death-save">
-                {{!-- Action on label to override pointer --}}
-                <label class="fillwidth action">{{CPLocal "StunDeathSave"}}</label>
+            <div class="field stun-save">
+                <label class="fillwidth action">{{CPLocal "StunSave"}}</label>
             </div>
             <div class="field">
-                <input class="roll-stun-death-modificator" value="{{StunDeathMod}}" placeholder="Modifier"></input>
+                <input class="roll-stun-modificator" value="{{stunSaveMod}}" placeholder="Modifier">
+            </div>
+            <div class="field death-save">
+                <label class="fillwidth action">{{CPLocal "DeathSave"}}</label>
+            </div>
+            <div class="field">
+                <input class="roll-death-modificator" value="{{deathSaveMod}}" placeholder="Modifier">
             </div>
         </div>
     </section>

@@ -23,6 +23,11 @@ $fail-color: #d1502fb8;
     background-repeat: no-repeat;
     background-position: center top;
     background-size: 100% auto;
+
+    // Private/whisper messages get darker background
+    &.whisper {
+      background-color: #06060F;
+    }
   }
 
   .message-content {
@@ -537,6 +542,16 @@ $fail-color: #d1502fb8;
   &--d100.min { background-image: url('../img/dice/d100red.png'); }
   &--d100.max, &--d100.exploded { background-image: url('../img/dice/d100green.png'); }
 
+  // Save rolls: inverted logic (1=good/green, 10=bad/red)
+  &--d10.save-inverted {
+    &.min { background-image: url('../img/dice/d10green.png'); }
+    &.max { background-image: url('../img/dice/d10red.png'); }
+  }
+
+  // Save result target badges
+  &--d10.save-success { background-image: url('../img/dice/d10green.png'); }
+  &--d10.save-failure { background-image: url('../img/dice/d10red.png'); }
+
   // Number overlaid on dice
   &__value {
     font-family: var(--font-blender);
@@ -620,10 +635,19 @@ $fail-color: #d1502fb8;
   align-items: center;
   justify-content: center;
 
-  img {
+  img, svg {
     width: 20px;
     height: 20px;
     object-fit: contain;
+  }
+
+  // Save roll icon colors
+  &--success {
+    color: #1A804D;
+  }
+
+  &--failure {
+    color: #86223D;
   }
 }
 

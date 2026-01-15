@@ -58,8 +58,11 @@ export class CyberpunkActorSheet extends ActorSheet {
       const initiativeMod = foundry.utils.getProperty(system, "initiativeMod") || 0;
       sheetData.initiativeMod = initiativeMod;
 
-      const StunDeathMod = foundry.utils.getProperty(system, "StunDeathMod") || 0;
-      sheetData.StunDeathMod = StunDeathMod;
+      const stunSaveMod = foundry.utils.getProperty(system, "stunSaveMod") || 0;
+      sheetData.stunSaveMod = stunSaveMod;
+
+      const deathSaveMod = foundry.utils.getProperty(system, "deathSaveMod") || 0;
+      sheetData.deathSaveMod = deathSaveMod;
     }
 
     // Collect all programs that belong to this actor.
@@ -361,14 +364,24 @@ export class CyberpunkActorSheet extends ActorSheet {
       this.actor.update({"system.initiativeMod": Number(value)});
     });
 
-    // Stun/Death save
-    html.find(".roll-stun-death-modificator").change(ev => {
+    // Stun Save
+    html.find(".roll-stun-modificator").change(ev => {
       const value = ev.target.value;
-      this.actor.update({"system.StunDeathMod": Number(value)});
+      this.actor.update({"system.stunSaveMod": Number(value)});
     });
-    html.find(".stun-death-save").click(ev => {
-      const rollModificatorInput = html.find(".roll-stun-death-modificator")[0]
-      this.actor.rollStunDeath(rollModificatorInput.value);
+    html.find(".stun-save").click(ev => {
+      const rollModificatorInput = html.find(".roll-stun-modificator")[0];
+      this.actor.rollStunSave(Number(rollModificatorInput.value) || 0);
+    });
+
+    // Death Save
+    html.find(".roll-death-modificator").change(ev => {
+      const value = ev.target.value;
+      this.actor.update({"system.deathSaveMod": Number(value)});
+    });
+    html.find(".death-save").click(ev => {
+      const rollModificatorInput = html.find(".roll-death-modificator")[0];
+      this.actor.rollDeathSave(Number(rollModificatorInput.value) || 0);
     });
 
     // Damage

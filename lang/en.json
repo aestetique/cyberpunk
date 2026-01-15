@@ -348,8 +348,12 @@
     "CYBERPUNK.Action": "Action",
     "CYBERPUNK.Rolls": "Rolls",
     "CYBERPUNK.Initiative": "Initiative",
+    "CYBERPUNK.InitiativeRoll": "Initiative Roll",
     "CYBERPUNK.StunDeathSave": "Stun/Death Save",
-    "CYBERPUNK.UnderThresholdMessage": "Roll under the thresholds to succeed",
+    "CYBERPUNK.StunSave": "Stun Save",
+    "CYBERPUNK.ShockSave": "Shock Save",
+    "CYBERPUNK.DeathSave": "Death Save",
+    "CYBERPUNK.UnderThresholdMessage": "Roll under the thresholds to succeed.",
     "CYBERPUNK.Save": "Save",
     "CYBERPUNK.Description": "Description",
 

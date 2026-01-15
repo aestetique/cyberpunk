@@ -3,6 +3,7 @@ import { CyberpunkActorSheet } from "./actor/actor-sheet.js";
 import { CyberpunkItem } from "./item/item.js";
 import { CyberpunkItemSheet } from "./item/item-sheet.js";
 import { CyberpunkChatMessage } from "./chat-message.js";
+import { CyberpunkCombat } from "./combat.js";
 
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
@@ -25,6 +26,7 @@ Hooks.once('init', async function () {
     CONFIG.Actor.documentClass = CyberpunkActor;
     CONFIG.Item.documentClass = CyberpunkItem;
     CONFIG.ChatMessage.documentClass = CyberpunkChatMessage;
+    CONFIG.Combat.documentClass = CyberpunkCombat;
 
     // Register sheets, unregister original core sheets
     Actors.unregisterSheet("core", ActorSheet);

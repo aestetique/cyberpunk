@@ -464,9 +464,12 @@ $fail-color: #d1502fb8;
   }
 
   &--dice {
+    flex-wrap: wrap;
     justify-content: flex-start;
     gap: 4px;
-    padding-left: 6px;
+    height: auto;
+    min-height: 28px;
+    padding: 6px;
     border-bottom: none;
   }
 }

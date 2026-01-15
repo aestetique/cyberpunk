@@ -131,6 +131,51 @@ export function classifyRollDice(roll) {
 }
 
 /**
+ * Process a Roll into dice groups for the formula-roll template.
+ * Groups dice by type (4d6, 2d10, etc.). Numeric modifiers are shown in formula only.
+ * @param {Roll} roll - An evaluated Foundry Roll
+ * @returns {Object} Template data with diceGroups, formula, and total
+ */
+export function processFormulaRoll(roll) {
+    const diceGroups = [];
+
+    for (const term of roll.terms) {
+        if (term instanceof foundry.dice.terms.Die) {
+            // Dice term (e.g., 4d6)
+            const faces = term.faces;
+            const dice = term.results.map(r => {
+                const isMax = r.result === faces;
+                const isMin = r.result === 1;
+                return {
+                    result: r.result,
+                    faces: faces,
+                    classes: [
+                        r.exploded ? "exploded" : null,
+                        r.discarded ? "discarded" : null,
+                        isMin ? "min" : null,
+                        isMax ? "max" : null
+                    ].filter(c => c).join(" ")
+                };
+            });
+
+            diceGroups.push({
+                label: `${term.number}d${faces}`,
+                subtotal: term.total,
+                faces: faces,
+                dice: dice
+            });
+        }
+        // Skip NumericTerms and OperatorTerms - they're shown in the formula bar
+    }
+
+    return {
+        formula: roll.formula,
+        total: roll.total,
+        diceGroups: diceGroups
+    };
+}
+
+/**
  * This class allows for making multiple rolls in a single card. For example, an attack roll and a damage roll.
  * The API is designed to make sure each roll WILL get an equivalent metadata, so users of Multiroll don't have to make sure to balance the number of rolls they add, and the metadata.
  * 

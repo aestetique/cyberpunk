@@ -4,6 +4,7 @@ import { CyberpunkItem } from "./item/item.js";
 import { CyberpunkItemSheet } from "./item/item-sheet.js";
 import { CyberpunkChatMessage } from "./chat-message.js";
 import { CyberpunkCombat } from "./combat.js";
+import { processFormulaRoll } from "./dice.js";
 
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
@@ -58,4 +59,32 @@ Hooks.once("ready", function() {
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;
     migrations.migrateWorld();
+});
+
+/**
+ * Intercept basic /roll commands and restyle them with our formula-roll template
+ */
+Hooks.on("createChatMessage", async (message, options, userId) => {
+    // Only process messages with rolls that don't already have our styling
+    if (!message.rolls?.length) return;
+    if (message.content.includes("cyberpunk-card")) return;
+
+    // Only process messages from current user to avoid duplicates
+    if (message.author?.id !== game.user.id) return;
+
+    // Process the first roll (basic /roll commands only have one)
+    const roll = message.rolls[0];
+    if (!roll) return;
+
+    // Build template data using our helper
+    const templateData = processFormulaRoll(roll);
+
+    // Render the new content
+    const newContent = await renderTemplate(
+        "systems/cp2020/templates/chat/formula-roll.hbs",
+        templateData
+    );
+
+    // Update the message with styled content
+    await message.update({ content: newContent });
 });

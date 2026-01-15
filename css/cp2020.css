@@ -1031,9 +1031,12 @@ div.statderive .value.rightborder {
   padding-left: 6px;
 }
 .roll-details__row--dice {
+  flex-wrap: wrap;
   justify-content: flex-start;
   gap: 4px;
-  padding-left: 6px;
+  height: auto;
+  min-height: 28px;
+  padding: 6px;
   border-bottom: none;
 }
 

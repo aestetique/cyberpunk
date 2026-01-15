@@ -349,6 +349,7 @@
     "CYBERPUNK.Rolls": "Rolls",
     "CYBERPUNK.Initiative": "Initiative",
     "CYBERPUNK.InitiativeRoll": "Initiative Roll",
+    "CYBERPUNK.FormulaRoll": "Formula Roll",
     "CYBERPUNK.StunDeathSave": "Stun/Death Save",
     "CYBERPUNK.StunSave": "Stun Save",
     "CYBERPUNK.ShockSave": "Shock Save",

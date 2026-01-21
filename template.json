@@ -786,6 +786,7 @@
 			"flavor": "",
 			"notes": "",
 			"level": 0,
+			"ipLevel": 0,
 			"chipLevel": 0,
 			"ip": 0,
 			"diffMod": 1,
@@ -899,6 +900,10 @@
 			"specialAbility": {
 				"name": "",
 				"description": ""
+			},
+			"specialSkill": {
+				"uuid": "",
+				"name": ""
 			},
 			"careerSkills": []
 		}

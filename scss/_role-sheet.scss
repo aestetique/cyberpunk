@@ -277,6 +277,48 @@
   }
 }
 
+// Special Skill Drop Zone
+.special-skill-drop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--chat-accent);
+  border: 1px dashed var(--chat-stroke);
+  border-radius: 2px;
+  min-height: 32px;
+
+  .skill-name {
+    font-family: var(--font-blender);
+    font-size: 13px;
+    color: var(--chat-text);
+    pointer-events: none; // Ensure drops go to parent
+  }
+
+  .placeholder {
+    font-family: var(--font-blender);
+    font-size: 13px;
+    color: var(--chat-gray);
+    font-style: italic;
+    pointer-events: none; // Ensure drops go to parent
+  }
+
+  .remove-special-skill {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--chat-gray);
+    cursor: pointer;
+    pointer-events: auto; // Button needs to be clickable
+
+    &:hover {
+      color: var(--chat-red-text);
+    }
+  }
+}
+
 // Career Skills List
 .career-skills-list {
   list-style: none;

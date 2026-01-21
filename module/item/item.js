@@ -8,7 +8,29 @@ import { CyberpunkActor } from "../actor/actor.js";
  * @extends {Item}
  */
 export class CyberpunkItem extends Item {
-  // This also has preparedata, but we don't have to worry about that so far
+
+  /** @override */
+  async _preCreate(data, options, user) {
+    await super._preCreate(data, options, user);
+
+    // Set default placeholder image based on item type
+    const placeholders = {
+      skill: "systems/cp2020/img/svg/placeholder-skill.svg",
+      weapon: "systems/cp2020/img/svg/placeholder-weapon.svg",
+      armor: "systems/cp2020/img/svg/placeholder-armor.svg",
+      cyberware: "systems/cp2020/img/svg/placeholder-cyberware.svg",
+      vehicle: "systems/cp2020/img/svg/placeholder-vehicle.svg",
+      misc: "systems/cp2020/img/svg/placeholder-gear.svg",
+      program: "systems/cp2020/img/svg/placeholder-program.svg",
+      role: "systems/cp2020/img/svg/placeholder-role.svg"
+    };
+
+    const placeholder = placeholders[data.type];
+    // Only set if no custom image provided (Foundry default or empty)
+    if (placeholder && (!data.img || data.img === "icons/svg/mystery-man.svg")) {
+      this.updateSource({ img: placeholder });
+    }
+  }
 
   prepareData() {
     super.prepareData();

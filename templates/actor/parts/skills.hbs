@@ -1,1 +1,60 @@
-{{!-- Skills tab - placeholder --}}
+{{!-- Skills Tab --}}
+<div class="skills-container">
+  <header class="tab-header">
+    <span class="tab-title">SKILLS</span>
+    <img class="tab-badge" src="systems/cp2020/img/ui/badge-skills.svg" alt="">
+  </header>
+
+  <div class="skills-content">
+    <div class="skills-column">
+      {{#each skillsLeft as |skill|}}
+        <div class="skill-row" data-skill-id="{{skill.id}}">
+          <button class="skill-chip" type="button" data-skill-id="{{skill.id}}" title="Toggle Chip">
+            <img src="systems/cp2020/img/ui/skillchip-{{skill.chipState}}.svg" alt="">
+          </button>
+          <span class="skill-attr">{{skill.statLabel}}</span>
+          <span class="skill-name skill-roll" data-skill-id="{{skill.id}}">{{skill.name}}</span>
+          {{#if ../isLocked}}
+            <span class="skill-value">{{skill.effectiveLevel}}</span>
+          {{else}}
+            <input type="number" class="skill-value skill-level-input" data-skill-id="{{skill.id}}" value="{{skill.level}}" min="0" max="10" title="Base Level (IP adds +{{skill.ipLevel}})">
+          {{/if}}
+          <button class="skill-plus" type="button" data-skill-id="{{skill.id}}" title="Increase Skill (+{{skill.ipCost}} IP)">
+            <img src="systems/cp2020/img/ui/icon-plus{{#unless skill.canIncrease}}-disabled{{/unless}}.svg" alt="+">
+          </button>
+          <input type="number" class="skill-ip" data-skill-id="{{skill.id}}" value="{{skill.ip}}" min="0">
+          {{#unless ../isLocked}}
+            <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
+              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+            </button>
+          {{/unless}}
+        </div>
+      {{/each}}
+    </div>
+    <div class="skills-column">
+      {{#each skillsRight as |skill|}}
+        <div class="skill-row" data-skill-id="{{skill.id}}">
+          <button class="skill-chip" type="button" data-skill-id="{{skill.id}}" title="Toggle Chip">
+            <img src="systems/cp2020/img/ui/skillchip-{{skill.chipState}}.svg" alt="">
+          </button>
+          <span class="skill-attr">{{skill.statLabel}}</span>
+          <span class="skill-name skill-roll" data-skill-id="{{skill.id}}">{{skill.name}}</span>
+          {{#if ../isLocked}}
+            <span class="skill-value">{{skill.effectiveLevel}}</span>
+          {{else}}
+            <input type="number" class="skill-value skill-level-input" data-skill-id="{{skill.id}}" value="{{skill.level}}" min="0" max="10" title="Base Level (IP adds +{{skill.ipLevel}})">
+          {{/if}}
+          <button class="skill-plus" type="button" data-skill-id="{{skill.id}}" title="Increase Skill (+{{skill.ipCost}} IP)">
+            <img src="systems/cp2020/img/ui/icon-plus{{#unless skill.canIncrease}}-disabled{{/unless}}.svg" alt="+">
+          </button>
+          <input type="number" class="skill-ip" data-skill-id="{{skill.id}}" value="{{skill.ip}}" min="0">
+          {{#unless ../isLocked}}
+            <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
+              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+            </button>
+          {{/unless}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+</div>

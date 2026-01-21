@@ -135,10 +135,28 @@
         {{!-- Details (620px) --}}
         <div class="sheet-details" data-group="primary">
           <div class="character-identity">
-            <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#if isLocked}}readonly{{/if}}>
-            <div class="role-display" data-drop-target="role">
-              <span class="role-label">{{#if roleLabel}}{{roleLabel}}{{else}}{{localize 'CYBERPUNK.DropRoleHere'}}{{/if}}</span>
+            <div class="identity-left">
+              <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#if isLocked}}readonly{{/if}}>
+              <div class="role-display" data-drop-target="role">
+                <span class="role-label">{{#if roleLabel}}{{roleLabel}}{{else}}{{localize 'CYBERPUNK.DropRoleHere'}}{{/if}}</span>
+              </div>
             </div>
+            {{#unless isLocked}}
+            <div class="identity-points">
+              <div class="info-block">
+                <img class="info-bg" src="systems/cp2020/img/ui/info-points.svg" alt="Character Points">
+                <span class="info-value">{{charPoints}} / 80</span>
+              </div>
+              <div class="info-block">
+                <img class="info-bg" src="systems/cp2020/img/ui/info-career.svg" alt="Career Points">
+                <span class="info-value">{{careerPoints}} / 40</span>
+              </div>
+              <div class="info-block">
+                <img class="info-bg" src="systems/cp2020/img/ui/info-pickup.svg" alt="Pickup Points">
+                <span class="info-value">{{pickupPoints}} / {{pickupMax}}</span>
+              </div>
+            </div>
+            {{/unless}}
           </div>
 
           {{!-- Attributes Row (620px, 16px gap from identity) --}}

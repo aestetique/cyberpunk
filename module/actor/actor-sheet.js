@@ -228,6 +228,45 @@ export class CyberpunkActorSheet extends ActorSheet {
         { key: 'age', label: 'Age', displayValue: `${info.age ?? 25}`, rawValue: info.age ?? 25, path: 'system.info.age', editable: true }
       ];
 
+      // Character creation point tracking (for unlock mode)
+      // Character Points: sum of all base attribute values
+      const charPoints = Object.values(stats).reduce((sum, stat) => {
+        return sum + (stat?.base ?? 0);
+      }, 0);
+      sheetData.charPoints = charPoints;
+
+      // Career and Pickup points from skills
+      const role = system.role;
+      const allSkills = this.actor.itemTypes.skill || [];
+      const careerSkillNames = new Set();
+      if (role?.uuid) {
+        const roleItem = fromUuidSync(role.uuid);
+        if (roleItem?.system?.careerSkills) {
+          roleItem.system.careerSkills.forEach(s => {
+            const name = typeof s === 'string' ? s : s.name;
+            careerSkillNames.add(name.toLowerCase());
+          });
+        }
+        if (roleItem?.system?.specialSkill?.name) {
+          careerSkillNames.add(roleItem.system.specialSkill.name.toLowerCase());
+        }
+      }
+
+      let careerPoints = 0;
+      let pickupPoints = 0;
+      allSkills.forEach(skill => {
+        const baseLevel = skill.system.level || 0;
+        if (careerSkillNames.has(skill.name.toLowerCase())) {
+          careerPoints += baseLevel;
+        } else {
+          pickupPoints += baseLevel;
+        }
+      });
+
+      sheetData.careerPoints = careerPoints;
+      sheetData.pickupPoints = pickupPoints;
+      sheetData.pickupMax = (stats.int?.base ?? 0) + (stats.ref?.base ?? 0);
+
       // Armor blocks data for template
       const hitLocs = system.hitLocations || {};
       const armorState = system.armorState || {};
@@ -313,6 +352,96 @@ export class CyberpunkActorSheet extends ActorSheet {
   }
 
   _prepareSkills(sheetData) {
+    const skills = this.actor.items.filter(i => i.type === "skill");
+    const role = this.actor.system.role;
+
+    // Stat label mapping
+    const statLabels = {
+      int: 'INT',
+      ref: 'REF',
+      tech: 'TECH',
+      cool: 'COOL',
+      attr: 'ATTR',
+      bt: 'BODY',
+      emp: 'EMP',
+      ma: 'MA',
+      luck: 'LUCK'
+    };
+
+    // Get career skill names and special skill from role
+    const careerSkillNames = new Set();
+    let specialSkillName = null;
+    if (role?.uuid) {
+      const roleItem = fromUuidSync(role.uuid);
+      if (roleItem?.system?.careerSkills) {
+        roleItem.system.careerSkills.forEach(s => {
+          const name = typeof s === 'string' ? s : s.name;
+          careerSkillNames.add(name.toLowerCase());
+        });
+      }
+      if (roleItem?.system?.specialSkill?.name) {
+        specialSkillName = roleItem.system.specialSkill.name.toLowerCase();
+      }
+    }
+
+    // Categorize and prepare skills
+    const preparedSkills = skills.map(skill => {
+      const isCareer = careerSkillNames.has(skill.name.toLowerCase());
+      // Special icon only shows if skill name matches the role's special skill
+      const isSpecial = specialSkillName && skill.name.toLowerCase() === specialSkillName;
+      const chipState = skill.system.isChipped ? (skill.system.chipLevel || 1) : 0;
+      // Base level (manually set) and IP-earned level
+      const baseLevel = skill.system.level || 0;
+      const ipLevel = skill.system.ipLevel || 0;
+      const totalLevel = baseLevel + ipLevel;
+      // When chipped, chip value is always used regardless of learned level
+      const effectiveLevel = skill.system.isChipped
+        ? skill.system.chipLevel
+        : totalLevel;
+      const diffMod = skill.system.diffMod || 1;
+      // IP cost for next level: total level × 10 × difficulty mod (minimum 10 × diffMod for level 0)
+      const ipCost = totalLevel === 0 ? 10 * diffMod : totalLevel * 10 * diffMod;
+      const currentIp = skill.system.ip || 0;
+      const canIncrease = currentIp >= ipCost;
+
+      return {
+        id: skill.id,
+        name: skill.name,
+        stat: skill.system.stat,
+        statLabel: statLabels[skill.system.stat] || skill.system.stat?.toUpperCase() || 'REF',
+        level: baseLevel,
+        ipLevel,
+        totalLevel,
+        chipLevel: skill.system.chipLevel,
+        isChipped: skill.system.isChipped,
+        chipState,
+        effectiveLevel,
+        ip: currentIp,
+        ipCost,
+        diffMod,
+        canIncrease,
+        isCareer,
+        isSpecial
+      };
+    });
+
+    // Sort: special first, then career alphabetically, then rest alphabetically
+    preparedSkills.sort((a, b) => {
+      if (a.isSpecial && !b.isSpecial) return -1;
+      if (!a.isSpecial && b.isSpecial) return 1;
+      if (a.isCareer && !b.isCareer) return -1;
+      if (!a.isCareer && b.isCareer) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    // Split into two columns evenly
+    const total = preparedSkills.length;
+    const leftCount = Math.ceil(total / 2);
+
+    sheetData.skillsLeft = preparedSkills.slice(0, leftCount);
+    sheetData.skillsRight = preparedSkills.slice(leftCount);
+
+    // Keep legacy support for old template usage
     sheetData.skillsSort = this.actor.system.skillsSortedBy || "Name";
     sheetData.skillsSortChoices = Object.keys(SortOrders);
     sheetData.filteredSkillIDs = this._filterSkills(sheetData);
@@ -320,28 +449,28 @@ export class CyberpunkActorSheet extends ActorSheet {
   }
 
   _filterSkills(sheetData) {
-    let id = sheetData.actor._id;
-
     if(sheetData.system.transient.skillFilter == null) {
       sheetData.system.transient.skillFilter = "";
     }
-    let upperSearch = sheetData.system.transient.skillFilter.toUpperCase();
-    let listToFilter = sheetData.system.sortedSkillIDs || game.actors.get(id).itemTypes.skill.map(skill => skill.id);
+    const upperSearch = sheetData.system.transient.skillFilter.toUpperCase();
+    const allSkillIds = this.actor.itemTypes.skill.map(skill => skill.id);
 
     if(upperSearch === "") {
-      return listToFilter;
+      return allSkillIds;
     }
-    else {
-      if(sheetData.system.transient.oldSearch != null
-        && sheetData.filteredSkillIDs != null
-        && upperSearch.startsWith(oldSearch)) {
-        listToFilter = sheetData.filteredSkillIDs;
-      }
-      return listToFilter.filter(id => {
-        let skillName = this.actor.items.get(id).name;
-        return skillName.toUpperCase().includes(upperSearch);
-      });
-    }
+
+    return allSkillIds.filter(id => {
+      const skillName = this.actor.items.get(id).name;
+      return skillName.toUpperCase().includes(upperSearch);
+    });
+  }
+
+  async _updateCombatSenseMod() {
+    const combatSenseLevel =
+      this.actor.items.find(item => item.type === 'skill' && item.name.includes('Combat'))?.system.level
+      ?? this.actor.items.find(item => item.type === 'skill' && item.name.includes('Боя'))?.system.level
+      ?? 0;
+    await this.actor.update({ "system.CombatSenseMod": Number(combatSenseLevel) });
   }
 
   _addWoundTrack(sheetData) {
@@ -568,14 +697,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       let updateData = { _id: skill.id };
       updateData[target] = parseInt(event.target.value, 10);
       await this.actor.updateEmbeddedDocuments("Item", [updateData]);
-      let combatSenseItemFind =
-        this.actor.items.find(item => item.type === 'skill' && item.name.includes('Combat'))?.system.level
-        ?? this.actor.items.find(item => item.type === 'skill' && item.name.includes('Боя'))?.system.level
-        ?? 0;
-      await this.actor.update({ "system.CombatSenseMod": Number(combatSenseItemFind) });
+      await this._updateCombatSenseMod();
     });
 
-    // Toggle skill chipped
+    // Toggle skill chipped (legacy handler)
     html.find(".chip-toggle").click(async ev => {
       const skill = this.actor.items.get(ev.currentTarget.dataset.skillId);
       const toggled = !skill.system.isChipped;
@@ -584,6 +709,22 @@ export class CyberpunkActorSheet extends ActorSheet {
         _id: skill.id,
         "system.isChipped": toggled,
         "system.-=chipped": null
+      }]);
+    });
+
+    // Skill chip button - cycles through chip levels (0 → 1 → 2 → 3 → 0)
+    html.find(".skill-chip").click(async ev => {
+      const skill = this.actor.items.get(ev.currentTarget.dataset.skillId);
+      if (!skill) return;
+
+      const currentChipLevel = skill.system.isChipped ? (skill.system.chipLevel || 1) : 0;
+      const nextChipLevel = (currentChipLevel + 1) % 4;
+      const isChipped = nextChipLevel > 0;
+
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: skill.id,
+        "system.isChipped": isChipped,
+        "system.chipLevel": nextChipLevel
       }]);
     });
 
@@ -677,6 +818,106 @@ export class CyberpunkActorSheet extends ActorSheet {
         return dlg.render(true);
       }
       this.actor.rollSkill(id);
+    });
+
+    // Chip toggle (cycle 0 → 1 → 2 → 3 → 0) for new skills tab
+    html.find('.skill-chip').click(async ev => {
+      const skillId = ev.currentTarget.dataset.skillId;
+      const skill = this.actor.items.get(skillId);
+      if (!skill) return;
+
+      const currentChipLevel = skill.system.chipLevel || 0;
+      const isChipped = skill.system.isChipped;
+
+      let newChipLevel, newIsChipped;
+      if (!isChipped) {
+        newIsChipped = true;
+        newChipLevel = 1;
+      } else if (currentChipLevel < 3) {
+        newIsChipped = true;
+        newChipLevel = currentChipLevel + 1;
+      } else {
+        newIsChipped = false;
+        newChipLevel = 0;
+      }
+
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: skillId,
+        "system.isChipped": newIsChipped,
+        "system.chipLevel": newChipLevel
+      }]);
+    });
+
+    // Skill IP input for new skills tab
+    html.find('.skill-ip').change(async ev => {
+      const skillId = ev.currentTarget.dataset.skillId;
+      const newIp = parseInt(ev.target.value, 10) || 0;
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: skillId,
+        "system.ip": Math.max(0, newIp)
+      }]);
+    });
+
+    // Base skill level input (unlocked mode)
+    html.find('.skill-level-input').change(async ev => {
+      const skillId = ev.currentTarget.dataset.skillId;
+      const newLevel = parseInt(ev.target.value, 10) || 0;
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: skillId,
+        "system.level": Math.max(0, Math.min(10, newLevel))
+      }]);
+      // Update Combat Sense modifier if this was a Combat Sense skill
+      await this._updateCombatSenseMod();
+    });
+
+    // Plus button (spend IP) for new skills tab
+    html.find('.skill-plus').click(async ev => {
+      const skillId = ev.currentTarget.dataset.skillId;
+      const skill = this.actor.items.get(skillId);
+      if (!skill) return;
+
+      // Total level = base level + IP-earned level
+      const baseLevel = skill.system.level || 0;
+      const ipLevel = skill.system.ipLevel || 0;
+      const totalLevel = baseLevel + ipLevel;
+      const diffMod = skill.system.diffMod || 1;
+      const cost = totalLevel === 0 ? 10 * diffMod : totalLevel * 10 * diffMod;
+      const currentIp = skill.system.ip || 0;
+
+      if (currentIp >= cost) {
+        await this.actor.updateEmbeddedDocuments("Item", [{
+          _id: skillId,
+          "system.ipLevel": ipLevel + 1,
+          "system.ip": currentIp - cost
+        }]);
+        // Update Combat Sense modifier if this was a Combat Sense skill
+        await this._updateCombatSenseMod();
+      } else {
+        ui.notifications.warn(`Not enough IP. Need ${cost}, have ${currentIp}.`);
+      }
+    });
+
+    // Delete skill for new skills tab
+    html.find('.skill-delete').click(ev => {
+      const skillId = ev.currentTarget.dataset.skillId;
+      const skill = this.actor.items.get(skillId);
+      if (!skill) return;
+
+      new Dialog({
+        title: localize("ItemDeleteConfirmTitle"),
+        content: `<p>${localizeParam("ItemDeleteConfirmText", {itemName: skill.name})}</p>`,
+        buttons: {
+          yes: {
+            label: localize("Yes"),
+            callback: async () => {
+              await skill.delete();
+              await this._updateCombatSenseMod();
+            }
+          },
+          no: { label: localize("No") }
+        },
+        default: "no"
+      }).render(true);
     });
 
     // Generic condition toggle (Stabilized, Fast Draw, Action Surge, etc.)
@@ -875,7 +1116,7 @@ export class CyberpunkActorSheet extends ActorSheet {
   }
 
   /**
-   * Apply career skills from a role to the actor
+   * Apply career skills and special skill from a role to the actor
    * Fetches skills by UUID and adds them to the character
    * @param {string} roleUUID - The UUID of the role item
    */
@@ -884,8 +1125,17 @@ export class CyberpunkActorSheet extends ActorSheet {
     const role = await fromUuid(roleUUID);
     if (!role) return;
 
+    // Combine career skills and special skill
     const careerSkills = role.system?.careerSkills || [];
-    if (careerSkills.length === 0) return;
+    const specialSkill = role.system?.specialSkill;
+
+    // Build list of skills to process
+    const skillsToProcess = [...careerSkills];
+    if (specialSkill?.uuid || specialSkill?.name) {
+      skillsToProcess.push(specialSkill);
+    }
+
+    if (skillsToProcess.length === 0) return;
 
     // Get existing skill names on actor (lowercase for comparison)
     const existingSkillNames = this.actor.items
@@ -894,7 +1144,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Find skills to add
     const skillsToAdd = [];
-    for (const skillEntry of careerSkills) {
+    for (const skillEntry of skillsToProcess) {
       // Support both old format (string) and new format (object with uuid/name)
       const skillName = typeof skillEntry === 'string' ? skillEntry : skillEntry.name;
       const skillUUID = typeof skillEntry === 'object' ? skillEntry.uuid : null;
@@ -914,16 +1164,8 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       // Fallback to name-based search in compendiums (old format)
       if (!skillData) {
-        const lang = game.i18n.lang;
-        const packName = lang === "ru" ? "cp2020.default-skills-ru" : "cp2020.default-skills-en";
-        const rolePackName = lang === "ru" ? "cp2020.role-skills-ru" : "cp2020.role-skills-en";
-
-        const defaultPack = game.packs.get(packName);
-        const rolePack = game.packs.get(rolePackName);
-
-        const defaultSkills = await defaultPack?.getDocuments() || [];
-        const roleSkills = await rolePack?.getDocuments() || [];
-        const allSkills = [...defaultSkills, ...roleSkills];
+        const skillsPack = game.packs.get("cp2020.skills");
+        const allSkills = await skillsPack?.getDocuments() || [];
 
         const foundSkill = allSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
         if (foundSkill) {
@@ -955,6 +1197,26 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Get dropped item first to check its type
     const item = await Item.implementation.fromDropData(data);
     if (!item) return;
+
+    // Check for duplicate skills (by UUID or name)
+    if (item.type === "skill") {
+      // Check by UUID (using sourceId flag that Foundry sets on copied items)
+      const existingByUUID = this.actor.items.find(i =>
+        i.type === "skill" && i.flags?.core?.sourceId === item.uuid
+      );
+      if (existingByUUID) {
+        ui.notifications.info("This skill is already added.");
+        return;
+      }
+      // Also check by name as fallback
+      const existingByName = this.actor.items.find(i =>
+        i.type === "skill" && i.name.toLowerCase() === item.name.toLowerCase()
+      );
+      if (existingByName) {
+        ui.notifications.info("This skill is already added.");
+        return;
+      }
+    }
 
     // Handle role drops - works anywhere on the sheet
     if (item.type === "role") {

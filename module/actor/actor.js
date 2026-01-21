@@ -1,7 +1,7 @@
 import { makeD10Roll, Multiroll } from "../dice.js";
 import { SortOrders, sortSkills } from "./skill-sort.js";
 import { btmFromBT } from "../lookups.js";
-import { properCase, localize, getDefaultSkills } from "../utils.js"
+import { properCase, localize } from "../utils.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION } from "../conditions.js"
 
 /**
@@ -12,27 +12,18 @@ export class CyberpunkActor extends Actor {
 
 
   /** @override */
-  async _onCreate(data, options={}) {
-    const updates = {_id: data._id};
-    if (data.type === "character" ) {
-      updates["img"] = "systems/cp2020/img/edgerunner.svg";
-      updates["prototypeToken.texture.src"] = "systems/cp2020/img/edgerunner.svg";
-      updates["prototypeToken.actorLink"] = true;
-      updates["prototypeToken.sight.enabled"] = true;
-      updates["system.icon"] = "systems/cp2020/img/edgerunner.svg";
-    }
-    
-    // Check if we have skills already, don't wipe skill items if we do
-    let firstSkill = data.items.find(item => item.type === 'skill');
-    if (!firstSkill) {
-      // Using toObject is important - foundry REALLY doesn't like creating new documents from documents themselves
-      const skillsData = 
-        sortSkills(await getDefaultSkills(), SortOrders.Name)
-        .map(item => item.toObject());
-      updates.items = [];
-      updates.items = data.items.concat(skillsData);
-      updates["system.skillsSortedBy"] = "Name";
-      this.update(updates);
+  async _preCreate(data, options, user) {
+    await super._preCreate(data, options, user);
+
+    if (data.type === "character") {
+      this.updateSource({
+        img: "systems/cp2020/img/svg/placeholder-character.svg",
+        "prototypeToken.texture.src": "systems/cp2020/img/svg/placeholder-character.svg",
+        "prototypeToken.actorLink": true,
+        "prototypeToken.sight.enabled": true,
+        "system.icon": "systems/cp2020/img/svg/placeholder-character.svg",
+        "system.skillsSortedBy": "Name"
+      });
     }
   }
 

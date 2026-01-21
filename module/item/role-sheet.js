@@ -18,7 +18,7 @@ export class CyberpunkRoleSheet extends ItemSheet {
       width: 400,
       height: 520,
       tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "details" }],
-      dragDrop: [{ dropSelector: "[data-drop-target='career-skill']" }]
+      dragDrop: [{ dropSelector: "[data-drop-target]" }]
     });
   }
 
@@ -74,6 +74,12 @@ export class CyberpunkRoleSheet extends ItemSheet {
       skills.splice(index, 1);
       await this.item.update({ "system.careerSkills": skills });
     });
+
+    // Remove special skill
+    html.find('.remove-special-skill').click(async ev => {
+      ev.preventDefault();
+      await this.item.update({ "system.specialSkill": { uuid: "", name: "" } });
+    });
   }
 
   /* -------------------------------------------- */
@@ -106,6 +112,24 @@ export class CyberpunkRoleSheet extends ItemSheet {
       return;
     }
 
+    // Determine which drop target received the skill
+    const dropTargetEl = event.target.closest('[data-drop-target]');
+    const dropTarget = dropTargetEl?.dataset.dropTarget;
+    console.log("Drop target element:", dropTargetEl);
+    console.log("Drop target value:", dropTarget);
+
+    if (dropTarget === 'special-skill') {
+      // Set the special skill
+      await this.item.update({
+        "system.specialSkill": {
+          uuid: item.uuid,
+          name: item.name
+        }
+      });
+      return;
+    }
+
+    // Default: add to career skills
     // Check if skill already exists (by UUID or by name)
     const currentSkills = this.item.system.careerSkills || [];
     const isDuplicate = currentSkills.some(skill => {

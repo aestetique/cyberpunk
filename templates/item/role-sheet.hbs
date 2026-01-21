@@ -60,6 +60,23 @@
             {{/if}}
           </div>
 
+          {{!-- Special Skill --}}
+          <div class="role-field special-skill">
+            <label>{{localize "CYBERPUNK.SpecialSkill"}}</label>
+            <div class="special-skill-drop" data-drop-target="special-skill">
+              {{#if system.specialSkill.name}}
+                <span class="skill-name">{{system.specialSkill.name}}</span>
+                {{#unless isLocked}}
+                  <button type="button" class="remove-special-skill" title="{{localize 'CYBERPUNK.RemoveSpecialSkill'}}">
+                    <i class="fas fa-times"></i>
+                  </button>
+                {{/unless}}
+              {{else}}
+                <span class="placeholder">{{localize "CYBERPUNK.DropSkillHere"}}</span>
+              {{/if}}
+            </div>
+          </div>
+
           {{!-- Source --}}
           <div class="role-field">
             <label>{{localize "CYBERPUNK.Source"}}</label>

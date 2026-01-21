@@ -36,31 +36,10 @@
       "type": "RollTable"
     },
     {
-      "name": "default-skills-en",
-      "label": "Default Skills EN",
+      "name": "skills",
+      "label": "Skills",
       "system": "cp2020",
-      "path": "./packs/default-skills-en.db",
-      "type": "Item"
-    },
-    {
-      "name": "default-skills-ru",
-      "label": "Default Skills RU",
-      "system": "cp2020",
-      "path": "./packs/default-skills-ru.db",
-      "type": "Item"
-    },
-    {
-      "name": "role-skills-en",
-      "label": "Role Skills EN",
-      "system": "cp2020",
-      "path": "./packs/role-skills-en.db",
-      "type": "Item"
-    },
-    {
-      "name": "role-skills-ru",
-      "label": "Role Skills RU",
-      "system": "cp2020",
-      "path": "./packs/role-skills-ru.db",
+      "path": "./packs/skills.db",
       "type": "Item"
     },
     {

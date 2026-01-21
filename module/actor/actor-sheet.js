@@ -1,4 +1,4 @@
-import { martialOptions, meleeAttackTypes, meleeBonkOptions, rangedModifiers, weaponTypes } from "../lookups.js"
+import { martialOptions, meleeAttackTypes, meleeBonkOptions, rangedModifiers, weaponTypes, reliability, concealability } from "../lookups.js"
 import { localize, localizeParam } from "../utils.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { SortOrders } from "./skill-sort.js";
@@ -101,6 +101,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       this._prepareCharacterItems(sheetData);
       this._addWoundTrack(sheetData);
       this._prepareSkills(sheetData);
+      this._prepareGearData(sheetData);
 
       sheetData.weaponTypes = weaponTypes;
 
@@ -486,6 +487,93 @@ export class CyberpunkActorSheet extends ActorSheet {
       .filter((item) => !hideThese.has(item.type))
       .sort((a, b) => nameSorter.compare(a.name, b.name));
     return showItems;
+  }
+
+  _prepareGearData(sheetData) {
+    const weapons = this.actor.itemTypes.weapon || [];
+    const armor = this.actor.itemTypes.armor || [];
+    const misc = this.actor.itemTypes.misc || [];
+
+    // Prepare weapons data
+    sheetData.weapons = weapons.map(w => {
+      const sys = w.system;
+      // Build context: Type · Caliber · Reliability · Concealability · Range
+      const weaponType = weaponTypes[sys.weaponType] || sys.weaponType || '';
+      const caliber = sys.ammoType || '';
+      const rel = sys.reliability ? game.i18n.localize("CYBERPUNK." + sys.reliability) : '';
+      const conc = sys.concealability ? game.i18n.localize("CYBERPUNK." + sys.concealability) : '';
+      const range = sys.range ? `${sys.range} m` : '';
+
+      const contextParts = [weaponType, caliber, rel, conc, range].filter(p => p);
+      const context = contextParts.join(' · ');
+
+      return {
+        id: w.id,
+        img: w.img,
+        name: w.name,
+        context: context,
+        price: sys.cost || 0,
+        damage: sys.damage || '',
+        shotsLeft: sys.shotsLeft ?? 0,
+        shots: sys.shots ?? 0,
+        rof: sys.rof ?? 0,
+        canReload: (sys.shotsLeft ?? 0) < (sys.shots ?? 0)
+      };
+    });
+
+    // Prepare armor/outfit data
+    sheetData.outfitItems = armor.map(a => {
+      const sys = a.system;
+      // Get coverage areas
+      const coverage = sys.coverage || {};
+      const areas = [];
+
+      // Check each area - SP > 0 means covered
+      if (coverage.Head?.stoppingPower > 0) areas.push('Head');
+      if (coverage.Torso?.stoppingPower > 0) areas.push('Torso');
+      // Combine arms
+      if (coverage.lArm?.stoppingPower > 0 || coverage.rArm?.stoppingPower > 0) areas.push('Arms');
+      // Combine legs
+      if (coverage.lLeg?.stoppingPower > 0 || coverage.rLeg?.stoppingPower > 0) areas.push('Legs');
+
+      // Get SP (same for all covered areas, use first found)
+      let sp = 0;
+      for (const loc of ['Head', 'Torso', 'lArm', 'rArm', 'lLeg', 'rLeg']) {
+        if (coverage[loc]?.stoppingPower > 0) {
+          sp = coverage[loc].stoppingPower;
+          break;
+        }
+      }
+
+      // Armor type
+      const armorType = sys.armorType === 'hard' ? 'Hard Armor' : 'Soft Armor';
+
+      // Build context
+      const contextParts = [armorType, ...areas];
+      const context = contextParts.join(' · ');
+
+      return {
+        id: a.id,
+        img: a.img,
+        name: a.name,
+        context: context,
+        price: sys.cost || 0,
+        sp: sp,
+        encumbrance: sys.encumbrance ?? 0,
+        equipped: sys.equipped ?? false
+      };
+    });
+
+    // Prepare misc/gear data
+    sheetData.gearItems = misc.map(m => {
+      return {
+        id: m.id,
+        img: m.img,
+        name: m.name,
+        context: 'Misc',
+        price: m.system.cost || 0
+      };
+    });
   }
 
   _prepareCharacterItems(sheetData) {
@@ -952,6 +1040,99 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Delete item
     html.find('.item-delete').click(deleteItemDialog.bind(this));
     html.find('.rc-item-delete').bind("contextmenu", deleteItemDialog.bind(this));
+
+    // ----- Gear Tab Event Listeners -----
+
+    // View item (gear tab)
+    html.find('.gear-view').click(ev => {
+      ev.stopPropagation();
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (item) item.sheet.render(true);
+    });
+
+    // Delete item (gear tab)
+    html.find('.gear-delete').click(ev => {
+      ev.stopPropagation();
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      new Dialog({
+        title: localize("ItemDeleteConfirmTitle"),
+        content: `<p>${localizeParam("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        buttons: {
+          yes: {
+            label: localize("Yes"),
+            callback: () => item.delete()
+          },
+          no: { label: localize("No") }
+        },
+        default: "no"
+      }).render(true);
+    });
+
+    // Reload weapon (gear tab)
+    html.find('.reload-weapon').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const canReload = ev.currentTarget.dataset.canReload === 'true';
+      if (!canReload) return;
+
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      const maxShots = item.system.shots ?? 0;
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: itemId,
+        "system.shotsLeft": maxShots
+      }]);
+    });
+
+    // Toggle armor equipped (gear tab)
+    html.find('.toggle-equip').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      const currentEquipped = item.system.equipped ?? false;
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: itemId,
+        "system.equipped": !currentEquipped
+      }]);
+    });
+
+    // Fire weapon (gear tab) - clicking on icon or name
+    html.find('.gear-fire-weapon').click(ev => {
+      ev.stopPropagation();
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      const isRanged = item.isRanged();
+      const targetTokens = Array.from(game.users.current.targets.values()).map(target => {
+        return {
+          name: target.document.name,
+          id: target.id
+        };
+      });
+
+      let modifierGroups;
+      if (isRanged) {
+        modifierGroups = rangedModifiers(item, targetTokens);
+      } else if (item.system.attackType === meleeAttackTypes.martial) {
+        modifierGroups = martialOptions(this.actor);
+      } else {
+        modifierGroups = meleeBonkOptions();
+      }
+
+      const dialog = new ModifiersDialog(this.actor, {
+        weapon: item,
+        targetTokens: targetTokens,
+        modifierGroups: modifierGroups,
+        onConfirm: (fireOptions) => item.__weaponRoll(fireOptions, targetTokens)
+      });
+      dialog.render(true);
+    });
 
     // "Fire" button for weapons
     html.find('.fire-weapon').click(ev => {

@@ -1006,3 +1006,232 @@ input.skill-value.skill-level-input {
     border: none;
   }
 }
+
+// ============================================
+// Gear Tab
+// ============================================
+
+.gear-container {
+  width: 620px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gear-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gear-content {
+  display: flex;
+  flex-direction: column;
+}
+
+// Empty state placeholder row
+.gear-row.gear-empty {
+  justify-content: center;
+}
+
+.gear-empty-text {
+  font-family: var(--font-blender);
+  font-weight: 300; // Book
+  font-size: 12px;
+  line-height: 12px;
+  color: #808090;
+  text-align: center;
+}
+
+.gear-row {
+  width: 100%;
+  height: 48px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px dashed #26282F;
+}
+
+.gear-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #252730;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: none;
+  }
+
+  &.gear-fire-weapon {
+    cursor: pointer;
+  }
+}
+
+.gear-info {
+  height: 30px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  &.gear-fire-weapon {
+    cursor: pointer;
+  }
+}
+
+// Name: Refinery 55 Medium, 16px, line-height 16px, #FFFFFF
+.gear-name {
+  height: 16px;
+  font-family: var(--font-refinery);
+  font-weight: 500; // Medium
+  font-size: 16px;
+  line-height: 16px;
+  color: #FFFFFF;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Context: Blender Pro Book, 12px, line-height 12px, #808090
+.gear-context {
+  height: 12px;
+  font-family: var(--font-blender);
+  font-weight: 300; // Book
+  font-size: 12px;
+  line-height: 12px;
+  color: #808090;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Price: 24px tall, row with 4px gap, Blender Pro Book 16px, line-height 24px, align-right
+.gear-price {
+  height: 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+
+  .price-value {
+    font-family: var(--font-blender);
+    font-weight: 300; // Book
+    font-size: 16px;
+    line-height: 24px;
+    color: #FFFFFF;
+    text-align: right;
+  }
+
+  img {
+    width: 16px;
+    height: 16px;
+    border: none;
+  }
+}
+
+// Item-specific field: 30px tall
+// Top row: Blender Pro Book, 16px, line-height 16px, #FFFFFF, align-center
+// Bottom row: Blender Pro, 12px, line-height 12px, #808090, align-center
+.gear-field {
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  .field-top {
+    font-family: var(--font-blender);
+    font-weight: 300; // Book
+    font-size: 16px;
+    line-height: 16px;
+    color: #FFFFFF;
+    text-align: center;
+  }
+
+  .field-bottom {
+    font-family: var(--font-blender);
+    font-weight: 400; // Regular
+    font-size: 12px;
+    line-height: 12px;
+    color: #808090;
+    text-align: center;
+  }
+}
+
+// Action button (reload/equip): 40px wide, 30px tall, 16x16 icon inside
+.gear-action-btn {
+  width: 40px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  img {
+    width: 16px;
+    height: 16px;
+    border: none;
+  }
+
+  &[data-can-reload="false"] {
+    cursor: default;
+  }
+
+  &[data-can-reload="true"] {
+    cursor: pointer;
+  }
+}
+
+// Spacer for gear items to align with weapons/armor (2x 60px fields + 40px action + 2x 8px gaps)
+.gear-spacer {
+  width: 176px;
+  flex-shrink: 0;
+}
+
+// View/Delete block: 16px wide, 34px tall, two icons vertically with 2px gap
+.gear-actions {
+  width: 16px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gear-view,
+.gear-delete {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.6;
+  outline: none;
+  box-shadow: none;
+
+  &:hover, &:focus {
+    opacity: 1;
+    box-shadow: none;
+    outline: none;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+}

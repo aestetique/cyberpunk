@@ -6,8 +6,6 @@
   font-weight: 400;
 }
 
-// I'd have loved to give Stone Sans with this, but I don't have the license
-// Open Sans ExtraBold seems to do okay though
 $font-primary: "Noto Sans", sans-serif;
 $font-secondary: "Open Sans ExtraBold", sans-serif;
 $text-colour: black;
@@ -265,9 +263,7 @@ $field-border-width: 2px;
     }
 }
 
-// Only pull this animation when details is open
-// Do this to all elements after the *
-// Nabbed from https://stackoverflow.com/a/38215801/5708707
+// Animate child elements when <details> opens
 details[open] summary ~ * {
     animation: sweep .5s ease-in-out;
 }

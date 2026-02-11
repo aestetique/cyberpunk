@@ -1,6 +1,6 @@
 <div class="cyberpunk-card cyberpunk-card--skill-check">
     {{!-- Section Bar: Skill/Stat Name with Attribute Icon --}}
-    {{> (CPTemplate "chat/partials/section-bar.hbs") label=title icon=statIcon}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=title icon=statIcon}}
 
     {{!-- Roll Results --}}
     {{#each rolls as |rollData|}}
@@ -21,10 +21,10 @@
                             <span class="roll-details__value-text">{{rollData.roll.total}}</span>
                         </span>
                     </div>
-                    {{#if rollData.diceInfo}}
+                    {{#if rollData.dice}}
                     <div class="roll-details__row roll-details__row--dice">
-                        {{#each rollData.diceInfo as |die|}}
-                        {{#each die.subrolls as |subroll|}}
+                        {{#each rollData.dice as |die|}}
+                        {{#each die.results as |subroll|}}
                         <div class="dice-badge dice-badge--d{{die.faces}} {{subroll.classes}}">
                             <span class="dice-badge__value">{{{subroll.result}}}</span>
                         </div>
@@ -39,9 +39,9 @@
         {{!-- Result Row with success/failure and difficulty target --}}
         <div class="result-row result-row--{{#if ../success}}success{{else}}failure{{/if}} roll-toggle">
             {{#if ../success}}
-            <span class="result-row__icon"><img src="systems/cp2020/img/chat/success.png" alt="Success"></span>
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/success.png" alt="Success"></span>
             {{else}}
-            <span class="result-row__icon"><img src="systems/cp2020/img/chat/failure.png" alt="Failure"></span>
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/failure.png" alt="Failure"></span>
             {{/if}}
             <span class="result-row__value">{{rollData.roll.total}}</span>
             <span class="result-row__target">

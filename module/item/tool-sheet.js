@@ -14,7 +14,7 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["cyberpunk", "sheet", "item", "tool-sheet"],
-            template: "systems/cp2020/templates/item/tool-sheet.hbs",
+            template: "systems/cyberpunk/templates/item/tool-sheet.hbs",
             dragDrop: [{ dropSelector: "[data-drop-target]" }]
         });
     }

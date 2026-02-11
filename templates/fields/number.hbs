@@ -1,5 +1,5 @@
 <div class="field">
-    <label for="{{edit}}">{{CPLocal label}}</label>
+    <label for="{{edit}}">{{loc label}}</label>
     <span class="flex-pad"></span>
 
     <input
@@ -9,11 +9,11 @@
         type="number"
 
         {{#if readOnly}}
-            value="{{deepLookup . edit}}"
+            value="{{getByPath . edit}}"
 
         {{else}}
-            {{#unless (eq (deepLookup . edit) 0)}}
-                value="{{deepLookup . edit}}"
+            {{#unless (eq (getByPath . edit) 0)}}
+                value="{{getByPath . edit}}"
             {{/unless}}
             placeholder="0"
         {{/if}}

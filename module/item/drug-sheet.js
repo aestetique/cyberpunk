@@ -15,7 +15,7 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["cyberpunk", "sheet", "item", "drug-sheet"],
-            template: "systems/cp2020/templates/item/drug-sheet.hbs",
+            template: "systems/cyberpunk/templates/item/drug-sheet.hbs",
             dragDrop: [{ dropSelector: "[data-drop-target]" }]
         });
     }

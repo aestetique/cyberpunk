@@ -7,7 +7,7 @@ import { DEFAULT_SKILL_MAPPINGS } from "./settings/skill-mapping-defaults.js";
  * Should be called once on "ready" by the GM.
  */
 export function migrateSkillMappings() {
-  const saved = game.settings.get("cp2020", "skillMappings");
+  const saved = game.settings.get("cyberpunk", "skillMappings");
   const defaults = DEFAULT_SKILL_MAPPINGS;
 
   // Rebuild in the order defined by defaults, preserving saved skill assignments
@@ -38,16 +38,14 @@ export function migrateSkillMappings() {
   }
 
   if (changed) {
-    game.settings.set("cp2020", "skillMappings", migrated);
+    game.settings.set("cyberpunk", "skillMappings", migrated);
     console.log("CYBERPUNK: Skill mappings migrated to match current defaults.");
   }
 }
 
 export function registerSystemSettings() {
-  /**
-   * Track the system version upon which point a migration was last applied
-   */
-  game.settings.register("cp2020", "systemMigrationVersion", {
+  /** Last system version that ran migrations */
+  game.settings.register("cyberpunk", "systemMigrationVersion", {
     name: "SETTINGS.SysMigration",
     scope: "world",
     config: false,
@@ -56,9 +54,20 @@ export function registerSystemSettings() {
   });
 
   /**
+   * Track whether the cp2020 → cyberpunk namespace migration has run
+   */
+  game.settings.register("cyberpunk", "namespaceMigrated", {
+    name: "Namespace Migration",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  /**
    * Skill mappings data (hidden setting that stores the actual configuration)
    */
-  game.settings.register("cp2020", "skillMappings", {
+  game.settings.register("cyberpunk", "skillMappings", {
     name: "SETTINGS.SkillMappings",
     scope: "world",
     config: false,
@@ -69,7 +78,7 @@ export function registerSystemSettings() {
   /**
    * Settings menu button to open skill mapping configuration
    */
-  game.settings.registerMenu("cp2020", "skillMappingMenu", {
+  game.settings.registerMenu("cyberpunk", "skillMappingMenu", {
     name: "SETTINGS.SkillMappingMenuName",
     label: "SETTINGS.SkillMappingMenuLabel",
     hint: "SETTINGS.SkillMappingMenuHint",

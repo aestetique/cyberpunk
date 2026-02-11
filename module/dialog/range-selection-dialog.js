@@ -1,5 +1,5 @@
 import { fireModes, ranges } from "../lookups.js";
-import { localize, localizeParam } from "../utils.js";
+import { localize, formatLocale } from "../utils.js";
 
 /**
  * Range Selection Dialog — select range band before opening attack modifiers.
@@ -45,8 +45,8 @@ export class RangeSelectionDialog extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "range-selection-dialog",
-      classes: ["cp2020", "range-selection-dialog"],
-      template: "systems/cp2020/templates/dialog/range-selection.hbs",
+      classes: ["cyberpunk", "range-selection-dialog"],
+      template: "systems/cyberpunk/templates/dialog/range-selection.hbs",
       width: 300,
       height: "auto",
       popOut: true,
@@ -62,10 +62,10 @@ export class RangeSelectionDialog extends Application {
     // Build range options with calculated distances
     const rangeOptions = [
       { key: ranges.pointBlank, distance: 1, label: localize("RangePointBlankLabel") },
-      { key: ranges.close, distance: Math.round(weaponRange / 4), label: localizeParam("RangeCloseLabel", { range: Math.round(weaponRange / 4) }) },
-      { key: ranges.medium, distance: Math.round(weaponRange / 2), label: localizeParam("RangeMediumLabel", { range: Math.round(weaponRange / 2) }) },
-      { key: ranges.long, distance: weaponRange, label: localizeParam("RangeLongLabel", { range: weaponRange }) },
-      { key: ranges.extreme, distance: weaponRange * 2, label: localizeParam("RangeExtremeLabel", { range: weaponRange * 2 }) }
+      { key: ranges.close, distance: Math.round(weaponRange / 4), label: formatLocale("RangeCloseLabel", { range: Math.round(weaponRange / 4) }) },
+      { key: ranges.medium, distance: Math.round(weaponRange / 2), label: formatLocale("RangeMediumLabel", { range: Math.round(weaponRange / 2) }) },
+      { key: ranges.long, distance: weaponRange, label: formatLocale("RangeLongLabel", { range: weaponRange }) },
+      { key: ranges.extreme, distance: weaponRange * 2, label: formatLocale("RangeExtremeLabel", { range: weaponRange * 2 }) }
     ];
 
     // Mark the selected range
@@ -275,8 +275,8 @@ export class RangeSelectionDialog extends Application {
     html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
 
     // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src', `systems/cp2020/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src', `systems/cp2020/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+    html.find('.luck-minus-btn img').attr('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+    html.find('.luck-plus-btn img').attr('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
   /**
@@ -290,7 +290,7 @@ export class RangeSelectionDialog extends Application {
       ambush: this._conditions.ambush,
       ricochet: this._conditions.ricochet,
       // Prepared, Distracted, and Luck via extraMod
-      // Note: Location targeting -4 is applied by __shootModTerms when targetArea is set
+      // Note: Location targeting -4 is applied by _rangedModifiers when targetArea is set
       extraMod: (this._conditions.prepared ? 2 : 0)
               + (this._conditions.distracted ? -2 : 0)
               + this._luckToSpend,
@@ -316,7 +316,7 @@ export class RangeSelectionDialog extends Application {
     }
 
     this.close();
-    this.weapon.__weaponRoll(fireOptions, this.targetTokens);
+    this.weapon._resolveAttack(fireOptions, this.targetTokens);
   }
 
   /** @override */

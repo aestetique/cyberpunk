@@ -1,27 +1,27 @@
 
 {{!-- Use as 
-    {{#> systems/cp2020/templates/item/item-sheet.hbs}}
+    {{#> systems/cyberpunk/templates/item/item-sheet.hbs}}
         settings tab contents
-    {{/systems/cp2020/templates/item/item-sheet.hbs}}
+    {{/systems/cyberpunk/templates/item/item-sheet.hbs}}
  --}}
 <form class="cyberpunk {{cssClass}}" autocomplete="off">
     <header class="flexrow nowrap">
         <div class="flexcol item-info">
             <span class="infoline">
                 <h1 class="title">
-                    <input class="field-value fillwidth" name="name" type="text" value="{{item.name}}" placeholder="{{CPLocal 'ItemName'}}"/>
+                    <input class="field-value fillwidth" name="name" type="text" value="{{item.name}}" placeholder="{{loc 'ItemName'}}"/>
                 </h1>
-                <span class="summary inactive">{{> (varTemplate "item/parts/[VAR]/summary.hbs" item.type)}}</span>
+                <span class="summary inactive">{{> (dynTpl "item/parts/[VAR]/summary.hbs" item.type)}}</span>
             </span>
-            <textarea class="flavor" name="system.flavor" placeholder="{{CPLocal 'Flavor'}}">{{system.flavor}}</textarea>
+            <textarea class="flavor" name="system.flavor" placeholder="{{loc 'Flavor'}}">{{system.flavor}}</textarea>
         </div>
         <img class="item-img" src="{{item.img}}" data-edit="img" title="{{item.name}}"/>
     </header>
 
     {{!-- Sheet Tab Navigation --}}
     <nav class="sheet-tabs tabs" data-group="primary">
-        <a class="item" data-tab="settings">{{CPLocal 'Settings'}}</a>
-        <a class="item" data-tab="notes">{{CPLocal 'Notes'}}</a>
+        <a class="item" data-tab="settings">{{loc 'Settings'}}</a>
+        <a class="item" data-tab="notes">{{loc 'Notes'}}</a>
     </nav>
 
     {{!-- Sheet Body --}}
@@ -35,13 +35,13 @@
         {{!-- Attributes Tab --}}
         <div class="tab" data-group="primary" data-tab="settings">
             
-            {{#unless (equals item.type "misc")}}
-            {{> (varTemplate "item/parts/[VAR]/settings.hbs" item.type)}}
+            {{#unless (eq item.type "misc")}}
+            {{> (dynTpl "item/parts/[VAR]/settings.hbs" item.type)}}
             {{/unless}}
             {{!-- Not all items have common settings --}}
             {{!-- May be worth instead other settings things just including the template on their own --}}
-            {{#if (hasProperty item.system "equipped")}}
-            {{> (varTemplate "item/parts/commodity/settings.hbs" item.type)}}
+            {{#if (hasProp item.system "equipped")}}
+            {{> (dynTpl "item/parts/commodity/settings.hbs" item.type)}}
             {{/if}}
         </div>
     </section>

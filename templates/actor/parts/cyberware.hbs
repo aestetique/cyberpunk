@@ -4,7 +4,7 @@
   <div class="gear-block cyberware-block" data-cyberware-type="sensor">
     <header class="tab-header">
       <span class="tab-title">{{cyberwareCategories.sensor.title}}</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-sensor.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-sensor.svg" alt="">
     </header>
     <div class="tab-content gear-content" data-drop-target="cyberware-sensor">
       {{#each cyberwareCategories.sensor.items as |cyber|}}
@@ -20,14 +20,14 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{cyber.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-field humanity-field" style="width: 70px;">
             {{#if cyber.humanityRolled}}
               <span class="field-top">{{cyber.humanityLoss}}</span>
             {{else}}
               <button class="field-top humanity-roll-btn" type="button" data-item-id="{{cyber.id}}" title="Roll Humanity Loss">
-                <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
               </button>
             {{/if}}
             <span class="field-bottom">Humanity Loss</span>
@@ -39,22 +39,22 @@
           <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" data-structurally-broken="{{cyber.isStructurallyBroken}}">
             {{#if cyber.isStructurallyBroken}}
               {{#if cyber.equipped}}
-                <img src="systems/cp2020/img/ui/badge-off-broken.svg" alt="Broken">
+                <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Broken">
               {{else}}
-                <img src="systems/cp2020/img/ui/badge-off.svg" alt="Off">
+                <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
               {{/if}}
             {{else if cyber.equipped}}
-              <img src="systems/cp2020/img/ui/badge-on.svg" alt="On">
+              <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
             {{else}}
-              <img src="systems/cp2020/img/ui/badge-off.svg" alt="Off">
+              <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
             {{/if}}
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{cyber.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{cyber.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -63,7 +63,7 @@
         {{#each cyber.attachedOptions as |opt|}}
           <div class="gear-row cyberware-row cyberware-option attached" data-item-id="{{opt.id}}" data-parent-id="{{opt.parentId}}">
             <div class="option-icon detach-option" data-item-id="{{opt.id}}" title="Detach Option">
-              <img src="systems/cp2020/img/ui/badge-option-on.svg" alt="Attached">
+              <img src="systems/cyberpunk/img/ui/badge-option-on.svg" alt="Attached">
             </div>
             <div class="gear-icon">
               <img src="{{opt.img}}" alt="{{opt.name}}">
@@ -74,14 +74,14 @@
             </div>
             <div class="gear-price">
               <span class="price-value">{{opt.price}}</span>
-              <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
             </div>
             <div class="gear-field humanity-field" style="width: 70px;">
               {{#if opt.humanityRolled}}
                 <span class="field-top">{{opt.humanityLoss}}</span>
               {{else}}
                 <button class="field-top humanity-roll-btn" type="button" data-item-id="{{opt.id}}" title="Roll Humanity Loss">
-                  <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                  <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
                 </button>
               {{/if}}
               <span class="field-bottom">Humanity Loss</span>
@@ -93,10 +93,10 @@
             <div class="gear-action-btn"></div>
             <div class="gear-actions">
               <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
-                <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
               </button>
               <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
-                <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
               </button>
             </div>
           </div>
@@ -111,7 +111,7 @@
         {{#each cyberwareCategories.sensor.detachedOptions as |opt|}}
           <div class="gear-row cyberware-row cyberware-option detached" data-item-id="{{opt.id}}" data-cyberware-type="sensor" draggable="true">
             <div class="option-icon">
-              <img src="systems/cp2020/img/ui/badge-option-off.svg" alt="Detached">
+              <img src="systems/cyberpunk/img/ui/badge-option-off.svg" alt="Detached">
             </div>
             <div class="gear-icon">
               <img src="{{opt.img}}" alt="{{opt.name}}">
@@ -122,14 +122,14 @@
             </div>
             <div class="gear-price">
               <span class="price-value">{{opt.price}}</span>
-              <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
             </div>
             <div class="gear-field humanity-field" style="width: 70px;">
               {{#if opt.humanityRolled}}
                 <span class="field-top">{{opt.humanityLoss}}</span>
               {{else}}
                 <button class="field-top humanity-roll-btn" type="button" data-item-id="{{opt.id}}" title="Roll Humanity Loss">
-                  <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                  <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
                 </button>
               {{/if}}
               <span class="field-bottom">Humanity Loss</span>
@@ -141,10 +141,10 @@
             <div class="gear-action-btn"></div>
             <div class="gear-actions">
               <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
-                <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
               </button>
               <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
-                <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
               </button>
             </div>
           </div>
@@ -166,7 +166,7 @@
   <div class="gear-block cyberware-block" data-cyberware-type="cyberlimb">
     <header class="tab-header">
       <span class="tab-title">{{cyberwareCategories.cyberlimb.title}}</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-cyberlimb.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-cyberlimb.svg" alt="">
     </header>
     <div class="tab-content gear-content" data-drop-target="cyberware-cyberlimb">
       {{#each cyberwareCategories.cyberlimb.items as |cyber|}}
@@ -182,14 +182,14 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{cyber.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-field humanity-field" style="width: 70px;">
             {{#if cyber.humanityRolled}}
               <span class="field-top">{{cyber.humanityLoss}}</span>
             {{else}}
               <button class="field-top humanity-roll-btn" type="button" data-item-id="{{cyber.id}}" title="Roll Humanity Loss">
-                <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
               </button>
             {{/if}}
             <span class="field-bottom">Humanity Loss</span>
@@ -201,22 +201,22 @@
           <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" data-structurally-broken="{{cyber.isStructurallyBroken}}">
             {{#if cyber.isStructurallyBroken}}
               {{#if cyber.equipped}}
-                <img src="systems/cp2020/img/ui/badge-off-broken.svg" alt="Broken">
+                <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Broken">
               {{else}}
-                <img src="systems/cp2020/img/ui/badge-off.svg" alt="Off">
+                <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
               {{/if}}
             {{else if cyber.equipped}}
-              <img src="systems/cp2020/img/ui/badge-on.svg" alt="On">
+              <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
             {{else}}
-              <img src="systems/cp2020/img/ui/badge-off.svg" alt="Off">
+              <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
             {{/if}}
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{cyber.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{cyber.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -225,7 +225,7 @@
         {{#each cyber.attachedOptions as |opt|}}
           <div class="gear-row cyberware-row cyberware-option attached" data-item-id="{{opt.id}}" data-parent-id="{{opt.parentId}}">
             <div class="option-icon detach-option" data-item-id="{{opt.id}}" title="Detach Option">
-              <img src="systems/cp2020/img/ui/badge-option-on.svg" alt="Attached">
+              <img src="systems/cyberpunk/img/ui/badge-option-on.svg" alt="Attached">
             </div>
             <div class="gear-icon">
               <img src="{{opt.img}}" alt="{{opt.name}}">
@@ -236,14 +236,14 @@
             </div>
             <div class="gear-price">
               <span class="price-value">{{opt.price}}</span>
-              <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
             </div>
             <div class="gear-field humanity-field" style="width: 70px;">
               {{#if opt.humanityRolled}}
                 <span class="field-top">{{opt.humanityLoss}}</span>
               {{else}}
                 <button class="field-top humanity-roll-btn" type="button" data-item-id="{{opt.id}}" title="Roll Humanity Loss">
-                  <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                  <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
                 </button>
               {{/if}}
               <span class="field-bottom">Humanity Loss</span>
@@ -255,10 +255,10 @@
             <div class="gear-action-btn"></div>
             <div class="gear-actions">
               <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
-                <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
               </button>
               <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
-                <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
               </button>
             </div>
           </div>
@@ -273,7 +273,7 @@
         {{#each cyberwareCategories.cyberlimb.detachedOptions as |opt|}}
           <div class="gear-row cyberware-row cyberware-option detached" data-item-id="{{opt.id}}" data-cyberware-type="cyberlimb" draggable="true">
             <div class="option-icon">
-              <img src="systems/cp2020/img/ui/badge-option-off.svg" alt="Detached">
+              <img src="systems/cyberpunk/img/ui/badge-option-off.svg" alt="Detached">
             </div>
             <div class="gear-icon">
               <img src="{{opt.img}}" alt="{{opt.name}}">
@@ -284,14 +284,14 @@
             </div>
             <div class="gear-price">
               <span class="price-value">{{opt.price}}</span>
-              <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
             </div>
             <div class="gear-field humanity-field" style="width: 70px;">
               {{#if opt.humanityRolled}}
                 <span class="field-top">{{opt.humanityLoss}}</span>
               {{else}}
                 <button class="field-top humanity-roll-btn" type="button" data-item-id="{{opt.id}}" title="Roll Humanity Loss">
-                  <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                  <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
                 </button>
               {{/if}}
               <span class="field-bottom">Humanity Loss</span>
@@ -303,10 +303,10 @@
             <div class="gear-action-btn"></div>
             <div class="gear-actions">
               <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
-                <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
               </button>
               <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
-                <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
               </button>
             </div>
           </div>
@@ -327,7 +327,7 @@
   <div class="gear-block cyberware-block" data-cyberware-type="implant">
     <header class="tab-header">
       <span class="tab-title">{{cyberwareCategories.implant.title}}</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-implant.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-implant.svg" alt="">
     </header>
     <div class="tab-content gear-content" data-drop-target="cyberware-implant">
       {{#each cyberwareCategories.implant.items as |cyber|}}
@@ -341,14 +341,14 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{cyber.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-field humanity-field" style="width: 70px;">
             {{#if cyber.humanityRolled}}
               <span class="field-top">{{cyber.humanityLoss}}</span>
             {{else}}
               <button class="field-top humanity-roll-btn" type="button" data-item-id="{{cyber.id}}" title="Roll Humanity Loss">
-                <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
               </button>
             {{/if}}
             <span class="field-bottom">Humanity Loss</span>
@@ -356,17 +356,17 @@
           <div class="gear-field" style="width: 80px;"></div>
           <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}">
             {{#if cyber.equipped}}
-              <img src="systems/cp2020/img/ui/badge-on.svg" alt="On">
+              <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
             {{else}}
-              <img src="systems/cp2020/img/ui/badge-off.svg" alt="Off">
+              <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
             {{/if}}
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{cyber.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{cyber.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -384,7 +384,7 @@
   <div class="gear-block cyberware-block" data-cyberware-type="chipware">
     <header class="tab-header">
       <span class="tab-title">{{cyberwareCategories.chipware.title}}</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-chipware.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-chipware.svg" alt="">
     </header>
     <div class="tab-content gear-content" data-drop-target="cyberware-chipware">
       {{#each cyberwareCategories.chipware.items as |cyber|}}
@@ -398,14 +398,14 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{cyber.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-field humanity-field" style="width: 70px;">
             {{#if cyber.humanityRolled}}
               <span class="field-top">{{cyber.humanityLoss}}</span>
             {{else}}
               <button class="field-top humanity-roll-btn" type="button" data-item-id="{{cyber.id}}" title="Roll Humanity Loss">
-                <img src="systems/cp2020/img/dice/d10gold.svg" alt="Roll">
+                <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
               </button>
             {{/if}}
             <span class="field-bottom">Humanity Loss</span>
@@ -413,17 +413,17 @@
           <div class="gear-field" style="width: 80px;"></div>
           <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}">
             {{#if cyber.equipped}}
-              <img src="systems/cp2020/img/ui/badge-on.svg" alt="On">
+              <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
             {{else}}
-              <img src="systems/cp2020/img/ui/badge-off.svg" alt="Off">
+              <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
             {{/if}}
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{cyber.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{cyber.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>

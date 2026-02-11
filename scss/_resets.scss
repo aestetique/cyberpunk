@@ -4,7 +4,7 @@
     border: 0 none;
     border-radius: 0px;
     padding: unset;
-    // Without this line=, all of them get set to.. 23 pixels high?!
+    // Override Foundry's default line-height
     height: unset;
     min-width: unset;
     background-color: unset;

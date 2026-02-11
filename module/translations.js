@@ -1,11 +1,6 @@
-export function getMartialKeyByName(name){
-    for(const k in game.i18n.translations.CYBERPUNK.martials){
-        if (game.i18n.translations.CYBERPUNK.martials[k] === name){
-            return k
-        }
-    }
-}
+export { localize } from "./utils.js";
 
-export function localize(key, data = {}) {
-  return game.i18n.format("CYBERPUNK." + key, data);
+export function getMartialKeyByName(name) {
+    const martials = game.i18n.translations.CYBERPUNK?.martials ?? {};
+    return Object.entries(martials).find(([, v]) => v === name)?.[0];
 }

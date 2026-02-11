@@ -2,7 +2,7 @@
   {{!-- Header (38px) --}}
   <header class="sheet-header">
     <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
-      <img src="systems/cp2020/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
+      <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
     </button>
 
     <span class="header-name">{{item.name}}</span>
@@ -29,7 +29,7 @@
         <input type="text" class="item-name" name="name" value="{{item.name}}" {{#if isLocked}}readonly{{/if}}>
         <div class="item-category">
           <div class="category-icon">
-            <img src="systems/cp2020/img/ui/badge-skills.svg" alt="">
+            <img src="systems/cyberpunk/img/ui/badge-skills.svg" alt="">
           </div>
           <span class="category-label">Skill</span>
         </div>
@@ -50,7 +50,7 @@
             <div class="dropdown">
               <span class="dropdown-text">{{selectedStatLabel}}</span>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{else}}
@@ -61,7 +61,7 @@
                 {{/each}}
               </select>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{/if}}
@@ -74,7 +74,7 @@
             <div class="dropdown">
               <span class="dropdown-text">{{selectedDifficultyLabel}}</span>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{else}}
@@ -85,7 +85,7 @@
                 {{/each}}
               </select>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{/if}}

@@ -1,6 +1,6 @@
 <div class="cyberpunk-card cyberpunk-card--skill">
     {{!-- Section Bar: Skill/Stat Name with Attribute Icon --}}
-    {{> (CPTemplate "chat/partials/section-bar.hbs") label=title icon=statIcon}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=title icon=statIcon}}
 
     {{!-- Roll Results --}}
     {{#each rolls}}
@@ -22,10 +22,10 @@
                             <span class="roll-details__value-text">{{roll.total}}</span>
                         </span>
                     </div>
-                    {{#if diceInfo}}
+                    {{#if dice}}
                     <div class="roll-details__row roll-details__row--dice">
-                        {{#each diceInfo}}
-                        {{#each this.subrolls}}
+                        {{#each dice}}
+                        {{#each this.results}}
                         <div class="dice-badge dice-badge--d{{../faces}} {{this.classes}}">
                             <span class="dice-badge__value">{{{this.result}}}</span>
                         </div>

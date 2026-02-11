@@ -16,7 +16,7 @@ import { CyberpunkCyberwareSheet } from "./item/cyberware-sheet.js";
 import { CyberpunkChatMessage } from "./chat-message.js";
 import { CyberpunkCombat } from "./combat.js";
 import { processFormulaRoll } from "./dice.js";
-import { CP2020_CONDITIONS, CONDITION_EFFECTS } from "./conditions.js";
+import { CYBERPUNK_CONDITIONS, CONDITION_EFFECTS } from "./conditions.js";
 
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
@@ -42,64 +42,64 @@ Hooks.once('init', async function () {
     CONFIG.Combat.documentClass = CyberpunkCombat;
 
     // Register system conditions (status effects)
-    CONFIG.statusEffects = CP2020_CONDITIONS;
+    CONFIG.statusEffects = CYBERPUNK_CONDITIONS;
 
     // Register sheets, unregister original core sheets
     Actors.unregisterSheet("core", ActorSheet);
-    Actors.registerSheet("cp2020", CyberpunkActorSheet, { makeDefault: true });
+    Actors.registerSheet("cyberpunk", CyberpunkActorSheet, { makeDefault: true });
     Items.unregisterSheet("core", ItemSheet);
-    Items.registerSheet("cp2020", CyberpunkItemSheet, { makeDefault: true });
-    Items.registerSheet("cp2020", CyberpunkRoleSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkItemSheet, { makeDefault: true });
+    Items.registerSheet("cyberpunk", CyberpunkRoleSheet, {
         types: ["role"],
         makeDefault: true,
         label: "CYBERPUNK.RoleSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkSkillSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkSkillSheet, {
         types: ["skill"],
         makeDefault: true,
         label: "CYBERPUNK.SkillSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkCommoditySheet, {
+    Items.registerSheet("cyberpunk", CyberpunkCommoditySheet, {
         types: ["misc"],
         makeDefault: true,
         label: "CYBERPUNK.CommoditySheet"
     });
-    Items.registerSheet("cp2020", CyberpunkOutfitSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkOutfitSheet, {
         types: ["armor"],
         makeDefault: true,
         label: "CYBERPUNK.OutfitSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkAmmoSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkAmmoSheet, {
         types: ["ammo"],
         makeDefault: true,
         label: "CYBERPUNK.AmmoSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkWeaponSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkWeaponSheet, {
         types: ["weapon"],
         makeDefault: true,
         label: "CYBERPUNK.WeaponSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkOrdnanceSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkOrdnanceSheet, {
         types: ["ordnance"],
         makeDefault: true,
         label: "CYBERPUNK.OrdnanceSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkToolSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkToolSheet, {
         types: ["tool"],
         makeDefault: true,
         label: "CYBERPUNK.ToolSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkDrugSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkDrugSheet, {
         types: ["drug"],
         makeDefault: true,
         label: "CYBERPUNK.DrugSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkProgramSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkProgramSheet, {
         types: ["program"],
         makeDefault: true,
         label: "CYBERPUNK.ProgramSheet"
     });
-    Items.registerSheet("cp2020", CyberpunkCyberwareSheet, {
+    Items.registerSheet("cyberpunk", CyberpunkCyberwareSheet, {
         types: ["cyberware"],
         makeDefault: true,
         label: "CYBERPUNK.CyberwareSheet"
@@ -200,11 +200,14 @@ async function _migrateConditionNames() {
 }
 
 /**
- * Once the entire VTT framework is initialized, check to see if we should perform a data migration (nabbed from Foundry's 5e module and adapted)
+ * Check whether a data migration is needed when the world is ready.
  */
-Hooks.once("ready", function() {
+Hooks.once("ready", async function() {
     // Determine whether a system migration is required and feasible
     if ( !game.user.isGM ) return;
+
+    // Migrate flags and settings from old "cp2020" namespace to "cyberpunk"
+    await migrations.migrateNamespace();
 
     // Reconcile skill mappings with current defaults (add new, remove obsolete)
     migrateSkillMappings();
@@ -212,7 +215,7 @@ Hooks.once("ready", function() {
     // Fix any existing ActiveEffects with unlocalized condition names
     _migrateConditionNames();
 
-    const lastMigrateVersion = game.settings.get("cp2020", "systemMigrationVersion");
+    const lastMigrateVersion = game.settings.get("cyberpunk", "systemMigrationVersion");
     // We do need to try migrating if we haven't run before - as it stands, previous worlds didn't use this setting, or by default had it set to current version
 
     // The version migrations need to begin - if you make a change from 0.1 to 0.2, this should be 0.2
@@ -229,7 +232,7 @@ Hooks.once("ready", function() {
 Hooks.on("targetToken", (user, token, targeted) => {
     // Only react to current user's targeting
     if (user.id === game.user.id) {
-        Hooks.callAll("cp2020.targetChanged");
+        Hooks.callAll("cyberpunk.targetChanged");
     }
 });
 
@@ -237,7 +240,7 @@ Hooks.on("targetToken", (user, token, targeted) => {
  * Broadcast token selection changes to chat messages for reactive UI updates
  */
 Hooks.on("controlToken", (token, controlled) => {
-    Hooks.callAll("cp2020.selectionChanged");
+    Hooks.callAll("cyberpunk.selectionChanged");
 });
 
 /**
@@ -258,7 +261,7 @@ Hooks.on("preCreateChatMessage", async (message, data, options, userId) => {
 
     // Render the new content
     const newContent = await renderTemplate(
-        "systems/cp2020/templates/chat/formula-roll.hbs",
+        "systems/cyberpunk/templates/chat/formula-roll.hbs",
         templateData
     );
 
@@ -320,7 +323,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     }
 
     // Check if Mortally Wounded (woundState >= 4) and NOT Stabilized and NOT Dead
-    if (actor.woundState() >= 4 &&
+    if (actor.getWoundLevel() >= 4 &&
         !actor.statuses.has("stabilized") &&
         !actor.statuses.has("dead")) {
         const modifier = actor.system.deathSaveMod || 0;
@@ -329,7 +332,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
 
     // Handle Burning damage (2d10 first turn, 1d10 second, 1d6 third)
     if (actor.statuses.has("burning")) {
-        const duration = actor.getFlag("cp2020", "burningDuration") || 0;
+        const duration = actor.getFlag("cyberpunk", "burningDuration") || 0;
         if (duration > 0) {
             // Roll burning damage based on remaining duration
             let damageFormula;
@@ -347,7 +350,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             // Post to chat with expandable roll details
             const speaker = ChatMessage.getSpeaker({ actor });
             const rollData = processFormulaRoll(damageRoll);
-            const content = await renderTemplate("systems/cp2020/templates/chat/condition-damage.hbs", {
+            const content = await renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                 label: game.i18n.localize("CYBERPUNK.BurningDamage"),
                 icon: "fire",
                 formula: rollData.formula,
@@ -366,17 +369,17 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             const newDuration = duration - 1;
             if (newDuration <= 0) {
                 await actor.toggleStatusEffect("burning", { active: false });
-                await actor.unsetFlag("cp2020", "burningDuration");
+                await actor.unsetFlag("cyberpunk", "burningDuration");
             } else {
-                await actor.setFlag("cp2020", "burningDuration", newDuration);
+                await actor.setFlag("cyberpunk", "burningDuration", newDuration);
             }
         }
     }
 
     // Handle Acid SP reduction (1d6 per turn for 3 turns)
     if (actor.statuses.has("acid")) {
-        const duration = actor.getFlag("cp2020", "acidDuration") || 0;
-        const hitLocation = actor.getFlag("cp2020", "acidLocation");
+        const duration = actor.getFlag("cyberpunk", "acidDuration") || 0;
+        const hitLocation = actor.getFlag("cyberpunk", "acidLocation");
 
         if (duration > 0 && hitLocation) {
             const spReductionRoll = await new Roll("1d6").evaluate();
@@ -401,7 +404,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
                     const newSP = Math.max(0, currentSP - spReduction);
                     await item.update({ [`system.coverage.${hitLocation}.stoppingPower`]: newSP });
                 }
-                const content = await renderTemplate("systems/cp2020/templates/chat/condition-damage.hbs", {
+                const content = await renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                     label: game.i18n.localize("CYBERPUNK.AcidDamage"),
                     icon: "acid",
                     formula: rollData.formula,
@@ -419,7 +422,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
                 // No armor - deal wound damage instead
                 const currentDamage = actor.system.damage || 0;
                 await actor.update({ "system.damage": Math.min(currentDamage + spReduction, 40) });
-                const content = await renderTemplate("systems/cp2020/templates/chat/condition-damage.hbs", {
+                const content = await renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                     label: game.i18n.localize("CYBERPUNK.AcidWounds"),
                     icon: "acid",
                     formula: rollData.formula,
@@ -439,10 +442,10 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             const newDuration = duration - 1;
             if (newDuration <= 0) {
                 await actor.toggleStatusEffect("acid", { active: false });
-                await actor.unsetFlag("cp2020", "acidDuration");
-                await actor.unsetFlag("cp2020", "acidLocation");
+                await actor.unsetFlag("cyberpunk", "acidDuration");
+                await actor.unsetFlag("cyberpunk", "acidLocation");
             } else {
-                await actor.setFlag("cp2020", "acidDuration", newDuration);
+                await actor.setFlag("cyberpunk", "acidDuration", newDuration);
             }
         }
     }
@@ -450,14 +453,14 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     // Handle timed conditions from microwave (blinded, deafened, shocked)
     for (const conditionId of ["blinded", "deafened", "shocked"]) {
         const flagKey = `${conditionId}Duration`;
-        const duration = actor.getFlag("cp2020", flagKey);
+        const duration = actor.getFlag("cyberpunk", flagKey);
         if (duration && duration > 0) {
             const newDuration = duration - 1;
             if (newDuration <= 0) {
                 await actor.toggleStatusEffect(conditionId, { active: false });
-                await actor.unsetFlag("cp2020", flagKey);
+                await actor.unsetFlag("cyberpunk", flagKey);
             } else {
-                await actor.setFlag("cp2020", flagKey, newDuration);
+                await actor.setFlag("cyberpunk", flagKey, newDuration);
             }
         }
     }

@@ -21,8 +21,8 @@ export class ReloadDialog extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "reload-dialog",
-      classes: ["cp2020", "reload-dialog"],
-      template: "systems/cp2020/templates/dialog/reload.hbs",
+      classes: ["cyberpunk", "reload-dialog"],
+      template: "systems/cyberpunk/templates/dialog/reload.hbs",
       width: 300,
       height: "auto",
       popOut: true,
@@ -267,7 +267,7 @@ export class ReloadDialog extends Application {
       await this.actor.createEmbeddedDocuments("Item", [{
         name: nameParts.join(" "),
         type: "ammo",
-        img: "systems/cp2020/img/items/ammo.svg",
+        img: "systems/cyberpunk/img/items/ammo.svg",
         system: {
           weaponType: ammoWT,
           caliber: weaponCaliber,

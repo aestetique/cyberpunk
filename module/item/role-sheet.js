@@ -16,7 +16,7 @@ export class CyberpunkRoleSheet extends CyberpunkItemSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["cyberpunk", "sheet", "item", "role-sheet"],
-      template: "systems/cp2020/templates/item/role-sheet.hbs",
+      template: "systems/cyberpunk/templates/item/role-sheet.hbs",
       dragDrop: [{ dropSelector: "[data-drop-target]" }]
     });
   }

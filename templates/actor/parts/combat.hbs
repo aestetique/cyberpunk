@@ -3,33 +3,33 @@
     <section class="combat-rolls">
         <div class="flexrow flexwrap fillwidth">
             <div class="field roll-initiative">
-                <label class="fillwidth action">{{CPLocal "Initiative"}}</label>
+                <label class="fillwidth action">{{loc "Initiative"}}</label>
             </div>
             <div class="field">
                 <input class="roll-initiative-modificator" value="{{initiativeMod}}" placeholder="Modifier">
             </div>
             <div class="field stun-save">
-                <label class="fillwidth action">{{CPLocal "StunSave"}}</label>
+                <label class="fillwidth action">{{loc "StunSave"}}</label>
             </div>
             <div class="field">
                 <input class="roll-stun-modificator" value="{{stunSaveMod}}" placeholder="Modifier">
             </div>
             <div class="field death-save">
-                <label class="fillwidth action">{{CPLocal "DeathSave"}}</label>
+                <label class="fillwidth action">{{loc "DeathSave"}}</label>
             </div>
             <div class="field">
                 <input class="roll-death-modificator" value="{{deathSaveMod}}" placeholder="Modifier">
             </div>
             <div class="field condition-toggle">
-                <label class="fillwidth">{{CPLocal "Stabilized"}}</label>
+                <label class="fillwidth">{{loc "Stabilized"}}</label>
                 <input type="checkbox" class="toggle-condition" data-condition="stabilized" {{#if (hasStatus actor "stabilized")}}checked{{/if}}>
             </div>
             <div class="field condition-toggle">
-                <label class="fillwidth">{{CPLocal "FastDraw"}}</label>
+                <label class="fillwidth">{{loc "FastDraw"}}</label>
                 <input type="checkbox" class="toggle-condition" data-condition="fast-draw" {{#if (hasStatus actor "fast-draw")}}checked{{/if}}>
             </div>
             <div class="field condition-toggle">
-                <label class="fillwidth">{{CPLocal "ActionSurge"}}</label>
+                <label class="fillwidth">{{loc "ActionSurge"}}</label>
                 <input type="checkbox" class="toggle-condition" data-condition="action-surge" {{#if (hasStatus actor "action-surge")}}checked{{/if}}>
             </div>
         </div>
@@ -38,12 +38,12 @@
     <section class="armor-section">
         {{!-- TODO: It'd be quite possible to loop through hit locations here, I think. Would work well for other creatures. --}}
         <header>
-            <h2>{{CPLocal "Armor"}}</h2>
+            <h2>{{loc "Armor"}}</h2>
         </header>
 
-        {{> (template "actor/parts/armor-display") hitLocations=system.hitLocations hitLocsName="hitLocations"}}
+        {{> (tpl "actor/parts/armor-display") hitLocations=system.hitLocations hitLocsName="hitLocations"}}
         <div class="field margin-bottom">
-            <label for="system.stats.ref.armorMod">{{CPLocal "Encumbrance"}}</label>
+            <label for="system.stats.ref.armorMod">{{loc "Encumbrance"}}</label>
             <span class="flex-pad"></span>
             <input type="number" name="system.stats.ref.armorMod" value="{{system.stats.ref.armorMod}}" class="number nogrow not-editable" readonly>
         </div>
@@ -55,7 +55,7 @@
                 <label class="name">{{name}}</label>
                 <span class="flex-pad"></span>
                 <span>
-                    <label class="inactive">{{armorSummary system.coverage}}</label>
+                    <label class="inactive">{{coverageSummary system.coverage}}</label>
                 </span>
             </div>
             {{/each}}
@@ -64,7 +64,7 @@
     </section>
     <section class="weapons-list">
         <header>
-            <h2>{{CPLocal "Weapons"}}</h2>
+            <h2>{{loc "Weapons"}}</h2>
         </header>
         {{#each gear.weapons as |weapon|}}
             <div class="fire-weapon field action" data-item-id="{{weapon.id}}">

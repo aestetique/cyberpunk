@@ -1,11 +1,11 @@
-import { makeD10Roll, Multiroll } from "../dice.js";
-import { SortOrders, sortSkills } from "./skill-sort.js";
-import { btmFromBT } from "../lookups.js";
-import { properCase, localize } from "../utils.js"
+import { buildD10Roll, RollBundle } from "../dice.js";
+import { SortModes, sortSkills } from "./skill-sort.js";
+import { bodyTypeModifier } from "../lookups.js";
+import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION } from "../conditions.js"
 
 /**
- * Extend the base Actor document by defining a custom roll data structure which is ideal for the Simple system.
+ * Actor document for Cyberpunk 2020 characters.
  * @extends {Actor}
  */
 export class CyberpunkActor extends Actor {
@@ -17,11 +17,11 @@ export class CyberpunkActor extends Actor {
 
     if (data.type === "character") {
       this.updateSource({
-        img: "systems/cp2020/img/svg/placeholder-character.svg",
-        "prototypeToken.texture.src": "systems/cp2020/img/svg/placeholder-character.svg",
+        img: "systems/cyberpunk/img/svg/placeholder-character.svg",
+        "prototypeToken.texture.src": "systems/cyberpunk/img/svg/placeholder-character.svg",
         "prototypeToken.actorLink": true,
         "prototypeToken.sight.enabled": true,
-        "system.icon": "systems/cp2020/img/svg/placeholder-character.svg",
+        "system.icon": "systems/cyberpunk/img/svg/placeholder-character.svg",
         "system.skillsSortedBy": "Name"
       });
     }
@@ -32,13 +32,11 @@ export class CyberpunkActor extends Actor {
    */
   prepareData() {
     super.prepareData();
-    // Make separate methods for each Actor type (character, npc, etc.) to keep
-    // things organized.
     switch ( this.type ) {
-      // NPCs are exactly the same as characters at the moment, but don't get vision or default actorlink
+      // Both types share the same preparation logic
       case "npc":
       case "character":
-        this._prepareCharacterData(this.system);
+        this._computeDerivedStats(this.system);
         break;
     }
   }
@@ -46,30 +44,13 @@ export class CyberpunkActor extends Actor {
   /**
    * Prepare Character type specific data
    */
-  _prepareCharacterData(system) {
+  _computeDerivedStats(system) {
     const stats = system.stats;
     // Calculate stat totals using base+temp
     for(const stat of Object.values(stats)) {
       stat.total = stat.base + stat.tempMod;
     }
-    // A lookup for translating hit rolls to names of hit locations
-    // I know that for ranges there are better data structures to lookup, but we're using d10s for hit locations, so it's no issue
-    system.hitLocLookup = {};
-    for(const hitLoc in system.hitLocations) {
-      let area = system.hitLocations[hitLoc]
-      area.stoppingPower = 0;
-      let [start, end] = area.location;
-      // Just one die number that'll hit the location
-      if(!end) {
-        system.hitLocLookup[start] = hitLoc;
-      }
-      // A range of die numbers that'll hit the location
-      else {
-        for(let i = start; i <= end; i++) {
-          system.hitLocLookup[i] = hitLoc;
-        }
-      }
-    }
+    system.hitLocLookup = buildHitLocationIndex(system.hitLocations);
     
     // Sort through this now so we don't have to later
     let equippedItems = this.items.contents.filter(item => {
@@ -128,80 +109,26 @@ export class CyberpunkActor extends Actor {
         stats.ref.armorMod -= armorData.encumbrance;
       }
 
-      // While we're looping through armor, might as well modify hit locations' armor
-      // I. Version of the direct addition of armor. In the future, can add it as an additional option in the settings
-      // for(let armorArea in armorData.coverage) {
-      //   let location = system.hitLocations[armorArea];
-      //   if(location !== undefined) {
-      //     armorArea = armorData.coverage[armorArea];
-      //     // Converting both values to numbers before adding
-      //     location.stoppingPower = Number(location.stoppingPower) + Number(armorArea.stoppingPower);
-      //   }
-      // }
-      
-      // II. The version of the addition of armor according to the rule book
-      for(let armorArea in armorData.coverage) {
-        let location = system.hitLocations[armorArea];
-        if(location !== undefined) {
-          let armorCoverage = armorData.coverage[armorArea];
-            let armorMaxSP = Number(armorCoverage.stoppingPower) || 0;
-            let armorAblation = Number(armorCoverage.ablation) || 0;
-            let locationStoppingPower = Number(location.stoppingPower);
-            let armorStoppingPower = Math.max(0, armorMaxSP - armorAblation);
-
-            // If there is no armor on one of the zones, just add armor
-            if(locationStoppingPower === 0 || armorStoppingPower === 0) {
-                location.stoppingPower = locationStoppingPower + armorStoppingPower;
-            } else {
-                // If the armor is already on, we count it according to the modification table
-                let difference = Math.abs(locationStoppingPower - armorStoppingPower);
-                let maxValue = Math.max(locationStoppingPower, armorStoppingPower);
-                let modifier = 0;
-
-                if (difference >= 27) modifier = 0;
-                else if (difference >= 21) modifier = 2;
-                else if (difference >= 15) modifier = 3;
-                else if (difference >= 9) modifier = 3;
-                else if (difference >= 5) modifier = 4;
-                else modifier = 5;
-
-                // Adding the modifier to the highest value
-                location.stoppingPower = maxValue + modifier;
-            }
+      // Layered armor stacking per CP2020 rules
+      for (const armorArea in armorData.coverage) {
+        const location = system.hitLocations[armorArea];
+        if (location !== undefined) {
+          const cov = armorData.coverage[armorArea];
+          const layerSP = Math.max(0, (Number(cov.stoppingPower) || 0) - (Number(cov.ablation) || 0));
+          location.stoppingPower = stackArmorSP(Number(location.stoppingPower), layerSP);
         }
       }
-
     });
 
-    // Add cyberarmor SP to hit locations (same stacking logic as armor)
-    const cyberware = equippedItems.filter(i => i.type === "cyberware" && i.system.isArmor);
-    cyberware.forEach(cyber => {
-      const armorData = cyber.system.armor || {};
-      for (let armorArea in armorData.coverage) {
-        let location = system.hitLocations[armorArea];
+    // Add cyberarmor SP to hit locations (same stacking rules)
+    equippedItems.filter(i => i.type === "cyberware" && i.system.isArmor).forEach(cyber => {
+      const coverage = (cyber.system.armor || {}).coverage || {};
+      for (const armorArea in coverage) {
+        const location = system.hitLocations[armorArea];
         if (location !== undefined) {
-          let armorCoverage = armorData.coverage[armorArea];
-          let armorMaxSP = Number(armorCoverage.stoppingPower) || 0;
-          let armorAblation = Number(armorCoverage.ablation) || 0;
-          let locationStoppingPower = Number(location.stoppingPower);
-          let armorStoppingPower = Math.max(0, armorMaxSP - armorAblation);
-
-          if (locationStoppingPower === 0 || armorStoppingPower === 0) {
-            location.stoppingPower = locationStoppingPower + armorStoppingPower;
-          } else {
-            let difference = Math.abs(locationStoppingPower - armorStoppingPower);
-            let maxValue = Math.max(locationStoppingPower, armorStoppingPower);
-            let modifier = 0;
-
-            if (difference >= 27) modifier = 0;
-            else if (difference >= 21) modifier = 2;
-            else if (difference >= 15) modifier = 3;
-            else if (difference >= 9) modifier = 3;
-            else if (difference >= 5) modifier = 4;
-            else modifier = 5;
-
-            location.stoppingPower = maxValue + modifier;
-          }
+          const cov = coverage[armorArea];
+          const layerSP = Math.max(0, (Number(cov.stoppingPower) || 0) - (Number(cov.ablation) || 0));
+          location.stoppingPower = stackArmorSP(Number(location.stoppingPower), layerSP);
         }
       }
     });
@@ -215,17 +142,15 @@ export class CyberpunkActor extends Actor {
     const body = stats.bt;
     body.carry = body.total * 10;
     body.lift = body.total * 40;
-    body.modifier = btmFromBT(body.total);
+    body.modifier = bodyTypeModifier(body.total);
     system.carryWeight = 0;
     equippedItems.forEach(item => {
       let weight = item.system.weight || 0;
       system.carryWeight += parseFloat(weight);
     });
 
-    // Apply wound effects
-    // Change stat total, but leave a record of the difference in stats.[statName].woundMod
-    // Modifies the very-end-total, idk if this'll need to change in the future
-    let woundState = this.woundState();
+    // Apply wound penalties to stats, tracking the delta in stat.woundMod
+    let woundState = this.getWoundLevel();
     let woundStat = function(stat, totalChange) {
         let newTotal = totalChange(stat.total)
         stat.woundMod = -(stat.total - newTotal);
@@ -293,7 +218,7 @@ export class CyberpunkActor extends Actor {
       const attachedOptions = this.items.filter(i =>
         i.type === 'cyberware' &&
         i.system.isOption &&
-        i.getFlag('cp2020', 'attachedTo') === limb.id
+        i.getFlag('cyberpunk', 'attachedTo') === limb.id
       );
 
       const sdpBonusTotal = attachedOptions.reduce((sum, opt) => {
@@ -400,17 +325,15 @@ export class CyberpunkActor extends Actor {
 
   /**
    *
-   * @param {string} sortOrder The order to sort skills by. Options are in skill-sort.js's SortOrders. "Name" or "Stat". Default "Name".
+   * @param {string} sortOrder The order to sort skills by. Options are in skill-sort.js's SortModes. "Name" or "Stat". Default "Name".
    */
-  sortSkills(sortOrder = "Name") {
+  reorderSkills(sortOrder = "Name") {
     let allSkills = this.itemTypes.skill;
-    sortOrder = sortOrder || Object.keys(SortOrders)[0];
+    sortOrder = sortOrder || Object.keys(SortModes)[0];
     console.log(`Sorting skills by ${sortOrder}`);
-    let sortedView = sortSkills(allSkills, SortOrders[sortOrder]).map(skill => skill.id);
+    let sortedView = sortSkills(allSkills, SortModes[sortOrder]).map(skill => skill.id);
 
-    // Technically UI info, but we don't wanna calc every time we open a sheet so store it in the actor.
     this.update({
-      // Why is it that when storing Item: {data: {data: {innerdata}}}, it comes out as {data: {innerdata}}
       "system.sortedSkillIDs": sortedView,
       "system.skillsSortedBy": sortOrder
     });
@@ -422,7 +345,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Body Type Modifier
    */
   static btm(body) {
-    return btmFromBT(body);
+    return bodyTypeModifier(body);
   }
 
   /**
@@ -446,7 +369,7 @@ export class CyberpunkActor extends Actor {
    * 1 = Light, 2 = Serious, 3 = Critical, 4-10 = Mortal 0-6
    * @returns {number} Wound state from 0 (uninjured) to 10 (Mortal 6)
    */
-  woundState() {
+  getWoundLevel() {
     const damage = this.system.damage;
     if (damage === 0) return 0;
     // Wound slots are 4 wide, so divide by 4, ceil the result, cap at 10
@@ -454,15 +377,15 @@ export class CyberpunkActor extends Actor {
   }
 
 
-  stunThreshold() {
+  getStunThreshold() {
     const body = this.system.stats.bt.total;
-    // +1 as Light has no penalty, but is 1 from woundState()
-    return body - this.woundState() + 1;
+    // +1 as Light has no penalty, but is 1 from getWoundLevel()
+    return body - this.getWoundLevel() + 1;
   }
 
-  deathThreshold() {
+  getDeathThreshold() {
     // The first wound state to penalise is Mortal 1 instead of Serious.
-    return this.stunThreshold() + 3;
+    return this.getStunThreshold() + 3;
   }
 
   /**
@@ -470,8 +393,8 @@ export class CyberpunkActor extends Actor {
    * Removes any existing wound condition and applies the appropriate one.
    * Called automatically when damage changes.
    */
-  async syncWoundCondition() {
-    const state = this.woundState();
+  async updateWoundStatus() {
+    const state = this.getWoundLevel();
     const newConditionId = WOUND_STATE_TO_CONDITION[state] || null;
 
     // Get current wound condition (if any)
@@ -503,11 +426,11 @@ export class CyberpunkActor extends Actor {
 
     // Sync wound condition when damage changes
     if (changed.system?.damage !== undefined) {
-      await this.syncWoundCondition();
+      await this.updateWoundStatus();
     }
   }
 
-  trainedMartials() {
+  getLearnedMartialArts() {
     return this.itemTypes.skill
       .filter(skill => skill.name.startsWith(localize("Martial")))
       .filter(martial => martial.system.level > 0)
@@ -515,7 +438,7 @@ export class CyberpunkActor extends Actor {
   }
 
   // TODO: Make this doable with just skill name
-  static realSkillValue(skill) {
+  static effectiveSkillLevel(skill) {
     // Sometimes we use this to sort raw item data before it becomes a full-fledged item. So we use either system or data, as needed
     if (!skill) return 0;
     const data = skill.system ?? skill;
@@ -524,7 +447,7 @@ export class CyberpunkActor extends Actor {
     return value;
   }
 
-  getSkillVal(skillName) {
+  resolveSkillTotal(skillName) {
     const nameLoc = localize("Skill" + skillName);
     // Localization may return the original key, so we check both options
     const targetName = nameLoc.includes("Skill") ? skillName : nameLoc;
@@ -589,7 +512,7 @@ export class CyberpunkActor extends Actor {
    * @param {boolean} advantage
    * @param {boolean} disadvantage
    */
-  async rollSkill(skillId, extraMod = 0, advantage = false, disadvantage = false) {
+  async performSkillRoll(skillId, extraMod = 0, advantage = false, disadvantage = false) {
     // Handle virtual skills (from equipped chipware)
     if (skillId.startsWith('virtual-')) {
       return this._rollVirtualSkill(skillId, extraMod, advantage, disadvantage);
@@ -640,7 +563,7 @@ export class CyberpunkActor extends Actor {
     // If chipped, use chip value INSTEAD of skill level
     const skillValue = isChipped
       ? chipValue
-      : CyberpunkActor.realSkillValue(skill);
+      : CyberpunkActor.effectiveSkillLevel(skill);
 
     // Calculate skill bonuses from equipped tools, drugs, and cyberware (NOT applied to chipped skills)
     let skillBonus = 0;
@@ -676,7 +599,7 @@ export class CyberpunkActor extends Actor {
       skillBonus || null
     ].filter(Boolean);
 
-    const makeRoll = () => makeD10Roll(parts, this.system);   // d10 + parts
+    const makeRoll = () => buildD10Roll(parts, this.system);   // d10 + parts
 
     // if both are accidentally marked — ignore
     if (advantage && disadvantage) { advantage = disadvantage = false; }
@@ -692,7 +615,7 @@ export class CyberpunkActor extends Actor {
           ? (r1.total >= r2.total ? r1 : r2)   // best
           : (r1.total <= r2.total ? r1 : r2);  // worst
 
-        new Multiroll(skill.name)
+        new RollBundle(skill.name)
           .addRoll(chosen)
           .defaultExecute({ statIcon: skill.system.stat }, this);
       } catch (e) {
@@ -702,7 +625,7 @@ export class CyberpunkActor extends Actor {
     }
 
     // normal roll
-    new Multiroll(skill.name)
+    new RollBundle(skill.name)
       .addRoll(makeRoll())
       .defaultExecute({ statIcon: skill.system.stat }, this);
   }
@@ -754,7 +677,7 @@ export class CyberpunkActor extends Actor {
       fastDrawPenalty || null
     ].filter(Boolean);
 
-    const makeRoll = () => makeD10Roll(rollParts, this.system);
+    const makeRoll = () => buildD10Roll(rollParts, this.system);
 
     // if both are accidentally marked — ignore
     if (advantage && disadvantage) { advantage = disadvantage = false; }
@@ -770,7 +693,7 @@ export class CyberpunkActor extends Actor {
           ? (r1.total >= r2.total ? r1 : r2)
           : (r1.total <= r2.total ? r1 : r2);
 
-        new Multiroll(skillName)
+        new RollBundle(skillName)
           .addRoll(chosen)
           .defaultExecute({ statIcon: stat }, this);
       } catch (e) {
@@ -780,13 +703,13 @@ export class CyberpunkActor extends Actor {
     }
 
     // normal roll
-    new Multiroll(skillName)
+    new RollBundle(skillName)
       .addRoll(makeRoll())
       .defaultExecute({ statIcon: stat }, this);
   }
 
-  rollStat(statName) {
-    let fullStatName = localize(properCase(statName) + "Full");
+  performStatRoll(statName) {
+    let fullStatName = localize(toTitleCase(statName) + "Full");
 
     // Action Surge: -3 penalty on all stat rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
@@ -798,8 +721,8 @@ export class CyberpunkActor extends Actor {
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
 
-    let roll = new Multiroll(fullStatName);
-    roll.addRoll(makeD10Roll(parts, this.system));
+    let roll = new RollBundle(fullStatName);
+    roll.addRoll(buildD10Roll(parts, this.system));
     roll.defaultExecute({ statIcon: statName }, this);
   }
 
@@ -855,7 +778,7 @@ export class CyberpunkActor extends Actor {
     }
 
     const isChipped = chipValue !== null;
-    const skillValue = isChipped ? chipValue : CyberpunkActor.realSkillValue(skill);
+    const skillValue = isChipped ? chipValue : CyberpunkActor.effectiveSkillLevel(skill);
 
     // Calculate skill bonuses from equipped items (NOT for chipped)
     let skillBonus = 0;
@@ -890,7 +813,7 @@ export class CyberpunkActor extends Actor {
       skillBonus || null
     ].filter(Boolean);
 
-    const roll = makeD10Roll(parts, this.system);
+    const roll = buildD10Roll(parts, this.system);
     await roll.evaluate();
 
     // Check for natural 1 on the d10
@@ -902,9 +825,9 @@ export class CyberpunkActor extends Actor {
 
     // Create chat message
     const speaker = ChatMessage.getSpeaker({ actor: this });
-    new Multiroll(skill.name)
+    new RollBundle(skill.name)
       .addRoll(roll)
-      .execute(speaker, "systems/cp2020/templates/chat/skill-check.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: skill.system.stat,
         difficulty: difficulty,
         success: success
@@ -947,7 +870,7 @@ export class CyberpunkActor extends Actor {
       fastDrawPenalty || null
     ].filter(Boolean);
 
-    const roll = makeD10Roll(rollParts, this.system);
+    const roll = buildD10Roll(rollParts, this.system);
     await roll.evaluate();
 
     const d10Result = roll.dice[0]?.results[0]?.result;
@@ -955,9 +878,9 @@ export class CyberpunkActor extends Actor {
     const success = !isNatural1 && roll.total >= difficulty;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
-    new Multiroll(skillName)
+    new RollBundle(skillName)
       .addRoll(roll)
-      .execute(speaker, "systems/cp2020/templates/chat/skill-check.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: stat,
         difficulty: difficulty,
         success: success
@@ -976,7 +899,7 @@ export class CyberpunkActor extends Actor {
    * @param {number} extraMod - Additional modifier (conditions + luck)
    */
   async rollStatCheck(statName, difficulty, extraMod = 0) {
-    const fullStatName = localize(properCase(statName) + "Full");
+    const fullStatName = localize(toTitleCase(statName) + "Full");
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
 
@@ -985,7 +908,7 @@ export class CyberpunkActor extends Actor {
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
     if (extraMod) parts.push(extraMod);
 
-    const roll = makeD10Roll(parts, this.system);
+    const roll = buildD10Roll(parts, this.system);
     await roll.evaluate();
 
     const d10Result = roll.dice[0]?.results[0]?.result;
@@ -993,9 +916,9 @@ export class CyberpunkActor extends Actor {
     const success = !isNatural1 && roll.total >= difficulty;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
-    new Multiroll(fullStatName)
+    new RollBundle(fullStatName)
       .addRoll(roll)
-      .execute(speaker, "systems/cp2020/templates/chat/skill-check.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: statName,
         difficulty: difficulty,
         success: success
@@ -1010,7 +933,7 @@ export class CyberpunkActor extends Actor {
   /*
    * Adds this actor to the current encounter - if there isn't one, this just shows an error - and rolls their initiative
    */
-  async addToCombatAndRollInitiative(modificator, options = {createCombatants: true}) {
+  async enterCombatWithInitiative(modificator, options = {createCombatants: true}) {
     if(!game.combat) {
       ui.notifications.error(localize("NoCombatError"));
       return;
@@ -1044,15 +967,15 @@ export class CyberpunkActor extends Actor {
    * @param {number} modifier - Optional modifier to the roll
    */
   async rollStunSave(modifier = 0) {
-    const threshold = this.stunThreshold();
+    const threshold = this.getStunThreshold();
     const roll = await new Roll(modifier ? `1d10 + ${-modifier}` : "1d10").evaluate();
     const success = roll.total < threshold;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
 
-    new Multiroll(localize("ShockSave"))
+    new RollBundle(localize("ShockSave"))
       .addRoll(roll, { name: localize("Save") })
-      .execute(speaker, "systems/cp2020/templates/chat/save-roll.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/save-roll.hbs", {
         saveType: "shock",
         saveLabel: localize("ShockSave"),
         threshold: threshold,
@@ -1079,15 +1002,15 @@ export class CyberpunkActor extends Actor {
    * @param {number} modifier - Optional modifier to the roll
    */
   async rollPoisonSave(modifier = 0) {
-    const threshold = this.stunThreshold(); // Same threshold as Stun (BT-based)
+    const threshold = this.getStunThreshold(); // Same threshold as Stun (BT-based)
     const roll = await new Roll(modifier ? `1d10 + ${modifier}` : "1d10").evaluate();
     const success = roll.total < threshold;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
 
-    new Multiroll(localize("PoisonSave"))
+    new RollBundle(localize("PoisonSave"))
       .addRoll(roll, { name: localize("Save") })
-      .execute(speaker, "systems/cp2020/templates/chat/save-roll.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/save-roll.hbs", {
         saveType: "poison",
         saveLabel: localize("PoisonSave"),
         threshold: threshold,
@@ -1114,15 +1037,15 @@ export class CyberpunkActor extends Actor {
    * @param {number} modifier - Optional modifier to the roll
    */
   async rollDeathSave(modifier = 0) {
-    const threshold = this.deathThreshold();
+    const threshold = this.getDeathThreshold();
     const roll = await new Roll(modifier ? `1d10 + ${modifier}` : "1d10").evaluate();
     const success = roll.total < threshold;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
 
-    new Multiroll(localize("DeathSave"))
+    new RollBundle(localize("DeathSave"))
       .addRoll(roll, { name: localize("Save") })
-      .execute(speaker, "systems/cp2020/templates/chat/save-roll.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/save-roll.hbs", {
         saveType: "death",
         saveLabel: localize("DeathSave"),
         threshold: threshold,
@@ -1196,9 +1119,9 @@ export class CyberpunkActor extends Actor {
     const effectiveLuck = this.system.stats.luck?.effective ?? this.system.stats.luck?.total ?? 0;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
-    new Multiroll(localize("Fumble"))
+    new RollBundle(localize("Fumble"))
       .addRoll(roll, { name: "1d10" })
-      .execute(speaker, "systems/cp2020/templates/chat/fumble.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/fumble.hbs", {
         fumbleHint: fumbleHint,
         actorId: this.id,
         severity: severity,
@@ -1211,15 +1134,15 @@ export class CyberpunkActor extends Actor {
    * Roll Initiative and display in chat
    * Uses REF stat + 1d10
    */
-  async rollInitiativeChat() {
+  async performInitiativeRoll() {
     const ref = this.system.stats.ref.total;
     const roll = await new Roll(`1d10 + ${ref}`).evaluate();
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
 
-    new Multiroll(localize("InitiativeRoll"))
+    new RollBundle(localize("InitiativeRoll"))
       .addRoll(roll, { name: "1d10" })
-      .execute(speaker, "systems/cp2020/templates/chat/initiative.hbs", {
+      .execute(speaker, "systems/cyberpunk/templates/chat/initiative.hbs", {
         refValue: ref
       });
 

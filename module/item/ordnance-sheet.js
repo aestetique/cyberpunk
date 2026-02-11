@@ -17,7 +17,7 @@ export class CyberpunkOrdnanceSheet extends CyberpunkItemSheet {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["cyberpunk", "sheet", "item", "ordnance-sheet"],
-            template: "systems/cp2020/templates/item/ordnance-sheet.hbs"
+            template: "systems/cyberpunk/templates/item/ordnance-sheet.hbs"
         });
     }
 

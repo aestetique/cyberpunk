@@ -1,10 +1,10 @@
-import { Multiroll } from "./dice.js";
+import { RollBundle } from "./dice.js";
 import { localize } from "./utils.js";
 import { InitiativeRollDialog } from "./dialog/initiative-roll-dialog.js";
 
 /**
  * Extend the base Combat to customize initiative roll rendering
- * Uses the Multiroll system with initiative.hbs template for styled chat messages
+ * Uses the RollBundle system with initiative.hbs template for styled chat messages
  */
 export class CyberpunkCombat extends Combat {
 
@@ -53,18 +53,18 @@ export class CyberpunkCombat extends Combat {
             // Store the initiative value
             updates.push({_id: combatant.id, initiative: roll.total});
 
-            // Create chat message using our Multiroll system
+            // Create chat message using our RollBundle system
             const speaker = ChatMessage.getSpeaker({
                 actor: combatant.actor,
                 token: combatant.token,
                 alias: combatant.name
             });
 
-            const multiroll = new Multiroll(localize("InitiativeRoll"));
+            const multiroll = new RollBundle(localize("InitiativeRoll"));
             multiroll.addRoll(roll, { name: "1d10" });
 
             // Execute with our custom template (this creates the chat message)
-            await multiroll.execute(speaker, "systems/cp2020/templates/chat/initiative.hbs", {
+            await multiroll.execute(speaker, "systems/cyberpunk/templates/chat/initiative.hbs", {
                 refValue: combatant.actor.system?.stats?.ref?.total ?? 0
             });
         }

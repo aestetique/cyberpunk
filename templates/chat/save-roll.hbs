@@ -1,6 +1,6 @@
 <div class="cyberpunk-card cyberpunk-card--save cyberpunk-card--{{saveType}}">
     {{!-- Section Bar: Save Type (SHOCK SAVE or DEATH SAVE) --}}
-    {{> (CPTemplate "chat/partials/section-bar.hbs") icon=saveType label=saveLabel}}
+    {{> (sysPath "chat/partials/section-bar.hbs") icon=saveType label=saveLabel}}
 
     {{!-- Collapsible Roll Container --}}
     {{#each rolls as |rollData|}}
@@ -26,10 +26,10 @@
                             <span class="roll-details__value-text">{{rollData.roll.total}}</span>
                         </span>
                     </div>
-                    {{#if rollData.diceInfo}}
+                    {{#if rollData.dice}}
                     <div class="roll-details__row roll-details__row--dice">
-                        {{#each rollData.diceInfo as |die|}}
-                        {{#each die.subrolls as |subroll|}}
+                        {{#each rollData.dice as |die|}}
+                        {{#each die.results as |subroll|}}
                         <div class="dice-badge dice-badge--d10 save-inverted {{subroll.classes}}">
                             <span class="dice-badge__value">{{{subroll.result}}}</span>
                         </div>
@@ -44,9 +44,9 @@
         {{!-- Result Row (always visible, clickable to expand) --}}
         <div class="result-row result-row--{{#if ../success}}success{{else}}failure{{/if}} roll-toggle">
             {{#if ../success}}
-            <span class="result-row__icon"><img src="systems/cp2020/img/chat/success.png" alt="Success"></span>
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/success.png" alt="Success"></span>
             {{else}}
-            <span class="result-row__icon"><img src="systems/cp2020/img/chat/failure.png" alt="Failure"></span>
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/failure.png" alt="Failure"></span>
             {{/if}}
             <span class="result-row__value">{{rollData.roll.total}}</span>
             <span class="result-row__target">

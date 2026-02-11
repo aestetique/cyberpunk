@@ -1,10 +1,8 @@
-import { Multiroll } from "./dice.js";
+import { RollBundle } from "./dice.js";
 import { localize } from "./utils.js";
 
 /**
- * Extend the base ChatMessage to customize rendering for Cyberpunk 2020
- * Based on the D&D5e approach of replacing the message header
- * Updated for Foundry V13 API (renderHTML instead of getHTML)
+ * Custom ChatMessage rendering for the Cyberpunk system.
  */
 export class CyberpunkChatMessage extends ChatMessage {
 
@@ -20,7 +18,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         this._activateListeners(html);
 
         // Call system hook for further customization by modules
-        Hooks.callAll("cp2020.renderChatMessageHTML", this, html);
+        Hooks.callAll("cyberpunk.renderChatMessageHTML", this, html);
 
         return html;
     }
@@ -28,7 +26,7 @@ export class CyberpunkChatMessage extends ChatMessage {
     /* -------------------------------------------- */
 
     /**
-     * Get the actor associated with this message (D&D5e style)
+     * Get the actor associated with this message.
      * @returns {Actor|null}
      */
     getAssociatedActor() {
@@ -79,7 +77,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                         }
                     }
                 } catch (e) {
-                    console.warn("CP2020: Could not format Simple Calendar timestamp", e);
+                    console.warn("Cyberpunk: Could not format Simple Calendar timestamp", e);
                 }
             }
         }
@@ -133,7 +131,7 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /**
-     * Enrich the chat card with custom header (D&D5e style)
+     * Enrich the chat card with a custom header.
      * @param {HTMLElement} html - The rendered message HTML element
      * @private
      */
@@ -146,12 +144,12 @@ export class CyberpunkChatMessage extends ChatMessage {
 
         // Build avatar element
         const avatar = document.createElement("div");
-        avatar.classList.add("cp2020-avatar");
+        avatar.classList.add("cyberpunk-avatar");
         const avatarImg = document.createElement("img");
 
         // Get best image: actor portrait > user avatar > placeholder
         // Always use actor portrait, never token image
-        let img = "systems/cp2020/img/placeholder-actor.svg";
+        let img = "systems/cyberpunk/img/placeholder-actor.svg";
         if (actor?.img && actor.img !== "icons/svg/mystery-man.svg") {
             img = actor.img;
         } else if (this.author?.avatar) {
@@ -174,20 +172,20 @@ export class CyberpunkChatMessage extends ChatMessage {
 
         // Build info container
         const info = document.createElement("div");
-        info.classList.add("cp2020-info");
+        info.classList.add("cyberpunk-info");
 
         // Top row: Player name + timestamp + delete
         const metaRow = document.createElement("div");
-        metaRow.classList.add("cp2020-meta-row");
+        metaRow.classList.add("cyberpunk-meta-row");
 
         // Player name
         const playerName = document.createElement("span");
-        playerName.classList.add("cp2020-player-name");
+        playerName.classList.add("cyberpunk-player-name");
         playerName.textContent = this.author?.name || "Player";
 
         // Timestamp - use our helper that checks Simple Calendar first
         const timestamp = document.createElement("span");
-        timestamp.classList.add("cp2020-timestamp");
+        timestamp.classList.add("cyberpunk-timestamp");
         timestamp.textContent = this._getTimestampDisplay();
 
         metaRow.appendChild(playerName);
@@ -197,7 +195,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         const canDelete = game.user.isGM || this.isAuthor;
         if (canDelete) {
             const deleteBtn = document.createElement("a");
-            deleteBtn.classList.add("cp2020-delete");
+            deleteBtn.classList.add("cyberpunk-delete");
             deleteBtn.dataset.action = "delete";
             deleteBtn.dataset.tooltip = "Delete";
             deleteBtn.setAttribute("aria-label", "Delete");
@@ -211,10 +209,10 @@ export class CyberpunkChatMessage extends ChatMessage {
 
         // Bottom row: Actor name
         const actorRow = document.createElement("div");
-        actorRow.classList.add("cp2020-actor-row");
+        actorRow.classList.add("cyberpunk-actor-row");
 
         const actorName = document.createElement("span");
-        actorName.classList.add("cp2020-actor-name");
+        actorName.classList.add("cyberpunk-actor-name");
         // Use our helper to get the best actor name
         actorName.textContent = this._getActorDisplayName();
 
@@ -225,10 +223,10 @@ export class CyberpunkChatMessage extends ChatMessage {
 
         // Replace header content
         header.replaceChildren(avatar, info);
-        header.classList.add("cp2020-header");
+        header.classList.add("cyberpunk-header");
 
         // Style the overall message
-        html.classList.add("cp2020-message");
+        html.classList.add("cyberpunk-message");
     }
 
     /* -------------------------------------------- */
@@ -240,7 +238,7 @@ export class CyberpunkChatMessage extends ChatMessage {
      */
     _activateListeners(html) {
         // Delete button
-        html.querySelector(".cp2020-delete[data-action='delete']")?.addEventListener("click", async (event) => {
+        html.querySelector(".cyberpunk-delete[data-action='delete']")?.addEventListener("click", async (event) => {
             event.preventDefault();
             event.stopPropagation();
             await this.delete();
@@ -252,7 +250,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         });
 
         // Portrait interactions
-        const avatar = html.querySelector(".cp2020-avatar");
+        const avatar = html.querySelector(".cyberpunk-avatar");
         if (avatar) {
             // Click to open actor sheet
             avatar.addEventListener("click", this._onPortraitClick.bind(this));
@@ -273,7 +271,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             const applyBtn = targetSelector.querySelector(".apply-damage-btn");
             if (applyBtn) {
                 // Check if damage was already applied (persisted in flags)
-                if (this.getFlag("cp2020", "damageApplied")) {
+                if (this.getFlag("cyberpunk", "damageApplied")) {
                     applyBtn.textContent = "APPLIED";
                     applyBtn.disabled = true;
 
@@ -288,12 +286,12 @@ export class CyberpunkChatMessage extends ChatMessage {
             }
 
             // Initialize target info based on current mode (only if not already applied)
-            if (!this.getFlag("cp2020", "damageApplied")) {
+            if (!this.getFlag("cyberpunk", "damageApplied")) {
                 this._updateTargetInfo(html, "targeted");
             }
 
             // Subscribe to target/selection changes for reactive updates
-            Hooks.on("cp2020.targetChanged", () => {
+            Hooks.on("cyberpunk.targetChanged", () => {
                 // Check if this chat message is still in the DOM
                 if (!document.body.contains(html)) return;
                 const activeTab = html.querySelector(".target-selector__tab--active");
@@ -302,7 +300,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                 }
             });
 
-            Hooks.on("cp2020.selectionChanged", () => {
+            Hooks.on("cyberpunk.selectionChanged", () => {
                 // Check if this chat message is still in the DOM
                 if (!document.body.contains(html)) return;
                 const activeTab = html.querySelector(".target-selector__tab--active");
@@ -326,7 +324,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             const rollLuckBtn = fumbleCard.querySelector(".fumble-roll-luck-btn:not(.fumble-roll-luck-btn--disabled)");
             if (rollLuckBtn) {
                 // Check if luck was already rolled (persisted in flags)
-                if (this.getFlag("cp2020", "fumbleLuckRolled")) {
+                if (this.getFlag("cyberpunk", "fumbleLuckRolled")) {
                     this._restoreFumbleLuckResult(html, fumbleCard);
                 } else {
                     rollLuckBtn.addEventListener("click", (event) => this._onFumbleRollLuck(event, html, fumbleCard));
@@ -771,7 +769,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                     modifiedDamage = Math.floor(modifiedDamage / 2);
                 }
 
-                // HEAD DOUBLING: Double damage to head (CP2020 rule)
+                // HEAD DOUBLING: Double damage to head (Cyberpunk rule)
                 // Applied after armor reduction but before BTM
                 const isHeadHit = location === 'Head';
                 const damageBeforeHeadDouble = modifiedDamage;
@@ -958,7 +956,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                     // Cyberlimb destroyed - delete it and attached options
                     const attachedOptions = actor.items.filter(i =>
                         i.type === 'cyberware' &&
-                        i.getFlag('cp2020', 'attachedTo') === cyberlimb.id
+                        i.getFlag('cyberpunk', 'attachedTo') === cyberlimb.id
                     );
 
                     // Delete attached options first
@@ -992,7 +990,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             if (woundDamage <= 0 && cyberlimbDamage <= 0) continue;
 
             // Check wound state before update
-            const previousWoundState = actor.woundState();
+            const previousWoundState = actor.getWoundLevel();
 
             if (woundDamage > 0) {
                 // Get current damage and add new wound damage
@@ -1056,7 +1054,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             }
 
             // Get new wound state
-            const newWoundState = actor.woundState();
+            const newWoundState = actor.getWoundLevel();
 
             // Remove Stabilized if actor takes any damage (wound or cyberlimb)
             if ((woundDamage > 0 || cyberlimbDamage > 0) && actor.statuses.has("stabilized")) {
@@ -1109,7 +1107,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         if (content) content.style.display = "none";
 
         // Persist the applied state in message flags
-        await this.setFlag("cp2020", "damageApplied", true);
+        await this.setFlag("cyberpunk", "damageApplied", true);
     }
 
     /**
@@ -1158,7 +1156,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                 await actor.toggleStatusEffect("acid", { active: true });
                 await this._setConditionDuration(actor, "acid", 3);
                 // Store hit location for SP reduction
-                await actor.setFlag("cp2020", "acidLocation", hitLocation);
+                await actor.setFlag("cyberpunk", "acidLocation", hitLocation);
                 break;
 
             case "microwave":
@@ -1185,20 +1183,20 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @private
      */
     async _rollEffectSave(actor, saveType, conditionId) {
-        const threshold = actor.stunThreshold();
+        const threshold = actor.getStunThreshold();
         const roll = await new Roll("1d10").evaluate();
         const success = roll.total < threshold;
 
-        // Create chat message for save using Multiroll (same pattern as actor.js)
+        // Create chat message for save using RollBundle (same pattern as actor.js)
         const saveLabel = saveType === "poison"
             ? localize("PoisonSave")
             : localize("ShockSave");
 
         const speaker = ChatMessage.getSpeaker({ actor: actor });
 
-        new Multiroll(saveLabel)
+        new RollBundle(saveLabel)
             .addRoll(roll, { name: localize("Save") })
-            .execute(speaker, "systems/cp2020/templates/chat/save-roll.hbs", {
+            .execute(speaker, "systems/cyberpunk/templates/chat/save-roll.hbs", {
                 saveType: saveType,
                 saveLabel: saveLabel,
                 threshold: threshold,
@@ -1220,7 +1218,7 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @private
      */
     async _setConditionDuration(actor, conditionId, turns) {
-        await actor.setFlag("cp2020", `${conditionId}Duration`, turns);
+        await actor.setFlag("cyberpunk", `${conditionId}Duration`, turns);
     }
 
     /**
@@ -1328,7 +1326,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         const speaker = ChatMessage.getSpeaker({ actor: actor });
         const html = `<div class="cyberpunk-card">
             <div class="section-bar">
-                <span class="section-bar__icon"><img src="systems/cp2020/img/chat/microwave.svg" alt=""></span>
+                <span class="section-bar__icon"><img src="systems/cyberpunk/img/chat/microwave.svg" alt=""></span>
                 <span class="section-bar__label">${game.i18n.localize("CYBERPUNK.MicrowaveEffect")}</span>
             </div>
             <div class="microwave-result">
@@ -1398,8 +1396,8 @@ export class CyberpunkChatMessage extends ChatMessage {
         });
 
         // Persist the result in message flags for reload
-        await this.setFlag("cp2020", "fumbleLuckRolled", true);
-        await this.setFlag("cp2020", "fumbleLuckResult", {
+        await this.setFlag("cyberpunk", "fumbleLuckRolled", true);
+        await this.setFlag("cyberpunk", "fumbleLuckResult", {
             rollResult,
             effectiveLuck,
             success,
@@ -1420,8 +1418,8 @@ export class CyberpunkChatMessage extends ChatMessage {
         const successClass = success ? "success" : "failure";
         const badgeClass = success ? "save-success" : "save-failure";
         const iconSrc = success
-            ? "systems/cp2020/img/chat/success.png"
-            : "systems/cp2020/img/chat/failure.png";
+            ? "systems/cyberpunk/img/chat/success.png"
+            : "systems/cyberpunk/img/chat/failure.png";
         const iconAlt = success ? "Success" : "Failure";
 
         return `
@@ -1502,7 +1500,7 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @private
      */
     _restoreFumbleLuckResult(html, fumbleCard) {
-        const resultData = this.getFlag("cp2020", "fumbleLuckResult");
+        const resultData = this.getFlag("cyberpunk", "fumbleLuckResult");
         if (!resultData) return;
 
         const { rollResult, effectiveLuck, success, newHint } = resultData;

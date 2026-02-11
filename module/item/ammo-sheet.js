@@ -11,7 +11,7 @@ export class CyberpunkAmmoSheet extends CyberpunkItemSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["cyberpunk", "sheet", "item", "ammo-sheet"],
-      template: "systems/cp2020/templates/item/ammo-sheet.hbs"
+      template: "systems/cyberpunk/templates/item/ammo-sheet.hbs"
     });
   }
 

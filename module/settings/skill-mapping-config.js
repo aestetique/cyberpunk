@@ -37,7 +37,7 @@ export class SkillMappingConfig extends HandlebarsApplicationMixin(ApplicationV2
 
   static PARTS = {
     form: {
-      template: "systems/cp2020/templates/settings/skill-mapping-config.hbs",
+      template: "systems/cyberpunk/templates/settings/skill-mapping-config.hbs",
       scrollable: [".scrollable"]
     },
     footer: {
@@ -46,7 +46,7 @@ export class SkillMappingConfig extends HandlebarsApplicationMixin(ApplicationV2
   };
 
   async _prepareContext(options) {
-    const mappings = game.settings.get("cp2020", "skillMappings");
+    const mappings = game.settings.get("cyberpunk", "skillMappings");
 
     const defaults = DEFAULT_SKILL_MAPPINGS;
     const categories = Object.entries(mappings).map(([key, category]) => {
@@ -77,12 +77,12 @@ export class SkillMappingConfig extends HandlebarsApplicationMixin(ApplicationV2
     const skillIndex = Number(target.dataset.index);
 
     const mappings = foundry.utils.deepClone(
-      game.settings.get("cp2020", "skillMappings")
+      game.settings.get("cyberpunk", "skillMappings")
     );
 
     if (mappings[categoryKey]?.skills) {
       mappings[categoryKey].skills.splice(skillIndex, 1);
-      await game.settings.set("cp2020", "skillMappings", mappings);
+      await game.settings.set("cyberpunk", "skillMappings", mappings);
       this._scrollTop = this.element.querySelector(".scrollable")?.scrollTop || 0;
       this.render();
     }
@@ -96,7 +96,7 @@ export class SkillMappingConfig extends HandlebarsApplicationMixin(ApplicationV2
     });
 
     if (confirmed) {
-      await game.settings.set("cp2020", "skillMappings",
+      await game.settings.set("cyberpunk", "skillMappings",
         foundry.utils.deepClone(DEFAULT_SKILL_MAPPINGS)
       );
       this.render();
@@ -129,7 +129,7 @@ export class SkillMappingConfig extends HandlebarsApplicationMixin(ApplicationV2
     }
 
     const mappings = foundry.utils.deepClone(
-      game.settings.get("cp2020", "skillMappings")
+      game.settings.get("cyberpunk", "skillMappings")
     );
     const category = mappings[categoryKey];
     if (!category) return;
@@ -151,7 +151,7 @@ export class SkillMappingConfig extends HandlebarsApplicationMixin(ApplicationV2
     } else {
       category.skills.push({ name: item.name, uuid: item.uuid });
     }
-    await game.settings.set("cp2020", "skillMappings", mappings);
+    await game.settings.set("cyberpunk", "skillMappings", mappings);
     this._scrollTop = this.element.querySelector(".scrollable")?.scrollTop || 0;
     this.render();
 

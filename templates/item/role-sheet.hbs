@@ -2,7 +2,7 @@
   {{!-- Header (38px) --}}
   <header class="sheet-header">
     <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
-      <img src="systems/cp2020/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
+      <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
     </button>
 
     <span class="header-name">{{item.name}}</span>
@@ -29,7 +29,7 @@
         <input type="text" class="item-name" name="name" value="{{item.name}}" {{#if isLocked}}readonly{{/if}}>
         <div class="item-category">
           <div class="category-icon">
-            <img src="systems/cp2020/img/ui/badge-role.svg" alt="">
+            <img src="systems/cyberpunk/img/ui/badge-role.svg" alt="">
           </div>
           <span class="category-label">Role</span>
         </div>
@@ -38,10 +38,10 @@
 
     {{!-- Tabs Line --}}
     <div class="tabs-line">
-      <a class="tab-header {{#if (equals activeTab 'description')}}active{{/if}}" data-tab="description">
+      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-tab="description">
         <span class="tab-text">Description</span>
       </a>
-      <a class="tab-header {{#if (equals activeTab 'skills')}}active{{/if}}" data-tab="skills">
+      <a class="tab-header {{#if (eq activeTab 'skills')}}active{{/if}}" data-tab="skills">
         <span class="tab-text">Skills</span>
       </a>
     </div>
@@ -51,7 +51,7 @@
 
     {{!-- Tab Content --}}
     <div class="tab-content">
-      {{#if (equals activeTab 'description')}}
+      {{#if (eq activeTab 'description')}}
         {{!-- Description Tab --}}
         {{!-- Flavour Text --}}
         <div class="flavour-section">
@@ -77,7 +77,7 @@
               <span class="skill-name" data-uuid="{{system.specialSkill.uuid}}">{{system.specialSkill.name}}</span>
               {{#unless isLocked}}
                 <button type="button" class="remove-special-skill" title="Remove Skill">
-                  <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Remove">
+                  <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
                 </button>
               {{/unless}}
             </div>
@@ -98,7 +98,7 @@
                   <span class="skill-name" data-uuid="{{skill.uuid}}">{{skill.name}}</span>
                   {{#unless ../isLocked}}
                     <button type="button" class="remove-career-skill" data-index="{{index}}" title="Remove Skill">
-                      <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Remove">
+                      <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
                     </button>
                   {{/unless}}
                 </div>

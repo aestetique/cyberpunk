@@ -4,11 +4,11 @@
     <div class="wound-state">
         <div class="wound-state-label">{{stateName}}</div>
         <div class="damageholder">
-            {{!-- damageBoxes gives context. WoundNo is which wound, classes dictate which are filled and which have left/right borders --}}
-            {{#damageBoxes stateNo ../system.damage}}
+            {{!-- woundBoxes gives context. WoundNo is which wound, classes dictate which are filled and which have left/right borders --}}
+            {{#woundBoxes stateNo ../system.damage}}
                 {{!-- span instead of radio, because radio doesn't allow clicking of current wound to toggle --}}
                 <span data-damage={{woundNo}} class="damage {{classes}}"></span>
-            {{/damageBoxes}}
+            {{/woundBoxes}}
         </div>
     </div>
     {{/each}}

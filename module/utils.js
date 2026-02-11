@@ -1,37 +1,40 @@
-import { defaultAreaLookup, defaultHitLocations } from "./lookups.js"
-// Utility methods that don't really belong anywhere else
+import { areaLookupTable, hitLocationDefaults } from "./lookups.js"
 
-export function properCase(str) {
-    return str.replace(
-        /\w\S*/g,
-        function(txt) {
-            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-        }
-    );
-};
+const I18N_PREFIX = "CYBERPUNK.";
 
-export function replaceIn(replaceIn, replaceWith) {
-    return replaceIn.replace("[VAR]", replaceWith);
+// --- Text helpers ---
+
+export function toTitleCase(text) {
+    return text.split(/\s+/)
+        .map(word => word.length ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word)
+        .join(" ");
 }
+
+export function interpolate(template, value) {
+    return template.replace("[VAR]", value);
+}
+
+// --- Localization ---
 
 export function localize(key, data = {}) {
-  return game.i18n.format("CYBERPUNK." + key, data);
-}
-export function tryLocalize(str, defaultResult=str) {
-    let key = "CYBERPUNK." + str;
-    if(!game.i18n.has(key))
-        return defaultResult;
-    else
-        return game.i18n.localize(key);
-}
-export function localizeParam(str, params) {
-    return game.i18n.format("CYBERPUNK."+ str, params);
+    return game.i18n.format(I18N_PREFIX + key, data);
 }
 
-export function shortLocalize(str) {
-    let makeShort = !!game.i18n.has("CYBERPUNK." + str + "Short");
-    return tryLocalize(makeShort ? str + "Short" : str);
+export function safeLocalize(key, fallback = key) {
+    const fullKey = I18N_PREFIX + key;
+    return game.i18n.has(fullKey) ? game.i18n.localize(fullKey) : fallback;
 }
+
+export function formatLocale(key, data) {
+    return game.i18n.format(I18N_PREFIX + key, data);
+}
+
+export function localizeShort(key) {
+    const shortKey = key + "Short";
+    return game.i18n.has(I18N_PREFIX + shortKey) ? safeLocalize(shortKey) : safeLocalize(key);
+}
+
+// --- UI helpers ---
 
 // Scrollable tab beautifying
 let resizeObserver = null;
@@ -58,12 +61,8 @@ function update() {
     });
 }
 
-/**
- * 
- * @param {CyberpunkActor} The actor you're targeting a location on
- * @param {*} targetArea If you're aiming at a specific area, this is the NAME of that area - eg "Head"
- * @returns {*} {roll: The rolled diceroll when aiming, areaHit: where actually hit}
- */
+// --- Hit location rolling ---
+
 const locationKeyMap = {
     'LeftArm': 'lArm', 'RightArm': 'rArm',
     'LeftLeg': 'lLeg', 'RightLeg': 'rLeg',
@@ -75,59 +74,85 @@ export async function rollLocation(targetActor, targetArea) {
         // Normalize display names (LeftArm, RightArm, etc.) to data keys (lArm, rArm, etc.)
         const normalizedArea = locationKeyMap[targetArea] || targetArea;
         // Area name to number lookup
-        const hitLocs = (!!targetActor) ? targetActor.hitLocations : defaultHitLocations();
-        const targetNum = hitLocs[normalizedArea].location[0];
-        let roll = await new Roll(`${targetNum}`).evaluate();
+        const locations = (!!targetActor) ? targetActor.hitLocations : hitLocationDefaults();
+        const locationIndex = locations[normalizedArea].location[0];
+        let roll = await new Roll(`${locationIndex}`).evaluate();
         return {
             roll: roll,
             areaHit: normalizedArea
         };
     }
     // Number to area name lookup
-    let hitAreaLookup = (!!targetActor && !!targetActor.hitLocLookup) ? targetActor.hitLocLookup : defaultAreaLookup;
+    let areaLookup = (!!targetActor && !!targetActor.hitLocLookup) ? targetActor.hitLocLookup : areaLookupTable;
 
     let roll = await new Roll("1d10").evaluate();
     return {
         roll: roll,
-        areaHit: hitAreaLookup[roll.total]
+        areaHit: areaLookup[roll.total]
     };
 }
 
-export function deepLookup(startObject, path) {
-    let current = startObject;
-    for (const segment of path.split(".")) {
-        if (current == null) return undefined;
-        current = current[segment];
-    }
-    return current;
+// --- Object path utilities ---
+
+export function getByPath(obj, path) {
+    return path.split(".").reduce((node, part) => node?.[part], obj);
 }
 
-// Like deep-lookup, but... setting instead
-export function deepSet(startObject, path, value, overwrite=true) {
-    let current = startObject;
-    let pathArray = path.split(".");
-    let lastPath = pathArray.pop();
-    pathArray.forEach(segment => {
-        let alreadyThere = current[segment];
-        if(alreadyThere === undefined) {
-            current[segment] = {};
-        }
-        current = current[segment];
-    });
-    let alreadyThere = current[lastPath];
-    if(alreadyThere === undefined || overwrite) {
-        current[lastPath] = value;
+export function setByPath(obj, path, value, force = true) {
+    const parts = path.split(".");
+    const lastKey = parts.pop();
+    const target = parts.reduce((node, part) => {
+        if (node[part] === undefined) node[part] = {};
+        return node[part];
+    }, obj);
+    if (target[lastKey] === undefined || force) {
+        target[lastKey] = value;
     }
-
-    return startObject;
+    return obj;
 }
 
-// Clamp x to be between min and max inclusive
 export function clamp(x, min, max) {
-    return Math.min(Math.max(x, min), max);
+    return x < min ? min : x > max ? max : x;
 }
 
-export async function getDefaultSkills() {
-    // Compendiums removed - skills should be added manually or from local world items
-    return [];
+// --- Armor SP stacking ---
+
+// Layered armor modifier table (CP2020 rules)
+const LAYER_BONUS = [[27, 0], [21, 2], [15, 3], [9, 3], [5, 4], [0, 5]];
+
+/**
+ * Stack two SP values using the CP2020 layered armor rules.
+ * @param {number} existingSP - Current SP on the location
+ * @param {number} incomingSP - SP of the new armor layer
+ * @returns {number} Combined SP value
+ */
+export function stackArmorSP(existingSP, incomingSP) {
+    if (existingSP === 0 || incomingSP === 0) return existingSP + incomingSP;
+    const diff = Math.abs(existingSP - incomingSP);
+    const bonus = LAYER_BONUS.find(([threshold]) => diff >= threshold)?.[1] ?? 5;
+    return Math.max(existingSP, incomingSP) + bonus;
+}
+
+// --- Hit location index building ---
+
+/**
+ * Build a d10-roll → location-key lookup from the hit locations data.
+ * Also resets stoppingPower to 0 on each location.
+ * @param {Object} hitLocations - The actor's hitLocations data
+ * @returns {Object} Map of roll result → location key
+ */
+export function buildHitLocationIndex(hitLocations) {
+    const lookup = {};
+    for (const [key, area] of Object.entries(hitLocations)) {
+        area.stoppingPower = 0;
+        const [start, end] = area.location;
+        if (!end) {
+            lookup[start] = key;
+        } else {
+            for (let i = start; i <= end; i++) {
+                lookup[i] = key;
+            }
+        }
+    }
+    return lookup;
 }

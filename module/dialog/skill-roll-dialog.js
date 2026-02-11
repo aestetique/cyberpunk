@@ -48,8 +48,8 @@ export class SkillRollDialog extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "skill-roll-dialog",
-      classes: ["cp2020", "skill-roll-dialog"],
-      template: "systems/cp2020/templates/dialog/skill-roll.hbs",
+      classes: ["cyberpunk", "skill-roll-dialog"],
+      template: "systems/cyberpunk/templates/dialog/skill-roll.hbs",
       width: 300,
       height: "auto",
       popOut: true,
@@ -187,9 +187,9 @@ export class SkillRollDialog extends Application {
 
     // Swap icons based on disabled state
     html.find('.luck-minus-btn img').attr('src',
-      `systems/cp2020/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+      `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
     html.find('.luck-plus-btn img').attr('src',
-      `systems/cp2020/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+      `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
   /**

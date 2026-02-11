@@ -2,7 +2,7 @@
   {{!-- Header (38px) --}}
   <header class="sheet-header">
     <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
-      <img src="systems/cp2020/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
+      <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
     </button>
 
     <span class="header-name">{{item.name}}</span>
@@ -29,7 +29,7 @@
         <input type="text" class="item-name" name="name" value="{{item.name}}" {{#if isLocked}}readonly{{/if}}>
         <div class="item-category">
           <div class="category-icon">
-            <img src="systems/cp2020/img/ui/badge-program.svg" alt="">
+            <img src="systems/cyberpunk/img/ui/badge-program.svg" alt="">
           </div>
           <span class="category-label">{{localize "CYBERPUNK.Program"}}</span>
         </div>
@@ -45,7 +45,7 @@
             <input type="number" class="stat-value" name="system.cost" value="{{system.cost}}" step="0.01">
           {{/if}}
           <div class="stat-icon">
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="Price">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="Price">
           </div>
         </div>
 
@@ -57,7 +57,7 @@
             <input type="number" class="stat-value" name="system.weight" value="{{system.weight}}" step="0.01">
           {{/if}}
           <div class="stat-icon">
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="Weight">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="Weight">
           </div>
         </div>
 
@@ -73,12 +73,12 @@
                 {{/each}}
               </select>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{/if}}
           <div class="stat-icon">
-            <img src="systems/cp2020/img/ui/badge-rarity.svg" alt="Availability">
+            <img src="systems/cyberpunk/img/ui/badge-rarity.svg" alt="Availability">
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@
             <div class="dropdown">
               <span class="dropdown-text">{{selectedProgramClassLabel}}</span>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{else}}
@@ -108,7 +108,7 @@
                 {{/each}}
               </select>
               <div class="dropdown-chevron">
-                <img src="systems/cp2020/img/ui/icon-down.svg" alt="">
+                <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
               </div>
             </div>
           {{/if}}

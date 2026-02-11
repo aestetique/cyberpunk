@@ -1,6 +1,6 @@
 <div class="field-list">
   <div class="form-group">
-    <label>{{CPLocal "ProgramStrength"}}</label>
+    <label>{{loc "ProgramStrength"}}</label>
     <input type="number" name="system.power" value="{{system.power}}" />
   </div>
 
@@ -12,23 +12,23 @@
 
 <div class="field-list">
   <div class="form-group">
-    <label for="programType">{{CPLocal 'ProgramTypeLabel'}}</label>
+    <label for="programType">{{loc 'ProgramTypeLabel'}}</label>
     <select id="programType" name="system.programType">
-      <option value="Intrusion" {{#if (eq system.programType "Intrusion")}}selected{{/if}}>{{CPLocal 'ProgramIntrusion'}}</option>
-      <option value="Decryption" {{#if (eq system.programType "Decryption")}}selected{{/if}}>{{CPLocal 'ProgramDecryption'}}</option>
-      <option value="Detection" {{#if (eq system.programType "Detection")}}selected{{/if}}>{{CPLocal 'ProgramDetection'}}</option>
-      <option value="Anti-System" {{#if (eq system.programType "Anti-System")}}selected{{/if}}>{{CPLocal 'ProgramAntiSystem'}}</option>
-      <option value="Stealth" {{#if (eq system.programType "Stealth")}}selected{{/if}}>{{CPLocal 'ProgramStealth'}}</option>
-      <option value="Protection" {{#if (eq system.programType "Protection")}}selected{{/if}}>{{CPLocal 'ProgramProtection'}}</option>
-      <option value="Anti-ICE" {{#if (eq system.programType "Anti-ICE")}}selected{{/if}}>{{CPLocal 'ProgramAntiICE'}}</option>
-      <option value="Anti-Personnel" {{#if (eq system.programType "Anti-Personnel")}}selected{{/if}}>{{CPLocal 'ProgramAntiPersonnel'}}</option>
-      <option value="Controller" {{#if (eq system.programType "Controller")}}selected{{/if}}>{{CPLocal 'ProgramController'}}</option>
-      <option value="Utility" {{#if (eq system.programType "Utility")}}selected{{/if}}>{{CPLocal 'ProgramUtility'}}</option>
+      <option value="Intrusion" {{#if (eq system.programType "Intrusion")}}selected{{/if}}>{{loc 'ProgramIntrusion'}}</option>
+      <option value="Decryption" {{#if (eq system.programType "Decryption")}}selected{{/if}}>{{loc 'ProgramDecryption'}}</option>
+      <option value="Detection" {{#if (eq system.programType "Detection")}}selected{{/if}}>{{loc 'ProgramDetection'}}</option>
+      <option value="Anti-System" {{#if (eq system.programType "Anti-System")}}selected{{/if}}>{{loc 'ProgramAntiSystem'}}</option>
+      <option value="Stealth" {{#if (eq system.programType "Stealth")}}selected{{/if}}>{{loc 'ProgramStealth'}}</option>
+      <option value="Protection" {{#if (eq system.programType "Protection")}}selected{{/if}}>{{loc 'ProgramProtection'}}</option>
+      <option value="Anti-ICE" {{#if (eq system.programType "Anti-ICE")}}selected{{/if}}>{{loc 'ProgramAntiICE'}}</option>
+      <option value="Anti-Personnel" {{#if (eq system.programType "Anti-Personnel")}}selected{{/if}}>{{loc 'ProgramAntiPersonnel'}}</option>
+      <option value="Controller" {{#if (eq system.programType "Controller")}}selected{{/if}}>{{loc 'ProgramController'}}</option>
+      <option value="Utility" {{#if (eq system.programType "Utility")}}selected{{/if}}>{{loc 'ProgramUtility'}}</option>
     </select>
   </div>
 
   <div class="form-group">
-    <label>{{CPLocal "ActionThrow"}}</label>
+    <label>{{loc "ActionThrow"}}</label>
     <input type="text" name="system.actionFormula" value="{{system.actionFormula}}" />
   </div>
 </div>

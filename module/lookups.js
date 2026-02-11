@@ -309,7 +309,7 @@ export function getAttackSkillsForWeapon(weaponType) {
             }
         }
         try {
-            const mappings = game.settings.get("cp2020", "skillMappings");
+            const mappings = game.settings.get("cyberpunk", "skillMappings");
             for (const category of Object.values(mappings)) {
                 if (category?.skills?.length) {
                     for (const s of category.skills) allSkills.add(s.name);
@@ -323,7 +323,7 @@ export function getAttackSkillsForWeapon(weaponType) {
     if (!categoryKey) return DEFAULT_ATTACK_SKILLS[weaponType] || [];
 
     try {
-        const mappings = game.settings.get("cp2020", "skillMappings");
+        const mappings = game.settings.get("cyberpunk", "skillMappings");
         const category = mappings[categoryKey];
         if (category?.skills?.length) {
             return category.skills.map(s => s.name);
@@ -346,7 +346,7 @@ export function getAttackSkillsForOrdnance() {
 
     // Add Throw category
     try {
-        const mappings = game.settings.get("cp2020", "skillMappings");
+        const mappings = game.settings.get("cyberpunk", "skillMappings");
         const throwCat = mappings["throw"];
         if (throwCat?.skills?.length) {
             for (const s of throwCat.skills) skills.add(s.name);
@@ -380,7 +380,7 @@ export function getAttackSkillsForOrdnance() {
  */
 export function getSkillsForCategory(categoryKey) {
     try {
-        const mappings = game.settings.get("cp2020", "skillMappings");
+        const mappings = game.settings.get("cyberpunk", "skillMappings");
         const category = mappings[categoryKey];
         if (category?.skills?.length) {
             return category.skills.map(s => s.name);
@@ -456,7 +456,7 @@ export let rangedAttackTypes = {
 }
 
 export let meleeAttackTypes = {
-    melee: "Melee", // Regular melee bonk
+    melee: "Melee",
     mono: "Mono", // Monokatanas, etc
     martial: "Martial", // Martial arts! Here, the chosen attack skill does not matter
     cyberbeast: "Beast"
@@ -531,7 +531,7 @@ rangeResolve[ranges.extreme] = range => range*2;
 export { rangeDCs, rangeResolve }
 
 export let defaultTargetLocations = ["Head", "Torso", "lArm", "rArm", "lLeg", "rLeg"]
-export let defaultAreaLookup = {
+export let areaLookupTable = {
     1: "Head",
     2: "Torso",
     3: "Torso",
@@ -544,7 +544,7 @@ export let defaultAreaLookup = {
     10: "rLeg"
 }
 
-export function defaultHitLocations() {
+export function hitLocationDefaults() {
   const actorDocs = game?.system?.documentTypes?.Actor;
 
   const tpl = actorDocs?.templates?.hitLocations?.hitLocations;
@@ -563,9 +563,9 @@ export function defaultHitLocations() {
   };
 }
 
-export function rangedModifiers(weapon, targetTokens=[]) {
+export function buildRangedModifierGroups(weapon, targetTokens=[]) {
     let range = weapon.system.range || 50;
-    let fireModes = weapon.__getFireModes() || [];
+    let fireModes = weapon._availableFireModes() || [];
     return [
         [{
             localKey: "FireMode",
@@ -621,7 +621,7 @@ export function rangedModifiers(weapon, targetTokens=[]) {
     ];
 }
 
-export function martialOptions(actor) {
+export function buildMartialModifierGroups(actor) {
     return [
         [{
             localKey: "Action",
@@ -649,7 +649,7 @@ export function martialOptions(actor) {
         {
             localKey: "MartialArt",
             dataPath: "martialArt",
-            choices: [{value: game.i18n.localize("CYBERPUNK.SkillBrawling"), localKey: "SkillBrawling"}, ...(actor.trainedMartials().map(martialName => {
+            choices: [{value: game.i18n.localize("CYBERPUNK.SkillBrawling"), localKey: "SkillBrawling"}, ...(actor.getLearnedMartialArts().map(martialName => {
                 return {value: martialName, localKey: "Skill" + getMartialKeyByName(martialName)}
             }))]
         },
@@ -667,7 +667,7 @@ export function martialOptions(actor) {
 }
 
 // Needs to be a function, or every time the modifiers dialog is launched, it'll add "extra mods" on
-export function meleeBonkOptions() {
+export function buildMeleeModifierGroups() {
     return [[
         {
             localKey: "TargetArea",
@@ -691,10 +691,9 @@ export function meleeBonkOptions() {
 }
 
 /**
- * Get a body type modifier from the body type stat (body)
- * I couldn't figure out a single formula that'd work for it (cos of the weird widths of BT values)
+ * BTM lookup — non-linear thresholds require explicit mapping.
  */
-export function btmFromBT(body) {
+export function bodyTypeModifier(body) {
     if(body <= 2) {
         return 0;
       }
@@ -717,8 +716,8 @@ export function btmFromBT(body) {
       }
 }
 
-export function strengthDamageBonus(bt) {
-    let btm = btmFromBT(bt);
+export function meleeDamageBonus(bt) {
+    let btm = bodyTypeModifier(bt);
     if(btm < 5)
         return btm - 2;
 

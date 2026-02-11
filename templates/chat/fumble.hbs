@@ -1,6 +1,6 @@
 <div class="cyberpunk-card cyberpunk-card--fumble" data-actor-id="{{actorId}}" data-severity="{{severity}}" data-effective-luck="{{effectiveLuck}}">
     {{!-- Section Bar: Fumble with Fumble Icon --}}
-    {{> (CPTemplate "chat/partials/section-bar.hbs") label=(CPLocal "Fumble") icon="fumble"}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Fumble") icon="fumble"}}
 
     {{!-- Roll Results --}}
     {{#each rolls as |rollData|}}
@@ -21,10 +21,10 @@
                             <span class="roll-details__value-text">{{rollData.roll.total}}</span>
                         </span>
                     </div>
-                    {{#if rollData.diceInfo}}
+                    {{#if rollData.dice}}
                     <div class="roll-details__row roll-details__row--dice">
-                        {{#each rollData.diceInfo as |die|}}
-                        {{#each die.subrolls as |subroll|}}
+                        {{#each rollData.dice as |die|}}
+                        {{#each die.results as |subroll|}}
                         <div class="dice-badge dice-badge--d10 {{subroll.classes}}">
                             <span class="dice-badge__value">{{{subroll.result}}}</span>
                         </div>
@@ -51,9 +51,9 @@
     {{!-- Roll Luck Button / Result Container --}}
     <div class="fumble-luck-container">
         {{#if canRollLuck}}
-        <button class="fumble-roll-luck-btn" type="button">{{CPLocal "RollLuck"}}</button>
+        <button class="fumble-roll-luck-btn" type="button">{{loc "RollLuck"}}</button>
         {{else}}
-        <button class="fumble-roll-luck-btn fumble-roll-luck-btn--disabled" type="button" disabled>{{CPLocal "RollLuck"}}</button>
+        <button class="fumble-roll-luck-btn fumble-roll-luck-btn--disabled" type="button" disabled>{{loc "RollLuck"}}</button>
         {{/if}}
     </div>
 </div>

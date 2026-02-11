@@ -1,97 +1,96 @@
 /**
- * Define a set of template paths to pre-load
- * Pre-loaded templates are compiled and cached for fast access when rendering
+ * Preload Handlebars partials for the Cyberpunk system.
  * @return {Promise}
  */
 export const preloadHandlebarsTemplates = async function() {
-    // Path to partial from foundry path. For cyberpunk, is "systems/cp2020/templates/actor/parts/___.hbs". Is .hbs as they're handlebars files
+    // Path to partial from foundry path. For cyberpunk, is "systems/cyberpunk/templates/actor/parts/___.hbs". Is .hbs as they're handlebars files
     return loadTemplates([
-        "systems/cp2020/templates/actor/parts/statsrow.hbs",
-        "systems/cp2020/templates/actor/parts/woundtracker.hbs",
-        "systems/cp2020/templates/actor/parts/skills.hbs",
-        "systems/cp2020/templates/actor/parts/gear.hbs",
-        "systems/cp2020/templates/actor/parts/cyberware.hbs",
-        "systems/cp2020/templates/actor/parts/combat.hbs",
-        "systems/cp2020/templates/actor/parts/armor-display.hbs",
-        "systems/cp2020/templates/actor/parts/skill.hbs",
-        "systems/cp2020/templates/actor/parts/netrunning.hbs",
+        "systems/cyberpunk/templates/actor/parts/statsrow.hbs",
+        "systems/cyberpunk/templates/actor/parts/woundtracker.hbs",
+        "systems/cyberpunk/templates/actor/parts/skills.hbs",
+        "systems/cyberpunk/templates/actor/parts/gear.hbs",
+        "systems/cyberpunk/templates/actor/parts/cyberware.hbs",
+        "systems/cyberpunk/templates/actor/parts/combat.hbs",
+        "systems/cyberpunk/templates/actor/parts/armor-display.hbs",
+        "systems/cyberpunk/templates/actor/parts/skill.hbs",
+        "systems/cyberpunk/templates/actor/parts/netrunning.hbs",
 
         // Shared templates
-        "systems/cp2020/templates/fields/string.hbs",
-        "systems/cp2020/templates/fields/number.hbs",
-        "systems/cp2020/templates/fields/boolean.hbs",
-        "systems/cp2020/templates/fields/select.hbs",
+        "systems/cyberpunk/templates/fields/string.hbs",
+        "systems/cyberpunk/templates/fields/number.hbs",
+        "systems/cyberpunk/templates/fields/boolean.hbs",
+        "systems/cyberpunk/templates/fields/select.hbs",
 
         // Roll templates
-        "systems/cp2020/templates/chat/default-roll.hbs",
-        "systems/cp2020/templates/chat/weapon-roll.hbs",
-        "systems/cp2020/templates/chat/multi-hit.hbs",
-        "systems/cp2020/templates/chat/initiative.hbs",
-        "systems/cp2020/templates/chat/save-roll.hbs",
-        "systems/cp2020/templates/chat/suppressive.hbs",
-        "systems/cp2020/templates/chat/formula-roll.hbs",
-        "systems/cp2020/templates/chat/humanity-roll.hbs",
-        "systems/cp2020/templates/chat/condition-damage.hbs",
-        "systems/cp2020/templates/chat/skill-check.hbs",
-        "systems/cp2020/templates/chat/fumble.hbs",
-        "systems/cp2020/templates/chat/melee-execute.hbs",
-        "systems/cp2020/templates/chat/melee-hit.hbs",
+        "systems/cyberpunk/templates/chat/default-roll.hbs",
+        "systems/cyberpunk/templates/chat/weapon-roll.hbs",
+        "systems/cyberpunk/templates/chat/multi-hit.hbs",
+        "systems/cyberpunk/templates/chat/initiative.hbs",
+        "systems/cyberpunk/templates/chat/save-roll.hbs",
+        "systems/cyberpunk/templates/chat/suppressive.hbs",
+        "systems/cyberpunk/templates/chat/formula-roll.hbs",
+        "systems/cyberpunk/templates/chat/humanity-roll.hbs",
+        "systems/cyberpunk/templates/chat/condition-damage.hbs",
+        "systems/cyberpunk/templates/chat/skill-check.hbs",
+        "systems/cyberpunk/templates/chat/fumble.hbs",
+        "systems/cyberpunk/templates/chat/melee-execute.hbs",
+        "systems/cyberpunk/templates/chat/melee-hit.hbs",
 
         // Chat card partials
-        "systems/cp2020/templates/chat/partials/card-header.hbs",
-        "systems/cp2020/templates/chat/partials/section-bar.hbs",
-        "systems/cp2020/templates/chat/partials/weapon-line.hbs",
-        "systems/cp2020/templates/chat/partials/formula-bar.hbs",
-        "systems/cp2020/templates/chat/partials/roll-details.hbs",
-        "systems/cp2020/templates/chat/partials/result-row.hbs",
-        "systems/cp2020/templates/chat/partials/damage-grid.hbs",
+        "systems/cyberpunk/templates/chat/partials/card-header.hbs",
+        "systems/cyberpunk/templates/chat/partials/section-bar.hbs",
+        "systems/cyberpunk/templates/chat/partials/weapon-line.hbs",
+        "systems/cyberpunk/templates/chat/partials/formula-bar.hbs",
+        "systems/cyberpunk/templates/chat/partials/roll-details.hbs",
+        "systems/cyberpunk/templates/chat/partials/result-row.hbs",
+        "systems/cyberpunk/templates/chat/partials/damage-grid.hbs",
 
         // Item sheet
-        "systems/cp2020/templates/item/item-sheet.hbs",
+        "systems/cyberpunk/templates/item/item-sheet.hbs",
 
         // Weapon parts
-        "systems/cp2020/templates/item/parts/weapon/summary.hbs",
-        "systems/cp2020/templates/item/parts/weapon/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/weapon/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/weapon/settings.hbs",
         // Armor parts
-        "systems/cp2020/templates/item/parts/armor/summary.hbs",
-        "systems/cp2020/templates/item/parts/armor/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/armor/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/armor/settings.hbs",
         // Cyberware (old item sheet parts)
-        "systems/cp2020/templates/item/parts/cyberware/summary.hbs",
-        "systems/cp2020/templates/item/parts/cyberware/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/settings.hbs",
         // Cyberware card partials
-        "systems/cp2020/templates/item/parts/cyberware/tab-description.hbs",
-        "systems/cp2020/templates/item/parts/cyberware/tab-details.hbs",
-        "systems/cp2020/templates/item/parts/cyberware/tab-effect.hbs",
-        "systems/cp2020/templates/item/parts/cyberware/tab-weapon.hbs",
-        "systems/cp2020/templates/item/parts/cyberware/tab-armor.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/tab-description.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/tab-details.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/tab-effect.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/tab-weapon.hbs",
+        "systems/cyberpunk/templates/item/parts/cyberware/tab-armor.hbs",
         // Vehicle
-        "systems/cp2020/templates/item/parts/vehicle/summary.hbs",
-        "systems/cp2020/templates/item/parts/vehicle/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/vehicle/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/vehicle/settings.hbs",
         // Skill
-        "systems/cp2020/templates/item/parts/skill/summary.hbs",
-        "systems/cp2020/templates/item/parts/skill/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/skill/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/skill/settings.hbs",
 
         // Commodity
-        "systems/cp2020/templates/item/parts/commodity/summary.hbs",
-        "systems/cp2020/templates/item/parts/commodity/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/commodity/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/commodity/settings.hbs",
 
         // Weapon settings dialog
-        "systems/cp2020/templates/dialog/modifiers.hbs",
-        "systems/cp2020/templates/dialog/skill-roll.hbs",
-        "systems/cp2020/templates/dialog/initiative-roll.hbs",
-        "systems/cp2020/templates/dialog/melee-attack.hbs",
+        "systems/cyberpunk/templates/dialog/modifiers.hbs",
+        "systems/cyberpunk/templates/dialog/skill-roll.hbs",
+        "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
+        "systems/cyberpunk/templates/dialog/melee-attack.hbs",
 
         // Program
-        "systems/cp2020/templates/item/parts/program/summary.hbs",
-        "systems/cp2020/templates/item/parts/program/settings.hbs",
+        "systems/cyberpunk/templates/item/parts/program/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/program/settings.hbs",
 
         // Role
-        "systems/cp2020/templates/item/role-sheet.hbs",
-        "systems/cp2020/templates/item/parts/role/summary.hbs",
-        "systems/cp2020/templates/item/parts/role/settings.hbs",
+        "systems/cyberpunk/templates/item/role-sheet.hbs",
+        "systems/cyberpunk/templates/item/parts/role/summary.hbs",
+        "systems/cyberpunk/templates/item/parts/role/settings.hbs",
 
         // Settings
-        "systems/cp2020/templates/settings/skill-mapping-config.hbs",
+        "systems/cyberpunk/templates/settings/skill-mapping-config.hbs",
 
     ]);
   };

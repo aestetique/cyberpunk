@@ -17,7 +17,7 @@ export class CyberpunkOutfitSheet extends CyberpunkItemSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["cyberpunk", "sheet", "item", "outfit-sheet"],
-      template: "systems/cp2020/templates/item/outfit-sheet.hbs"
+      template: "systems/cyberpunk/templates/item/outfit-sheet.hbs"
     });
   }
 

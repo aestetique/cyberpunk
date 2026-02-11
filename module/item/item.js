@@ -1,10 +1,10 @@
-import { weaponTypes, rangedAttackTypes, meleeAttackTypes, fireModes, ranges, rangeDCs, rangeResolve, attackSkills, martialActions, strengthDamageBonus, exoticEffects } from "../lookups.js"
-import { Multiroll, makeD10Roll }  from "../dice.js"
-import { clamp, deepLookup, localize, localizeParam, rollLocation } from "../utils.js"
+import { weaponTypes, rangedAttackTypes, meleeAttackTypes, fireModes, ranges, rangeDCs, rangeResolve, attackSkills, martialActions, meleeDamageBonus, exoticEffects } from "../lookups.js"
+import { RollBundle, buildD10Roll }  from "../dice.js"
+import { clamp, getByPath, localize, formatLocale, rollLocation } from "../utils.js"
 import { CyberpunkActor } from "../actor/actor.js";
 
 /**
- * Extend the basic Item with some very simple modifications.
+ * Item document for the Cyberpunk 2020 system.
  * @extends {Item}
  */
 export class CyberpunkItem extends Item {
@@ -15,18 +15,18 @@ export class CyberpunkItem extends Item {
 
     // Set default placeholder image based on item type
     const placeholders = {
-      skill: "systems/cp2020/img/svg/placeholder-skill.svg",
-      weapon: "systems/cp2020/img/svg/placeholder-weapon.svg",
-      armor: "systems/cp2020/img/svg/placeholder-armor.svg",
-      cyberware: "systems/cp2020/img/svg/placeholder-cyberware.svg",
-      vehicle: "systems/cp2020/img/svg/placeholder-vehicle.svg",
-      misc: "systems/cp2020/img/svg/placeholder-gear.svg",
-      ammo: "systems/cp2020/img/svg/placeholder-ammo.svg",
-      program: "systems/cp2020/img/svg/placeholder-program.svg",
-      role: "systems/cp2020/img/svg/placeholder-role.svg",
-      ordnance: "systems/cp2020/img/svg/placeholder-ordnance.svg",
-      tool: "systems/cp2020/img/svg/placeholder-tool.svg",
-      drug: "systems/cp2020/img/svg/placeholder-drug.svg"
+      skill: "systems/cyberpunk/img/svg/placeholder-skill.svg",
+      weapon: "systems/cyberpunk/img/svg/placeholder-weapon.svg",
+      armor: "systems/cyberpunk/img/svg/placeholder-armor.svg",
+      cyberware: "systems/cyberpunk/img/svg/placeholder-cyberware.svg",
+      vehicle: "systems/cyberpunk/img/svg/placeholder-vehicle.svg",
+      misc: "systems/cyberpunk/img/svg/placeholder-gear.svg",
+      ammo: "systems/cyberpunk/img/svg/placeholder-ammo.svg",
+      program: "systems/cyberpunk/img/svg/placeholder-program.svg",
+      role: "systems/cyberpunk/img/svg/placeholder-role.svg",
+      ordnance: "systems/cyberpunk/img/svg/placeholder-ordnance.svg",
+      tool: "systems/cyberpunk/img/svg/placeholder-tool.svg",
+      drug: "systems/cyberpunk/img/svg/placeholder-drug.svg"
     };
 
     const placeholder = placeholders[data.type];
@@ -77,22 +77,14 @@ export class CyberpunkItem extends Item {
   }
 
   _prepareArmorData(system) {
+    if (!this.actor) return;
+
     // If new owner and armor covers this many areas or more, delete armor coverage areas the owner does not have
     const COVERAGE_CLEANSE_THRESHOLD = 20;
 
-    let skipReform = false;
-    // Check if actor context is valid before proceeding
-    try {
-      let idCheck = this.actor.id;
-    }
-    catch (e) {
-      console.warn("CyberpunkItem: Actor context unavailable for armor reform, skipping", e);
-      skipReform = true;
-    }
-
-    let nowOwned = !system.lastOwnerId && this.actor;
+    let nowOwned = !system.lastOwnerId;
     let changedHands = system.lastOwnerId !== undefined && system.lastOwnerId != this.actor.id;
-    if(!skipReform && (nowOwned || changedHands)) {
+    if(nowOwned || changedHands) {
       system.lastOwnerId = this.actor.id;
       let ownerLocs = this.actor.system.hitLocations;
       
@@ -134,7 +126,7 @@ export class CyberpunkItem extends Item {
     // This is where the item would make a roll in the chat or something like that.
     switch (this.type) {
       case "weapon":
-        this.__weaponRoll();
+        this._resolveAttack();
         break;
 
       default:
@@ -144,7 +136,7 @@ export class CyberpunkItem extends Item {
 
   // TODO: For 0.8.1, we want to also add flavor text to the different modifiers
   // Get the roll modifiers to add when given a certain set of modifiers
-  __shootModTerms({
+  _rangedModifiers({
     aimRounds,
     ambush,
     blinded,
@@ -163,7 +155,7 @@ export class CyberpunkItem extends Item {
     if(!!targetArea) {
       terms.push(-4);
     }
-    // Man I want language macros here...
+    // Aiming bonus
     if(aimRounds && aimRounds > 0) {
       terms.push(aimRounds);
     }
@@ -219,31 +211,13 @@ export class CyberpunkItem extends Item {
   }
 
   // Melee mods are a lot...simpler? I could maybe add swept or something, or opponent dodging. That'll be best once choosing targets is done
-  __meleeModTerms({extraMod}) {
+  _meleeModifiers({extraMod}) {
     return [extraMod];
   }
 
-  // Now, this is gonna have to ask the player for different things depending on the weapon
-  // Apply modifiers first? p99 in book
-  // Crit fail jam roll
-
-  // p106
-  // Automatic weapon? choose between 3-round burst, full-auto and suppressive fire
-  // 3-round = 1 target
-  // full-auto = as many targets as you wish cos screw you
-  // Suppressive fire? choose an area. save is rof/width area, minimum 2m
-
-  // Laser? How much of the charge are you using?
-  // Microwaver? regular attack, though includes path, but also roll on microwaver table
-
-  // Area effect. Miss? Roll direction, roll meters away
-  // Shotgun? Width depends on distance from character
-  // Grenades have fixed width. Throw up to 10xBOD
-  // Gas? Wind effect. Dear lord.
-
-  // Let's just pretend the unusual ranged doesn't exist for now
-  // Look into `modifiers.js` for the modifier obect
-  __weaponRoll(attackMods, targetTokens) {
+  // Resolve a weapon attack roll — fire mode dispatch + hit/damage processing
+  // See `modifiers.js` for the modifier object structure
+  _resolveAttack(attackMods, targetTokens) {
     let owner = this.actor;
     let system = this.system;
 
@@ -262,31 +236,31 @@ export class CyberpunkItem extends Item {
     let isRanged = this.isRanged();
     if(!isRanged) {
       if (system.attackType === meleeAttackTypes.martial) {
-        return this.__martialBonk(attackMods);
+        return this._executeMartialAction(attackMods);
       }
       else {
-        return this.__meleeBonk(attackMods);
+        return this._executeMeleeStrike(attackMods);
       }
     }
 
     // ---- Firemode-specific rolling. I may roll together some common aspects later ----
     // Full auto
     if(attackMods.fireMode === fireModes.fullAuto) {
-      return this.__fullAuto(attackMods, targetTokens);
+      return this._fireFullAuto(attackMods, targetTokens);
     }
     // Three-round burst. Shares... a lot in common with full auto actually
     else if(attackMods.fireMode === fireModes.threeRoundBurst) {
-      return this.__threeRoundBurst(attackMods);
+      return this._fireBurst(attackMods);
     }
     else if(attackMods.fireMode === fireModes.singleShot) {
-      return this.__singleShot(attackMods);
+      return this._fireSingle(attackMods);
     }
     else if(attackMods.fireMode === fireModes.suppressive) {
-      return this.__suppressiveFire(attackMods);
+      return this._fireSuppressive(attackMods);
     }
   }
 
-  __getFireModes() {
+  _availableFireModes() {
     if (this.type !== "weapon") {
       console.error(`${this.name} is not a weapon, and therefore has no fire modes`)
       return [];
@@ -321,16 +295,16 @@ export class CyberpunkItem extends Item {
   static getRangeLabel(range, actualRange) {
     const labels = {
       [ranges.pointBlank]: localize("RangePointBlankLabel"),
-      [ranges.close]: localizeParam("RangeCloseLabel", { range: actualRange }),
-      [ranges.medium]: localizeParam("RangeMediumLabel", { range: actualRange }),
-      [ranges.long]: localizeParam("RangeLongLabel", { range: actualRange }),
-      [ranges.extreme]: localizeParam("RangeExtremeLabel", { range: actualRange })
+      [ranges.close]: formatLocale("RangeCloseLabel", { range: actualRange }),
+      [ranges.medium]: formatLocale("RangeMediumLabel", { range: actualRange }),
+      [ranges.long]: formatLocale("RangeLongLabel", { range: actualRange }),
+      [ranges.extreme]: formatLocale("RangeExtremeLabel", { range: actualRange })
     };
     return labels[range] || range;
   }
 
   // Roll just the attack roll of a weapon, return it
-  async attackRoll(attackMods) {
+  async rollToHit(attackMods) {
     let system = this.system;
     let isRanged = this.isRanged();
 
@@ -345,10 +319,10 @@ export class CyberpunkItem extends Item {
       attackTerms.push(`@attackSkill`);
     }
     if(isRanged) {
-      attackTerms.push(...(this.__shootModTerms(attackMods)));
+      attackTerms.push(...(this._rangedModifiers(attackMods)));
     }
     else {
-      attackTerms.push(...(this.__meleeModTerms(attackMods)));
+      attackTerms.push(...(this._meleeModifiers(attackMods)));
     }
     if(system.accuracy) {
       attackTerms.push(system.accuracy);
@@ -370,9 +344,9 @@ export class CyberpunkItem extends Item {
       attackTerms.push(minBodyPenalty.accuracyPenalty);
     }
 
-    return await makeD10Roll(attackTerms, {
+    return await buildD10Roll(attackTerms, {
       stats: this.actor.system.stats,
-      attackSkill: this.actor.getSkillVal(resolvedSkill)
+      attackSkill: this.actor.resolveSkillTotal(resolvedSkill)
     }).evaluate();
   }
 
@@ -381,7 +355,7 @@ export class CyberpunkItem extends Item {
    * @param {*} attackMods The modifiers for an attack. fireMode, ambush, etc - look in lookups.js for the specification of these
    * @returns
    */
-  async __fullAuto(attackMods, targetTokens) {
+  async _fireFullAuto(attackMods, targetTokens) {
       let system = this.system;
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
       let actualRangeBracket = rangeResolve[attackMods.range](system.range);
@@ -396,7 +370,7 @@ export class CyberpunkItem extends Item {
       let rolls = [];
       let fumbleTriggered = false;
       for (let i = 0; i < targetCount; i++) {
-          let attackRoll = await this.attackRoll(attackMods);
+          let attackRoll = await this.rollToHit(attackMods);
 
           // Trigger Dice So Nice for attack roll
           if (game.dice3d) {
@@ -458,19 +432,19 @@ export class CyberpunkItem extends Item {
               loadedAmmoType: this.system.loadedAmmoType || "standard",
               damageType: this.system.damageType || ""
           };
-          let roll = new Multiroll(CyberpunkItem.getFireModeLabel(fireModes.fullAuto));
-          roll.execute(undefined, "systems/cp2020/templates/chat/multi-hit.hbs", templateData);
+          let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.fullAuto));
+          roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
           rolls.push(roll);
       }
       return rolls;
   }
 
-  async __threeRoundBurst(attackMods) {
+  async _fireBurst(attackMods) {
       let system = this.system;
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
       let actualRangeBracket = rangeResolve[attackMods.range](system.range);
       let DC = rangeDCs[attackMods.range];
-      let attackRoll = await this.attackRoll(attackMods);
+      let attackRoll = await this.rollToHit(attackMods);
 
       // Trigger Dice So Nice for attack roll
       if (game.dice3d) {
@@ -533,13 +507,13 @@ export class CyberpunkItem extends Item {
           loadedAmmoType: this.system.loadedAmmoType || "standard",
           damageType: this.system.damageType || ""
       };
-      let roll = new Multiroll(CyberpunkItem.getFireModeLabel(fireModes.threeRoundBurst));
-      roll.execute(undefined, "systems/cp2020/templates/chat/multi-hit.hbs", templateData);
+      let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.threeRoundBurst));
+      roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
       this.update({"system.shotsLeft": system.shotsLeft - roundsFired});
       return roll;
   }
 
-  async __suppressiveFire(mods = {}) {
+  async _fireSuppressive(mods = {}) {
     const sys = this.system;
     // Minimum Body penalty halves effective ROF
     const minBodyPenalty = this._getMinBodyPenalty();
@@ -570,18 +544,18 @@ export class CyberpunkItem extends Item {
     }
 
     const html = await renderTemplate(
-      "systems/cp2020/templates/chat/suppressive.hbs",
+      "systems/cyberpunk/templates/chat/suppressive.hbs",
       { weaponName: this.name, rounds, width, saveDC, dmgFormula, results, loadedAmmoType: this.system.loadedAmmoType || "standard" }
     );
 
     ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: html,
-      flags  : { cp2020: { fireMode: "suppressive" } }
+      flags  : { cyberpunk: { fireMode: "suppressive" } }
     });
   }
 
-  async __singleShot(attackMods) {
+  async _fireSingle(attackMods) {
       let system = this.system;
 
       // Determine if this is an exotic weapon with an effect
@@ -591,7 +565,7 @@ export class CyberpunkItem extends Item {
 
       // The range we're shooting at
       let DC = rangeDCs[attackMods.range];
-      let attackRoll = await this.attackRoll(attackMods);
+      let attackRoll = await this.rollToHit(attackMods);
 
       // Trigger Dice So Nice for attack roll
       if (game.dice3d) {
@@ -668,8 +642,8 @@ export class CyberpunkItem extends Item {
           hitLocation: hitLocation
       };
 
-      let roll = new Multiroll(CyberpunkItem.getFireModeLabel(fireModes.singleShot));
-      roll.execute(undefined, "systems/cp2020/templates/chat/multi-hit.hbs", templateData);
+      let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.singleShot));
+      roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
 
       // Exotic weapons deduct from charges, regular weapons from shotsLeft
       if (isExotic) {
@@ -721,9 +695,9 @@ export class CyberpunkItem extends Item {
       return icons[effect] || effect;
   }
 
-  async __meleeBonk(attackMods) {
+  async _executeMeleeStrike(attackMods) {
       // Just doesn't have a DC - is contested instead
-      let attackRoll = await this.attackRoll(attackMods);
+      let attackRoll = await this.rollToHit(attackMods);
 
       // Trigger Dice So Nice for attack roll
       if (game.dice3d) {
@@ -752,7 +726,7 @@ export class CyberpunkItem extends Item {
           }
       }
       let damageRoll = await new Roll(damageFormula, {
-          strengthBonus: strengthDamageBonus(this.actor.system.stats.bt.total)
+          strengthBonus: meleeDamageBonus(this.actor.system.stats.bt.total)
       }).evaluate();
 
       // Trigger Dice So Nice for damage roll
@@ -785,15 +759,15 @@ export class CyberpunkItem extends Item {
           hitLocation: hitLocation
       };
 
-      let roll = new Multiroll(localize("Strike"));
+      let roll = new RollBundle(localize("Strike"));
       roll.execute(
           ChatMessage.getSpeaker({ actor: this.actor }),
-          "systems/cp2020/templates/chat/melee-hit.hbs",
+          "systems/cyberpunk/templates/chat/melee-hit.hbs",
           templateData
       );
       return roll;
   }
-  async __martialBonk(attackMods) {
+  async _executeMartialAction(attackMods) {
     let actor = this.actor;
     let system = actor.system;
     // Action being done, eg strike, block etc
@@ -804,10 +778,10 @@ export class CyberpunkItem extends Item {
     // let martialBonus = this.actor?.skills.MartialArts[martialArt].bonuses[action];
     let isMartial = martialArt != "Brawling";
     let keyTechniqueBonus = 0;
-    let martialSkillLevel = actor.getSkillVal(martialArt);
+    let martialSkillLevel = actor.resolveSkillTotal(martialArt);
     let flavor = game.i18n.has(`CYBERPUNK.${action + "Text"}`) ? localize(action + "Text") : "";
 
-    let results = new Multiroll(localizeParam("MartialTitle", {action: localize(action), martialArt: localize("Skill" + martialArt)}), flavor);
+    let results = new RollBundle(formatLocale("MartialTitle", {action: localize(action), martialArt: localize("Skill" + martialArt)}), flavor);
 
     // All martial arts are contested
     let attackRoll = new Roll(`1d10x10+@stats.ref.total+@attackBonus+@keyTechniqueBonus`, {
@@ -844,7 +818,7 @@ export class CyberpunkItem extends Item {
       let loc = await rollLocation(attackMods.targetActor, attackMods.targetArea);
       results.addRoll(loc.roll, {name: localize("Location"), flavor: loc.areaHit});
       results.addRoll(new Roll(damageFormula, {
-        strengthBonus: strengthDamageBonus(system.stats.bt.total),
+        strengthBonus: meleeDamageBonus(system.stats.bt.total),
         // Martial arts get a damage bonus.
         martialDamageBonus: isMartial ? martialSkillLevel : 0
       }), {name: localize("Damage")});

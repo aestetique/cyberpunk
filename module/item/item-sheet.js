@@ -1,10 +1,10 @@
 import { weaponTypes, sortedAttackTypes, concealability, availability, reliability, attackSkills, meleeAttackTypes, getStatNames, ammoCalibersByWeaponType, weaponToAmmoType } from "../lookups.js";
-import { formulaHasDice } from "../dice.js";
+import { containsDice } from "../dice.js";
 import { localize } from "../utils.js";
 import { getMartialKeyByName } from '../translations.js'
 
 /**
- * Extend the basic ItemSheet with some very simple modifications
+ * Item sheet for the Cyberpunk 2020 system.
  * @extends {ItemSheet}
  */
 export class CyberpunkItemSheet extends ItemSheet {
@@ -21,13 +21,7 @@ export class CyberpunkItemSheet extends ItemSheet {
 
   /** @override */
   get template() {
-    const path = "systems/cp2020/templates/item";
-    // Return a single sheet for all item types.
-    // return `${path}/item-sheet.hbs`;
-
-    // Alternatively, you could use the following return statement to do a
-    // unique item sheet by type, like `weapon-sheet.hbs`.
-    return `${path}/item-sheet.hbs`;
+    return `systems/cyberpunk/templates/item/item-sheet.hbs`;
   }
 
   /* -------------------------------------------- */
@@ -40,15 +34,15 @@ export class CyberpunkItemSheet extends ItemSheet {
 
     switch (this.item.type) {
       case "weapon":
-        this._prepareWeapon(data);
+        this._buildWeaponContext(data);
         break;
     
       case "armor":
-        this._prepareArmor(data);
+        this._buildArmorContext(data);
         break;
 
       case "skill":
-        this._prepareSkill(data);
+        this._buildSkillContext(data);
         break;
 
       default:
@@ -57,11 +51,11 @@ export class CyberpunkItemSheet extends ItemSheet {
     return data;
   }
 
-  _prepareSkill(sheet) {
+  _buildSkillContext(sheet) {
     sheet.stats = getStatNames();
   }
 
-  _prepareWeapon(sheet) {
+  _buildWeaponContext(sheet) {
     sheet.weaponTypes = Object.values(weaponTypes).sort();
     if(this.item.system.weaponType === weaponTypes.melee) {
       sheet.attackTypes = Object.values(meleeAttackTypes).sort();
@@ -76,7 +70,7 @@ export class CyberpunkItemSheet extends ItemSheet {
     sheet.attackSkills = [
       ...attackSkills[this.item.system.weaponType]
       .map(x => localize("Skill"+x)), 
-      ...(this.actor?.trainedMartials().
+      ...(this.actor?.getLearnedMartialArts().
       map(name => localize('Skill'+getMartialKeyByName(name))) || [])
     ];
 
@@ -104,7 +98,7 @@ export class CyberpunkItemSheet extends ItemSheet {
     }
   }
 
-  _prepareArmor(sheet) {
+  _buildArmorContext(sheet) {
     sheet.armorTypeChoices = [
       { value: "soft", localKey: "CYBERPUNK.ArmorTypeSoft" },
       { value: "hard", localKey: "CYBERPUNK.ArmorTypeHard" }
@@ -144,7 +138,7 @@ export class CyberpunkItemSheet extends ItemSheet {
       const hc = cyber.system.humanityCost;
       let loss = 0;
       // determine if humanity cost is a number or dice
-      if (formulaHasDice(hc)) {
+      if (containsDice(hc)) {
         // roll the humanity cost
         let r = await new Roll(hc).evaluate();
         loss = r.total ? r.total : 0;

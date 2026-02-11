@@ -1,10 +1,10 @@
 <div class="cyberpunk-card cyberpunk-card--attack">
     {{!-- Section Bar: Fire Mode (FULL AUTO, THREE-ROUND BURST, SINGLE SHOT) --}}
-    {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="gun" label=fireModeLabel}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="gun" label=fireModeLabel}}
 
     {{!-- Weapon Line --}}
     {{#if weaponName}}
-    {{> "systems/cp2020/templates/chat/partials/weapon-line.hbs"}}
+    {{> "systems/cyberpunk/templates/chat/partials/weapon-line.hbs"}}
     {{/if}}
 
     {{!-- Collapsible Attack Roll Container --}}
@@ -29,7 +29,7 @@
                         {{#each attackRoll.terms as |term|}}
                             {{#if term.results}}
                                 {{#each term.results as |die|}}
-                                <div class="dice-badge dice-badge--d10 {{#if (equals die.result 10)}}max{{/if}} {{#if (equals die.result 1)}}min{{/if}} {{#if die.exploded}}exploded{{/if}}">
+                                <div class="dice-badge dice-badge--d10 {{#if (eq die.result 10)}}max{{/if}} {{#if (eq die.result 1)}}min{{/if}} {{#if die.exploded}}exploded{{/if}}">
                                     <span class="dice-badge__value">{{die.result}}</span>
                                 </div>
                                 {{/each}}
@@ -42,7 +42,7 @@
                 {{!-- Range Bar --}}
                 <div class="section-bar">
                     <span class="section-bar__icon">
-                        <img src="systems/cp2020/img/chat/range.svg" alt="Range">
+                        <img src="systems/cyberpunk/img/chat/range.svg" alt="Range">
                     </span>
                     <span class="section-bar__label">{{rangeLabel}}</span>
                 </div>
@@ -52,7 +52,7 @@
         {{!-- Result Row: Hit or Miss (clickable to toggle) --}}
         <div class="result-row result-row--{{#if hit}}success{{else}}failure{{/if}} roll-toggle">
             <span class="result-row__icon">
-                <img src="systems/cp2020/img/chat/{{#if hit}}success{{else}}failure{{/if}}.png" alt="{{#if hit}}Hit{{else}}Miss{{/if}}">
+                <img src="systems/cyberpunk/img/chat/{{#if hit}}success{{else}}failure{{/if}}.png" alt="{{#if hit}}Hit{{else}}Miss{{/if}}">
             </span>
             <span class="result-row__value">{{attackRoll._total}}</span>
             <span class="result-row__target">
@@ -66,7 +66,7 @@
     {{!-- Hit Tally (only on hit) --}}
     {{#if hit}}
     <div class="hit-tally">
-        <span class="hit-tally__text">{{CPLocalParam "HitTally" this}}</span>
+        <span class="hit-tally__text">{{locFmt "HitTally" this}}</span>
     </div>
     {{/if}}
 
@@ -75,23 +75,23 @@
     {{!-- Section Bar: Conditional label based on damage and effect --}}
     {{#if hasEffect}}
         {{#if hasDamage}}
-            {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="damage" label=(CPLocal "DamageAndEffect")}}
+            {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "DamageAndEffect")}}
         {{else}}
-            {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="damage" label=(CPLocal "Effect")}}
+            {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "Effect")}}
         {{/if}}
     {{else}}
-        {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="damage" label=(CPLocal "Damage")}}
+        {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "Damage")}}
     {{/if}}
 
     {{!-- Damage Grid (only if has damage) --}}
     {{#if hasDamage}}
-    {{> "systems/cp2020/templates/chat/partials/damage-grid.hbs" aggregatedDamage=(aggregateDamage areaDamages) areaDamages=areaDamages}}
+    {{> "systems/cyberpunk/templates/chat/partials/damage-grid.hbs" aggregatedDamage=(aggregateDamage areaDamages) areaDamages=areaDamages}}
     {{/if}}
 
     {{!-- Effect Row (only if exotic weapon with effect) --}}
     {{#if hasEffect}}
     <div class="effect-row">
-        <img src="systems/cp2020/img/conditions/{{effectIcon}}.svg" alt="">
+        <img src="systems/cyberpunk/img/conditions/{{effectIcon}}.svg" alt="">
         <span class="effect-row__label">{{effectLabel}}</span>
     </div>
     {{/if}}
@@ -99,24 +99,24 @@
     {{!-- Target Selector --}}
     <div class="target-selector" data-damage="{{json areaDamages}}" data-ammo-type="{{loadedAmmoType}}" data-damage-type="{{damageType}}" data-weapon-effect="{{weaponEffect}}" data-hit-location="{{hitLocation}}">
         <div class="target-selector__tabs">
-            <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{CPLocal "Targeted"}}</button>
+            <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{loc "Targeted"}}</button>
             <span class="target-selector__divider"></span>
-            <button class="target-selector__tab" data-mode="selected">{{CPLocal "Selected"}}</button>
+            <button class="target-selector__tab" data-mode="selected">{{loc "Selected"}}</button>
         </div>
         <div class="target-selector__content">
             <div class="target-info target-info--empty">
                 {{#if hasEffect}}
                     {{#if hasDamage}}
-                        {{CPLocal "SelectTargetDamageEffect"}}
+                        {{loc "SelectTargetDamageEffect"}}
                     {{else}}
-                        {{CPLocal "SelectTargetEffect"}}
+                        {{loc "SelectTargetEffect"}}
                     {{/if}}
                 {{else}}
-                    {{CPLocal "SelectTarget"}}
+                    {{loc "SelectTarget"}}
                 {{/if}}
             </div>
         </div>
-        <button class="apply-damage-btn" disabled>{{CPLocal "Apply"}}</button>
+        <button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>
     </div>
     {{/if}}
 </div>

@@ -1,5 +1,5 @@
-import { martialOptions, meleeAttackTypes, meleeBonkOptions, meleeDamageTypes, rangedModifiers, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes } from "../lookups.js"
-import { localize, localizeParam, tabBeautifying, properCase } from "../utils.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes } from "../lookups.js"
+import { localize, formatLocale, tabBeautifying, toTitleCase } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { ReloadDialog } from "../dialog/reload-dialog.js"
@@ -7,10 +7,10 @@ import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
 import { RangeSelectionDialog } from "../dialog/range-selection-dialog.js"
 import { MeleeAttackDialog } from "../dialog/melee-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
-import { SortOrders } from "./skill-sort.js";
+import { SortModes } from "./skill-sort.js";
 
 /**
- * Extend the basic ActorSheet with custom character sheet layout
+ * Character sheet for Cyberpunk 2020 actors.
  * @extends {ActorSheet}
  */
 export class CyberpunkActorSheet extends ActorSheet {
@@ -58,7 +58,7 @@ export class CyberpunkActorSheet extends ActorSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["cyberpunk", "sheet", "actor", "character-sheet"],
-      template: "systems/cp2020/templates/actor/actor-sheet.hbs",
+      template: "systems/cyberpunk/templates/actor/actor-sheet.hbs",
       width: 930,
       height: 624,
       resizable: true,
@@ -155,11 +155,11 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
 
       // Prepare character-related items and data
-      this._prepareCharacterItems(sheetData);
-      this._addWoundTrack(sheetData);
-      this._prepareSkills(sheetData);
-      this._prepareGearData(sheetData);
-      this._prepareCyberwareData(sheetData);
+      this._organizeInventory(sheetData);
+      this._buildWoundLabels(sheetData);
+      this._buildSkillDisplay(sheetData);
+      this._buildGearDisplay(sheetData);
+      this._buildCyberwareDisplay(sheetData);
 
       sheetData.weaponTypes = weaponTypes;
 
@@ -184,8 +184,8 @@ export class CyberpunkActorSheet extends ActorSheet {
       sheetData.initiativeTotal = refTotal + combatSenseMod + initiativeMod + fastDrawMod;
 
       // Calculate effective thresholds (using actor methods)
-      const stunThreshold = actor.stunThreshold();
-      const deathThreshold = actor.deathThreshold();
+      const stunThreshold = actor.getStunThreshold();
+      const deathThreshold = actor.getDeathThreshold();
 
       // Stun Save: threshold + Stun Save Mod
       const stunSaveMod = foundry.utils.getProperty(system, "stunSaveMod") || 0;
@@ -446,7 +446,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     return sheetData;
   }
 
-  _prepareSkills(sheetData) {
+  _buildSkillDisplay(sheetData) {
     const skills = this.actor.items.filter(i => i.type === "skill");
     const role = this.actor.system.role;
 
@@ -638,12 +638,12 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Keep legacy support for old template usage
     sheetData.skillsSort = this.actor.system.skillsSortedBy || "Name";
-    sheetData.skillsSortChoices = Object.keys(SortOrders);
-    sheetData.filteredSkillIDs = this._filterSkills(sheetData);
+    sheetData.skillsSortChoices = Object.keys(SortModes);
+    sheetData.filteredSkillIDs = this._applySkillFilter(sheetData);
     sheetData.skillDisplayList = sheetData.filteredSkillIDs.map(id => this.actor.items.get(id));
   }
 
-  _filterSkills(sheetData) {
+  _applySkillFilter(sheetData) {
     if(sheetData.system.transient.skillFilter == null) {
       sheetData.system.transient.skillFilter = "";
     }
@@ -660,7 +660,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     });
   }
 
-  async _updateCombatSenseMod() {
+  async _syncCombatSense() {
     const combatSenseLevel =
       this.actor.items.find(item => item.type === 'skill' && item.name.includes('Combat'))?.system.level
       ?? this.actor.items.find(item => item.type === 'skill' && item.name.includes('Боя'))?.system.level
@@ -668,13 +668,13 @@ export class CyberpunkActorSheet extends ActorSheet {
     await this.actor.update({ "system.CombatSenseMod": Number(combatSenseLevel) });
   }
 
-  _addWoundTrack(sheetData) {
+  _buildWoundLabels(sheetData) {
     const nonMortals = ["Light", "Serious", "Critical"].map(e => game.i18n.localize("CYBERPUNK."+e));
     const mortals = Array(7).fill().map((_,index) => game.i18n.format("CYBERPUNK.Mortal", {mortality: index}));
     sheetData.woundStates = nonMortals.concat(mortals);
   }
 
-  _gearTabItems(allItems) {
+  _getDisplayableGear(allItems) {
     let hideThese = new Set(["cyberware", "skill", "program"]);
     let nameSorter = new Intl.Collator();
     let showItems = allItems
@@ -683,7 +683,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     return showItems;
   }
 
-  _prepareGearData(sheetData) {
+  _buildGearDisplay(sheetData) {
     const weapons = this.actor.itemTypes.weapon || [];
     const armor = this.actor.itemTypes.armor || [];
     const commodity = this.actor.itemTypes.misc || [];
@@ -698,7 +698,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Also include cyberware OPTIONS with isWeapon=true when their parent is equipped
     const cyberweaponOptions = cyberware.filter(c => {
       if (!c.system.isWeapon || !c.system.isOption) return false;
-      const parentId = c.getFlag('cp2020', 'attachedTo');
+      const parentId = c.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false; // Detached options never appear in gear list
       const parent = cyberware.find(p => p.id === parentId);
       return parent && parent.system.equipped;
@@ -987,7 +987,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Also include cyberware OPTIONS with isArmor=true when their parent is equipped
     const cyberarmorOptions = cyberware.filter(c => {
       if (!c.system.isArmor || !c.system.isOption) return false;
-      const parentId = c.getFlag('cp2020', 'attachedTo');
+      const parentId = c.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false; // Detached options never appear in gear list
       const parent = cyberware.find(p => p.id === parentId);
       return parent && parent.system.equipped;
@@ -1090,7 +1090,7 @@ export class CyberpunkActorSheet extends ActorSheet {
    * Organizes cyberware into four fixed categories with options attachment system
    * @param {Object} sheetData - The sheet data object to augment
    */
-  _prepareCyberwareData(sheetData) {
+  _buildCyberwareDisplay(sheetData) {
     const cyberware = this.actor.itemTypes.cyberware || [];
 
     // Initialize category containers
@@ -1190,7 +1190,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     const detachedOptions = [];
 
     for (const opt of options) {
-      const parentId = opt.getFlag('cp2020', 'attachedTo') || null;
+      const parentId = opt.getFlag('cyberpunk', 'attachedTo') || null;
       if (parentId && baseItems.some(b => b.id === parentId)) {
         if (!attachmentMap.has(parentId)) attachmentMap.set(parentId, []);
         attachmentMap.get(parentId).push(opt);
@@ -1309,10 +1309,10 @@ export class CyberpunkActorSheet extends ActorSheet {
     sheetData.hasCyberware = cyberware.length > 0;
   }
 
-  _prepareCharacterItems(sheetData) {
+  _organizeInventory(sheetData) {
     let sortedItems = sheetData.actor.itemTypes;
 
-    sheetData.gearTabItems = this._gearTabItems(sheetData.actor.items);
+    sheetData.gearTabItems = this._getDisplayableGear(sheetData.actor.items);
 
     sheetData.gear = {
       weapons: sortedItems.weapon,
@@ -1452,7 +1452,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       let item = getEventItem(this, ev);
       let confirmDialog = new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${localizeParam("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -1569,7 +1569,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Stat roll - open dialog
     html.find('.stat-roll').click(ev => {
       const statName = ev.currentTarget.dataset.statName;
-      const fullStatName = localize(properCase(statName) + "Full");
+      const fullStatName = localize(toTitleCase(statName) + "Full");
 
       // Close any existing skill roll dialog first
       const existingDialog = Object.values(ui.windows).find(w => w.id === "skill-roll-dialog");
@@ -1605,7 +1605,7 @@ export class CyberpunkActorSheet extends ActorSheet {
             const dotDamage = Number(this.dataset.damage);
             // Show darkened hover for taken dots from hoverDamage+1 to currentDamage
             if (dotDamage > hoverDamage && dotDamage <= currentDamage) {
-              $(this).attr('src', 'systems/cp2020/img/ui/wounds-hover-dark.svg');
+              $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-hover-dark.svg');
             }
           });
         } else {
@@ -1613,7 +1613,7 @@ export class CyberpunkActorSheet extends ActorSheet {
           html.find('.wound-dot').each(function() {
             const dotDamage = Number(this.dataset.damage);
             if (dotDamage <= hoverDamage && dotDamage > currentDamage) {
-              $(this).attr('src', 'systems/cp2020/img/ui/wounds-hover.svg');
+              $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-hover.svg');
             }
           });
         }
@@ -1623,7 +1623,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         html.find('.wound-dot').each(function() {
           const dotDamage = Number(this.dataset.damage);
           const state = currentDamage >= dotDamage ? 'taken' : 'fresh';
-          $(this).attr('src', `systems/cp2020/img/ui/wounds-${state}.svg`);
+          $(this).attr('src', `systems/cyberpunk/img/ui/wounds-${state}.svg`);
         });
       }
     );
@@ -1635,7 +1635,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       let updateData = { _id: skill.id };
       updateData[target] = parseInt(event.target.value, 10);
       await this.actor.updateEmbeddedDocuments("Item", [updateData]);
-      await this._updateCombatSenseMod();
+      await this._syncCombatSense();
     });
 
     // Toggle skill chipped (legacy handler)
@@ -1669,7 +1669,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Skill sorting
     html.find(".skill-sort > select").change(ev => {
       let sort = ev.currentTarget.value;
-      this.actor.sortSkills(sort);
+      this.actor.reorderSkills(sort);
     });
 
     // Skill search: auto-filter + clear button
@@ -1747,7 +1747,7 @@ export class CyberpunkActorSheet extends ActorSheet {
             { localKey: "ExtraModifiers", dataPath: "extraMod", defaultValue: 0 }
           ]],
           onConfirm: ({ extraMod=0, advantage=false, disadvantage=false }) =>
-            this.actor.rollSkill(
+            this.actor.performSkillRoll(
               id,
               Number(extraMod) || 0,
               advantage,
@@ -1817,7 +1817,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         "system.level": Math.max(0, Math.min(10, newLevel))
       }]);
       // Update Combat Sense modifier if this was a Combat Sense skill
-      await this._updateCombatSenseMod();
+      await this._syncCombatSense();
     });
 
     // Plus button (spend IP) for new skills tab
@@ -1841,7 +1841,7 @@ export class CyberpunkActorSheet extends ActorSheet {
           "system.ip": currentIp - cost
         }]);
         // Update Combat Sense modifier if this was a Combat Sense skill
-        await this._updateCombatSenseMod();
+        await this._syncCombatSense();
       } else {
         ui.notifications.warn(`Not enough IP. Need ${cost}, have ${currentIp}.`);
       }
@@ -1855,13 +1855,13 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${localizeParam("ItemDeleteConfirmText", {itemName: skill.name})}</p>`,
+        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: skill.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
             callback: async () => {
               await skill.delete();
-              await this._updateCombatSenseMod();
+              await this._syncCombatSense();
             }
           },
           no: { label: localize("No") }
@@ -1960,7 +1960,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${localizeParam("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -2106,7 +2106,7 @@ export class CyberpunkActorSheet extends ActorSheet {
               }
             }, {
               width: 300,
-              classes: ["cp2020", "ranged-attack-dialog"]
+              classes: ["cyberpunk", "ranged-attack-dialog"]
             });
             dialog.render(true);
             return;
@@ -2120,12 +2120,12 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       // Melee weapons
       if (item.system.attackType === meleeAttackTypes.martial) {
-        const modifierGroups = martialOptions(this.actor);
+        const modifierGroups = buildMartialModifierGroups(this.actor);
         const dialog = new ModifiersDialog(this.actor, {
           weapon: item,
           targetTokens: targetTokens,
           modifierGroups: modifierGroups,
-          onConfirm: (fireOptions) => item.__weaponRoll(fireOptions, targetTokens)
+          onConfirm: (fireOptions) => item._resolveAttack(fireOptions, targetTokens)
         });
         dialog.render(true);
       } else {
@@ -2145,22 +2145,22 @@ export class CyberpunkActorSheet extends ActorSheet {
           id: target.id};
       });
       if(isRanged) {
-        let modifierGroups = rangedModifiers(item, targetTokens);
+        let modifierGroups = buildRangedModifierGroups(item, targetTokens);
         let dialog = new ModifiersDialog(this.actor, {
           weapon: item,
           targetTokens: targetTokens,
           modifierGroups: modifierGroups,
-          onConfirm: (fireOptions) => item.__weaponRoll(fireOptions, targetTokens)
+          onConfirm: (fireOptions) => item._resolveAttack(fireOptions, targetTokens)
         });
         dialog.render(true);
       }
       else if (item.system.attackType === meleeAttackTypes.martial){
-        let modifierGroups = martialOptions(this.actor);
+        let modifierGroups = buildMartialModifierGroups(this.actor);
         let dialog = new ModifiersDialog(this.actor, {
           weapon: item,
           targetTokens: targetTokens,
           modifierGroups: modifierGroups,
-          onConfirm: (fireOptions) => item.__weaponRoll(fireOptions, targetTokens)
+          onConfirm: (fireOptions) => item._resolveAttack(fireOptions, targetTokens)
         });
         dialog.render(true);
       }
@@ -2236,7 +2236,7 @@ export class CyberpunkActorSheet extends ActorSheet {
           // Show roll in chat with custom humanity template
           const templateData = processFormulaRoll(roll);
           const content = await renderTemplate(
-            "systems/cp2020/templates/chat/humanity-roll.hbs",
+            "systems/cyberpunk/templates/chat/humanity-roll.hbs",
             templateData
           );
           await ChatMessage.create({
@@ -2275,7 +2275,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       // Show roll in chat with custom humanity template
       const templateData = processFormulaRoll(roll);
       const content = await renderTemplate(
-        "systems/cp2020/templates/chat/humanity-roll.hbs",
+        "systems/cyberpunk/templates/chat/humanity-roll.hbs",
         templateData
       );
       await ChatMessage.create({
@@ -2309,12 +2309,12 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (!item) return;
 
       // Get parent cyberlimb before detaching (for SDP cap check)
-      const parentId = item.getFlag('cp2020', 'attachedTo');
+      const parentId = item.getFlag('cyberpunk', 'attachedTo');
       const parent = parentId ? this.actor.items.get(parentId) : null;
       const optionSdpBonus = item.system.sdpBonus || 0;
 
       // Remove the attachment flag
-      await item.unsetFlag('cp2020', 'attachedTo');
+      await item.unsetFlag('cyberpunk', 'attachedTo');
 
       // If parent is a cyberlimb and option had SDP bonus, cap current SDP to new max
       if (parent && parent.system.cyberwareType === 'cyberlimb' && optionSdpBonus > 0) {
@@ -2326,7 +2326,7 @@ export class CyberpunkActorSheet extends ActorSheet {
           i.type === 'cyberware' &&
           i.system.isOption &&
           i.id !== item.id &&
-          i.getFlag('cp2020', 'attachedTo') === parentId
+          i.getFlag('cyberpunk', 'attachedTo') === parentId
         );
         const remainingBonus = remainingOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
         const newMaxSdp = baseMax + remainingBonus;
@@ -2409,7 +2409,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
         // Validate: check available slots
         const usedSlots = this.actor.items
-          .filter(i => i.type === 'cyberware' && i.getFlag('cp2020', 'attachedTo') === baseItem.id)
+          .filter(i => i.type === 'cyberware' && i.getFlag('cyberpunk', 'attachedTo') === baseItem.id)
           .reduce((sum, i) => sum + (i.system.takesSpace || 1), 0);
         const availableSlots = baseItem.system.hasSlots || 0;
         const neededSlots = optionItem.system.takesSpace || 1;
@@ -2420,7 +2420,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         }
 
         // Attach option to base
-        await optionItem.setFlag('cp2020', 'attachedTo', baseItem.id);
+        await optionItem.setFlag('cyberpunk', 'attachedTo', baseItem.id);
 
         // If option has SDP bonus and base is a cyberlimb, increase current SDP
         const optionSdpBonus = optionItem.system.sdpBonus || 0;
@@ -2432,7 +2432,7 @@ export class CyberpunkActorSheet extends ActorSheet {
           const allAttachedOptions = this.actor.items.filter(i =>
             i.type === 'cyberware' &&
             i.system.isOption &&
-            i.getFlag('cp2020', 'attachedTo') === baseItem.id
+            i.getFlag('cyberpunk', 'attachedTo') === baseItem.id
           );
           const totalBonus = allAttachedOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
           const newMaxSdp = baseMax + totalBonus;
@@ -2459,7 +2459,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (!item) return;
       let confirmDialog = new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${localizeParam("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -2524,7 +2524,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         ui.notifications.warn(localize("InterfaceSkillNotFound"));
         return;
       }
-      this.actor.rollSkill(skillId);
+      this.actor.performSkillRoll(skillId);
     });
 
     // Active program context menu removal

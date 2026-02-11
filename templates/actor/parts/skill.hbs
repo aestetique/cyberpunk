@@ -6,9 +6,9 @@
         <label class="chip-toggle" data-skill-id="{{../skill.id}}">
             <div class="skill-stat-display">
                 {{~#if isRoleSkill~}}
-                    {{CPLocal (properCase stat)}} [{{CPLocal "Role"}}]
+                    {{loc (toTitleCase stat)}} [{{loc "Role"}}]
                 {{~else}}
-                    {{CPLocal (properCase stat)}}
+                    {{loc (toTitleCase stat)}}
                 {{~/if~}}
             </div>
             <div class="chip-icon {{#unless isChipped}}inactive{{/unless}}"></div>

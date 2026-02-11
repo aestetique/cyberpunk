@@ -24,8 +24,8 @@ export class RangedAttackDialog extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "ranged-attack-dialog",
-      classes: ["cp2020", "ranged-attack-dialog"],
-      template: "systems/cp2020/templates/dialog/ranged-attack.hbs",
+      classes: ["cyberpunk", "ranged-attack-dialog"],
+      template: "systems/cyberpunk/templates/dialog/ranged-attack.hbs",
       width: 300,
       height: "auto",
       popOut: true,

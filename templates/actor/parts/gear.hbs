@@ -5,7 +5,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">WEAPONS</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-weapons.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-weapons.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each weapons as |weapon|}}
@@ -19,11 +19,11 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{weapon.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{weapon.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{weapon.damage}}</span>
@@ -36,7 +36,7 @@
               <span class="field-bottom">Magazine</span>
             </div>
             <div class="gear-action-btn reload-weapon" data-item-id="{{weapon.id}}" data-can-reload="{{weapon.canReload}}">
-              <img src="systems/cp2020/img/ui/badge-reload{{#unless weapon.canReload}}-disabled{{/unless}}.svg" alt="Reload">
+              <img src="systems/cyberpunk/img/ui/badge-reload{{#unless weapon.canReload}}-disabled{{/unless}}.svg" alt="Reload">
             </div>
           {{else if weapon.isExotic}}
             {{!-- Exotic: Charges + Charge button --}}
@@ -45,7 +45,7 @@
               <span class="field-bottom">Charges</span>
             </div>
             <div class="gear-action-btn charge-weapon" data-item-id="{{weapon.id}}" data-can-charge="{{weapon.canCharge}}">
-              <img src="systems/cp2020/img/ui/badge-charge{{#unless weapon.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
+              <img src="systems/cyberpunk/img/ui/badge-charge{{#unless weapon.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
             </div>
           {{else}}
             {{!-- Melee: empty field + empty action --}}
@@ -54,10 +54,10 @@
           {{/if}}
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{weapon.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{weapon.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -71,7 +71,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">ORDNANCE</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-ordnance.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-ordnance.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each ordnanceItems as |ordnance|}}
@@ -85,11 +85,11 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{ordnance.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{ordnance.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{ordnance.damage}}</span>
@@ -102,10 +102,10 @@
           <div class="gear-action-btn"></div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{ordnance.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{ordnance.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -119,7 +119,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">OUTFIT</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-outfit.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-outfit.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each outfitItems as |armor|}}
@@ -133,11 +133,11 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{armor.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{armor.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{armor.sp}}</span>
@@ -149,17 +149,17 @@
           </div>
           {{#unless armor.isCyberware}}
             <div class="gear-action-btn toggle-equip" data-item-id="{{armor.id}}" data-equipped="{{armor.equipped}}">
-              <img src="systems/cp2020/img/ui/badge-outfit{{#unless armor.equipped}}-disabled{{/unless}}.svg" alt="Equip">
+              <img src="systems/cyberpunk/img/ui/badge-outfit{{#unless armor.equipped}}-disabled{{/unless}}.svg" alt="Equip">
             </div>
           {{else}}
             <div class="gear-action-btn"></div>
           {{/unless}}
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{armor.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{armor.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -173,7 +173,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">TOOLS</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-tool.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-tool.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each toolItems as |tool|}}
@@ -187,23 +187,23 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{tool.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{tool.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;"></div>
           <div class="gear-field" style="width: 60px;"></div>
           <div class="gear-action-btn toggle-tool" data-item-id="{{tool.id}}" data-equipped="{{tool.equipped}}">
-            <img src="systems/cp2020/img/ui/badge-{{#if tool.equipped}}on{{else}}off{{/if}}.svg" alt="Toggle">
+            <img src="systems/cyberpunk/img/ui/badge-{{#if tool.equipped}}on{{else}}off{{/if}}.svg" alt="Toggle">
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{tool.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{tool.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -217,7 +217,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">DRUGS</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-drug.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-drug.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each drugItems as |drug|}}
@@ -231,11 +231,11 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{drug.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{drug.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{drug.quantity}}</span>
@@ -243,14 +243,14 @@
           </div>
           <div class="gear-field" style="width: 60px;"></div>
           <div class="gear-action-btn toggle-drug" data-item-id="{{drug.id}}" data-equipped="{{drug.equipped}}">
-            <img src="systems/cp2020/img/ui/badge-{{#if drug.equipped}}used{{else}}wearoff{{/if}}.svg" alt="{{#if drug.equipped}}Wear Off{{else}}Use{{/if}}">
+            <img src="systems/cyberpunk/img/ui/badge-{{#if drug.equipped}}used{{else}}wearoff{{/if}}.svg" alt="{{#if drug.equipped}}Wear Off{{else}}Use{{/if}}">
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{drug.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{drug.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -264,7 +264,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">COMMODITIES</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-commodity.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-commodity.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each gearItems as |item|}}
@@ -278,21 +278,21 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{item.price}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{item.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;"></div>
           <div class="gear-field" style="width: 60px;"></div>
           <div class="gear-action-btn"></div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{item.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{item.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>
@@ -306,7 +306,7 @@
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">AMMO</span>
-      <img class="tab-badge" src="systems/cp2020/img/ui/badge-ammo.svg" alt="">
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-ammo.svg" alt="">
     </header>
     <div class="tab-content gear-content">
       {{#each ammoItems as |ammo|}}
@@ -320,11 +320,11 @@
           </div>
           <div class="gear-price">
             <span class="price-value">{{ammo.totalPrice}}</span>
-            <img src="systems/cp2020/img/ui/badge-eurodollar.svg" alt="eb">
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
           <div class="gear-weight">
             <span class="price-value">{{ammo.weight}}</span>
-            <img src="systems/cp2020/img/ui/badge-weight.svg" alt="kg">
+            <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;">
             {{#if ../isUnlocked}}
@@ -338,10 +338,10 @@
           <div class="gear-action-btn"></div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{ammo.id}}" title="View">
-              <img src="systems/cp2020/img/ui/icon-view.svg" alt="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
             </button>
             <button class="gear-delete" type="button" data-item-id="{{ammo.id}}" title="Delete">
-              <img src="systems/cp2020/img/ui/icon-trash.svg" alt="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
             </button>
           </div>
         </div>

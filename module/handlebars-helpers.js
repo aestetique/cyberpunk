@@ -1,210 +1,98 @@
-import { deepLookup, localize, properCase, replaceIn, shortLocalize } from "./utils.js"
+import { getByPath, toTitleCase, interpolate, localizeShort } from "./utils.js"
 
-const templatePath = "systems/cp2020/templates/";
+const TEMPLATE_ROOT = "systems/cyberpunk/templates/";
+const I18N_PREFIX = "CYBERPUNK.";
+
+// Operator lookup tables for cmp/calc helpers
+const COMPARATORS = {
+    "===": (a, b) => a === b, "==":  (a, b) => a == b,
+    "!=":  (a, b) => a != b,  "!==": (a, b) => a !== b,
+    ">":   (a, b) => a > b,   ">=":  (a, b) => a >= b,
+    "<":   (a, b) => a < b,   "<=":  (a, b) => a <= b,
+    "&&":  (a, b) => a && b,  "||":  (a, b) => a || b,
+};
+const ARITHMETIC = {
+    "+": (a, b) => a + b, "-": (a, b) => a - b,
+    "*": (a, b) => a * b, "/": (a, b) => a / b,
+};
+
 export function registerHandlebarsHelpers() {
-    Handlebars.registerHelper('properCase', properCase);
-    // Short for cyberpunk localize
-    Handlebars.registerHelper('CPLocal', function(str, options) {
-        let localizeKey = "CYBERPUNK." + str;
-        if(!game.i18n.has(localizeKey)) 
-            return str;
-        if(!options || Object.keys(options.hash).length === 0) {
-            return game.i18n.localize(localizeKey);
-        }
-        else {
-            return game.i18n.format(localizeKey, options.hash);
-        };
-    });
-    Handlebars.registerHelper("CPLocalParam", function(str, options) {
-        let localizeKey = "CYBERPUNK." + str;
-        return game.i18n.format(localizeKey, options);
-    });
-    Handlebars.registerHelper("shortCPLocal", shortLocalize);
+    const h = (name, fn) => Handlebars.registerHelper(name, fn);
 
-    Handlebars.registerHelper('localizeStat', function(str) {
-        return "CYBERPUNK." + properCase(str);
+    // --- Localization helpers ---
+    h('toTitleCase', toTitleCase);
+    h('loc', (str, options) => {
+        const key = I18N_PREFIX + str;
+        if (!game.i18n.has(key)) return str;
+        const params = options?.hash;
+        return params && Object.keys(params).length
+            ? game.i18n.format(key, params)
+            : game.i18n.localize(key);
     });
-    Handlebars.registerHelper('and', function(x,y) {
-        return x && y;
-    });
-    Handlebars.registerHelper('equals', function(x, y) {
-        return x === y;
-    });
-    Handlebars.registerHelper('compare', function(x, operator, y) {
-        switch (operator) {
-            case "===":
-                return x === y;
-            case "==":
-                return x == y;
-            case "!=":
-                return x != y;
-            case "!==":
-                return x !== y;
-            case ">":
-                return x > y;
-            case ">=":
-                return x >= y;
-            case "<":
-                return x < y;
-            case "<=":
-                return x <= y;
-            case "&&":
-                return x && y;
-            case "||":
-                return x || y;
-            default:
-                break;
-        }
-    });
-    Handlebars.registerHelper('math', function(x, operator, y) {
-        switch (operator) {
-            case "*":
-                return x * y;
-            case "/":
-                return x / y;
-            case "-": 
-                return x - y;
-            case "+":
-                return x + y;
-            default:
-                break;
-        }
-    });
-    Handlebars.registerHelper('hasProperty', function(x, prop) {
-        return x[prop] !== undefined;
-    })
+    h("locFmt", (str, options) => game.i18n.format(I18N_PREFIX + str, options));
+    h("locShort", localizeShort);
+    h('statKey', str => I18N_PREFIX + toTitleCase(str));
 
-    // Repeat what's inside it X times. i starts at 1, ends at amount.
-    // Useful for testing the damage track. Use as, for example, {{#repeat 4}}whatyouwanttorepeat{{/repeat}}
-    Handlebars.registerHelper("repeat", function(amount, options) {
-        var result = "";
-        for (var i = 1; i <= amount; i++) {
-            result = result + options.fn({i: i});
-        }
-        return result;
-    });
-    Handlebars.registerHelper("concat", function() {
-        let result = "";
-        //Skip the last argument.
-        for(var i = 0; i < arguments.length - 1; ++i) {
-            result += arguments[i];
-        }
-        return result;
-    });
-    Handlebars.registerHelper("skillRef", function(skill) {
-        return "CYBERPUNK.Skill" + skill.split(".").pop();
-    });
-    Handlebars.registerHelper("hasElements", function(array) {
-        return array.length > 0;
+    // --- Logic & math ---
+    h('both', (x, y) => x && y);
+    h('eq', (x, y) => x === y);
+    h('cmp', (x, op, y) => COMPARATORS[op]?.(x, y));
+    h('calc', (x, op, y) => ARITHMETIC[op]?.(x, y));
+    h('hasProp', (x, prop) => x[prop] !== undefined);
+
+    // --- Iteration & strings ---
+    h("times", (amount, options) =>
+        Array.from({ length: amount }, (_, idx) => options.fn({ i: idx + 1 })).join("")
+    );
+    h("strCat", (...args) => args.slice(0, -1).join(""));
+    h("skillKey", skill => `${I18N_PREFIX}Skill${skill.split(".").pop()}`);
+    h("notEmpty", array => array.length > 0);
+
+    // Normalise select options — accepts plain strings or {value, localKey, localData} objects
+    h("normOpt", (choice, options) => {
+        const ctx = choice?.value !== undefined
+            ? { value: choice.value, localKey: choice.localKey ?? choice.value, localData: choice.localData }
+            : { value: choice, localKey: choice, localData: undefined };
+        return options.fn(ctx);
     });
 
-    // Allows you to use simple ["one", "two"] options for a select, or something like
-    // [{value:"close", localKey:"RangeClose", localData: {range: 50}}, ...]
-    // Translates the simple into the more complex one, really
-    // Both extremes of ease-of-use and granularity :)
-    Handlebars.registerHelper("selectOption", function(choice, options) {
-        let context = {};
-        // We're using the more complex layout of choices. Almost no real translation needed (except for choosing local key)
-        if(choice.value !== undefined) {
-            context = {
-                value: choice.value,
-                localKey: choice.localKey || choice.value,
-                localData: choice.localData
-            }
-        }
-        // Just ["one", "two"] etc
-        else {
-            context = {
-                value: choice,
-                localKey: choice,
-                localData: undefined
-            }
-        }
-
-        return options.fn(context);
-    });
-    // Woundstate: 0 for light, 1 for serious, etc
-    // It's a little unintuitive, but handlebars loops start at 0, and that's our first would state
-    // Damage: How much damage the character has taken. Actor.system.damage.
-    // Provides within its context classes, and the current wound
-    Handlebars.registerHelper("damageBoxes", function(woundState, damage, options) {
-        const woundsPerState = 4;
-        const previousBoxes = woundState * woundsPerState;
-        let ret = [];
-        // Per box in wound
-        for(let boxNo = 1; boxNo <= woundsPerState; boxNo++) {
-            let thisWound = previousBoxes + boxNo;
-            let isChecked = thisWound == damage;
-            let classes = "";
-            if(boxNo === 1) {
-                classes += " leftmost"
-            }
-            else if (boxNo === woundsPerState) {
-                classes += " rightmost"
-            }
-    
-            if(damage >= thisWound) {
-                classes += " filled"
-            }
-            else { classes += " unfilled" }
-            // When the wound box is filled, make clicking it again essentially "deselect" that wound
-            if(damage == thisWound && damage > 0) {
-                thisWound -= 1;
-            }
-            ret += options.fn({
-                classes: classes, 
-                woundNo: thisWound, 
-                isChecked: isChecked
-            });
-        }
-        return ret;
+    // Wound track damage boxes (4 per wound state)
+    h("woundBoxes", (woundState, damage, options) => {
+        const BOXES = 4;
+        const offset = woundState * BOXES;
+        return Array.from({ length: BOXES }, (_, idx) => {
+            const boxIdx = idx + 1;
+            let woundNo = offset + boxIdx;
+            const filled = damage >= woundNo;
+            const isChecked = woundNo === damage;
+            const classes = [
+                boxIdx === 1 ? "leftmost" : boxIdx === BOXES ? "rightmost" : null,
+                filled ? "filled" : "unfilled",
+            ].filter(Boolean).join(" ");
+            // Clicking a filled box "deselects" it
+            if (isChecked && damage > 0) woundNo -= 1;
+            return options.fn({ classes, woundNo, isChecked });
+        }).join("");
     });
 
-    Handlebars.registerHelper("isObject", function(foo) {
-        return foo instanceof Object;
-    });
+    h("isObj", val => val instanceof Object);
 
-    Handlebars.registerHelper("template", function(templateName) {
-        return templatePath + templateName + ".hbs";
-    });
+    // --- Template path helpers ---
+    h("tpl", name => `${TEMPLATE_ROOT}${name}.hbs`);
+    h("sysPath", path => TEMPLATE_ROOT + path);
+    h("dynTpl", (path, value) => TEMPLATE_ROOT + interpolate(path, value));
+    h("getByPath", (context, path) => getByPath(context, path));
 
-    // eg. {{> (replaceIn "systems/cp2020/templates/path/to/a-partial-[VAR]" foo)}}
-    Handlebars.registerHelper("replaceIn", replaceIn);
-    // eg. {{> (CPTemplate "path/to/static-partial.hbs")}}
-    Handlebars.registerHelper("CPTemplate", function(path) {
-        return templatePath + path;
-    });
-    // eg. {{> (varTemplate "path/to/[VAR]-partial.hbs" foo)}}
-    Handlebars.registerHelper("varTemplate", function(path, replaceWith) {
-        return templatePath + replaceIn(path, replaceWith);
-    });
+    // Armor coverage summary — show abbreviated location names where SP > 0
+    h("coverageSummary", coverage =>
+        Object.entries(coverage)
+            .filter(([, data]) => data.stoppingPower > 0)
+            .map(([key]) => localizeShort(key))
+            .join("|")
+    );
 
-    Handlebars.registerHelper("deepLookup", function(context, path) {
-        return deepLookup(context, path);
-    });
-
-    /** Display array of localizable strings, in short if possible
-     * For each string, will look it up as a localization, with "Short" appended if possible, then join with "|"
-    **/
-    Handlebars.registerHelper("armorSummary", function(armorCoverage) {
-        return Object.keys(armorCoverage)
-            .filter(key => armorCoverage[key].stoppingPower > 0)
-            .map(shortLocalize)
-            .join("|");
-    });
-
-    /**
-     * Range array is either [a] or [a,b] usually - used in actors' hit locations
-     */
-    Handlebars.registerHelper("displayRange", function(rangeArray) {
-        if(rangeArray.length >= 2) {
-            return rangeArray[0] + "-" + rangeArray[1];
-        }
-        else if (rangeArray.length == 1) {
-            return String(rangeArray[0]);
-        }
-        return "";
-    });
+    // Display a hit-location range array as "a-b" or just "a"
+    h("fmtRange", range => range.length >= 2 ? `${range[0]}-${range[1]}` : String(range[0] ?? ""));
 
     /**
      * Aggregate damage by body location for chat cards

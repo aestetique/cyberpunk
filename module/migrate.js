@@ -1,14 +1,103 @@
-import { sortSkills, SortOrders } from "./actor/skill-sort.js";
-import { getDefaultSkills, localize, tryLocalize } from "./utils.js";
+import { sortSkills, SortModes } from "./actor/skill-sort.js";
+import { localize, safeLocalize } from "./utils.js";
+
+const OLD_NAMESPACE = "cp2020";
+const NEW_NAMESPACE = "cyberpunk";
 
 const updateFuncs = {
     "Actor": migrateActor,
     "Item": migrateItem
 }
-// I know there's a lot of await in here, and I think it might be possible to not wait for the results of updating entities. But I also don't know if it would blow foundry up to get so many update requests so far.
+
+/**
+ * Migrate flags from old "cp2020" namespace to "cyberpunk" on a single document.
+ */
+async function migrateDocFlags(doc) {
+    const oldFlags = doc.flags?.[OLD_NAMESPACE];
+    if (!oldFlags || Object.keys(oldFlags).length === 0) return;
+
+    const updates = {};
+    for (const [key, value] of Object.entries(oldFlags)) {
+        updates[`flags.${NEW_NAMESPACE}.${key}`] = value;
+    }
+    updates[`flags.${OLD_NAMESPACE}`] = null;
+
+    await doc.update(updates);
+}
+
+/**
+ * One-time migration of all document flags from "cp2020" to "cyberpunk" namespace.
+ * Also migrates settings stored under the old namespace.
+ */
+export async function migrateNamespace() {
+    if (!game.user.isGM) return;
+
+    // Check if already migrated
+    try {
+        const alreadyMigrated = game.settings.get(NEW_NAMESPACE, "namespaceMigrated");
+        if (alreadyMigrated) return;
+    } catch (e) {
+        // Setting not registered yet — will be handled below
+    }
+
+    // Migrate settings from old namespace
+    try {
+        const storage = game.settings.storage.get("world");
+        const oldVersion = storage.getItem(`${OLD_NAMESPACE}.systemMigrationVersion`);
+        if (oldVersion) {
+            const currentVersion = game.settings.get(NEW_NAMESPACE, "systemMigrationVersion");
+            if (!currentVersion) {
+                await game.settings.set(NEW_NAMESPACE, "systemMigrationVersion", oldVersion);
+            }
+        }
+        const oldMappings = storage.getItem(`${OLD_NAMESPACE}.skillMappings`);
+        if (oldMappings) {
+            try {
+                const parsed = JSON.parse(oldMappings);
+                await game.settings.set(NEW_NAMESPACE, "skillMappings", parsed);
+            } catch (e) {
+                console.warn("Cyberpunk: Could not parse old skill mappings", e);
+            }
+        }
+    } catch (e) {
+        console.warn("Cyberpunk: Could not migrate old settings", e);
+    }
+
+    // Migrate flags on all documents
+    console.log("Cyberpunk: Migrating flags from cp2020 to cyberpunk namespace...");
+
+    for (const actor of game.actors) {
+        await migrateDocFlags(actor);
+        for (const item of actor.items) {
+            await migrateDocFlags(item);
+        }
+        for (const effect of actor.effects) {
+            await migrateDocFlags(effect);
+        }
+    }
+
+    for (const item of game.items) {
+        await migrateDocFlags(item);
+    }
+
+    for (const msg of game.messages) {
+        await migrateDocFlags(msg);
+    }
+
+    for (const scene of game.scenes) {
+        for (const token of scene.tokens) {
+            if (!token.actorLink && token.actor) {
+                await migrateDocFlags(token.actor);
+            }
+        }
+    }
+
+    await game.settings.set(NEW_NAMESPACE, "namespaceMigrated", true);
+    console.log("Cyberpunk: Namespace migration complete.");
+}
 
 let migrationSuccess = true;
-// Handle migration of things. The shape of it nabbed from 5e
+
 export async function migrateWorld() {
     if (!game.user.isGM) {
         ui.notifications.error(localize("MigrateError"));
@@ -16,14 +105,14 @@ export async function migrateWorld() {
     }
 
     for(let actor of game.actors.contents) {
-        migrateDocument(actor);
-        actor.items.forEach(item => migrateDocument(item));
+        processDocument(actor);
+        actor.items.forEach(item => processDocument(item));
     }
     for(let item of game.items.contents) {
-        migrateDocument(item);
+        processDocument(item);
     }
     if(migrationSuccess) {
-        game.settings.set("cp2020", "systemMigrationVersion", game.system.version);
+        game.settings.set("cyberpunk", "systemMigrationVersion", game.system.version);
         ui.notifications.info(localize("MigrationComplete", { version: game.system.version }), { permanent: true });
 
     }
@@ -39,14 +128,14 @@ const defaultDataUse = async (document, updateData) => {
         await document.update(updateData);
     }
 }
-async function migrateDocument(document, withUpdataData = defaultDataUse) {
+async function processDocument(document, applyUpdate = defaultDataUse) {
     try {
         let migrateDataFunc = updateFuncs[document.documentName];
         if(migrateDataFunc === undefined) {
             console.log(`No migrate function for document with documentName field "${document.documentName}"`);
         }
         const updateData = await migrateDataFunc(document);
-        withUpdataData(document, updateData);
+        applyUpdate(document, updateData);
     } catch(err) {
         migrationSuccess = false;
         err.message = `Failed cyberpunk system migration for ${document.type} ${document.name}: ${err.message}`;
@@ -55,12 +144,10 @@ async function migrateDocument(document, withUpdataData = defaultDataUse) {
     }
 }
 
-// For now, actors. We can do migrate world as a total of them all. Nabbed framework of code from 5e
 /**
- * Migrate a single Actor document to incorporate latest cp2020 data model changes
- * Return an Object of updateData to be applied
- * @param {object} actor    The actor Document to update
- * @return {Object}         The updateData to apply (via `document.update`)
+ * Migrate a single Actor document to the current data model.
+ * @param {Actor} actor
+ * @returns {Object} updateData to apply
  */
 export async function migrateActor(actor) {
     console.log(`Migrating data of ${actor.name}`);
@@ -104,8 +191,7 @@ export async function migrateActor(actor) {
                     acc.push(...Object.entries(skill)
                         .filter(([name, subskill]) => name !== "group" && trained(subskill))
                         .map(([name, subskill]) => {
-                            // Groups with subskills don't exist anymore - they introduced a lot of complexity and heck.
-                            // We're including in the new name the 
+                            // Flatten grouped skills into individual skill items
                             let prefix = parentName === "MartialArts" ? "Martial Arts" : parentName;
                             // We'll be having a different name than before, so localize here
                             return [`${prefix}: ${localize("Skill"+name)}`, subskill]
@@ -114,7 +200,7 @@ export async function migrateActor(actor) {
                 return acc;
             }, []);
 
-        trainedSkills = trainedSkills.map(([name, skillData]) => convertOldSkill(name, skillData))
+        trainedSkills = trainedSkills.map(([name, skillData]) => legacySkillToItem(name, skillData))
     }
     console.log("Trained skills:");
     console.log(trainedSkills);
@@ -126,25 +212,21 @@ export async function migrateActor(actor) {
         console.log(`Keeping any skills you had points in: ${trainedSkills.join(", ") || "None"}`);
 
         // Key core skills by name so they may be overridden
-        let skillsToAdd = (await getDefaultSkills()).reduce((acc, item) => {
+        let skillsToAdd = [].reduce((acc, item) => {
             acc[item.name] = item.toObject();
             return acc;
         }, {});
         // Override core skills with any trained skill by the same name
         for(const trainedSkill of trainedSkills) {
-            // Old skills had localization keys as names, so we'll translate these
-            // Subskills have already been translated though, as we can only tell they're subskills while we were looping through them
-            // This is what happens when you migrate legacy, kids, it hurts
-            let localizedName = tryLocalize("Skill"+trainedSkill.name, trainedSkill.name);
+            // Translate legacy localization keys to display names
+            let localizedName = safeLocalize("Skill"+trainedSkill.name, trainedSkill.name);
             skillsToAdd[localizedName] = trainedSkill;
         }
         console.log(skillsToAdd);
-        skillsToAdd = sortSkills(Object.values(skillsToAdd), SortOrders.Name);
+        skillsToAdd = sortSkills(Object.values(skillsToAdd), SortModes.Name);
         actorUpdates["system.skillsSortedBy"] = "Name";
 
-        // Keep current items
         const currentItems = Array.from(actor.items).map(item => item.toObject());
-        // TODO: This is repeated in a few places - centralise/refactor
         actorUpdates.items = currentItems.concat(currentItems, skillsToAdd);
     }
 
@@ -177,8 +259,8 @@ export function migrateItem(item) {
 }
 
 // Take an old hardcoded skill and translate it into data for a skill item
-export function convertOldSkill(name, skillData) {
-    return {name: tryLocalize("Skill"+name, name), type: "skill", data: {
+export function legacySkillToItem(name, skillData) {
+    return {name: safeLocalize("Skill"+name, name), type: "skill", data: {
         flavor: "",
         notes: "",
         level: skillData.value || 0,

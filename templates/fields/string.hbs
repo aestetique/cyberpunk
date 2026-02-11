@@ -1,6 +1,6 @@
 <div class="field">
-    <label for="{{edit}}">{{CPLocal label}}</label>
+    <label for="{{edit}}">{{loc label}}</label>
     <span class="flex-pad"></span>
     <input {{#if readOnly}}readonly{{/if}} class="textsize" name="{{edit}}" 
-        type="text" value="{{deepLookup . edit}}"/>
+        type="text" value="{{getByPath . edit}}"/>
 </div>

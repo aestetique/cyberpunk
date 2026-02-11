@@ -6,7 +6,7 @@
 
   {{!-- Strike section bar --}}
   <div class="fire-mode-section">
-    <img src="systems/cp2020/img/chat/strike.svg" alt="">
+    <img src="systems/cyberpunk/img/chat/strike.svg" alt="">
     <span class="fire-mode-label">{{localize "CYBERPUNK.Strike"}}</span>
   </div>
 
@@ -20,7 +20,7 @@
 
   {{!-- Conditions section bar --}}
   <div class="fire-mode-section">
-    <img src="systems/cp2020/img/chat/conditions.svg" alt="">
+    <img src="systems/cyberpunk/img/chat/conditions.svg" alt="">
     <span class="fire-mode-label">{{localize "CYBERPUNK.ConditionsHeader"}}</span>
   </div>
 
@@ -42,48 +42,48 @@
 
   {{!-- Location section bar --}}
   <div class="fire-mode-section">
-    <img src="systems/cp2020/img/chat/location.svg" alt="">
+    <img src="systems/cyberpunk/img/chat/location.svg" alt="">
     <span class="fire-mode-label">{{localize "CYBERPUNK.Location"}}</span>
   </div>
 
   {{!-- Location buttons - 2x3 grid --}}
   <div class="location-grid{{#if executeSelected}} disabled{{/if}}">
     <button type="button" class="location-btn" data-location="LeftArm">
-      <img src="systems/cp2020/img/chat/LeftArm.svg" alt="">
+      <img src="systems/cyberpunk/img/chat/LeftArm.svg" alt="">
     </button>
     <button type="button" class="location-btn" data-location="Head">
-      <img src="systems/cp2020/img/chat/Head.svg" alt="">
+      <img src="systems/cyberpunk/img/chat/Head.svg" alt="">
     </button>
     <button type="button" class="location-btn" data-location="RightArm">
-      <img src="systems/cp2020/img/chat/RightArm.svg" alt="">
+      <img src="systems/cyberpunk/img/chat/RightArm.svg" alt="">
     </button>
     <button type="button" class="location-btn" data-location="LeftLeg">
-      <img src="systems/cp2020/img/chat/LeftLeg.svg" alt="">
+      <img src="systems/cyberpunk/img/chat/LeftLeg.svg" alt="">
     </button>
     <button type="button" class="location-btn" data-location="Torso">
-      <img src="systems/cp2020/img/chat/Torso.svg" alt="">
+      <img src="systems/cyberpunk/img/chat/Torso.svg" alt="">
     </button>
     <button type="button" class="location-btn" data-location="RightLeg">
-      <img src="systems/cp2020/img/chat/RightLeg.svg" alt="">
+      <img src="systems/cyberpunk/img/chat/RightLeg.svg" alt="">
     </button>
   </div>
 
   {{!-- Luck section bar --}}
   <div class="fire-mode-section">
-    <img src="systems/cp2020/img/chat/luck.svg" alt="">
+    <img src="systems/cyberpunk/img/chat/luck.svg" alt="">
     <span class="fire-mode-label">{{localize "CYBERPUNK.LuckFull"}}</span>
   </div>
 
   {{!-- Luck controls --}}
   <div class="luck-controls{{#if luckDisabled}} disabled{{/if}}">
     <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
-      <img src="systems/cp2020/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+      <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="luck-value">{{luckToSpend}}</span>
     </div>
     <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
-      <img src="systems/cp2020/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+      <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
 

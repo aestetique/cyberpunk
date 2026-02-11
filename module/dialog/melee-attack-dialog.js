@@ -41,8 +41,8 @@ export class MeleeAttackDialog extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "melee-attack-dialog",
-      classes: ["cp2020", "melee-attack-dialog"],
-      template: "systems/cp2020/templates/dialog/melee-attack.hbs",
+      classes: ["cyberpunk", "melee-attack-dialog"],
+      template: "systems/cyberpunk/templates/dialog/melee-attack.hbs",
       width: 300,
       height: "auto",
       popOut: true,
@@ -110,7 +110,7 @@ export class MeleeAttackDialog extends Application {
         html.find('.location-grid').addClass('disabled');
         html.find('.location-btn').each((i, btn) => {
           const loc = btn.dataset.location;
-          $(btn).find('img').attr('src', `systems/cp2020/img/chat/${loc}-disabled.svg`);
+          $(btn).find('img').attr('src', `systems/cyberpunk/img/chat/${loc}-disabled.svg`);
         });
       } else {
         // Re-enable all controls
@@ -120,7 +120,7 @@ export class MeleeAttackDialog extends Application {
         html.find('.location-grid').removeClass('disabled');
         html.find('.location-btn').each((i, btn) => {
           const loc = btn.dataset.location;
-          $(btn).find('img').attr('src', `systems/cp2020/img/chat/${loc}.svg`);
+          $(btn).find('img').attr('src', `systems/cyberpunk/img/chat/${loc}.svg`);
         });
       }
     });
@@ -189,8 +189,8 @@ export class MeleeAttackDialog extends Application {
     html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
 
     // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src', `systems/cp2020/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src', `systems/cp2020/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+    html.find('.luck-minus-btn img').attr('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+    html.find('.luck-plus-btn img').attr('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
   /**
@@ -216,7 +216,7 @@ export class MeleeAttackDialog extends Application {
       };
 
       const content = await renderTemplate(
-        "systems/cp2020/templates/chat/melee-execute.hbs",
+        "systems/cyberpunk/templates/chat/melee-execute.hbs",
         templateData
       );
 
@@ -250,7 +250,7 @@ export class MeleeAttackDialog extends Application {
       };
 
       this.close();
-      this.weapon.__weaponRoll(attackMods, this.targetTokens);
+      this.weapon._resolveAttack(attackMods, this.targetTokens);
     }
   }
 }

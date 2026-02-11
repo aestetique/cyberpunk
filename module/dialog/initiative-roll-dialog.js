@@ -34,8 +34,8 @@ export class InitiativeRollDialog extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "initiative-roll-dialog",
-      classes: ["cp2020", "initiative-roll-dialog"],
-      template: "systems/cp2020/templates/dialog/initiative-roll.hbs",
+      classes: ["cyberpunk", "initiative-roll-dialog"],
+      template: "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
       width: 300,
       height: "auto",
       popOut: true,
@@ -118,9 +118,9 @@ export class InitiativeRollDialog extends Application {
 
     // Swap icons based on disabled state
     html.find('.luck-minus-btn img').attr('src',
-      `systems/cp2020/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+      `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
     html.find('.luck-plus-btn img').attr('src',
-      `systems/cp2020/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+      `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
   /**

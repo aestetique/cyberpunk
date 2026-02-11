@@ -1,8 +1,8 @@
 {
-  "id": "cp2020",
-  "title": "Cyberpunk 2020",
+  "id": "cyberpunk",
+  "title": "Cyberpunk",
   "description": "A system for playing the R. Talsorian Games' Cyberpunk 2020 in the Foundry Virtual Tabletop environment.",
-  "background": "systems/cp2020/img/ui/system-background.webp",
+  "background": "systems/cyberpunk/img/ui/system-background.webp",
   "version": "1.0.4",
   "compatibility": {
     "minimum": "13",
@@ -25,8 +25,8 @@
     }
   ],
   "scripts": [],
-  "esmodules": ["module/cp2020.js"],
-  "styles": ["css/cp2020.css"],
+  "esmodules": ["module/cyberpunk.js"],
+  "styles": ["css/cyberpunk.css"],
   "languages": [
     {
       "lang": "en",
@@ -42,8 +42,7 @@
   },
   "primaryTokenAttribute": null,
   "secondaryTokenAttribute": null,
-  "url": "https://github.com/aestetique/cp2020",
-  "manifest": "https://raw.githubusercontent.com/aestetique/cp2020/main/system.json",
-  "download": "https://github.com/aestetique/cp2020/archive/refs/tags/release-1.0.4.zip"
+  "url": "https://github.com/aestetique/cyberpunk",
+  "manifest": "https://raw.githubusercontent.com/aestetique/cyberpunk/main/system.json",
+  "download": "https://github.com/aestetique/cyberpunk/archive/refs/tags/release-1.0.4.zip"
 }
-  

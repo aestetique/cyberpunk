@@ -22,7 +22,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["cyberpunk", "sheet", "item", "cyberware-sheet"],
-            template: "systems/cp2020/templates/item/cyberware-sheet.hbs",
+            template: "systems/cyberpunk/templates/item/cyberware-sheet.hbs",
             width: 500,
             height: 400,
             dragDrop: [{ dropSelector: "[data-drop-target]" }]
@@ -60,7 +60,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             const attachedOptions = this.item.actor.items.filter(i =>
                 i.type === 'cyberware' &&
                 i.system.isOption &&
-                i.getFlag('cp2020', 'attachedTo') === this.item.id
+                i.getFlag('cyberpunk', 'attachedTo') === this.item.id
             );
 
             const sdpBonusTotal = attachedOptions.reduce((sum, opt) => {

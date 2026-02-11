@@ -1,4 +1,4 @@
-import { deepSet, localize } from "../utils.js"
+import { setByPath, localize } from "../utils.js"
 import { defaultTargetLocations, fireModes } from "../lookups.js"
 
 /**
@@ -12,9 +12,9 @@ import { defaultTargetLocations, fireModes } from "../lookups.js"
       static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
         id: "weapon-modifier",
-        classes: ["cp2020"],
+        classes: ["cyberpunk"],
         title: localize("AttackModifiers"),
-        template: "systems/cp2020/templates/dialog/modifiers.hbs",
+        template: "systems/cyberpunk/templates/dialog/modifiers.hbs",
         width: 500,
         height: "auto",
         weapon: null,
@@ -46,9 +46,6 @@ import { defaultTargetLocations, fireModes } from "../lookups.js"
   
     /** @override */
     getData() {
-      // Woo! This should be much more flexible than the previous implementation
-      // My gods did it require thinking about the shape of things, because loosely-typed can be a headache
-
       const groups = JSON.parse(JSON.stringify(this.options.modifierGroups || []));
 
       if (this.options.extraMod) {
@@ -68,7 +65,7 @@ import { defaultTargetLocations, fireModes } from "../lookups.js"
         group.forEach(mod => {
           // path towards modifier's field template
           mod.fieldPath = `fields/${mod.choices ? "select" : typeof mod.defaultValue}`;
-          deepSet(defaultValues, mod.dataPath,
+          setByPath(defaultValues, mod.dataPath,
             mod.defaultValue !== undefined ? mod.defaultValue : "");
         });
       });
@@ -76,7 +73,6 @@ import { defaultTargetLocations, fireModes } from "../lookups.js"
       return {
         modifierGroups: groups,
         targetTokens: this.options.targetTokens,
-        // You can't refer to indices in FormApplication form entries as far as I know, so let's give them a place to live
         defaultValues,
         isRanged: this.options.weapon?.isRanged?.() ?? false,
         shotsLeft: this.options.weapon?.system.shotsLeft ?? 0,

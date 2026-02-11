@@ -9,7 +9,7 @@ $fail-color: #d1502fb8;
 // ============================================
 // Foundry Message Wrapper Styling
 // ============================================
-.cp2020-message {
+.cyberpunk-message {
   // Override Foundry's default message styling
   &.message {
     background-color: var(--chat-back);
@@ -38,7 +38,7 @@ $fail-color: #d1502fb8;
 }
 
 // Foundry Message Typography
-.cp2020-message {
+.cyberpunk-message {
   .message-content {
     font-family: var(--font-blender);
     font-size: 16px;
@@ -52,7 +52,7 @@ $fail-color: #d1502fb8;
 }
 
 // Custom header styling (replaces Foundry's default)
-.cp2020-header {
+.cyberpunk-header {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -60,7 +60,7 @@ $fail-color: #d1502fb8;
   margin-bottom: 10px;
 }
 
-.cp2020-avatar {
+.cyberpunk-avatar {
   width: 36px;
   height: 36px;
   min-width: 36px;
@@ -80,7 +80,7 @@ $fail-color: #d1502fb8;
   }
 }
 
-.cp2020-info {
+.cyberpunk-info {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -90,14 +90,14 @@ $fail-color: #d1502fb8;
 }
 
 // Top row: Player name + timestamp + trash
-.cp2020-meta-row {
+.cyberpunk-meta-row {
   display: flex;
   align-items: center;
   gap: 4px;
   width: 100%;
 }
 
-.cp2020-player-name {
+.cyberpunk-player-name {
   flex: 1 0 0;
   font-family: var(--font-blender);
   font-weight: 400;
@@ -106,7 +106,7 @@ $fail-color: #d1502fb8;
   color: var(--chat-text);
 }
 
-.cp2020-timestamp {
+.cyberpunk-timestamp {
   font-family: var(--font-blender);
   font-weight: 400;
   font-size: 10px;
@@ -115,7 +115,7 @@ $fail-color: #d1502fb8;
   text-align: right;
 }
 
-.cp2020-delete {
+.cyberpunk-delete {
   width: 12px;
   height: 12px;
   aspect-ratio: 1/1;
@@ -137,13 +137,13 @@ $fail-color: #d1502fb8;
 }
 
 // Bottom row: Actor name (full width)
-.cp2020-actor-row {
+.cyberpunk-actor-row {
   display: flex;
   align-items: center;
   width: 100%;
 }
 
-.cp2020-actor-name {
+.cyberpunk-actor-name {
   font-family: var(--font-refinery);
   font-weight: 500;
   font-size: 16px;

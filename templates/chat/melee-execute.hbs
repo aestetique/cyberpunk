@@ -1,31 +1,31 @@
 <div class="cyberpunk-card cyberpunk-card--attack">
     {{!-- Section Bar: Execute type --}}
-    {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="strike" label=effectLabel}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="strike" label=effectLabel}}
 
     {{!-- Weapon Line --}}
-    {{> "systems/cp2020/templates/chat/partials/weapon-line.hbs"}}
+    {{> "systems/cyberpunk/templates/chat/partials/weapon-line.hbs"}}
 
     {{!-- Section Bar: Effect --}}
-    {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="damage" label=(CPLocal "Effect")}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "Effect")}}
 
     {{!-- Effect Row (shows the condition icon + label) --}}
     <div class="effect-row">
-        <img src="systems/cp2020/img/conditions/{{effectIcon}}.svg" alt="">
+        <img src="systems/cyberpunk/img/conditions/{{effectIcon}}.svg" alt="">
         <span class="effect-row__label">{{effectLabel}}</span>
     </div>
 
     {{!-- Target Selector (for applying the condition) --}}
     <div class="target-selector" data-damage="{}" data-weapon-effect="{{conditionId}}" data-hit-location="">
         <div class="target-selector__tabs">
-            <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{CPLocal "Targeted"}}</button>
+            <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{loc "Targeted"}}</button>
             <span class="target-selector__divider"></span>
-            <button class="target-selector__tab" data-mode="selected">{{CPLocal "Selected"}}</button>
+            <button class="target-selector__tab" data-mode="selected">{{loc "Selected"}}</button>
         </div>
         <div class="target-selector__content">
             <div class="target-info target-info--empty">
-                {{CPLocal "SelectTargetEffect"}}
+                {{loc "SelectTargetEffect"}}
             </div>
         </div>
-        <button class="apply-damage-btn" disabled>{{CPLocal "Apply"}}</button>
+        <button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>
     </div>
 </div>

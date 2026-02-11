@@ -857,7 +857,7 @@ div.statderive .value.rightborder {
   display: inline;
 }
 
-.cp2020-message.message {
+.cyberpunk-message.message {
   background-color: var(--chat-back);
   border: 2px solid var(--chat-stroke);
   border-radius: 4px;
@@ -868,25 +868,25 @@ div.statderive .value.rightborder {
   background-position: center top;
   background-size: 100% auto;
 }
-.cp2020-message.message.whisper {
+.cyberpunk-message.message.whisper {
   background-color: #06060F;
 }
-.cp2020-message .message-content {
+.cyberpunk-message .message-content {
   padding: 0;
   margin: 0;
 }
 
-.cp2020-message .message-content {
+.cyberpunk-message .message-content {
   font-family: var(--font-blender);
   font-size: 16px;
   line-height: 1.1;
 }
-.cp2020-message .message-content h1, .cp2020-message .message-content h2, .cp2020-message .message-content h3, .cp2020-message .message-content h4, .cp2020-message .message-content h5, .cp2020-message .message-content h6 {
+.cyberpunk-message .message-content h1, .cyberpunk-message .message-content h2, .cyberpunk-message .message-content h3, .cyberpunk-message .message-content h4, .cyberpunk-message .message-content h5, .cyberpunk-message .message-content h6 {
   font-family: inherit;
   color: currentColor;
 }
 
-.cp2020-header {
+.cyberpunk-header {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -894,7 +894,7 @@ div.statderive .value.rightborder {
   margin-bottom: 10px;
 }
 
-.cp2020-avatar {
+.cyberpunk-avatar {
   width: 36px;
   height: 36px;
   min-width: 36px;
@@ -906,14 +906,14 @@ div.statderive .value.rightborder {
   flex-shrink: 0;
   box-sizing: border-box;
 }
-.cp2020-avatar img {
+.cyberpunk-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center center;
 }
 
-.cp2020-info {
+.cyberpunk-info {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -922,14 +922,14 @@ div.statderive .value.rightborder {
   min-width: 0;
 }
 
-.cp2020-meta-row {
+.cyberpunk-meta-row {
   display: flex;
   align-items: center;
   gap: 4px;
   width: 100%;
 }
 
-.cp2020-player-name {
+.cyberpunk-player-name {
   flex: 1 0 0;
   font-family: var(--font-blender);
   font-weight: 400;
@@ -938,7 +938,7 @@ div.statderive .value.rightborder {
   color: var(--chat-text);
 }
 
-.cp2020-timestamp {
+.cyberpunk-timestamp {
   font-family: var(--font-blender);
   font-weight: 400;
   font-size: 10px;
@@ -947,7 +947,7 @@ div.statderive .value.rightborder {
   text-align: right;
 }
 
-.cp2020-delete {
+.cyberpunk-delete {
   width: 12px;
   height: 12px;
   aspect-ratio: 1/1;
@@ -958,21 +958,21 @@ div.statderive .value.rightborder {
   align-items: center;
   justify-content: center;
 }
-.cp2020-delete:hover {
+.cyberpunk-delete:hover {
   color: var(--chat-red);
 }
-.cp2020-delete svg {
+.cyberpunk-delete svg {
   width: 100%;
   height: 100%;
 }
 
-.cp2020-actor-row {
+.cyberpunk-actor-row {
   display: flex;
   align-items: center;
   width: 100%;
 }
 
-.cp2020-actor-name {
+.cyberpunk-actor-name {
   font-family: var(--font-refinery);
   font-weight: 500;
   font-size: 16px;
@@ -5750,4 +5750,4 @@ input.skill-value.skill-level-input:focus {
   -moz-appearance: textfield;
 }
 
-/*# sourceMappingURL=cp2020.css.map */
+/*# sourceMappingURL=cyberpunk.css.map */

@@ -39,185 +39,185 @@ export const WOUND_STATE_TO_CONDITION = {
  * Condition definitions for CONFIG.statusEffects
  * These appear in the token HUD and can be toggled on tokens
  */
-export const CP2020_CONDITIONS = [
+export const CYBERPUNK_CONDITIONS = [
     {
         id: "lightly-wounded",
         name: "CYBERPUNK.Conditions.LightlyWounded",
-        icon: "systems/cp2020/img/conditions/light.svg",
+        icon: "systems/cyberpunk/img/conditions/light.svg",
         statuses: ["lightly-wounded"]
     },
     {
         id: "seriously-wounded",
         name: "CYBERPUNK.Conditions.SeriouslyWounded",
-        icon: "systems/cp2020/img/conditions/serious.svg",
+        icon: "systems/cyberpunk/img/conditions/serious.svg",
         statuses: ["seriously-wounded"]
     },
     {
         id: "critically-wounded",
         name: "CYBERPUNK.Conditions.CriticallyWounded",
-        icon: "systems/cp2020/img/conditions/critical.svg",
+        icon: "systems/cyberpunk/img/conditions/critical.svg",
         statuses: ["critically-wounded"]
     },
     {
         id: "mortally-wounded-0",
         name: "CYBERPUNK.Conditions.MortallyWounded0",
-        icon: "systems/cp2020/img/conditions/mortal0.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal0.svg",
         statuses: ["mortally-wounded-0"]
     },
     {
         id: "mortally-wounded-1",
         name: "CYBERPUNK.Conditions.MortallyWounded1",
-        icon: "systems/cp2020/img/conditions/mortal1.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal1.svg",
         statuses: ["mortally-wounded-1"]
     },
     {
         id: "mortally-wounded-2",
         name: "CYBERPUNK.Conditions.MortallyWounded2",
-        icon: "systems/cp2020/img/conditions/mortal2.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal2.svg",
         statuses: ["mortally-wounded-2"]
     },
     {
         id: "mortally-wounded-3",
         name: "CYBERPUNK.Conditions.MortallyWounded3",
-        icon: "systems/cp2020/img/conditions/mortal3.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal3.svg",
         statuses: ["mortally-wounded-3"]
     },
     {
         id: "mortally-wounded-4",
         name: "CYBERPUNK.Conditions.MortallyWounded4",
-        icon: "systems/cp2020/img/conditions/mortal4.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal4.svg",
         statuses: ["mortally-wounded-4"]
     },
     {
         id: "mortally-wounded-5",
         name: "CYBERPUNK.Conditions.MortallyWounded5",
-        icon: "systems/cp2020/img/conditions/mortal5.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal5.svg",
         statuses: ["mortally-wounded-5"]
     },
     {
         id: "mortally-wounded-6",
         name: "CYBERPUNK.Conditions.MortallyWounded6",
-        icon: "systems/cp2020/img/conditions/mortal6.svg",
+        icon: "systems/cyberpunk/img/conditions/mortal6.svg",
         statuses: ["mortally-wounded-6"]
     },
     {
         id: "shocked",
         name: "CYBERPUNK.Conditions.Shocked",
-        icon: "systems/cp2020/img/conditions/shocked.svg",
+        icon: "systems/cyberpunk/img/conditions/shocked.svg",
         statuses: ["shocked"]
     },
     {
         id: "dead",
         name: "CYBERPUNK.Conditions.Dead",
-        icon: "systems/cp2020/img/conditions/dead.svg",
+        icon: "systems/cyberpunk/img/conditions/dead.svg",
         statuses: ["dead"]
     },
     {
         id: "stabilized",
         name: "CYBERPUNK.Conditions.Stabilized",
-        icon: "systems/cp2020/img/conditions/stabilized.svg",
+        icon: "systems/cyberpunk/img/conditions/stabilized.svg",
         statuses: ["stabilized"]
     },
     {
         id: "lost-left-arm",
         name: "CYBERPUNK.Conditions.LostLeftArm",
-        icon: "systems/cp2020/img/conditions/lost-left-arm.svg",
+        icon: "systems/cyberpunk/img/conditions/lost-left-arm.svg",
         statuses: ["lost-left-arm"]
     },
     {
         id: "lost-right-arm",
         name: "CYBERPUNK.Conditions.LostRightArm",
-        icon: "systems/cp2020/img/conditions/lost-right-arm.svg",
+        icon: "systems/cyberpunk/img/conditions/lost-right-arm.svg",
         statuses: ["lost-right-arm"]
     },
     {
         id: "lost-left-leg",
         name: "CYBERPUNK.Conditions.LostLeftLeg",
-        icon: "systems/cp2020/img/conditions/lost-left-leg.svg",
+        icon: "systems/cyberpunk/img/conditions/lost-left-leg.svg",
         statuses: ["lost-left-leg"]
     },
     {
         id: "lost-right-leg",
         name: "CYBERPUNK.Conditions.LostRightLeg",
-        icon: "systems/cp2020/img/conditions/lost-right-leg.svg",
+        icon: "systems/cyberpunk/img/conditions/lost-right-leg.svg",
         statuses: ["lost-right-leg"]
     },
     {
         id: "fast-draw",
         name: "CYBERPUNK.Conditions.FastDraw",
-        icon: "systems/cp2020/img/conditions/fast-draw.svg",
+        icon: "systems/cyberpunk/img/conditions/fast-draw.svg",
         statuses: ["fast-draw"]
     },
     {
         id: "action-surge",
         name: "CYBERPUNK.Conditions.ActionSurge",
-        icon: "systems/cp2020/img/conditions/action-surge.svg",
+        icon: "systems/cyberpunk/img/conditions/action-surge.svg",
         statuses: ["action-surge"]
     },
     {
         id: "poisoned",
         name: "CYBERPUNK.Conditions.Poisoned",
-        icon: "systems/cp2020/img/conditions/poisoned.svg",
+        icon: "systems/cyberpunk/img/conditions/poisoned.svg",
         statuses: ["poisoned"]
     },
     {
         id: "confused",
         name: "CYBERPUNK.Conditions.Confused",
-        icon: "systems/cp2020/img/conditions/confused.svg",
+        icon: "systems/cyberpunk/img/conditions/confused.svg",
         statuses: ["confused"]
     },
     {
         id: "tearing",
         name: "CYBERPUNK.Conditions.Tearing",
-        icon: "systems/cp2020/img/conditions/tearing.svg",
+        icon: "systems/cyberpunk/img/conditions/tearing.svg",
         statuses: ["tearing"]
     },
     {
         id: "unconscious",
         name: "CYBERPUNK.Conditions.Unconscious",
-        icon: "systems/cp2020/img/conditions/unconscious.svg",
+        icon: "systems/cyberpunk/img/conditions/unconscious.svg",
         statuses: ["unconscious"]
     },
     {
         id: "burning",
         name: "CYBERPUNK.Conditions.Burning",
-        icon: "systems/cp2020/img/conditions/burning.svg",
+        icon: "systems/cyberpunk/img/conditions/burning.svg",
         statuses: ["burning"]
     },
     {
         id: "acid",
         name: "CYBERPUNK.Conditions.Acid",
-        icon: "systems/cp2020/img/conditions/acid.svg",
+        icon: "systems/cyberpunk/img/conditions/acid.svg",
         statuses: ["acid"]
     },
     {
         id: "blinded",
         name: "CYBERPUNK.Conditions.Blinded",
-        icon: "systems/cp2020/img/conditions/blinded.svg",
+        icon: "systems/cyberpunk/img/conditions/blinded.svg",
         statuses: ["blinded"]
     },
     {
         id: "shorted",
         name: "CYBERPUNK.Conditions.Shorted",
-        icon: "systems/cp2020/img/conditions/microwave.svg",
+        icon: "systems/cyberpunk/img/conditions/microwave.svg",
         statuses: ["shorted"]
     },
     {
         id: "deafened",
         name: "CYBERPUNK.Conditions.Deafened",
-        icon: "systems/cp2020/img/conditions/deafened.svg",
+        icon: "systems/cyberpunk/img/conditions/deafened.svg",
         statuses: ["deafened"]
     },
     {
         id: "grappled",
         name: "CYBERPUNK.Conditions.Grappled",
-        icon: "systems/cp2020/img/conditions/grappled.svg",
+        icon: "systems/cyberpunk/img/conditions/grappled.svg",
         statuses: ["grappled"]
     },
     {
         id: "prone",
         name: "CYBERPUNK.Conditions.Prone",
-        icon: "systems/cp2020/img/conditions/prone.svg",
+        icon: "systems/cyberpunk/img/conditions/prone.svg",
         statuses: ["prone"]
     }
 ];

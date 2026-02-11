@@ -11,7 +11,7 @@ export class CyberpunkProgramSheet extends CyberpunkItemSheet {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["cyberpunk", "sheet", "item", "program-sheet"],
-            template: "systems/cp2020/templates/item/program-sheet.hbs"
+            template: "systems/cyberpunk/templates/item/program-sheet.hbs"
         });
     }
 

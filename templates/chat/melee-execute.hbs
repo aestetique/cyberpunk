@@ -5,6 +5,9 @@
     {{!-- Weapon Line --}}
     {{> "systems/cp2020/templates/chat/partials/weapon-line.hbs"}}
 
+    {{!-- Section Bar: Effect --}}
+    {{> "systems/cp2020/templates/chat/partials/section-bar.hbs" icon="damage" label=(CPLocal "Effect")}}
+
     {{!-- Effect Row (shows the condition icon + label) --}}
     <div class="effect-row">
         <img src="systems/cp2020/img/conditions/{{effectIcon}}.svg" alt="">

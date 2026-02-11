@@ -737,10 +737,6 @@ $fail-color: #d1502fb8;
 
   &--muted {
     opacity: 0.5;
-
-    img {
-      filter: brightness(0) invert(0.5);
-    }
   }
 }
 

@@ -459,6 +459,10 @@
       .location-btn {
         background: #26282F;
         cursor: default;
+
+        img {
+          filter: none;
+        }
       }
     }
   }

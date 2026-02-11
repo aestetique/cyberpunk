@@ -102,7 +102,7 @@ export class MeleeAttackDialog extends Application {
           this._conditions[key] = false;
         }
         html.find('.condition-btn').removeClass('selected');
-        html.find('.conditions-grid').addClass('disabled');
+        html.find('.conditions-grid:not(.conditions-grid--single)').addClass('disabled');
 
         // Reset and disable location
         this._selectedLocation = null;
@@ -116,7 +116,7 @@ export class MeleeAttackDialog extends Application {
         // Re-enable all controls
         html.find('.luck-controls').toggleClass('disabled', this._availableLuck <= 0);
         this._updateLuckDisplay(html);
-        html.find('.conditions-grid').removeClass('disabled');
+        html.find('.conditions-grid:not(.conditions-grid--single)').removeClass('disabled');
         html.find('.location-grid').removeClass('disabled');
         html.find('.location-btn').each((i, btn) => {
           const loc = btn.dataset.location;

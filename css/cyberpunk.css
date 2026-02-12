@@ -42,228 +42,6 @@
   background-color: black;
 }
 
-/* ========================================
-   ITEM SHEET BASE STYLES (consolidated)
-   ======================================== */
-.cyberpunk.role-sheet.app,
-.cyberpunk.skill-sheet.app,
-.cyberpunk.commodity-sheet.app,
-.cyberpunk.outfit-sheet.app,
-.cyberpunk.ammo-sheet.app,
-.cyberpunk.weapon-sheet.app,
-.cyberpunk.ordnance-sheet.app,
-.cyberpunk.tool-sheet.app,
-.cyberpunk.drug-sheet.app,
-.cyberpunk.program-sheet.app,
-.cyberpunk.cyberware-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
-}
-
-.cyberpunk.role-sheet > .window-header,
-.cyberpunk.skill-sheet > .window-header,
-.cyberpunk.commodity-sheet > .window-header,
-.cyberpunk.outfit-sheet > .window-header,
-.cyberpunk.ammo-sheet > .window-header,
-.cyberpunk.weapon-sheet > .window-header,
-.cyberpunk.ordnance-sheet > .window-header,
-.cyberpunk.tool-sheet > .window-header,
-.cyberpunk.drug-sheet > .window-header,
-.cyberpunk.program-sheet > .window-header,
-.cyberpunk.cyberware-sheet > .window-header {
-  display: none;
-}
-
-.cyberpunk.role-sheet > .window-content,
-.cyberpunk.skill-sheet > .window-content,
-.cyberpunk.commodity-sheet > .window-content,
-.cyberpunk.outfit-sheet > .window-content,
-.cyberpunk.ammo-sheet > .window-content,
-.cyberpunk.weapon-sheet > .window-content,
-.cyberpunk.ordnance-sheet > .window-content,
-.cyberpunk.tool-sheet > .window-content,
-.cyberpunk.drug-sheet > .window-content,
-.cyberpunk.program-sheet > .window-content,
-.cyberpunk.cyberware-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
-}
-
-.cyberpunk.role-sheet > .window-resizable-handle,
-.cyberpunk.skill-sheet > .window-resizable-handle,
-.cyberpunk.commodity-sheet > .window-resizable-handle,
-.cyberpunk.outfit-sheet > .window-resizable-handle,
-.cyberpunk.ammo-sheet > .window-resizable-handle,
-.cyberpunk.weapon-sheet > .window-resizable-handle,
-.cyberpunk.ordnance-sheet > .window-resizable-handle,
-.cyberpunk.tool-sheet > .window-resizable-handle,
-.cyberpunk.drug-sheet > .window-resizable-handle,
-.cyberpunk.program-sheet > .window-resizable-handle,
-.cyberpunk.cyberware-sheet > .window-resizable-handle {
-  display: none;
-}
-
-.cyberpunk.role-sheet button,
-.cyberpunk.role-sheet a,
-.cyberpunk.skill-sheet button,
-.cyberpunk.skill-sheet a,
-.cyberpunk.commodity-sheet button,
-.cyberpunk.commodity-sheet a,
-.cyberpunk.outfit-sheet button,
-.cyberpunk.outfit-sheet a,
-.cyberpunk.ammo-sheet button,
-.cyberpunk.ammo-sheet a,
-.cyberpunk.weapon-sheet button,
-.cyberpunk.weapon-sheet a,
-.cyberpunk.ordnance-sheet button,
-.cyberpunk.ordnance-sheet a,
-.cyberpunk.tool-sheet button,
-.cyberpunk.tool-sheet a,
-.cyberpunk.drug-sheet button,
-.cyberpunk.drug-sheet a,
-.cyberpunk.program-sheet button,
-.cyberpunk.program-sheet a,
-.cyberpunk.cyberware-sheet button,
-.cyberpunk.cyberware-sheet a {
-  --button-focus-outline-color: transparent;
-}
-
-.cyberpunk.role-sheet button:focus,
-.cyberpunk.role-sheet a:focus,
-.cyberpunk.skill-sheet button:focus,
-.cyberpunk.skill-sheet a:focus,
-.cyberpunk.commodity-sheet button:focus,
-.cyberpunk.commodity-sheet a:focus,
-.cyberpunk.outfit-sheet button:focus,
-.cyberpunk.outfit-sheet a:focus,
-.cyberpunk.ammo-sheet button:focus,
-.cyberpunk.ammo-sheet a:focus,
-.cyberpunk.weapon-sheet button:focus,
-.cyberpunk.weapon-sheet a:focus,
-.cyberpunk.ordnance-sheet button:focus,
-.cyberpunk.ordnance-sheet a:focus,
-.cyberpunk.tool-sheet button:focus,
-.cyberpunk.tool-sheet a:focus,
-.cyberpunk.drug-sheet button:focus,
-.cyberpunk.drug-sheet a:focus,
-.cyberpunk.program-sheet button:focus,
-.cyberpunk.program-sheet a:focus,
-.cyberpunk.cyberware-sheet button:focus,
-.cyberpunk.cyberware-sheet a:focus {
-  box-shadow: none;
-  outline: none;
-}
-
-.cyberpunk.role-sheet img,
-.cyberpunk.skill-sheet img,
-.cyberpunk.commodity-sheet img,
-.cyberpunk.outfit-sheet img,
-.cyberpunk.ammo-sheet img,
-.cyberpunk.weapon-sheet img,
-.cyberpunk.ordnance-sheet img,
-.cyberpunk.tool-sheet img,
-.cyberpunk.drug-sheet img,
-.cyberpunk.program-sheet img,
-.cyberpunk.cyberware-sheet img {
-  border: none;
-}
-
-.cyberpunk.role-sheet h1,
-.cyberpunk.role-sheet h2,
-.cyberpunk.skill-sheet h1,
-.cyberpunk.skill-sheet h2,
-.cyberpunk.commodity-sheet h1,
-.cyberpunk.commodity-sheet h2,
-.cyberpunk.outfit-sheet h1,
-.cyberpunk.outfit-sheet h2,
-.cyberpunk.ammo-sheet h1,
-.cyberpunk.ammo-sheet h2,
-.cyberpunk.weapon-sheet h1,
-.cyberpunk.weapon-sheet h2,
-.cyberpunk.ordnance-sheet h1,
-.cyberpunk.ordnance-sheet h2,
-.cyberpunk.tool-sheet h1,
-.cyberpunk.tool-sheet h2,
-.cyberpunk.drug-sheet h1,
-.cyberpunk.drug-sheet h2,
-.cyberpunk.program-sheet h1,
-.cyberpunk.program-sheet h2,
-.cyberpunk.cyberware-sheet h1,
-.cyberpunk.cyberware-sheet h2 {
-  border: none;
-  border-bottom: none;
-}
-
-/* Card height standardization */
-.role-card,
-.skill-card,
-.commodity-card,
-.outfit-card,
-.ammo-card,
-.weapon-card,
-.ordnance-card,
-.tool-card,
-.drug-card,
-.program-card {
-  height: 400px;
-}
-
-/* Shared dual-field layout */
-.weapon-card .dual-field,
-.ordnance-card .dual-field,
-.program-card .dual-field,
-.cyberware-card .dual-field {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  flex: 1 0 0;
-}
-
-/* Shared dual-value display */
-.weapon-card .dual-value,
-.ordnance-card .dual-value,
-.program-card .dual-value,
-.cyberware-card .dual-value {
-  display: flex;
-  width: 47px;
-  height: 26px;
-  padding: 5px 8px;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: #808090;
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-  text-align: left;
-}
-
-/* Shared card divider */
-.weapon-card .weapon-divider,
-.ordnance-card .weapon-divider,
-.cyberware-card .weapon-divider {
-  width: 100%;
-  height: 1px;
-  flex-shrink: 0;
-  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
-}
-
-/* Shared bonus-row layout */
-.tool-card .bonus-row,
-.drug-card .bonus-row,
-.cyberware-card .bonus-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  align-self: stretch;
-}
-
 .cyberpunk section.window-content {
   font-family: "Noto Sans", sans-serif;
   font-weight: bold;
@@ -1151,10 +929,6 @@ div.statderive .value.rightborder {
   width: 100%;
 }
 
-.card-hint--centered {
-  text-align: center;
-}
-
 /* Fumble Luck Roll Styles */
 .fumble-hint-container {
   padding: 0;
@@ -1256,7 +1030,7 @@ div.statderive .value.rightborder {
   height: 36px;
   border-radius: 4px;
   border: 1px solid var(--chat-stroke);
-  background: var(--chat-gray);
+  background: #1A1A1A;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -2480,9 +2254,6 @@ input.character-name[readonly] {
   background: #26282F;
   border-radius: 4px;
 }
-.unlocked .character-sheet .skill-delete {
-  margin-left: 8px;
-}
 
 .role-display {
   height: 22px;
@@ -3041,24 +2812,34 @@ input.skill-value.skill-level-input:focus {
   color: #FFFFFF;
 }
 
+.skill-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  margin-right: 6px;
+}
+
+.skill-view,
 .skill-delete {
   width: 16px;
   height: 16px;
-  margin-left: -8px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  flex-shrink: 0;
   opacity: 0.6;
   outline: none;
   box-shadow: none;
 }
-.skill-delete:hover, .skill-delete:focus {
+.skill-view:hover, .skill-view:focus,
+.skill-delete:hover,
+.skill-delete:focus {
   opacity: 1;
   box-shadow: none;
   outline: none;
 }
+.skill-view img,
 .skill-delete img {
   width: 100%;
   height: 100%;
@@ -3174,12 +2955,10 @@ input.skill-value.skill-level-input:focus {
 }
 
 .gear-weight {
-  width: 60px;
   height: 24px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
   padding-right: 8px;
@@ -4039,6 +3818,43 @@ input.skill-value.skill-level-input:focus {
   -moz-appearance: textfield;
 }
 
+.cyberpunk.role-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.role-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.role-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.role-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.role-sheet button, .cyberpunk.role-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.role-sheet button:focus, .cyberpunk.role-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.role-sheet img {
+  border: none;
+}
+.cyberpunk.role-sheet h1, .cyberpunk.role-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.role-card {
+  min-height: 400px;
+}
+
 .role-card .special-skill-field {
   display: flex;
   flex-direction: row;
@@ -4074,7 +3890,7 @@ input.skill-value.skill-level-input:focus {
 }
 .role-card .skill-drop.filled .remove-special-skill {
   width: 16px;
-  height: 26px;
+  height: 16px;
   padding: 0;
   border: none;
   background: transparent;
@@ -4095,7 +3911,6 @@ input.skill-value.skill-level-input:focus {
 
 .role-card .skill-drop.empty {
   display: flex;
-  height: 26px;
   padding: 0 8px;
   align-items: center;
   gap: 10px;
@@ -4189,7 +4004,7 @@ input.skill-value.skill-level-input:focus {
 }
 .role-card .career-skill-item .remove-career-skill {
   width: 16px;
-  height: 26px;
+  height: 16px;
   padding: 0;
   border: none;
   background: transparent;
@@ -4206,6 +4021,117 @@ input.skill-value.skill-level-input:focus {
 
 .role-card:not(.unlocked) .career-skill-item .skill-name {
   color: #808090;
+}
+
+.cyberpunk.skill-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.skill-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.skill-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.skill-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.skill-sheet button, .cyberpunk.skill-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.skill-sheet button:focus, .cyberpunk.skill-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.skill-sheet img {
+  border: none;
+}
+.cyberpunk.skill-sheet h1, .cyberpunk.skill-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.skill-card {
+  height: 400px;
+}
+
+.cyberpunk.commodity-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.commodity-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.commodity-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.commodity-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.commodity-sheet button, .cyberpunk.commodity-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.commodity-sheet button:focus, .cyberpunk.commodity-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.commodity-sheet img {
+  border: none;
+}
+.cyberpunk.commodity-sheet h1, .cyberpunk.commodity-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.commodity-card {
+  height: 400px;
+}
+
+.cyberpunk.outfit-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.outfit-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.outfit-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.outfit-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.outfit-sheet button, .cyberpunk.outfit-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.outfit-sheet button:focus, .cyberpunk.outfit-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.outfit-sheet img {
+  border: none;
+}
+.cyberpunk.outfit-sheet h1, .cyberpunk.outfit-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.outfit-card {
+  min-height: 400px;
 }
 
 .outfit-card .sp-frame {
@@ -4327,12 +4253,48 @@ input.skill-value.skill-level-input:focus {
   -moz-appearance: textfield;
 }
 
+.cyberpunk.ammo-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.ammo-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.ammo-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.ammo-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.ammo-sheet button, .cyberpunk.ammo-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.ammo-sheet button:focus, .cyberpunk.ammo-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.ammo-sheet img {
+  border: none;
+}
+.cyberpunk.ammo-sheet h1, .cyberpunk.ammo-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.ammo-card {
+  height: 400px;
+}
+
 .app.window-app.reload-dialog,
 .app.window-app.ranged-attack-dialog,
 .app.window-app.range-selection-dialog,
 .app.window-app.melee-attack-dialog,
-.app.window-app.skill-roll-dialog,
-.app.window-app.initiative-roll-dialog {
+.app.window-app.defence-roll-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -4342,16 +4304,14 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.ranged-attack-dialog .window-header,
 .app.window-app.range-selection-dialog .window-header,
 .app.window-app.melee-attack-dialog .window-header,
-.app.window-app.skill-roll-dialog .window-header,
-.app.window-app.initiative-roll-dialog .window-header {
+.app.window-app.defence-roll-dialog .window-header {
   display: none;
 }
 .app.window-app.reload-dialog .window-content,
 .app.window-app.ranged-attack-dialog .window-content,
 .app.window-app.range-selection-dialog .window-content,
 .app.window-app.melee-attack-dialog .window-content,
-.app.window-app.skill-roll-dialog .window-content,
-.app.window-app.initiative-roll-dialog .window-content {
+.app.window-app.defence-roll-dialog .window-content {
   background: transparent;
   padding: 0;
   margin: 0;
@@ -4362,7 +4322,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper,
 .range-selection-wrapper,
 .melee-attack-wrapper,
-.skill-roll-wrapper {
+.defence-roll-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -4372,7 +4332,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .reload-header,
 .range-selection-wrapper .reload-header,
 .melee-attack-wrapper .reload-header,
-.skill-roll-wrapper .reload-header {
+.defence-roll-wrapper .reload-header {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4384,7 +4344,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .reload-header .reload-title,
 .range-selection-wrapper .reload-header .reload-title,
 .melee-attack-wrapper .reload-header .reload-title,
-.skill-roll-wrapper .reload-header .reload-title {
+.defence-roll-wrapper .reload-header .reload-title {
   font-family: var(--font-refinery);
   font-size: 16px;
   font-weight: 500;
@@ -4396,7 +4356,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .reload-header .header-control.close,
 .range-selection-wrapper .reload-header .header-control.close,
 .melee-attack-wrapper .reload-header .header-control.close,
-.skill-roll-wrapper .reload-header .header-control.close {
+.defence-roll-wrapper .reload-header .header-control.close {
   position: absolute;
   right: 0;
   top: 50%;
@@ -4416,7 +4376,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .reload-header .header-control.close:hover,
 .range-selection-wrapper .reload-header .header-control.close:hover,
 .melee-attack-wrapper .reload-header .header-control.close:hover,
-.skill-roll-wrapper .reload-header .header-control.close:hover {
+.defence-roll-wrapper .reload-header .header-control.close:hover {
   opacity: 1;
 }
 .reload-dialog-wrapper .reload-ammo-btn,
@@ -4471,7 +4431,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .reload-apply-btn,
 .range-selection-wrapper .reload-apply-btn,
 .melee-attack-wrapper .reload-apply-btn,
-.skill-roll-wrapper .reload-apply-btn {
+.defence-roll-wrapper .reload-apply-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -4493,7 +4453,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .reload-apply-btn:hover,
 .range-selection-wrapper .reload-apply-btn:hover,
 .melee-attack-wrapper .reload-apply-btn:hover,
-.skill-roll-wrapper .reload-apply-btn:hover {
+.defence-roll-wrapper .reload-apply-btn:hover {
   background: rgb(154.3392857143, 39.1607142857, 70.2589285714);
 }
 .reload-dialog-wrapper .reload-empty,
@@ -4558,15 +4518,15 @@ input.skill-value.skill-level-input:focus {
 .melee-attack-wrapper .reload-apply-btn,
 .melee-attack-wrapper .fire-mode-btn,
 .melee-attack-wrapper .range-dropdown-btn,
-.skill-roll-wrapper .reload-apply-btn,
-.skill-roll-wrapper .range-dropdown-btn {
+.defence-roll-wrapper .reload-apply-btn,
+.defence-roll-wrapper .range-dropdown-btn {
   box-shadow: none;
 }
 .reload-dialog-wrapper .fire-mode-section,
 .ranged-attack-wrapper .fire-mode-section,
 .range-selection-wrapper .fire-mode-section,
 .melee-attack-wrapper .fire-mode-section,
-.skill-roll-wrapper .fire-mode-section {
+.defence-roll-wrapper .fire-mode-section {
   display: flex;
   height: 26px;
   padding: 1px 0;
@@ -4580,7 +4540,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .fire-mode-section img,
 .range-selection-wrapper .fire-mode-section img,
 .melee-attack-wrapper .fire-mode-section img,
-.skill-roll-wrapper .fire-mode-section img {
+.defence-roll-wrapper .fire-mode-section img {
   width: 16px;
   height: 16px;
   filter: brightness(0) invert(1);
@@ -4590,7 +4550,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .fire-mode-section .fire-mode-label,
 .range-selection-wrapper .fire-mode-section .fire-mode-label,
 .melee-attack-wrapper .fire-mode-section .fire-mode-label,
-.skill-roll-wrapper .fire-mode-section .fire-mode-label {
+.defence-roll-wrapper .fire-mode-section .fire-mode-label {
   font-family: var(--font-blender);
   font-size: 16px;
   font-weight: 500;
@@ -4602,7 +4562,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-dropdown,
 .range-selection-wrapper .range-dropdown,
 .melee-attack-wrapper .range-dropdown,
-.skill-roll-wrapper .range-dropdown {
+.defence-roll-wrapper .range-dropdown {
   position: relative;
   width: 100%;
 }
@@ -4610,7 +4570,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-dropdown-btn,
 .range-selection-wrapper .range-dropdown-btn,
 .melee-attack-wrapper .range-dropdown-btn,
-.skill-roll-wrapper .range-dropdown-btn {
+.defence-roll-wrapper .range-dropdown-btn {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -4627,21 +4587,21 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-dropdown-btn:hover,
 .range-selection-wrapper .range-dropdown-btn:hover,
 .melee-attack-wrapper .range-dropdown-btn:hover,
-.skill-roll-wrapper .range-dropdown-btn:hover {
+.defence-roll-wrapper .range-dropdown-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .range-dropdown-btn.open,
 .ranged-attack-wrapper .range-dropdown-btn.open,
 .range-selection-wrapper .range-dropdown-btn.open,
 .melee-attack-wrapper .range-dropdown-btn.open,
-.skill-roll-wrapper .range-dropdown-btn.open {
+.defence-roll-wrapper .range-dropdown-btn.open {
   border-radius: 2px 2px 0 0;
 }
 .reload-dialog-wrapper .range-dropdown-btn .range-label,
 .ranged-attack-wrapper .range-dropdown-btn .range-label,
 .range-selection-wrapper .range-dropdown-btn .range-label,
 .melee-attack-wrapper .range-dropdown-btn .range-label,
-.skill-roll-wrapper .range-dropdown-btn .range-label {
+.defence-roll-wrapper .range-dropdown-btn .range-label {
   font-family: var(--font-blender);
   font-size: 16px;
   font-weight: 500;
@@ -4653,7 +4613,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-dropdown-btn i,
 .range-selection-wrapper .range-dropdown-btn i,
 .melee-attack-wrapper .range-dropdown-btn i,
-.skill-roll-wrapper .range-dropdown-btn i {
+.defence-roll-wrapper .range-dropdown-btn i {
   font-size: 12px;
   color: var(--chat-text, #FFF);
   transition: transform 0.2s;
@@ -4662,14 +4622,14 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-dropdown-btn.open i,
 .range-selection-wrapper .range-dropdown-btn.open i,
 .melee-attack-wrapper .range-dropdown-btn.open i,
-.skill-roll-wrapper .range-dropdown-btn.open i {
+.defence-roll-wrapper .range-dropdown-btn.open i {
   transform: rotate(180deg);
 }
 .reload-dialog-wrapper .range-dropdown-list,
 .ranged-attack-wrapper .range-dropdown-list,
 .range-selection-wrapper .range-dropdown-list,
 .melee-attack-wrapper .range-dropdown-list,
-.skill-roll-wrapper .range-dropdown-list {
+.defence-roll-wrapper .range-dropdown-list {
   display: none;
   position: absolute;
   top: 100%;
@@ -4687,14 +4647,14 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-dropdown-list.open,
 .range-selection-wrapper .range-dropdown-list.open,
 .melee-attack-wrapper .range-dropdown-list.open,
-.skill-roll-wrapper .range-dropdown-list.open {
+.defence-roll-wrapper .range-dropdown-list.open {
   display: block;
 }
 .reload-dialog-wrapper .range-option,
 .ranged-attack-wrapper .range-option,
 .range-selection-wrapper .range-option,
 .melee-attack-wrapper .range-option,
-.skill-roll-wrapper .range-option {
+.defence-roll-wrapper .range-option {
   display: flex;
   align-items: center;
   height: 32px;
@@ -4711,28 +4671,27 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .range-option:hover,
 .range-selection-wrapper .range-option:hover,
 .melee-attack-wrapper .range-option:hover,
-.skill-roll-wrapper .range-option:hover {
+.defence-roll-wrapper .range-option:hover {
   background: var(--chat-gray, #444856);
 }
 .reload-dialog-wrapper .range-option.selected,
 .ranged-attack-wrapper .range-option.selected,
 .range-selection-wrapper .range-option.selected,
 .melee-attack-wrapper .range-option.selected,
-.skill-roll-wrapper .range-option.selected {
+.defence-roll-wrapper .range-option.selected {
   background: var(--chat-green, #24563D);
 }
 .reload-dialog-wrapper .range-option.selected:hover,
 .ranged-attack-wrapper .range-option.selected:hover,
 .range-selection-wrapper .range-option.selected:hover,
 .melee-attack-wrapper .range-option.selected:hover,
-.skill-roll-wrapper .range-option.selected:hover {
+.defence-roll-wrapper .range-option.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
 }
 .reload-dialog-wrapper .conditions-grid,
 .ranged-attack-wrapper .conditions-grid,
 .range-selection-wrapper .conditions-grid,
-.melee-attack-wrapper .conditions-grid,
-.skill-roll-wrapper .conditions-grid {
+.melee-attack-wrapper .conditions-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
@@ -4740,31 +4699,21 @@ input.skill-value.skill-level-input:focus {
 .reload-dialog-wrapper .conditions-grid.disabled,
 .ranged-attack-wrapper .conditions-grid.disabled,
 .range-selection-wrapper .conditions-grid.disabled,
-.melee-attack-wrapper .conditions-grid.disabled,
-.skill-roll-wrapper .conditions-grid.disabled {
+.melee-attack-wrapper .conditions-grid.disabled {
   pointer-events: none;
 }
 .reload-dialog-wrapper .conditions-grid.disabled .condition-btn,
 .ranged-attack-wrapper .conditions-grid.disabled .condition-btn,
 .range-selection-wrapper .conditions-grid.disabled .condition-btn,
-.melee-attack-wrapper .conditions-grid.disabled .condition-btn,
-.skill-roll-wrapper .conditions-grid.disabled .condition-btn {
+.melee-attack-wrapper .conditions-grid.disabled .condition-btn {
   background: #26282F;
   color: #444856;
   cursor: default;
 }
-/* Single-button variant for Initiative dialog */
-.skill-roll-wrapper .conditions-grid--single {
-  display: block;
-}
-.skill-roll-wrapper .conditions-grid--single .condition-btn {
-  width: 100%;
-}
 .reload-dialog-wrapper .condition-btn,
 .ranged-attack-wrapper .condition-btn,
 .range-selection-wrapper .condition-btn,
-.melee-attack-wrapper .condition-btn,
-.skill-roll-wrapper .condition-btn {
+.melee-attack-wrapper .condition-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -4786,65 +4735,26 @@ input.skill-value.skill-level-input:focus {
 .reload-dialog-wrapper .condition-btn:hover,
 .ranged-attack-wrapper .condition-btn:hover,
 .range-selection-wrapper .condition-btn:hover,
-.melee-attack-wrapper .condition-btn:hover,
-.skill-roll-wrapper .condition-btn:hover {
+.melee-attack-wrapper .condition-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .condition-btn.selected,
 .ranged-attack-wrapper .condition-btn.selected,
 .range-selection-wrapper .condition-btn.selected,
-.melee-attack-wrapper .condition-btn.selected,
-.skill-roll-wrapper .condition-btn.selected {
+.melee-attack-wrapper .condition-btn.selected {
   background: var(--chat-green, #24563D);
 }
 .reload-dialog-wrapper .condition-btn.selected:hover,
 .ranged-attack-wrapper .condition-btn.selected:hover,
 .range-selection-wrapper .condition-btn.selected:hover,
-.melee-attack-wrapper .condition-btn.selected:hover,
-.skill-roll-wrapper .condition-btn.selected:hover {
+.melee-attack-wrapper .condition-btn.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
-}
-/* Single-button variant for Melee dialog */
-.melee-attack-wrapper .conditions-grid--single {
-  display: block;
-}
-.melee-attack-wrapper .conditions-grid--single .execute-btn {
-  width: 100%;
-}
-/* Execute button (Coup De Grace / Knockout) with custom colors */
-.melee-attack-wrapper .execute-btn {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 36px;
-  padding: 0 12px;
-  background: #444856;
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background 0.15s;
-  box-shadow: none;
-  font-family: var(--font-blender);
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
-  color: var(--chat-text, #FFF);
-  text-transform: uppercase;
-}
-.melee-attack-wrapper .execute-btn:hover {
-  background: rgb(80.75, 84.75, 98.75);
-}
-.melee-attack-wrapper .execute-btn.selected {
-  background: #1A804D;
-}
-.melee-attack-wrapper .execute-btn.selected:hover {
-  background: rgb(31.5245901639, 141.9754098361, 89.75);
 }
 .reload-dialog-wrapper .luck-controls,
 .ranged-attack-wrapper .luck-controls,
 .range-selection-wrapper .luck-controls,
 .melee-attack-wrapper .luck-controls,
-.skill-roll-wrapper .luck-controls {
+.defence-roll-wrapper .luck-controls {
   display: flex;
   gap: 6px;
 }
@@ -4852,14 +4762,14 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .luck-controls.disabled,
 .range-selection-wrapper .luck-controls.disabled,
 .melee-attack-wrapper .luck-controls.disabled,
-.skill-roll-wrapper .luck-controls.disabled {
+.defence-roll-wrapper .luck-controls.disabled {
   pointer-events: none;
 }
 .reload-dialog-wrapper .luck-controls.disabled .luck-btn,
 .ranged-attack-wrapper .luck-controls.disabled .luck-btn,
 .range-selection-wrapper .luck-controls.disabled .luck-btn,
 .melee-attack-wrapper .luck-controls.disabled .luck-btn,
-.skill-roll-wrapper .luck-controls.disabled .luck-btn {
+.defence-roll-wrapper .luck-controls.disabled .luck-btn {
   background: #26282F;
   cursor: default;
 }
@@ -4867,14 +4777,14 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .luck-controls.disabled .luck-display .luck-value,
 .range-selection-wrapper .luck-controls.disabled .luck-display .luck-value,
 .melee-attack-wrapper .luck-controls.disabled .luck-display .luck-value,
-.skill-roll-wrapper .luck-controls.disabled .luck-display .luck-value {
+.defence-roll-wrapper .luck-controls.disabled .luck-display .luck-value {
   color: #444856;
 }
 .reload-dialog-wrapper .luck-btn,
 .ranged-attack-wrapper .luck-btn,
 .range-selection-wrapper .luck-btn,
 .melee-attack-wrapper .luck-btn,
-.skill-roll-wrapper .luck-btn {
+.defence-roll-wrapper .luck-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -4891,7 +4801,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .luck-btn img,
 .range-selection-wrapper .luck-btn img,
 .melee-attack-wrapper .luck-btn img,
-.skill-roll-wrapper .luck-btn img {
+.defence-roll-wrapper .luck-btn img {
   width: 24px;
   height: 24px;
   border: none;
@@ -4900,14 +4810,14 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .luck-btn:hover:not(.disabled),
 .range-selection-wrapper .luck-btn:hover:not(.disabled),
 .melee-attack-wrapper .luck-btn:hover:not(.disabled),
-.skill-roll-wrapper .luck-btn:hover:not(.disabled) {
+.defence-roll-wrapper .luck-btn:hover:not(.disabled) {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .luck-btn.disabled,
 .ranged-attack-wrapper .luck-btn.disabled,
 .range-selection-wrapper .luck-btn.disabled,
 .melee-attack-wrapper .luck-btn.disabled,
-.skill-roll-wrapper .luck-btn.disabled {
+.defence-roll-wrapper .luck-btn.disabled {
   background: #26282F;
   cursor: not-allowed;
 }
@@ -4915,7 +4825,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .luck-display,
 .range-selection-wrapper .luck-display,
 .melee-attack-wrapper .luck-display,
-.skill-roll-wrapper .luck-display {
+.defence-roll-wrapper .luck-display {
   flex: 1;
   display: flex;
   justify-content: center;
@@ -4928,7 +4838,7 @@ input.skill-value.skill-level-input:focus {
 .ranged-attack-wrapper .luck-display .luck-value,
 .range-selection-wrapper .luck-display .luck-value,
 .melee-attack-wrapper .luck-display .luck-value,
-.skill-roll-wrapper .luck-display .luck-value {
+.defence-roll-wrapper .luck-display .luck-value {
   font-family: var(--font-blender);
   font-size: 32px;
   font-weight: 700;
@@ -5005,7 +4915,167 @@ input.skill-value.skill-level-input:focus {
 .melee-attack-wrapper .location-btn.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
 }
+.reload-dialog-wrapper .conditions-grid--single,
+.ranged-attack-wrapper .conditions-grid--single,
+.range-selection-wrapper .conditions-grid--single,
+.melee-attack-wrapper .conditions-grid--single {
+  display: block;
+}
+.reload-dialog-wrapper .conditions-grid--single .execute-btn,
+.ranged-attack-wrapper .conditions-grid--single .execute-btn,
+.range-selection-wrapper .conditions-grid--single .execute-btn,
+.melee-attack-wrapper .conditions-grid--single .execute-btn {
+  width: 100%;
+}
+.reload-dialog-wrapper .execute-btn,
+.ranged-attack-wrapper .execute-btn,
+.range-selection-wrapper .execute-btn,
+.melee-attack-wrapper .execute-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  background: #444856;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+  box-shadow: none;
+  font-family: var(--font-blender);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--chat-text, #FFF);
+  text-transform: uppercase;
+}
+.reload-dialog-wrapper .execute-btn:hover,
+.ranged-attack-wrapper .execute-btn:hover,
+.range-selection-wrapper .execute-btn:hover,
+.melee-attack-wrapper .execute-btn:hover {
+  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+}
+.reload-dialog-wrapper .execute-btn.selected,
+.ranged-attack-wrapper .execute-btn.selected,
+.range-selection-wrapper .execute-btn.selected,
+.melee-attack-wrapper .execute-btn.selected {
+  background: #1A804D;
+}
+.reload-dialog-wrapper .execute-btn.selected:hover,
+.ranged-attack-wrapper .execute-btn.selected:hover,
+.range-selection-wrapper .execute-btn.selected:hover,
+.melee-attack-wrapper .execute-btn.selected:hover {
+  background: rgb(30.3051948052, 149.1948051948, 89.75);
+}
 
+/* Defence buttons in melee-hit chat card */
+.defence-buttons {
+  display: flex;
+  gap: 10px;
+}
+.defence-btn {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  background: #444856;
+  border: 1px solid #444856;
+  border-radius: 2px;
+  color: #FFFFFF;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: none;
+  outline: none;
+}
+.defence-btn:hover:not(:disabled) {
+  background: rgb(79.26, 83.92, 100.24);
+}
+.defence-btn:disabled {
+  border: 1px solid var(--chat-stroke);
+  background: transparent;
+  color: var(--chat-gray);
+  cursor: not-allowed;
+}
+
+/* Defence dialog disabled dropdown */
+.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled {
+  background: #26282F;
+  color: #444856;
+  cursor: default;
+  pointer-events: none;
+}
+.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label {
+  color: #444856;
+}
+
+.cyberpunk.weapon-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.weapon-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.weapon-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.weapon-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.weapon-sheet button, .cyberpunk.weapon-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.weapon-sheet button:focus, .cyberpunk.weapon-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.weapon-sheet img {
+  border: none;
+}
+.cyberpunk.weapon-sheet h1, .cyberpunk.weapon-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.weapon-card {
+  min-height: 400px;
+}
+.weapon-card .weapon-divider {
+  width: 100%;
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
+}
+.weapon-card .dual-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+}
+.weapon-card .dual-value {
+  display: flex;
+  width: 47px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+  text-align: left;
+}
 .weapon-card .dual-value-narrow {
   width: 40px;
 }
@@ -5051,6 +5121,70 @@ input.skill-value.skill-level-input:focus {
   flex-shrink: 0;
 }
 
+.cyberpunk.ordnance-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.ordnance-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.ordnance-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.ordnance-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.ordnance-sheet button, .cyberpunk.ordnance-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.ordnance-sheet button:focus, .cyberpunk.ordnance-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.ordnance-sheet img {
+  border: none;
+}
+.cyberpunk.ordnance-sheet h1, .cyberpunk.ordnance-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.ordnance-card {
+  min-height: 400px;
+}
+.ordnance-card .weapon-divider {
+  width: 100%;
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
+}
+.ordnance-card .dual-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+}
+.ordnance-card .dual-value {
+  display: flex;
+  width: 47px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+  text-align: left;
+}
 .ordnance-card .dual-value-narrow {
   width: 40px;
 }
@@ -5094,6 +5228,51 @@ input.skill-value.skill-level-input:focus {
   font-weight: 500;
   line-height: 16px;
   flex-shrink: 0;
+}
+
+.cyberpunk.tool-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.tool-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.tool-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.tool-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.tool-sheet button, .cyberpunk.tool-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.tool-sheet button:focus, .cyberpunk.tool-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.tool-sheet img {
+  border: none;
+}
+.cyberpunk.tool-sheet h1, .cyberpunk.tool-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.tool-card {
+  min-height: 400px;
+}
+
+.tool-card .bonus-row,
+.drug-card .bonus-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
 }
 
 .tool-card .bonus-row .dropdown-wrapper,
@@ -5195,7 +5374,6 @@ input.skill-value.skill-level-input:focus {
 .tool-card .skill-drop.empty,
 .drug-card .skill-drop.empty {
   display: block;
-  height: 26px;
   padding: 0 8px;
   align-items: center;
   gap: 10px;
@@ -5270,6 +5448,100 @@ input.skill-value.skill-level-input:focus {
   box-shadow: none;
 }
 
+.cyberpunk.drug-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.drug-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.drug-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.drug-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.drug-sheet button, .cyberpunk.drug-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.drug-sheet button:focus, .cyberpunk.drug-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.drug-sheet img {
+  border: none;
+}
+.cyberpunk.drug-sheet h1, .cyberpunk.drug-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.drug-card {
+  min-height: 400px;
+}
+
+.cyberpunk.program-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.program-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.program-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.program-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.program-sheet button, .cyberpunk.program-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.program-sheet button:focus, .cyberpunk.program-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.program-sheet img {
+  border: none;
+}
+.cyberpunk.program-sheet h1, .cyberpunk.program-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.program-card {
+  min-height: 400px;
+}
+.program-card .dual-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+}
+.program-card .dual-value {
+  display: flex;
+  width: 47px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+}
 .program-card .dual-value-narrow {
   width: 40px;
 }
@@ -5312,6 +5584,39 @@ input.skill-value.skill-level-input:focus {
   font-weight: 500;
   line-height: 16px;
   flex-shrink: 0;
+}
+
+.cyberpunk.cyberware-sheet.app {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.cyberpunk.cyberware-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.cyberware-sheet > .window-content {
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+.cyberpunk.cyberware-sheet > .window-resizable-handle {
+  display: none;
+}
+.cyberpunk.cyberware-sheet button, .cyberpunk.cyberware-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.cyberware-sheet button:focus, .cyberpunk.cyberware-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.cyberware-sheet img {
+  border: none;
+}
+.cyberpunk.cyberware-sheet h1, .cyberpunk.cyberware-sheet h2 {
+  border: none;
+  border-bottom: none;
 }
 
 .cyberware-card .humanity-field {
@@ -5443,6 +5748,28 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   line-height: 16px;
 }
+.cyberware-card .dual-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+}
+.cyberware-card .dual-value {
+  display: flex;
+  width: 47px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+  text-align: left;
+}
 .cyberware-card .dual-value-narrow {
   width: 40px;
 }
@@ -5499,6 +5826,12 @@ input.skill-value.skill-level-input:focus {
 .cyberware-card .dual-value.with-bonus,
 .cyberware-card .variable-value.with-bonus {
   color: #6B8E23;
+}
+.cyberware-card .bonus-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
 }
 .cyberware-card .bonus-row .dropdown-wrapper {
   flex: 1 0 0;
@@ -5625,7 +5958,6 @@ input.skill-value.skill-level-input:focus {
 }
 .cyberware-card .skill-drop.empty {
   display: block;
-  height: 26px;
   padding: 0 8px;
   align-items: center;
   gap: 10px;
@@ -5639,6 +5971,12 @@ input.skill-value.skill-level-input:focus {
   font-size: 14px;
   font-weight: 400;
   line-height: 16px;
+}
+.cyberware-card .weapon-divider {
+  width: 100%;
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
 }
 .cyberware-card .sp-frame {
   position: relative;

@@ -1847,6 +1847,13 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
     });
 
+    // View skill item card
+    html.find('.skill-view').click(ev => {
+      const skillId = ev.currentTarget.dataset.skillId;
+      const skill = this.actor.items.get(skillId);
+      if (skill) skill.sheet.render(true);
+    });
+
     // Delete skill for new skills tab
     html.find('.skill-delete').click(ev => {
       const skillId = ev.currentTarget.dataset.skillId;

@@ -35,9 +35,14 @@
               <span class="skill-value">{{skill.computedLevel}}</span>
             {{else}}
               <input type="number" class="skill-value skill-level-input" data-skill-id="{{skill.id}}" value="{{skill.level}}" min="0" max="10" title="Base Level (IP adds +{{skill.ipLevel}})">
-              <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
-                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
-              </button>
+              <div class="skill-actions">
+                <button class="skill-view" type="button" data-skill-id="{{skill.id}}" title="View">
+                  <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+                </button>
+                <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
+                  <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+                </button>
+              </div>
             {{/if}}
           {{/if}}
         </div>
@@ -72,9 +77,14 @@
               <span class="skill-value">{{skill.computedLevel}}</span>
             {{else}}
               <input type="number" class="skill-value skill-level-input" data-skill-id="{{skill.id}}" value="{{skill.level}}" min="0" max="10" title="Base Level (IP adds +{{skill.ipLevel}})">
-              <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
-                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
-              </button>
+              <div class="skill-actions">
+                <button class="skill-view" type="button" data-skill-id="{{skill.id}}" title="View">
+                  <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+                </button>
+                <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
+                  <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+                </button>
+              </div>
             {{/if}}
           {{/if}}
         </div>

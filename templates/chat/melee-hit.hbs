@@ -65,6 +65,11 @@
                 {{loc "SelectTarget"}}
             </div>
         </div>
+        {{!-- Defence Buttons --}}
+        <div class="defence-buttons" data-attack-total="{{attackRoll._total}}">
+            <button class="defence-btn defence-btn--parry" disabled>{{loc "Parry"}}</button>
+            <button class="defence-btn defence-btn--dodge" disabled>{{loc "Dodge"}}</button>
+        </div>
         <button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>
     </div>
 </div>

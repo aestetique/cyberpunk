@@ -1,0 +1,145 @@
+{{!-- Martial Tab --}}
+
+{{!-- Row 1: Strike + Grapple --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Punch"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.strike}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.strike" value="{{system.martial.strike}}" min="0" max="5">
+    {{/if}}
+  </div>
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Grapple"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.grapple}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.grapple" value="{{system.martial.grapple}}" min="0" max="5">
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 2: Kick + Hold --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Kick"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.kick}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.kick" value="{{system.martial.kick}}" min="0" max="5">
+    {{/if}}
+  </div>
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Hold"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.hold}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.hold" value="{{system.martial.hold}}" min="0" max="5">
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 3: Parry + Choke --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Parry"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.parry}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.parry" value="{{system.martial.parry}}" min="0" max="5">
+    {{/if}}
+  </div>
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Choke"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.choke}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.choke" value="{{system.martial.choke}}" min="0" max="5">
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 4: Dodge + Throw --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Dodge"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.dodge}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.dodge" value="{{system.martial.dodge}}" min="0" max="5">
+    {{/if}}
+  </div>
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Throw"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.throw}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.throw" value="{{system.martial.throw}}" min="0" max="5">
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 5: Escape + Sweep --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Escape"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.escape}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.escape" value="{{system.martial.escape}}" min="0" max="5">
+    {{/if}}
+  </div>
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Sweep"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.sweep}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.sweep" value="{{system.martial.sweep}}" min="0" max="5">
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 6: Disarm + Ram --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Disarm"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.disarm}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.disarm" value="{{system.martial.disarm}}" min="0" max="5">
+    {{/if}}
+  </div>
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Ram"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.martial.ram}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.martial.ram" value="{{system.martial.ram}}" min="0" max="5">
+    {{/if}}
+  </div>
+</div>

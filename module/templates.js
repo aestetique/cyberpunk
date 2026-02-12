@@ -69,6 +69,10 @@ export const preloadHandlebarsTemplates = async function() {
         // Skill
         "systems/cyberpunk/templates/item/parts/skill/summary.hbs",
         "systems/cyberpunk/templates/item/parts/skill/settings.hbs",
+        // Skill card partials
+        "systems/cyberpunk/templates/item/parts/skill/tab-description.hbs",
+        "systems/cyberpunk/templates/item/parts/skill/tab-details.hbs",
+        "systems/cyberpunk/templates/item/parts/skill/tab-martial.hbs",
 
         // Commodity
         "systems/cyberpunk/templates/item/parts/commodity/summary.hbs",
@@ -79,6 +83,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/dialog/skill-roll.hbs",
         "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
         "systems/cyberpunk/templates/dialog/melee-attack.hbs",
+        "systems/cyberpunk/templates/dialog/defence-roll.hbs",
 
         // Program
         "systems/cyberpunk/templates/item/parts/program/summary.hbs",

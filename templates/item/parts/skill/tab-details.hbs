@@ -1,0 +1,99 @@
+{{!-- Details Tab --}}
+
+{{!-- Row 1: Attribute + Difficulty --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Attribute"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{selectedStatLabel}}</span>
+        <div class="dropdown-chevron">
+          <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+        </div>
+      </div>
+    {{else}}
+      <div class="dropdown-wrapper">
+        <select class="dropdown-select" name="system.stat">
+          {{#each statOptions}}
+            <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+        <div class="dropdown-chevron">
+          <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+        </div>
+      </div>
+    {{/if}}
+  </div>
+
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.Difficulty"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{selectedDifficultyLabel}}</span>
+        <div class="dropdown-chevron">
+          <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+        </div>
+      </div>
+    {{else}}
+      <div class="dropdown-wrapper">
+        <select class="dropdown-select" name="system.diffMod">
+          {{#each difficultyOptions}}
+            <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+        <div class="dropdown-chevron">
+          <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+        </div>
+      </div>
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 2: Base Value + Current IP --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.BaseValue"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.level}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.level" value="{{system.level}}" min="0" max="10">
+    {{/if}}
+  </div>
+
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.CurrentIP"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.ip}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.ip" value="{{system.ip}}" min="0">
+    {{/if}}
+  </div>
+</div>
+
+{{!-- Row 3: IP Bonus + Is Martial --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.IPBonus"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{system.ipLevel}}</span>
+      </div>
+    {{else}}
+      <input type="number" class="variable-input" name="system.ipLevel" value="{{system.ipLevel}}" min="0">
+    {{/if}}
+  </div>
+
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.IsMartial"}}</label>
+    {{#if isLocked}}
+      <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isMartial}}checked{{else}}unchecked{{/if}}.svg">
+    {{else}}
+      <img class="checkbox-img checkbox-toggle" data-field="system.isMartial"
+           src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isMartial}}checked{{else}}unchecked{{/if}}.svg">
+    {{/if}}
+  </div>
+</div>

@@ -512,9 +512,6 @@ input.character-name {
     border-radius: 4px;
   }
 
-  .skill-delete {
-    margin-left: 8px;
-  }
 }
 
 // Role Display (drag-drop target)
@@ -1151,15 +1148,23 @@ input.skill-value.skill-level-input {
   }
 }
 
+// View/Delete block for skills
+.skill-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  margin-right: 6px;
+}
+
+.skill-view,
 .skill-delete {
   width: 16px;
   height: 16px;
-  margin-left: -8px; // Remove gap between skill-ip and skill-delete
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  flex-shrink: 0;
   opacity: 0.6;
   outline: none;
   box-shadow: none;

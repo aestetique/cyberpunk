@@ -378,7 +378,7 @@ export class CyberpunkItem extends Item {
           }
 
           // Check for fumble (natural 1 on attack roll) - only trigger once per burst
-          const isNatural1 = attackRoll.dice[0]?.results?.some(r => r.result === 1 && !r.exploded);
+          const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
           if (isNatural1 && this.actor && !fumbleTriggered) {
               await this.actor.rollFumble(system.reliability);
               fumbleTriggered = true;
@@ -430,7 +430,8 @@ export class CyberpunkItem extends Item {
               weaponImage: this.img,
               weaponType: this.system.attackType,
               loadedAmmoType: this.system.loadedAmmoType || "standard",
-              damageType: this.system.damageType || ""
+              damageType: this.system.damageType || "",
+              hasDamage: true
           };
           let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.fullAuto));
           roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
@@ -452,7 +453,7 @@ export class CyberpunkItem extends Item {
       }
 
       // Check for fumble (natural 1 on attack roll)
-      const isNatural1 = attackRoll.dice[0]?.results?.some(r => r.result === 1 && !r.exploded);
+      const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
       if (isNatural1 && this.actor) {
           await this.actor.rollFumble(system.reliability);
       }
@@ -505,7 +506,8 @@ export class CyberpunkItem extends Item {
           weaponImage: this.img,
           weaponType: this.system.attackType,
           loadedAmmoType: this.system.loadedAmmoType || "standard",
-          damageType: this.system.damageType || ""
+          damageType: this.system.damageType || "",
+          hasDamage: true
       };
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.threeRoundBurst));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
@@ -573,7 +575,7 @@ export class CyberpunkItem extends Item {
       }
 
       // Check for fumble (natural 1 on attack roll)
-      const isNatural1 = attackRoll.dice[0]?.results?.some(r => r.result === 1 && !r.exploded);
+      const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
       if (isNatural1 && this.actor) {
           await this.actor.rollFumble(system.reliability);
       }
@@ -705,7 +707,7 @@ export class CyberpunkItem extends Item {
       }
 
       // Check for fumble (natural 1 on attack roll)
-      const isNatural1 = attackRoll.dice[0]?.results?.some(r => r.result === 1 && !r.exploded);
+      const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
       if (isNatural1 && this.actor) {
           await this.actor.rollFumble(this.system.reliability);
       }
@@ -770,7 +772,7 @@ export class CyberpunkItem extends Item {
   async _executeMartialAction(attackMods) {
     let actor = this.actor;
     let system = actor.system;
-    // Action being done, eg strike, block etc
+    // Action being done, eg strike, parry etc
     let action = attackMods.action;
     let martialArt = attackMods.martialArt;
 

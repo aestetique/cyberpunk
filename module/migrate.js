@@ -245,6 +245,13 @@ export function migrateItem(item) {
     itemUpdates["system.source"] = "";
   }
 
+  // Rename martial.block → martial.parry
+  if (item.type === "skill" && system.martial && ("block" in system.martial)) {
+    console.log(`${item.name}: Renaming martial.block to martial.parry`);
+    itemUpdates["system.martial.parry"] = system.martial.block;
+    itemUpdates["system.martial.-=block"] = null;
+  }
+
   if (item.type === "weapon" && system.rangeDamages === undefined) {
     console.log(`${item.name} missing rangeDamages. Initializing defaults.`);
     itemUpdates["system.rangeDamages"] = {

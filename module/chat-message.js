@@ -1,5 +1,6 @@
 import { RollBundle } from "./dice.js";
 import { localize } from "./utils.js";
+import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 
 /**
  * Custom ChatMessage rendering for the Cyberpunk system.
@@ -310,6 +311,11 @@ export class CyberpunkChatMessage extends ChatMessage {
             });
         }
 
+        // Defence buttons (Parry / Dodge)
+        html.querySelectorAll(".defence-btn").forEach(btn => {
+            btn.addEventListener("click", (event) => this._onDefenceClick(event, html));
+        });
+
         // Damage grid cell clicks for expandable details
         const damageGrid = html.querySelector(".damage-grid");
         if (damageGrid) {
@@ -539,6 +545,35 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /* -------------------------------------------- */
+    /*  Defence Roll                                 */
+    /* -------------------------------------------- */
+
+    /**
+     * Handle clicking a Parry or Dodge defence button on a melee-hit card.
+     * Opens the DefenceRollDialog for the selected/assigned actor.
+     * @param {Event} event - The click event
+     * @param {HTMLElement} html - The message HTML
+     * @private
+     */
+    _onDefenceClick(event, html) {
+        event.preventDefault();
+        const btn = event.currentTarget;
+        const defenceType = btn.classList.contains("defence-btn--parry") ? "parry" : "dodge";
+        const attackTotal = Number(html.querySelector(".defence-buttons")?.dataset.attackTotal) || 0;
+
+        // Determine the defending actor: selected token for GM, assigned character for players
+        let actor = canvas.tokens.controlled[0]?.actor;
+        if (!actor) actor = game.user.character;
+
+        if (!actor) {
+            ui.notifications.warn(localize("DefenceNoActor"));
+            return;
+        }
+
+        new DefenceRollDialog(actor, defenceType, attackTotal).render(true);
+    }
+
+    /* -------------------------------------------- */
     /*  Target Selector Methods                      */
     /* -------------------------------------------- */
 
@@ -574,6 +609,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         const applyBtn = html.querySelector(".apply-damage-btn");
         const hintEl = html.querySelector(".target-selector__hint");
         const targetSelector = html.querySelector(".target-selector");
+        const defenceBtns = html.querySelectorAll(".defence-btn");
 
         if (!content || !targetSelector) return;
 
@@ -614,6 +650,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             }
             content.innerHTML = `<div class="target-info target-info--empty">${emptyHint}</div>`;
             if (applyBtn) applyBtn.disabled = true;
+            defenceBtns.forEach(b => b.disabled = true);
             if (hintEl) hintEl.textContent = "";
             return;
         }
@@ -653,10 +690,11 @@ export class CyberpunkChatMessage extends ChatMessage {
             hintEl.textContent = hintParts.join(" | ");
         }
 
-        // Enable apply button if there are valid targets with damage
+        // Enable apply button and defence buttons if there are valid targets
         if (applyBtn) {
             applyBtn.disabled = targets.length === 0;
         }
+        defenceBtns.forEach(b => b.disabled = targets.length === 0);
     }
 
     /**

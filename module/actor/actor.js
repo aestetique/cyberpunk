@@ -452,7 +452,11 @@ export class CyberpunkActor extends Actor {
     // Localization may return the original key, so we check both options
     const targetName = nameLoc.includes("Skill") ? skillName : nameLoc;
 
-    const skillItem = this.itemTypes.skill.find(s => s.name === targetName);
+    let skillItem = this.itemTypes.skill.find(s => s.name === targetName);
+    // Fallback: try original name if localized name didn't match (e.g. martial art sub-types)
+    if (!skillItem && targetName !== skillName) {
+      skillItem = this.itemTypes.skill.find(s => s.name === skillName);
+    }
     if (!skillItem) return 0;
 
     // Check if this skill is chipped by equipped chipware

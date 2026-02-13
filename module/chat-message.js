@@ -621,6 +621,9 @@ export class CyberpunkChatMessage extends ChatMessage {
             damageData = {};
         }
 
+        // Expand AoE damage into per-location entries
+        damageData = this._expandAoeDamage(damageData);
+
         // Get loaded ammo type and melee damage type
         const ammoType = targetSelector.dataset.ammoType || "standard";
         const damageType = targetSelector.dataset.damageType || "";
@@ -695,6 +698,37 @@ export class CyberpunkChatMessage extends ChatMessage {
             applyBtn.disabled = targets.length === 0;
         }
         defenceBtns.forEach(b => b.disabled = targets.length === 0);
+    }
+
+    /**
+     * Expand AoE damage data into per-location entries.
+     * Splits the total damage evenly across all 6 body locations so the
+     * normal per-location logic (armor, cyberlimb SDP, BTM, ablation) applies.
+     * @param {Object} damageData - Damage data, possibly containing an "aoe" key
+     * @returns {Object} Expanded damage data with per-location entries, or original if not AoE
+     * @private
+     */
+    _expandAoeDamage(damageData) {
+        if (!damageData["aoe"]) return damageData;
+
+        const locations = ["Head", "Torso", "lArm", "rArm", "lLeg", "rLeg"];
+        const expanded = {};
+
+        for (const hit of damageData["aoe"]) {
+            const perLoc = Math.floor(hit.damage / 6);
+            const remainder = hit.damage - perLoc * 6;
+
+            locations.forEach((loc, i) => {
+                if (!expanded[loc]) expanded[loc] = [];
+                expanded[loc].push({
+                    damage: perLoc + (i < remainder ? 1 : 0),
+                    formula: hit.formula,
+                    dice: hit.dice
+                });
+            });
+        }
+
+        return expanded;
     }
 
     /**
@@ -927,6 +961,9 @@ export class CyberpunkChatMessage extends ChatMessage {
         } catch (e) {
             return;
         }
+
+        // Expand AoE damage into per-location entries
+        damageData = this._expandAoeDamage(damageData);
 
         // Get loaded ammo type and melee damage type
         const ammoType = targetSelector.dataset.ammoType || "standard";

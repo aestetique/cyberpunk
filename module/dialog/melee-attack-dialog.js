@@ -209,7 +209,7 @@ export class MeleeAttackDialog extends Application {
       const templateData = {
         weaponName: this.weapon.name,
         weaponImage: this.weapon.img,
-        weaponType: this.weapon.system.attackType,
+        weaponType: this.weapon.getWeaponLineType(),
         effectLabel,
         effectIcon,
         conditionId

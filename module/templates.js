@@ -34,6 +34,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/fumble.hbs",
         "systems/cyberpunk/templates/chat/melee-execute.hbs",
         "systems/cyberpunk/templates/chat/melee-hit.hbs",
+        "systems/cyberpunk/templates/chat/ordnance-hit.hbs",
 
         // Chat card partials
         "systems/cyberpunk/templates/chat/partials/card-header.hbs",

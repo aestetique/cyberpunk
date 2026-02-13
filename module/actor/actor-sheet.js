@@ -6,6 +6,7 @@ import { ReloadDialog } from "../dialog/reload-dialog.js"
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
 import { RangeSelectionDialog } from "../dialog/range-selection-dialog.js"
 import { MeleeAttackDialog } from "../dialog/melee-attack-dialog.js"
+import { OrdnanceAttackDialog } from "../dialog/ordnance-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
 import { SortModes } from "./skill-sort.js";
 
@@ -2152,6 +2153,49 @@ export class CyberpunkActorSheet extends ActorSheet {
       } else {
         new MeleeAttackDialog(this.actor, item, targetTokens).render(true);
       }
+    });
+
+    // Fire ordnance (gear tab) - clicking on icon or name
+    html.find('.gear-fire-ordnance').click(ev => {
+      ev.stopPropagation();
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      const targetTokens = Array.from(game.users.current.targets.values()).map(target => ({
+        name: target.document.name,
+        id: target.id
+      }));
+
+      // Check for charges before opening dialog
+      const charges = Number(item.system.charges) || 0;
+      if (charges <= 0) {
+        const dialog = new Dialog({
+          title: item.name,
+          content: `
+            <div class="ranged-attack-wrapper">
+              <header class="reload-header">
+                <span class="reload-title">${item.name}</span>
+                <a class="header-control close"><i class="fas fa-times"></i></a>
+              </header>
+              <div class="reload-empty">${game.i18n.localize("CYBERPUNK.OutOfCharges")}</div>
+            </div>
+          `,
+          buttons: {},
+          render: html => {
+            html.find('.header-control.close').click(() => dialog.close());
+            const header = html.find('.reload-header')[0];
+            if (header) new Draggable(dialog, html, header, false);
+          }
+        }, {
+          width: 300,
+          classes: ["cyberpunk", "ranged-attack-dialog"]
+        });
+        dialog.render(true);
+        return;
+      }
+
+      new OrdnanceAttackDialog(this.actor, item, targetTokens).render(true);
     });
 
     // "Fire" button for weapons

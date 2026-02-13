@@ -76,10 +76,10 @@
     <div class="tab-content gear-content">
       {{#each ordnanceItems as |ordnance|}}
         <div class="gear-row" data-item-id="{{ordnance.id}}">
-          <div class="gear-icon">
+          <div class="gear-icon gear-fire-ordnance" data-item-id="{{ordnance.id}}">
             <img src="{{ordnance.img}}" alt="{{ordnance.name}}">
           </div>
-          <div class="gear-info">
+          <div class="gear-info gear-fire-ordnance" data-item-id="{{ordnance.id}}">
             <span class="gear-name">{{ordnance.name}}</span>
             <span class="gear-context">{{ordnance.context}}</span>
           </div>

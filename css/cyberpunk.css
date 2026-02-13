@@ -1362,6 +1362,9 @@ div.statderive .value.rightborder {
 .damage-grid__cell--active {
   background: var(--chat-green);
 }
+.damage-grid--single .damage-grid__cell {
+  width: 100%;
+}
 
 .hit-tally {
   width: 100%;
@@ -2861,7 +2864,8 @@ input.skill-value.skill-level-input:focus {
   object-fit: cover;
   border: none;
 }
-.gear-icon.gear-fire-weapon {
+.gear-icon.gear-fire-weapon,
+.gear-icon.gear-fire-ordnance {
   cursor: pointer;
 }
 
@@ -2873,7 +2877,8 @@ input.skill-value.skill-level-input:focus {
   flex-direction: column;
   gap: 2px;
 }
-.gear-info.gear-fire-weapon {
+.gear-info.gear-fire-weapon,
+.gear-info.gear-fire-ordnance {
   cursor: pointer;
 }
 

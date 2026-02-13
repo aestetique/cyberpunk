@@ -551,6 +551,8 @@
     "CYBERPUNK.SelectTarget": "Select a target to apply damage",
     "CYBERPUNK.Apply": "APPLY",
     "CYBERPUNK.HitTally": "{hits} hit of {fired} fired",
+    "CYBERPUNK.HitOnSpot": "Hit right on spot",
+    "CYBERPUNK.ScatterDistance": "{distance} meters off target",
 
     "CYBERPUNK.Conditions.LightlyWounded": "Lightly Wounded",
     "CYBERPUNK.Conditions.SeriouslyWounded": "Seriously Wounded",
@@ -709,6 +711,8 @@
     "TYPES.Item.ordnance": "Ordnance",
     "CYBERPUNK.Ordnance": "ORDNANCE",
     "CYBERPUNK.OrdnanceSheet": "Ordnance Sheet",
+    "CYBERPUNK.OrdnanceAction": "Ordnance",
+    "CYBERPUNK.PlaceTemplateAndRoll": "Place template & Roll",
     "CYBERPUNK.Template": "Template",
     "CYBERPUNK.TemplateCircle": "Circle",
     "CYBERPUNK.TemplateCone": "Cone",

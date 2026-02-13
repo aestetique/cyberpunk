@@ -33,7 +33,7 @@ export function getActorImage(speaker) {
     }
 
     // 4. Fallback to placeholder
-    return "systems/cyberpunk/img/placeholder-actor.svg";
+    return "systems/cyberpunk/img/svg/placeholder-character.svg";
 }
 
 /**

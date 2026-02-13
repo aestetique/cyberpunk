@@ -534,57 +534,6 @@ div.statderive .value.rightborder {
   background-color: transparent;
 }
 
-.skill-top-matter {
-  display: flex;
-  flex-wrap: nowrap;
-  width: 100%;
-  margin-bottom: 3px;
-  flex-grow: 0;
-}
-.skill-top-matter > * {
-  flex-grow: 1;
-}
-.skill-top-matter div.search-icon {
-  background-color: black;
-  background-image: url(../img/search.png);
-}
-
-.field.skill > * {
-  padding-top: 3px;
-  padding-bottom: 3px;
-}
-.field.skill > label.skill-roll {
-  flex: 4;
-}
-.field.skill label.chip-toggle {
-  background-color: black;
-  display: flex;
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
-  padding-right: 3px;
-}
-.field.skill label.chip-toggle > * {
-  font-variant: all-small-caps;
-}
-.field.skill label.chip-toggle .skill-stat-display {
-  flex: 1;
-}
-.field.skill input[type=checkbox] {
-  display: none;
-}
-.field.skill .chip-icon {
-  border: 0px;
-  border-radius: 0px;
-  background-size: cover;
-  height: 1.5em;
-  width: 1.5em;
-  background-image: url(../img/chip.png);
-}
-
-.skill-group .field.skill {
-  width: 100%;
-}
 
 .cyberpunk textarea.flavor {
   font-family: "Noto Sans", sans-serif;

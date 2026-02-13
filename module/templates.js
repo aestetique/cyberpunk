@@ -12,7 +12,6 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/actor/parts/cyberware.hbs",
         "systems/cyberpunk/templates/actor/parts/combat.hbs",
         "systems/cyberpunk/templates/actor/parts/armor-display.hbs",
-        "systems/cyberpunk/templates/actor/parts/skill.hbs",
         "systems/cyberpunk/templates/actor/parts/netrunning.hbs",
 
         // Shared templates

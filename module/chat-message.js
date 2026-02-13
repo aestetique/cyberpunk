@@ -150,7 +150,7 @@ export class CyberpunkChatMessage extends ChatMessage {
 
         // Get best image: actor portrait > user avatar > placeholder
         // Always use actor portrait, never token image
-        let img = "systems/cyberpunk/img/placeholder-actor.svg";
+        let img = "systems/cyberpunk/img/svg/placeholder-character.svg";
         if (actor?.img && actor.img !== "icons/svg/mystery-man.svg") {
             img = actor.img;
         } else if (this.author?.avatar) {

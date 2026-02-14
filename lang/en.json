@@ -301,6 +301,7 @@
     "CYBERPUNK.Parry": "Parry",
     "CYBERPUNK.Sweep": "Sweep",
     "CYBERPUNK.Ram": "Ram",
+    "CYBERPUNK.Release": "Release",
     "CYBERPUNK.DefenceRoll": "Defence Roll",
     "CYBERPUNK.DefenceNoActor": "Select a token or assign a character to defend.",
     "CYBERPUNK.NoSkillsBonus": "No skills bonus",
@@ -553,6 +554,7 @@
     "CYBERPUNK.HitTally": "{hits} hit of {fired} fired",
     "CYBERPUNK.HitOnSpot": "Hit right on spot",
     "CYBERPUNK.ScatterDistance": "{distance} meters off target",
+    "CYBERPUNK.UnarmedAttack": "Unarmed Attack",
 
     "CYBERPUNK.Conditions.LightlyWounded": "Lightly Wounded",
     "CYBERPUNK.Conditions.SeriouslyWounded": "Seriously Wounded",
@@ -582,7 +584,8 @@
     "CYBERPUNK.Conditions.Blinded": "Blinded",
     "CYBERPUNK.Conditions.Shorted": "Shorted",
     "CYBERPUNK.Conditions.Deafened": "Deafened",
-    "CYBERPUNK.Conditions.Grappled": "Grappled",
+    "CYBERPUNK.Conditions.Grappling": "Grappling",
+    "CYBERPUNK.Conditions.Restrained": "Restrained",
     "CYBERPUNK.Conditions.Prone": "Prone",
     "CYBERPUNK.Stabilized": "Stabilized",
     "CYBERPUNK.FastDraw": "Fast Draw",
@@ -749,6 +752,7 @@
     "CYBERPUNK.PropStunSave": "Stun Save",
     "CYBERPUNK.PropDeathSave": "Death Save",
     "CYBERPUNK.PropPoisonSave": "Poison Save",
+    "CYBERPUNK.PropUnarmedMultiplier": "Unarmed Damage Multiplier",
 
     "TYPES.Item.drug": "Drug",
     "CYBERPUNK.Drug": "DRUG",

@@ -86,6 +86,10 @@ export class CyberpunkActor extends Actor {
       stat.total = stat.base + (stat.tempMod || 0);
     }
 
+    // Unarmed combat properties
+    system.unarmedBaseDamage = "1d6/2";
+    system.unarmedDamageMultiplier = system.unarmedDamageMultiplier || 1;
+
     // Check luck recovery (8 hours = 28,800,000 ms)
     const LUCK_RECOVERY_MS = 8 * 60 * 60 * 1000;
     if (stats.luck.spentAt && Date.now() - stats.luck.spentAt >= LUCK_RECOVERY_MS) {
@@ -240,6 +244,22 @@ export class CyberpunkActor extends Actor {
         itemId: limb.id
       };
     }
+
+    // Cyberarm/cyberleg upgrade unarmed damage
+    const hasCyberarm = equippedItems.some(i =>
+      i.type === 'cyberware' &&
+      i.system.cyberwareType === 'cyberlimb' &&
+      !i.system.isOption &&
+      ['leftArm', 'rightArm', 'extraArm'].includes(i.system.cyberwareSubtype)
+    );
+    const hasCyberleg = equippedItems.some(i =>
+      i.type === 'cyberware' &&
+      i.system.cyberwareType === 'cyberlimb' &&
+      !i.system.isOption &&
+      ['leftLeg', 'rightLeg'].includes(i.system.cyberwareSubtype)
+    );
+    if (hasCyberarm) system.unarmedBaseDamage = "1d6";
+    system.kickBaseDamage = hasCyberleg ? "2d6" : "1d6";
 
     // Determine armor state per location (for visual display)
     const armorState = {};
@@ -531,6 +551,11 @@ export class CyberpunkActor extends Actor {
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
 
+    // Restrained: -2 penalty on all checks
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    // Grappling: -2 penalty on all checks
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+
     // Awareness/Notice condition penalties (Unconscious -8, Blinded -4, Deafened -2)
     let awarenessConditionPenalty = 0;
     const awarenessSkillName = localize("SkillAwarenessNotice");
@@ -599,6 +624,8 @@ export class CyberpunkActor extends Actor {
       extraMod || null,
       actionSurgePenalty || null,
       fastDrawPenalty || null,
+      restrainedPenalty || null,
+      grapplingPenalty || null,
       awarenessConditionPenalty || null,
       skillBonus || null
     ].filter(Boolean);
@@ -672,13 +699,20 @@ export class CyberpunkActor extends Actor {
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
 
+    // Restrained: -2 penalty on all checks
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    // Grappling: -2 penalty on all checks
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+
     // Build roll parts
     const rollParts = [
       bonus.value,
       `@stats.${stat}.total`,
       extraMod || null,
       actionSurgePenalty || null,
-      fastDrawPenalty || null
+      fastDrawPenalty || null,
+      restrainedPenalty || null,
+      grapplingPenalty || null
     ].filter(Boolean);
 
     const makeRoll = () => buildD10Roll(rollParts, this.system);
@@ -721,9 +755,16 @@ export class CyberpunkActor extends Actor {
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
 
+    // Restrained: -2 penalty on all checks
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    // Grappling: -2 penalty on all checks
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
+    if (restrainedPenalty) parts.push(restrainedPenalty);
+    if (grapplingPenalty) parts.push(grapplingPenalty);
 
     let roll = new RollBundle(fullStatName);
     roll.addRoll(buildD10Roll(parts, this.system));
@@ -750,6 +791,11 @@ export class CyberpunkActor extends Actor {
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
+
+    // Restrained: -2 penalty on all checks
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    // Grappling: -2 penalty on all checks
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
 
     // Awareness/Notice condition penalties (Unconscious -8, Blinded -4, Deafened -2)
     let awarenessConditionPenalty = 0;
@@ -813,6 +859,8 @@ export class CyberpunkActor extends Actor {
       extraMod || null,
       actionSurgePenalty || null,
       fastDrawPenalty || null,
+      restrainedPenalty || null,
+      grapplingPenalty || null,
       awarenessConditionPenalty || null,
       skillBonus || null
     ].filter(Boolean);
@@ -865,13 +913,17 @@ export class CyberpunkActor extends Actor {
     const stat = bonus.skillStat || 'ref';
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
 
     const rollParts = [
       bonus.value,
       `@stats.${stat}.total`,
       extraMod || null,
       actionSurgePenalty || null,
-      fastDrawPenalty || null
+      fastDrawPenalty || null,
+      restrainedPenalty || null,
+      grapplingPenalty || null
     ].filter(Boolean);
 
     const roll = buildD10Roll(rollParts, this.system);
@@ -906,10 +958,14 @@ export class CyberpunkActor extends Actor {
     const fullStatName = localize(toTitleCase(statName) + "Full");
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
 
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
+    if (restrainedPenalty) parts.push(restrainedPenalty);
+    if (grapplingPenalty) parts.push(grapplingPenalty);
     if (extraMod) parts.push(extraMod);
 
     const roll = buildD10Roll(parts, this.system);

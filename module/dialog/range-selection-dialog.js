@@ -57,7 +57,7 @@ export class RangeSelectionDialog extends Application {
 
   /** @override */
   getData() {
-    const weaponRange = this.weapon.system.range || 50;
+    const weaponRange = this.weapon.weaponData.range || 50;
 
     // Build range options with calculated distances
     const rangeOptions = [
@@ -81,7 +81,7 @@ export class RangeSelectionDialog extends Application {
     const fireModeLabel = this._getFireModeLabel();
 
     // Check if weapon is exotic
-    const isExotic = this.weapon.system.weaponType === "Exotic";
+    const isExotic = this.weapon.weaponData.weaponType === "Exotic";
 
     return {
       fireModeLabel,
@@ -156,7 +156,7 @@ export class RangeSelectionDialog extends Application {
   _getAutoRangeFromDistance() {
     if (this._calculatedDistance === null) return null;
 
-    const weaponRange = this.weapon.system.range || 50;
+    const weaponRange = this.weapon.weaponData.range || 50;
     const dist = this._calculatedDistance;
 
     if (dist <= 1) return ranges.pointBlank;

@@ -53,7 +53,7 @@ export class MeleeAttackDialog extends Application {
 
   /** @override */
   getData() {
-    const damageType = this.weapon.system.damageType || "blunt";
+    const damageType = this.weapon.weaponData.damageType || "blunt";
     const isEdged = ["edged", "spike", "monoblade"].includes(damageType);
     const executeLabel = isEdged ? localize("CoupDeGrace") : localize("Knockout");
     const executeCondition = isEdged ? "coupDeGrace" : "knockout";
@@ -197,7 +197,7 @@ export class MeleeAttackDialog extends Application {
    * Execute the melee action — either an execute (CdG/Knockout) or a normal strike
    */
   async _executeRoll() {
-    const damageType = this.weapon.system.damageType || "blunt";
+    const damageType = this.weapon.weaponData.damageType || "blunt";
     const isEdged = ["edged", "spike", "monoblade"].includes(damageType);
 
     if (this._executeSelected) {

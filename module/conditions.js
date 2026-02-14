@@ -209,10 +209,16 @@ export const CYBERPUNK_CONDITIONS = [
         statuses: ["deafened"]
     },
     {
-        id: "grappled",
-        name: "CYBERPUNK.Conditions.Grappled",
-        icon: "systems/cyberpunk/img/conditions/grappled.svg",
-        statuses: ["grappled"]
+        id: "grappling",
+        name: "CYBERPUNK.Conditions.Grappling",
+        icon: "systems/cyberpunk/img/conditions/grappling.svg",
+        statuses: ["grappling"]
+    },
+    {
+        id: "restrained",
+        name: "CYBERPUNK.Conditions.Restrained",
+        icon: "systems/cyberpunk/img/conditions/restrained.svg",
+        statuses: ["restrained"]
     },
     {
         id: "prone",
@@ -375,8 +381,12 @@ export const CONDITION_EFFECTS = {
         // -2 to Awareness/Notice rolls - handled in skill logic
         changes: []
     },
-    "grappled": {
-        // Movement reduced to 0 - handled in movement logic
+    "grappling": {
+        // -2 on all checks - applied manually in rolls
+        changes: []
+    },
+    "restrained": {
+        // -2 on all checks - applied manually in rolls
         changes: []
     },
     "prone": {

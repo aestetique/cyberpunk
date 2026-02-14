@@ -1,0 +1,109 @@
+<div class="melee-attack-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{localize "CYBERPUNK.UnarmedAttack"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Punch section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/ref.svg" alt="">
+    <span class="fire-mode-label">{{actionLabel}}</span>
+  </div>
+
+  {{!-- Skill dropdown --}}
+  {{#if hasSkills}}
+  <div class="range-dropdown">
+    <button type="button" class="range-dropdown-btn">
+      <span class="range-label">{{selectedSkillLabel}}</span>
+      <i class="fas fa-chevron-down"></i>
+    </button>
+    <div class="range-dropdown-list">
+      {{#each skills}}
+        <div class="range-option{{#if @first}} selected{{/if}}" data-skill-id="{{id}}">
+          {{label}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+  {{else}}
+  <div class="range-dropdown range-dropdown--disabled">
+    <button type="button" class="range-dropdown-btn disabled" disabled>
+      <span class="range-label">{{noSkillsLabel}}</span>
+    </button>
+  </div>
+  {{/if}}
+
+  {{!-- Conditions section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/conditions.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.ConditionsHeader"}}</span>
+  </div>
+
+  {{!-- Condition buttons - 2x2 grid --}}
+  <div class="conditions-grid">
+    <button type="button" class="condition-btn" data-condition="prepared">
+      {{localize "CYBERPUNK.ConditionPrepared"}}
+    </button>
+    <button type="button" class="condition-btn" data-condition="ambush">
+      {{localize "CYBERPUNK.ConditionAmbush"}}
+    </button>
+    <button type="button" class="condition-btn" data-condition="distracted">
+      {{localize "CYBERPUNK.ConditionDistracted"}}
+    </button>
+    <button type="button" class="condition-btn" data-condition="indirect">
+      {{localize "CYBERPUNK.ConditionIndirect"}}
+    </button>
+  </div>
+
+  {{!-- Location section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/location.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.Location"}}</span>
+  </div>
+
+  {{!-- Location buttons - 2x3 grid --}}
+  <div class="location-grid">
+    <button type="button" class="location-btn" data-location="LeftArm">
+      <img src="systems/cyberpunk/img/chat/LeftArm.svg" alt="">
+    </button>
+    <button type="button" class="location-btn" data-location="Head">
+      <img src="systems/cyberpunk/img/chat/Head.svg" alt="">
+    </button>
+    <button type="button" class="location-btn" data-location="RightArm">
+      <img src="systems/cyberpunk/img/chat/RightArm.svg" alt="">
+    </button>
+    <button type="button" class="location-btn" data-location="LeftLeg">
+      <img src="systems/cyberpunk/img/chat/LeftLeg.svg" alt="">
+    </button>
+    <button type="button" class="location-btn" data-location="Torso">
+      <img src="systems/cyberpunk/img/chat/Torso.svg" alt="">
+    </button>
+    <button type="button" class="location-btn" data-location="RightLeg">
+      <img src="systems/cyberpunk/img/chat/RightLeg.svg" alt="">
+    </button>
+  </div>
+
+  {{!-- Luck section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/luck.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.LuckFull"}}</span>
+  </div>
+
+  {{!-- Luck controls --}}
+  <div class="luck-controls{{#if luckDisabled}} disabled{{/if}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+    </button>
+    <div class="luck-display">
+      <span class="luck-value">{{luckToSpend}}</span>
+    </div>
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+    </button>
+  </div>
+
+  {{!-- Roll button --}}
+  <button type="button" class="reload-apply-btn roll-btn">
+    {{localize "CYBERPUNK.Roll"}}
+  </button>
+</div>

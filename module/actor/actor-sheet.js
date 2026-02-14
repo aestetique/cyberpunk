@@ -7,6 +7,7 @@ import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
 import { RangeSelectionDialog } from "../dialog/range-selection-dialog.js"
 import { MeleeAttackDialog } from "../dialog/melee-attack-dialog.js"
 import { OrdnanceAttackDialog } from "../dialog/ordnance-attack-dialog.js"
+import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
 import { SortModes } from "./skill-sort.js";
 
@@ -851,6 +852,20 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Combine regular weapons and cyberweapons
     sheetData.weapons = [...weaponsList, ...cyberweaponsList];
+
+    // Unarmed attack damage display
+    const unarmedBase = this.actor.system.unarmedBaseDamage;
+    const unarmedMult = this.actor.system.unarmedDamageMultiplier;
+    if (unarmedMult <= 1) {
+      sheetData.unarmedDamage = unarmedBase;
+    } else {
+      const diceMatch = unarmedBase.match(/^(\d+)d(\d+)$/);
+      if (diceMatch) {
+        sheetData.unarmedDamage = `${Number(diceMatch[1]) * unarmedMult}d${diceMatch[2]}`;
+      } else {
+        sheetData.unarmedDamage = `(${unarmedBase})×${unarmedMult}`;
+      }
+    }
 
     // Prepare ordnance data
     sheetData.ordnanceItems = ordnance.map(o => {
@@ -1990,17 +2005,17 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (!item) return;
 
       // If the weapon uses ammo, open the reload dialog
-      const ammoWT = weaponToAmmoType[item.system.weaponType];
+      const ammoWT = weaponToAmmoType[item.weaponData.weaponType];
       if (ammoWT) {
         new ReloadDialog(this.actor, item).render(true);
         return;
       }
 
       // Legacy instant reload for weapons without ammo mapping
-      const maxShots = item.system.shots ?? 0;
+      const maxShots = item.weaponData.shots ?? 0;
       await this.actor.updateEmbeddedDocuments("Item", [{
         _id: itemId,
-        "system.shotsLeft": maxShots
+        [item._weaponUpdatePath("shotsLeft")]: maxShots
       }]);
     });
 
@@ -2014,8 +2029,8 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (!item) return;
 
       // Fill charges to max
-      const chargesMax = item.system.chargesMax ?? 0;
-      await item.update({ "system.charges": chargesMax });
+      const chargesMax = item.weaponData.chargesMax ?? 0;
+      await item.update({ [item._weaponUpdatePath("charges")]: chargesMax });
     });
 
     // Ammo quantity input (gear tab)
@@ -2090,6 +2105,10 @@ export class CyberpunkActorSheet extends ActorSheet {
     html.find('.gear-fire-weapon').click(ev => {
       ev.stopPropagation();
       const itemId = ev.currentTarget.dataset.itemId;
+      if (itemId === "unarmed") {
+        new UnarmedAttackDialog(this.actor).render(true);
+        return;
+      }
       const item = this.actor.items.get(itemId);
       if (!item) return;
 
@@ -2102,9 +2121,9 @@ export class CyberpunkActorSheet extends ActorSheet {
       // For ranged weapons, show fire mode selection first
       if (isRanged) {
         // Exotic weapons skip fire mode selection (always single shot)
-        if (item.system.weaponType === "Exotic") {
+        if (item.weaponData.weaponType === "Exotic") {
           // Check for charges before opening dialog
-          const charges = Number(item.system.charges) || 0;
+          const charges = Number(item.weaponData.charges) || 0;
           if (charges <= 0) {
             // Show "Out of charges" dialog with proper styling
             const dialog = new Dialog({
@@ -2141,7 +2160,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
 
       // Melee weapons
-      if (item.system.attackType === meleeAttackTypes.martial) {
+      if (item.weaponData.attackType === meleeAttackTypes.martial) {
         const modifierGroups = buildMartialModifierGroups(this.actor);
         const dialog = new ModifiersDialog(this.actor, {
           weapon: item,
@@ -2219,7 +2238,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         });
         dialog.render(true);
       }
-      else if (item.system.attackType === meleeAttackTypes.martial){
+      else if (item.weaponData.attackType === meleeAttackTypes.martial){
         let modifierGroups = buildMartialModifierGroups(this.actor);
         let dialog = new ModifiersDialog(this.actor, {
           weapon: item,

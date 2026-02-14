@@ -78,7 +78,8 @@ export const toolBonusProperties = {
     "initiativeMod": "PropInitiative",
     "stunSaveMod": "PropStunSave",
     "deathSaveMod": "PropDeathSave",
-    "poisonSaveMod": "PropPoisonSave"
+    "poisonSaveMod": "PropPoisonSave",
+    "unarmedDamageMultiplier": "PropUnarmedMultiplier"
 };
 
 /** Program class types */
@@ -725,7 +726,7 @@ export function meleeDamageBonus(bt) {
         case 11:
         case 12: return 4 
         case 13:
-        case 14: return 5
+        case 14: return 6
         default: return 8
     }
 }

@@ -1,13 +1,37 @@
 {{!-- Gear Tab --}}
 <div class="gear-container">
-  {{!-- 1. WEAPONS Block --}}
-  {{#if weapons.length}}
+  {{!-- 1. WEAPONS Block (always visible — unarmed row is permanent) --}}
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">WEAPONS</span>
       <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-weapons.svg" alt="">
     </header>
     <div class="tab-content gear-content">
+      {{!-- Unarmed Attack (always first) --}}
+      <div class="gear-row" data-item-id="unarmed">
+        <div class="gear-icon gear-fire-weapon" data-item-id="unarmed">
+          <img src="systems/cyberpunk/img/ui/unarmed.svg" alt="{{loc "UnarmedAttack"}}">
+        </div>
+        <div class="gear-info gear-fire-weapon" data-item-id="unarmed">
+          <span class="gear-name">{{loc "UnarmedAttack"}}</span>
+          <span class="gear-context">Melee · 1 m</span>
+        </div>
+        <div class="gear-price invisible">
+          <span class="price-value">0</span>
+          <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+        </div>
+        <div class="gear-weight invisible">
+          <span class="price-value">0</span>
+          <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+        </div>
+        <div class="gear-field" style="width: 60px;">
+          <span class="field-top">{{unarmedDamage}}</span>
+          <span class="field-bottom">Damage</span>
+        </div>
+        <div class="gear-field" style="width: 60px;"></div>
+        <div class="gear-action-btn"></div>
+        <div class="gear-actions"></div>
+      </div>
       {{#each weapons as |weapon|}}
         <div class="gear-row" data-item-id="{{weapon.id}}">
           <div class="gear-icon gear-fire-weapon" data-item-id="{{weapon.id}}">
@@ -64,7 +88,6 @@
       {{/each}}
     </div>
   </div>
-  {{/if}}
 
   {{!-- 2. ORDNANCE Block --}}
   {{#if ordnanceItems.length}}

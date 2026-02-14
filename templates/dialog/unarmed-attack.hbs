@@ -1,0 +1,13 @@
+<div class="ranged-attack-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{loc "UnarmedAttack"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+  <div class="unarmed-actions">
+    {{#each actions}}
+    <button type="button" class="fire-mode-btn unarmed-action-btn" data-action="{{this.key}}">
+      {{this.label}}
+    </button>
+    {{/each}}
+  </div>
+</div>

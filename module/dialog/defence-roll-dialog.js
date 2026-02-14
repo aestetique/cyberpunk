@@ -261,6 +261,8 @@ export class DefenceRollDialog extends Application {
     // Action Surge / Fast Draw penalties
     const actionSurgePenalty = this.actor.statuses.has("action-surge") ? -3 : 0;
     const fastDrawPenalty = this.actor.statuses.has("fast-draw") ? -3 : 0;
+    const restrainedPenalty = this.actor.statuses.has("restrained") ? -2 : 0;
+    const grapplingPenalty = this.actor.statuses.has("grappling") ? -2 : 0;
 
     // Skill value (same as resolveSkillTotal but we need it as a number for the formula)
     const skillValue = this._selectedSkill.value;
@@ -274,7 +276,9 @@ export class DefenceRollDialog extends Application {
       martialBonus || null,
       this._luckToSpend || null,
       actionSurgePenalty || null,
-      fastDrawPenalty || null
+      fastDrawPenalty || null,
+      restrainedPenalty || null,
+      grapplingPenalty || null
     ].filter(Boolean);
 
     const roll = buildD10Roll(parts, this.actor.system);

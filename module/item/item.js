@@ -49,11 +49,28 @@ export class CyberpunkItem extends Item {
     }
   }
 
-  isRanged() {
-    let system = this.system;
-    return !((system.weaponType === "Melee") || (system.weaponType === "Exotic" && Object.keys(meleeAttackTypes).includes(system.attackType)));
+  /**
+   * Get the weapon data sub-object.
+   * For regular weapons, this is `this.system`.
+   * For cyberware weapons, this is `this.system.weapon`.
+   */
+  get weaponData() {
+    return (this.type === "cyberware" && this.system.isWeapon) ? this.system.weapon : this.system;
   }
-  
+
+  /**
+   * Build the correct Foundry update path for a weapon field.
+   * For regular weapons: "system.{field}". For cyberware: "system.weapon.{field}".
+   */
+  _weaponUpdatePath(field) {
+    return (this.type === "cyberware") ? `system.weapon.${field}` : `system.${field}`;
+  }
+
+  isRanged() {
+    const wd = this.weaponData;
+    return !((wd.weaponType === "Melee") || (wd.weaponType === "Exotic" && Object.keys(meleeAttackTypes).includes(wd.attackType)));
+  }
+
   _prepareWeaponData(data) {
 
   }
@@ -65,7 +82,7 @@ export class CyberpunkItem extends Item {
    * @returns {{ accuracyPenalty: number, rofMultiplier: number }}
    */
   _getMinBodyPenalty() {
-    const minBody = this.system.minimumBody || 0;
+    const minBody = this.weaponData.minimumBody || 0;
     if (!minBody || !this.actor) return { accuracyPenalty: 0, rofMultiplier: 1 };
     const body = this.actor.system.stats?.bt?.total || 0;
     const deficit = minBody - body;
@@ -222,28 +239,30 @@ export class CyberpunkItem extends Item {
   // See `modifiers.js` for the modifier object structure
   _resolveAttack(attackMods, targetTokens) {
     let owner = this.actor;
-    let system = this.system;
-
-    // Check ammo/charges - exotic weapons use charges, regular weapons use shotsLeft
-    const isExotic = system.weaponType === "Exotic";
-    const ammoLeft = isExotic ? (system.charges || 0) : system.shotsLeft;
-    if (ammoLeft <= 0) {
-      const msgKey = isExotic ? "NoCharges" : "NoAmmo";
-      ui.notifications.warn(localize(msgKey));
-      return false;
-    }
+    const wd = this.weaponData;
 
     if (owner === null) {
       throw new Error("This item isn't owned by anyone.");
     }
+
+    // Melee weapons don't consume ammo — dispatch immediately
     let isRanged = this.isRanged();
     if(!isRanged) {
-      if (system.attackType === meleeAttackTypes.martial) {
+      if (wd.attackType === meleeAttackTypes.martial) {
         return this._executeMartialAction(attackMods);
       }
       else {
         return this._executeMeleeStrike(attackMods);
       }
+    }
+
+    // Check ammo/charges for ranged weapons
+    const isExotic = wd.weaponType === "Exotic";
+    const ammoLeft = isExotic ? (wd.charges || 0) : wd.shotsLeft;
+    if (ammoLeft <= 0) {
+      const msgKey = isExotic ? "NoCharges" : "NoAmmo";
+      ui.notifications.warn(localize(msgKey));
+      return false;
     }
 
     // ---- Firemode-specific rolling. I may roll together some common aspects later ----
@@ -264,11 +283,12 @@ export class CyberpunkItem extends Item {
   }
 
   _availableFireModes() {
-    if (this.type !== "weapon") {
+    if (this.type !== "weapon" && !(this.type === "cyberware" && this.system.isWeapon)) {
       console.error(`${this.name} is not a weapon, and therefore has no fire modes`)
       return [];
     }
-    if (this.system.attackType === rangedAttackTypes.auto || this.system.attackType === rangedAttackTypes.autoshotgun){
+    const wd = this.weaponData;
+    if (wd.attackType === rangedAttackTypes.auto || wd.attackType === rangedAttackTypes.autoshotgun){
       return [fireModes.fullAuto, fireModes.suppressive, fireModes.threeRoundBurst, fireModes.singleShot];
     }
     return [fireModes.singleShot];
@@ -308,7 +328,7 @@ export class CyberpunkItem extends Item {
 
   // Roll just the attack roll of a weapon, return it
   async rollToHit(attackMods) {
-    let system = this.system;
+    const wd = this.weaponData;
     let isRanged = this.isRanged();
 
     // Blinded attackers use LUCK instead of REF for all attacks
@@ -317,7 +337,7 @@ export class CyberpunkItem extends Item {
 
     let attackTerms = [`@stats.${attackStat}.total`];
     // Resolve attack skill: use explicit field, or fall back to first mapped skill for the weapon type
-    const resolvedSkill = system.attackSkill || (attackSkills[system.weaponType] || [])[0] || "";
+    const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
     if(resolvedSkill) {
       attackTerms.push(`@attackSkill`);
     }
@@ -327,8 +347,8 @@ export class CyberpunkItem extends Item {
     else {
       attackTerms.push(...(this._meleeModifiers(attackMods)));
     }
-    if(system.accuracy) {
-      attackTerms.push(system.accuracy);
+    if(wd.accuracy) {
+      attackTerms.push(wd.accuracy);
     }
 
     // Fast Draw: -3 penalty on attack rolls
@@ -339,6 +359,16 @@ export class CyberpunkItem extends Item {
     // Action Surge: -3 penalty on all weapon rolls
     if(this.actor.statuses.has("action-surge")) {
       attackTerms.push(-3);
+    }
+
+    // Restrained: -2 penalty on all checks
+    if(this.actor.statuses.has("restrained")) {
+      attackTerms.push(-2);
+    }
+
+    // Grappling: -2 penalty on all checks
+    if(this.actor.statuses.has("grappling")) {
+      attackTerms.push(-2);
     }
 
     // Minimum Body penalty: -2 per point of BODY deficit
@@ -359,15 +389,15 @@ export class CyberpunkItem extends Item {
    * @returns
    */
   async _fireFullAuto(attackMods, targetTokens) {
-      let system = this.system;
+      const wd = this.weaponData;
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
-      let actualRangeBracket = rangeResolve[attackMods.range](system.range);
+      let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let DC = rangeDCs[attackMods.range];
       let targetCount = targetTokens.length || attackMods.targetsCount || 1;
 
       // Minimum Body penalty halves effective ROF
       const minBodyPenalty = this._getMinBodyPenalty();
-      const effectiveRof = Math.max(1, Math.floor(system.rof * minBodyPenalty.rofMultiplier));
+      const effectiveRof = Math.max(1, Math.floor(wd.rof * minBodyPenalty.rofMultiplier));
 
       // This is a somewhat flawed multi-target thing - given target tokens, we could calculate distance (& therefore penalty) for each, and apply damage to them
       let rolls = [];
@@ -383,12 +413,12 @@ export class CyberpunkItem extends Item {
           // Check for fumble (natural 1 on attack roll) - only trigger once per burst
           const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
           if (isNatural1 && this.actor && !fumbleTriggered) {
-              await this.actor.rollFumble(system.reliability);
+              await this.actor.rollFumble(wd.reliability);
               fumbleTriggered = true;
           }
 
-          let roundsFired = Math.min(system.shotsLeft, effectiveRof / targetCount);
-          await this.update({"system.shotsLeft": system.shotsLeft - roundsFired});
+          let roundsFired = Math.min(wd.shotsLeft, effectiveRof / targetCount);
+          await this.update({[this._weaponUpdatePath("shotsLeft")]: wd.shotsLeft - roundsFired});
           let roundsHit = isNatural1 ? 0 : Math.min(roundsFired, attackRoll.total - DC);
           if (roundsHit < 0) {
               roundsHit = 0;
@@ -397,7 +427,7 @@ export class CyberpunkItem extends Item {
           let allDamageRolls = [];
           // Roll damage for each of the bullets that hit
           for (let j = 0; j < roundsHit; j++) {
-              let damageRoll = await new Roll(system.damage).evaluate();
+              let damageRoll = await new Roll(wd.damage).evaluate();
               allDamageRolls.push(damageRoll);
               let location = (await rollLocation(attackMods.targetActor, attackMods.targetArea)).areaHit;
               if (!areaDamages[location]) {
@@ -432,8 +462,8 @@ export class CyberpunkItem extends Item {
               weaponName: this.name,
               weaponImage: this.img,
               weaponType: this.getWeaponLineType(),
-              loadedAmmoType: this.system.loadedAmmoType || "standard",
-              damageType: this.system.damageType || "",
+              loadedAmmoType: wd.loadedAmmoType || "standard",
+              damageType: wd.damageType || "",
               hasDamage: true
           };
           let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.fullAuto));
@@ -444,9 +474,9 @@ export class CyberpunkItem extends Item {
   }
 
   async _fireBurst(attackMods) {
-      let system = this.system;
+      const wd = this.weaponData;
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
-      let actualRangeBracket = rangeResolve[attackMods.range](system.range);
+      let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let DC = rangeDCs[attackMods.range];
       let attackRoll = await this.rollToHit(attackMods);
 
@@ -458,13 +488,13 @@ export class CyberpunkItem extends Item {
       // Check for fumble (natural 1 on attack roll)
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
       if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(system.reliability);
+          await this.actor.rollFumble(wd.reliability);
       }
 
       // Minimum Body penalty halves effective ROF
       const minBodyPenalty = this._getMinBodyPenalty();
-      const effectiveRof = Math.max(1, Math.floor(system.rof * minBodyPenalty.rofMultiplier));
-      let roundsFired = Math.min(system.shotsLeft, effectiveRof, 3);
+      const effectiveRof = Math.max(1, Math.floor(wd.rof * minBodyPenalty.rofMultiplier));
+      let roundsFired = Math.min(wd.shotsLeft, effectiveRof, 3);
       let attackHits = attackRoll.total >= DC && !isNatural1;
       let areaDamages = {};
       let allDamageRolls = [];
@@ -473,7 +503,7 @@ export class CyberpunkItem extends Item {
           // In RAW this is 1d6/2, but this is functionally the same
           roundsHit = await new Roll("1d3").evaluate();
           for (let i = 0; i < roundsHit.total; i++) {
-              let damageRoll = await new Roll(system.damage).evaluate();
+              let damageRoll = await new Roll(wd.damage).evaluate();
               allDamageRolls.push(damageRoll);
               let location = (await rollLocation(attackMods.targetActor, attackMods.targetArea)).areaHit;
               if (!areaDamages[location]) {
@@ -508,18 +538,18 @@ export class CyberpunkItem extends Item {
           weaponName: this.name,
           weaponImage: this.img,
           weaponType: this.getWeaponLineType(),
-          loadedAmmoType: this.system.loadedAmmoType || "standard",
-          damageType: this.system.damageType || "",
+          loadedAmmoType: wd.loadedAmmoType || "standard",
+          damageType: wd.damageType || "",
           hasDamage: true
       };
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.threeRoundBurst));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
-      this.update({"system.shotsLeft": system.shotsLeft - roundsFired});
+      this.update({[this._weaponUpdatePath("shotsLeft")]: wd.shotsLeft - roundsFired});
       return roll;
   }
 
   async _fireSuppressive(mods = {}) {
-    const sys = this.system;
+    const sys = this.weaponData;
     // Minimum Body penalty halves effective ROF
     const minBodyPenalty = this._getMinBodyPenalty();
     const effectiveRof = Math.max(1, Math.floor(sys.rof * minBodyPenalty.rofMultiplier));
@@ -527,7 +557,7 @@ export class CyberpunkItem extends Item {
     const width = Math.max(2,  Number(mods.zoneWidth    ?? 2));
     const targets = Math.max(1,  Number(mods.targetsCount ?? 1));
 
-    await this.update({ "system.shotsLeft": sys.shotsLeft - rounds });
+    await this.update({ [this._weaponUpdatePath("shotsLeft")]: sys.shotsLeft - rounds });
 
     const saveDC = Math.ceil(rounds / width);
     const dmgFormula = sys.damage || "1d6";
@@ -550,7 +580,7 @@ export class CyberpunkItem extends Item {
 
     const html = await renderTemplate(
       "systems/cyberpunk/templates/chat/suppressive.hbs",
-      { weaponName: this.name, rounds, width, saveDC, dmgFormula, results, loadedAmmoType: this.system.loadedAmmoType || "standard" }
+      { weaponName: this.name, rounds, width, saveDC, dmgFormula, results, loadedAmmoType: sys.loadedAmmoType || "standard" }
     );
 
     ChatMessage.create({
@@ -561,12 +591,12 @@ export class CyberpunkItem extends Item {
   }
 
   async _fireSingle(attackMods) {
-      let system = this.system;
+      const wd = this.weaponData;
 
       // Determine if this is an exotic weapon with an effect
-      const isExotic = system.weaponType === "Exotic";
-      const weaponEffect = isExotic && system.effect ? system.effect : null;
-      const hasDamage = system.damage && system.damage !== "0" && system.damage !== "";
+      const isExotic = wd.weaponType === "Exotic";
+      const weaponEffect = isExotic && wd.effect ? wd.effect : null;
+      const hasDamage = wd.damage && wd.damage !== "0" && wd.damage !== "";
 
       // The range we're shooting at
       let DC = rangeDCs[attackMods.range];
@@ -580,13 +610,13 @@ export class CyberpunkItem extends Item {
       // Check for fumble (natural 1 on attack roll)
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
       if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(system.reliability);
+          await this.actor.rollFumble(wd.reliability);
       }
 
-      let actualRangeBracket = rangeResolve[attackMods.range](system.range);
+      let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let attackHits = attackRoll.total >= DC && !isNatural1;
       // Exotic weapons use charges, regular weapons use shotsLeft
-      const ammoLeft = isExotic ? (system.charges || 0) : system.shotsLeft;
+      const ammoLeft = isExotic ? (wd.charges || 0) : wd.shotsLeft;
       const roundsFired = Math.min(ammoLeft, 1);
       let areaDamages = {};
       let hitLocation = null;
@@ -598,7 +628,7 @@ export class CyberpunkItem extends Item {
 
           // Only roll damage if weapon has a damage formula
           if (hasDamage) {
-              let damageRoll = await new Roll(system.damage).evaluate();
+              let damageRoll = await new Roll(wd.damage).evaluate();
 
               // Trigger Dice So Nice for damage roll
               if (game.dice3d && damageRoll.dice.length > 0) {
@@ -636,8 +666,8 @@ export class CyberpunkItem extends Item {
           weaponName: this.name,
           weaponImage: this.img,
           weaponType: this.getWeaponLineType(),
-          loadedAmmoType: this.system.loadedAmmoType || "standard",
-          damageType: this.system.damageType || "",
+          loadedAmmoType: wd.loadedAmmoType || "standard",
+          damageType: wd.damageType || "",
           // Exotic effect data
           weaponEffect: weaponEffect,
           hasEffect: !!weaponEffect,
@@ -652,9 +682,9 @@ export class CyberpunkItem extends Item {
 
       // Exotic weapons deduct from charges, regular weapons from shotsLeft
       if (isExotic) {
-          this.update({"system.charges": (system.charges || 0) - roundsFired});
+          this.update({[this._weaponUpdatePath("charges")]: (wd.charges || 0) - roundsFired});
       } else {
-          this.update({"system.shotsLeft": system.shotsLeft - roundsFired});
+          this.update({[this._weaponUpdatePath("shotsLeft")]: wd.shotsLeft - roundsFired});
       }
 
       return roll;
@@ -848,26 +878,25 @@ export class CyberpunkItem extends Item {
    * @returns {string} e.g., "Assault Rifle", "Exotic · Confusion", "Melee · Edged", "Ordnance · Burning"
    */
   getWeaponLineType() {
-      const system = this.system;
-
-      // Ordnance items
+      // Ordnance items use this.system directly (not a weapon sub-object)
       if (this.type === "ordnance") {
-          const effectLabel = system.effect ? this._getEffectLabel(system.effect) : "";
+          const effectLabel = this.system.effect ? this._getEffectLabel(this.system.effect) : "";
           return effectLabel ? `${localize("OrdnanceAction")} · ${effectLabel}` : localize("OrdnanceAction");
       }
 
-      const wType = system.weaponType;
+      const wd = this.weaponData;
+      const wType = wd.weaponType;
 
       // Exotic weapons
       if (wType === "Exotic") {
-          const effectLabel = system.effect ? this._getEffectLabel(system.effect) : "";
+          const effectLabel = wd.effect ? this._getEffectLabel(wd.effect) : "";
           return effectLabel ? `Exotic · ${effectLabel}` : "Exotic";
       }
 
       // Melee weapons
       if (wType === "Melee") {
           const dmgTypeKeys = { blunt: "DmgBlunt", edged: "DmgEdged", spike: "DmgSpike", monoblade: "DmgMonoblade" };
-          const dmgKey = dmgTypeKeys[system.damageType];
+          const dmgKey = dmgTypeKeys[wd.damageType];
           const dmgLabel = dmgKey ? localize(dmgKey) : "";
           return dmgLabel ? `Melee · ${dmgLabel}` : "Melee";
       }
@@ -878,7 +907,7 @@ export class CyberpunkItem extends Item {
 
       const subtypeKey = subtypeKeys[wType];
       const subtypeLabel = subtypeKey ? localize(subtypeKey) : (wType || "");
-      const caliberKey = system.caliber ? caliberKeys[system.caliber] : null;
+      const caliberKey = wd.caliber ? caliberKeys[wd.caliber] : null;
       const caliberLabel = caliberKey ? localize(caliberKey) : "";
 
       return caliberLabel ? `${caliberLabel} ${subtypeLabel}` : subtypeLabel;
@@ -896,11 +925,29 @@ export class CyberpunkItem extends Item {
       // Check for fumble (natural 1 on attack roll)
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
       if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(this.system.reliability);
+          await this.actor.rollFumble(this.weaponData.reliability);
       }
 
+      // Martial skill damage bonus (if the weapon's attack skill is a martial art)
+      const wd = this.weaponData;
+      const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
+      let martialDamageBonus = 0;
+      if (resolvedSkill) {
+          const skill = this.actor.itemTypes.skill.find(s => s.name === resolvedSkill);
+          if (skill?.system.isMartial) {
+              martialDamageBonus = this.actor.resolveSkillTotal(resolvedSkill);
+          }
+      }
+
+      // Monoblade critical: natural 10 doubles base weapon damage
+      const isNatural10 = attackRoll.dice[0]?.results?.[0]?.result === 10;
+      const baseDamage = (wd.damageType === "monoblade" && isNatural10)
+          ? `(${wd.damage})*2`
+          : wd.damage;
+
       // Take into account the CyberTerminus modifier for damage
-      let damageFormula = `${this.system.damage}+@strengthBonus`;
+      let damageFormula = `${baseDamage}+@strengthBonus`;
+      if (martialDamageBonus > 0) damageFormula += '+@martialDamageBonus';
       if (attackMods.cyberTerminus) {
           switch (attackMods.cyberTerminus) {
               case "CyberTerminusX2":
@@ -915,7 +962,8 @@ export class CyberpunkItem extends Item {
           }
       }
       let damageRoll = await new Roll(damageFormula, {
-          strengthBonus: meleeDamageBonus(this.actor.system.stats.bt.total)
+          strengthBonus: meleeDamageBonus(this.actor.system.stats.bt.total),
+          martialDamageBonus
       }).evaluate();
 
       // Trigger Dice So Nice for damage roll
@@ -930,13 +978,14 @@ export class CyberpunkItem extends Item {
       areaDamages[hitLocation] = [{
           damage: damageRoll.total,
           formula: damageRoll.formula,
-          dice: damageRoll.terms.filter(t => t.results).map(term => ({
+          dice: damageRoll.dice.map(term => ({
               faces: term.faces,
               results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
           }))
       }];
 
       let templateData = {
+          actionIcon: "strike",
           fireModeLabel: localize("Strike"),
           attackRoll: attackRoll,
           areaDamages: areaDamages,
@@ -944,7 +993,7 @@ export class CyberpunkItem extends Item {
           weaponImage: this.img,
           weaponType: this.getWeaponLineType(),
           loadedAmmoType: "standard",
-          damageType: this.system.damageType || "",
+          damageType: this.weaponData.damageType || "",
           hitLocation: hitLocation
       };
 

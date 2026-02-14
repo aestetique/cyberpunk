@@ -36,8 +36,8 @@ export class RangedAttackDialog extends Application {
 
   /** @override */
   getData() {
-    const rof = Number(this.weapon.system.rof) || 1;
-    const shotsLeft = Number(this.weapon.system.shotsLeft) || 0;
+    const rof = Number(this.weapon.weaponData.rof) || 1;
+    const shotsLeft = Number(this.weapon.weaponData.shotsLeft) || 0;
     const hasAmmo = this._hasCompatibleAmmo();
 
     return {
@@ -54,8 +54,8 @@ export class RangedAttackDialog extends Application {
    * Check if the actor has compatible ammo for this weapon
    */
   _hasCompatibleAmmo() {
-    const ammoWT = weaponToAmmoType[this.weapon.system.weaponType];
-    const weaponCaliber = this.weapon.system.caliber || "";
+    const ammoWT = weaponToAmmoType[this.weapon.weaponData.weaponType];
+    const weaponCaliber = this.weapon.weaponData.caliber || "";
 
     const ammoItems = (this.actor.itemTypes.ammo || []).filter(a => {
       if (a.system.weaponType !== ammoWT) return false;

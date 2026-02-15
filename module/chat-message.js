@@ -676,7 +676,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                         <img src="${actor.img}" alt="${actor.name}">
                     </div>
                     <span class="target-info__name">${actor.name}</span>
-                    <span class="target-info__damage">${preview.total}</span>
+                    ${hasDamage ? `<span class="target-info__damage">${preview.total}</span>` : ""}
                 </div>
             `;
 
@@ -1246,6 +1246,16 @@ export class CyberpunkChatMessage extends ChatMessage {
             case "knockout":
                 // Knockout: instant unconscious, no save
                 await actor.toggleStatusEffect("unconscious", { active: true });
+                break;
+
+            case "prone":
+                await actor.toggleStatusEffect("prone", { active: true });
+                break;
+
+            case "grapple":
+                await actor.toggleStatusEffect("restrained", { active: true });
+                const grappler = this.getAssociatedActor();
+                if (grappler) await grappler.toggleStatusEffect("grappling", { active: true });
                 break;
         }
     }

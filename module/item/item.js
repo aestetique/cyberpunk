@@ -371,6 +371,11 @@ export class CyberpunkItem extends Item {
       attackTerms.push(-2);
     }
 
+    // Prone: -2 penalty on melee attacks only
+    if(!isRanged && this.actor.statuses.has("prone")) {
+      attackTerms.push(-2);
+    }
+
     // Minimum Body penalty: -2 per point of BODY deficit
     const minBodyPenalty = this._getMinBodyPenalty();
     if (minBodyPenalty.accuracyPenalty) {
@@ -988,6 +993,8 @@ export class CyberpunkItem extends Item {
           actionIcon: "strike",
           fireModeLabel: localize("Strike"),
           attackRoll: attackRoll,
+          hasDamage: true,
+          hasApply: true,
           areaDamages: areaDamages,
           weaponName: this.name,
           weaponImage: this.img,

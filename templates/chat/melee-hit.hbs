@@ -47,14 +47,32 @@
         </div>
     </div>
 
-    {{!-- Damage Section --}}
-    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "Damage")}}
+    {{!-- Damage/Effect Section --}}
+    {{#if hasEffect}}
+        {{#if hasDamage}}
+            {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "DamageAndEffect")}}
+        {{else}}
+            {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "Effect")}}
+        {{/if}}
+    {{else if hasDamage}}
+        {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="damage" label=(loc "Damage")}}
+    {{/if}}
 
     {{!-- Damage Grid --}}
+    {{#if hasDamage}}
     {{> "systems/cyberpunk/templates/chat/partials/damage-grid.hbs" aggregatedDamage=(aggregateDamage areaDamages) areaDamages=areaDamages}}
+    {{/if}}
+
+    {{!-- Effect Row --}}
+    {{#if hasEffect}}
+    <div class="effect-row">
+        <img src="systems/cyberpunk/img/conditions/{{effectIcon}}.svg" alt="">
+        <span class="effect-row__label">{{effectLabel}}</span>
+    </div>
+    {{/if}}
 
     {{!-- Target Selector --}}
-    <div class="target-selector" data-damage="{{json areaDamages}}" data-ammo-type="{{loadedAmmoType}}" data-damage-type="{{damageType}}" data-weapon-effect="" data-hit-location="{{hitLocation}}">
+    <div class="target-selector" data-damage="{{json areaDamages}}" data-ammo-type="{{loadedAmmoType}}" data-damage-type="{{damageType}}" data-weapon-effect="{{weaponEffect}}" data-hit-location="{{hitLocation}}">
         <div class="target-selector__tabs">
             <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{loc "Targeted"}}</button>
             <span class="target-selector__divider"></span>
@@ -70,6 +88,6 @@
             <button class="defence-btn defence-btn--parry" disabled>{{loc "Parry"}}</button>
             <button class="defence-btn defence-btn--dodge" disabled>{{loc "Dodge"}}</button>
         </div>
-        <button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>
+        {{#if hasApply}}<button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>{{/if}}
     </div>
 </div>

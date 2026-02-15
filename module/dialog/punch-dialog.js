@@ -17,8 +17,13 @@ export class PunchDialog extends Application {
     super();
     this.actor = actor;
     this._actionKey = actionKey;
-    this._martialKey = actionKey === "Kick" ? "kick" : "strike";
-    this._baseDamage = actionKey === "Kick" ? actor.system.kickBaseDamage : actor.system.unarmedBaseDamage;
+    const martialKeys = { Kick: "kick", Disarm: "disarm", Sweep: "sweep", Grapple: "grapple" };
+    this._martialKey = martialKeys[actionKey] || "strike";
+    const noDamageActions = ["Disarm", "Sweep", "Grapple"];
+    this._baseDamage = noDamageActions.includes(actionKey) ? null
+      : actionKey === "Kick" ? actor.system.kickBaseDamage : actor.system.unarmedBaseDamage;
+    const effectMap = { Sweep: "prone", Grapple: "grapple" };
+    this._weaponEffect = effectMap[actionKey] || "";
 
     // Skill selector
     this._dropdownOpen = false;
@@ -277,6 +282,7 @@ export class PunchDialog extends Application {
     if (this.actor.statuses.has("action-surge")) attackTerms.push(-3);
     if (this.actor.statuses.has("restrained")) attackTerms.push(-2);
     if (this.actor.statuses.has("grappling")) attackTerms.push(-2);
+    if (this.actor.statuses.has("prone")) attackTerms.push(-2);
 
     const attackRoll = await buildD10Roll(attackTerms, system).evaluate();
 
@@ -291,55 +297,66 @@ export class PunchDialog extends Application {
       await this.actor.rollFumble();
     }
 
-    // === DAMAGE ROLL ===
-    let baseDamageFormula = this._baseDamage;
-    const mult = system.unarmedDamageMultiplier;
-    if (mult > 1) {
-      baseDamageFormula = `(${baseDamageFormula})*${mult}`;
+    // === DAMAGE & LOCATION ROLLS (skip for damageless actions like Disarm) ===
+    let areaDamages = {};
+    let hitLocation = "";
+
+    if (this._baseDamage) {
+      let baseDamageFormula = this._baseDamage;
+      const mult = system.unarmedDamageMultiplier;
+      if (mult > 1) {
+        baseDamageFormula = `(${baseDamageFormula})*${mult}`;
+      }
+
+      const baseDamageRoll = await new Roll(baseDamageFormula).evaluate();
+
+      if (game.dice3d && baseDamageRoll.dice.length > 0) {
+        await game.dice3d.showForRoll(baseDamageRoll, game.user, true);
+      }
+
+      const strengthBonus = meleeDamageBonus(system.stats.bt.total);
+      const martialDamageBonus = this._selectedSkill?.isMartial ? this._selectedSkill.value : 0;
+      const totalDamage = Math.floor(baseDamageRoll.total) + strengthBonus + martialDamageBonus;
+
+      // Build clean display formula (no floor wrapper, omit zero bonuses)
+      const displayParts = [baseDamageFormula];
+      if (strengthBonus) displayParts.push(String(strengthBonus));
+      if (martialDamageBonus) displayParts.push(String(martialDamageBonus));
+      const displayFormula = displayParts.join(' + ');
+
+      // Location roll
+      const locationRoll = await rollLocation(null, this._selectedLocation);
+      hitLocation = locationRoll.areaHit;
+
+      // Build areaDamages
+      areaDamages = {};
+      areaDamages[hitLocation] = [{
+        damage: totalDamage,
+        formula: displayFormula,
+        dice: baseDamageRoll.dice.map(term => ({
+          faces: term.faces,
+          results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
+        }))
+      }];
     }
-
-    const baseDamageRoll = await new Roll(baseDamageFormula).evaluate();
-
-    if (game.dice3d && baseDamageRoll.dice.length > 0) {
-      await game.dice3d.showForRoll(baseDamageRoll, game.user, true);
-    }
-
-    const strengthBonus = meleeDamageBonus(system.stats.bt.total);
-    const martialDamageBonus = this._selectedSkill?.isMartial ? this._selectedSkill.value : 0;
-    const totalDamage = Math.floor(baseDamageRoll.total) + strengthBonus + martialDamageBonus;
-
-    // Build clean display formula (no floor wrapper, omit zero bonuses)
-    const displayParts = [baseDamageFormula];
-    if (strengthBonus) displayParts.push(String(strengthBonus));
-    if (martialDamageBonus) displayParts.push(String(martialDamageBonus));
-    const displayFormula = displayParts.join(' + ');
-
-    // === LOCATION ROLL ===
-    const locationRoll = await rollLocation(null, this._selectedLocation);
-    const hitLocation = locationRoll.areaHit;
-
-    // Build areaDamages
-    const areaDamages = {};
-    areaDamages[hitLocation] = [{
-      damage: totalDamage,
-      formula: displayFormula,
-      dice: baseDamageRoll.dice.map(term => ({
-        faces: term.faces,
-        results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
-      }))
-    }];
 
     // === CHAT MESSAGE ===
     const templateData = {
       actionIcon: "ref",
       fireModeLabel: localize(this._actionKey),
       attackRoll: attackRoll,
+      hasDamage: !!this._baseDamage,
+      hasApply: !!this._baseDamage || !!this._weaponEffect,
       areaDamages: areaDamages,
       weaponName: localize("UnarmedAttack"),
       weaponImage: "systems/cyberpunk/img/ui/unarmed.svg",
       weaponType: "Melee · 1 m",
       loadedAmmoType: "standard",
       damageType: "blunt",
+      weaponEffect: this._weaponEffect,
+      hasEffect: !!this._weaponEffect,
+      effectIcon: { prone: "prone", grapple: "restrained" }[this._weaponEffect] || null,
+      effectLabel: { prone: localize("Conditions.Prone"), grapple: localize("Conditions.Restrained") }[this._weaponEffect] || null,
       hitLocation: hitLocation
     };
 

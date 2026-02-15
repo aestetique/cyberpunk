@@ -6,6 +6,48 @@
   font-weight: 400;
 }
 
+@font-face {
+  font-family: "Blender Pro";
+  src: url(../fonts/blender-pro-book.ttf) format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Blender Pro";
+  src: url(../fonts/blender-pro-book-italic.ttf) format("truetype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Blender Pro";
+  src: url(../fonts/blender-pro-medium.ttf) format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Blender Pro";
+  src: url(../fonts/blender-pro-bold.ttf) format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Refinery 55";
+  src: url(../fonts/refinery-55-medium.ttf) format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Open Sans ExtraBold";
+  src: url(../fonts/OpenSans-ExtraBold.ttf) format("truetype");
+  font-weight: 800;
+  font-style: normal;
+}
+
 $font-primary: "Noto Sans", sans-serif;
 $font-secondary: "Open Sans ExtraBold", sans-serif;
 $text-colour: black;
@@ -44,7 +86,7 @@ $field-border-width: 2px;
   --chat-red-text: #86223D;
   --chat-red-back: #30161A;
 
-  // Typography - Using fallbacks until custom fonts are loaded
+  // Typography - Custom fonts with system fallbacks
   --font-blender: "Blender Pro", "Noto Sans", sans-serif;
   --font-refinery: "Refinery 55", "Open Sans", sans-serif;
   --font-orbitron: "Orbitron", "Open Sans", sans-serif;

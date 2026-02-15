@@ -59,7 +59,7 @@ export class UnarmedAttackDialog extends Application {
     // Action buttons
     html.find('.unarmed-action-btn').click(ev => {
       const action = ev.currentTarget.dataset.action;
-      if (action === "Punch" || action === "Kick") {
+      if (action === "Punch" || action === "Kick" || action === "Disarm" || action === "Sweep" || action === "Grapple") {
         new PunchDialog(this.actor, { actionKey: action }).render(true);
         this.close();
       }

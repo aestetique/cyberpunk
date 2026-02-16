@@ -997,6 +997,7 @@
 			"reliability": "standard",
 			"effect": "",
 			"charges": 0,
+			"chargesMax": 0,
 			"templateType": "circle",
 			"removeOnZero": false,
 			"radius": 0

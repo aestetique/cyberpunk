@@ -250,14 +250,18 @@
 
         {{!-- Row 4: Charges + Template Type --}}
         <div class="variables-row">
-          <div class="variable-field">
+          <div class="variable-field dual-field">
             <label class="variable-label">{{localize "CYBERPUNK.Charges"}}</label>
             {{#if isLocked}}
-              <div class="dropdown">
-                <span class="dropdown-text">{{system.charges}}</span>
-              </div>
+              <span class="dual-value">{{system.charges}}</span>
             {{else}}
-              <input type="number" class="variable-input" name="system.charges" value="{{system.charges}}" min="0">
+              <input type="number" class="dual-input" name="system.charges" value="{{system.charges}}" min="0">
+            {{/if}}
+            <span class="dual-separator">of</span>
+            {{#if isLocked}}
+              <span class="dual-value">{{system.chargesMax}}</span>
+            {{else}}
+              <input type="number" class="dual-input" name="system.chargesMax" value="{{system.chargesMax}}" min="0">
             {{/if}}
           </div>
 

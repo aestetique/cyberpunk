@@ -893,7 +893,11 @@ export class CyberpunkActorSheet extends ActorSheet {
         price: sys.cost || 0,
         weight: sys.weight || 0,
         damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
-        charges: sys.charges || 0
+        charges: sys.charges || 0,
+        chargesMax: sys.chargesMax || 0,
+        chargesDisplay: (sys.charges || sys.chargesMax) ? `${sys.charges ?? 0} / ${sys.chargesMax ?? 0}` : '–',
+        canCharge: (sys.charges ?? 0) < (sys.chargesMax ?? 0),
+        removeOnZero: sys.removeOnZero ?? false
       };
     });
 
@@ -2019,7 +2023,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       }]);
     });
 
-    // Charge exotic weapon (gear tab)
+    // Charge exotic weapon or rechargeable ordnance (gear tab)
     html.find('.charge-weapon').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const canCharge = ev.currentTarget.dataset.canCharge === 'true';
@@ -2028,9 +2032,17 @@ export class CyberpunkActorSheet extends ActorSheet {
       const item = this.actor.items.get(itemId);
       if (!item) return;
 
-      // Fill charges to max
-      const chargesMax = item.weaponData.chargesMax ?? 0;
-      await item.update({ [item._weaponUpdatePath("charges")]: chargesMax });
+      // Fill charges to max - determine item type and update path
+      let chargesMax, updatePath;
+      if (item.type === 'ordnance') {
+        chargesMax = item.system.chargesMax ?? 0;
+        updatePath = "system.charges";
+      } else {
+        // weapon or cyberware
+        chargesMax = item.weaponData.chargesMax ?? 0;
+        updatePath = item._weaponUpdatePath("charges");
+      }
+      await item.update({ [updatePath]: chargesMax });
     });
 
     // Ammo quantity input (gear tab)

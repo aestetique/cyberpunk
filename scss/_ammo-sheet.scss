@@ -20,7 +20,8 @@
 .app.window-app.range-selection-dialog,
 .app.window-app.melee-attack-dialog,
 .app.window-app.skill-roll-dialog,
-.app.window-app.defence-roll-dialog {
+.app.window-app.defence-roll-dialog,
+.app.window-app.initiative-roll-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;

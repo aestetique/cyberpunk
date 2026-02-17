@@ -231,6 +231,66 @@ export const CYBERPUNK_CONDITIONS = [
         name: "CYBERPUNK.Conditions.Prone",
         img: "systems/cyberpunk/img/conditions/prone.svg",
         statuses: ["prone"]
+    },
+    {
+        id: "tired",
+        name: "CYBERPUNK.Conditions.Tired",
+        img: "systems/cyberpunk/img/conditions/tired.svg",
+        statuses: ["tired"]
+    },
+    {
+        id: "fatigued",
+        name: "CYBERPUNK.Conditions.Fatigued",
+        img: "systems/cyberpunk/img/conditions/fatigued.svg",
+        statuses: ["fatigued"]
+    },
+    {
+        id: "exhausted",
+        name: "CYBERPUNK.Conditions.Exhausted",
+        img: "systems/cyberpunk/img/conditions/exhausted.svg",
+        statuses: ["exhausted"]
+    },
+    {
+        id: "debilitated",
+        name: "CYBERPUNK.Conditions.Debilitated",
+        img: "systems/cyberpunk/img/conditions/debilitated.svg",
+        statuses: ["debilitated"]
+    },
+    {
+        id: "collapse",
+        name: "CYBERPUNK.Conditions.Collapse",
+        img: "systems/cyberpunk/img/conditions/collapse.svg",
+        statuses: ["collapse"]
+    },
+    {
+        id: "fresh",
+        name: "CYBERPUNK.Conditions.Fresh",
+        img: "systems/cyberpunk/img/conditions/fresh.svg",
+        statuses: ["fresh"]
+    },
+    {
+        id: "anxious",
+        name: "CYBERPUNK.Conditions.Anxious",
+        img: "systems/cyberpunk/img/conditions/anxious.svg",
+        statuses: ["anxious"]
+    },
+    {
+        id: "tense",
+        name: "CYBERPUNK.Conditions.Tense",
+        img: "systems/cyberpunk/img/conditions/tense.svg",
+        statuses: ["tense"]
+    },
+    {
+        id: "stressed",
+        name: "CYBERPUNK.Conditions.Stressed",
+        img: "systems/cyberpunk/img/conditions/stressed.svg",
+        statuses: ["stressed"]
+    },
+    {
+        id: "cracked",
+        name: "CYBERPUNK.Conditions.Cracked",
+        img: "systems/cyberpunk/img/conditions/cracked.svg",
+        statuses: ["cracked"]
     }
 ];
 
@@ -402,6 +462,46 @@ export const CONDITION_EFFECTS = {
     "prone": {
         // Movement reduced to 0 - handled in movement logic
         changes: []
+    },
+    "tired": {
+        // -1 on all rolls - applied manually in rolls
+        changes: []
+    },
+    "fatigued": {
+        // -2 on all rolls - applied manually in rolls
+        changes: []
+    },
+    "exhausted": {
+        // -3 on all rolls - applied manually in rolls
+        changes: []
+    },
+    "debilitated": {
+        // -5 on all rolls - applied manually in rolls
+        changes: []
+    },
+    "collapse": {
+        // -8 on all rolls - applied manually in rolls
+        changes: []
+    },
+    "fresh": {
+        // +1 on COOL rolls - applied manually in rolls
+        changes: []
+    },
+    "anxious": {
+        // -1 on COOL rolls - applied manually in rolls
+        changes: []
+    },
+    "tense": {
+        // -2 on COOL rolls, -1 on other rolls - applied manually in rolls
+        changes: []
+    },
+    "stressed": {
+        // -3 on COOL rolls, -2 on other rolls - applied manually in rolls
+        changes: []
+    },
+    "cracked": {
+        // -5 on COOL rolls, -3 on other rolls - applied manually in rolls
+        changes: []
     }
 };
 
@@ -422,3 +522,73 @@ export function getConditionForWoundState(woundState) {
 export function isWoundCondition(conditionId) {
     return WOUND_CONDITION_IDS.includes(conditionId);
 }
+
+/**
+ * All condition IDs that represent fatigue states (for easy iteration)
+ */
+export const FATIGUE_CONDITION_IDS = [
+    "tired", "fatigued", "exhausted", "debilitated", "collapse"
+];
+
+/**
+ * Map fatigue level (1-5) to condition ID
+ */
+export const FATIGUE_LEVEL_TO_CONDITION = {
+    1: "tired",
+    2: "fatigued",
+    3: "exhausted",
+    4: "debilitated",
+    5: "collapse"
+};
+
+/**
+ * Penalty on all rolls for each fatigue condition
+ */
+export const FATIGUE_PENALTIES = {
+    "tired": -1,
+    "fatigued": -2,
+    "exhausted": -3,
+    "debilitated": -5,
+    "collapse": -8
+};
+
+/**
+ * All condition IDs that represent stress states (for easy iteration)
+ */
+export const STRESS_CONDITION_IDS = [
+    "fresh", "anxious", "tense", "stressed", "cracked"
+];
+
+/**
+ * Map stress level to condition ID
+ * Level -1 = Fresh (bonus), 0 = none, 1-4 = negative conditions
+ */
+export const STRESS_LEVEL_TO_CONDITION = {
+    "-1": "fresh",
+    1: "anxious",
+    2: "tense",
+    3: "stressed",
+    4: "cracked"
+};
+
+/**
+ * Penalty on COOL rolls for each stress condition
+ */
+export const STRESS_COOL_PENALTIES = {
+    "fresh": 1,
+    "anxious": -1,
+    "tense": -2,
+    "stressed": -3,
+    "cracked": -5
+};
+
+/**
+ * Penalty on non-COOL rolls for each stress condition
+ */
+export const STRESS_GENERAL_PENALTIES = {
+    "fresh": 0,
+    "anxious": 0,
+    "tense": -1,
+    "stressed": -2,
+    "cracked": -3
+};

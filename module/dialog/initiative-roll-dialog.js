@@ -18,8 +18,9 @@ export class InitiativeRollDialog extends Application {
     this.combat = combat;
     this.callback = callback;
 
-    // Fast Draw toggle
+    // Condition toggles
     this._fastDraw = false;
+    this._surprised = false;
 
     // Luck spending
     this._luckToSpend = 0;
@@ -54,6 +55,7 @@ export class InitiativeRollDialog extends Application {
     return {
       title: localize("InitiativeRoll"),
       fastDraw: this._fastDraw,
+      surprised: this._surprised,
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
       canIncreaseLuck: this._luckToSpend < this._availableLuck,
@@ -79,6 +81,12 @@ export class InitiativeRollDialog extends Application {
     html.find('.condition-btn[data-condition="fast-draw"]').click(ev => {
       this._fastDraw = !this._fastDraw;
       ev.currentTarget.classList.toggle('selected', this._fastDraw);
+    });
+
+    // Surprised toggle button
+    html.find('.condition-btn[data-condition="surprised"]').click(ev => {
+      this._surprised = !this._surprised;
+      ev.currentTarget.classList.toggle('selected', this._surprised);
     });
 
     // Luck plus button
@@ -145,9 +153,12 @@ export class InitiativeRollDialog extends Application {
     this._rolled = true;
     this.close();
 
-    // Execute the callback with the luck modifier
+    // Execute the callback with roll modifiers
     if (this.callback) {
-      this.callback(this._luckToSpend);
+      this.callback({
+        luckMod: this._luckToSpend,
+        surprisedPenalty: this._surprised ? -5 : 0
+      });
     }
   }
 
@@ -156,12 +167,12 @@ export class InitiativeRollDialog extends Application {
    * @param {Actor} actor
    * @param {Combatant} combatant
    * @param {Combat} combat
-   * @returns {Promise<number|null>} Resolves with luck modifier, or null if cancelled
+   * @returns {Promise<{luckMod: number, surprisedPenalty: number}|null>} Resolves with modifiers, or null if cancelled
    */
   static async show(actor, combatant, combat) {
     return new Promise((resolve) => {
-      const dialog = new InitiativeRollDialog(actor, combatant, combat, (luckMod) => {
-        resolve(luckMod);
+      const dialog = new InitiativeRollDialog(actor, combatant, combat, (modifiers) => {
+        resolve(modifiers);
       });
       dialog.render(true);
 

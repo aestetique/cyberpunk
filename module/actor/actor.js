@@ -2,7 +2,7 @@ import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes, sortSkills } from "./skill-sort.js";
 import { bodyTypeModifier } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
-import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION } from "../conditions.js"
+import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES } from "../conditions.js"
 
 /**
  * Actor document for Cyberpunk 2020 characters.
@@ -451,6 +451,122 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Current fatigue level. 0 = no condition, 1-5 maps to Tired through Collapse.
+   * Thresholds are based on effective BODY stat.
+   * @returns {number} Fatigue level from 0 (fresh) to 5 (collapse)
+   */
+  getFatigueLevel() {
+    const fatigue = this.system.fatigue || 0;
+    if (fatigue <= 0) return 0;
+    const body = this.system.stats.bt.total;
+    const half = Math.ceil(body / 2);
+    if (fatigue < half) return 0;
+    if (fatigue < body) return 1;
+    if (fatigue < body * 2) return 2;
+    if (fatigue < body * 3) return 3;
+    if (fatigue < body * 4) return 4;
+    return 5;
+  }
+
+  /**
+   * Get the roll penalty for the current fatigue level.
+   * @returns {number} Negative penalty (e.g. -1, -2, -3, -5, -8) or 0
+   */
+  getFatiguePenalty() {
+    const level = this.getFatigueLevel();
+    if (level === 0) return 0;
+    const conditionId = FATIGUE_LEVEL_TO_CONDITION[level];
+    return FATIGUE_PENALTIES[conditionId] || 0;
+  }
+
+  /**
+   * Current stress level. -1 = Fresh (bonus), 0 = no condition, 1-4 maps to Anxious through Cracked.
+   * Thresholds are based on effective COOL stat.
+   * @returns {number} Stress level from -1 (fresh) to 4 (cracked)
+   */
+  getStressLevel() {
+    const stress = (this.system.stress || 0) + (this.system.fright || 0);
+    if (stress <= 0) return 0;
+    const cool = this.system.stats.cool.total;
+    const half = Math.ceil(cool / 2);
+    if (stress < half) return -1;        // (0, COOL/2) → Fresh
+    if (stress < cool) return 0;         // [COOL/2, COOL) → no condition
+    if (stress < cool * 2) return 1;     // [COOL, COOLx2) → Anxious
+    if (stress < cool * 3) return 2;     // [COOLx2, COOLx3) → Tense
+    if (stress < cool * 4) return 3;     // [COOLx3, COOLx4) → Stressed
+    return 4;                            // [COOLx4, ...) → Cracked
+  }
+
+  /**
+   * Get the roll penalty (or bonus) for the current stress level.
+   * @param {boolean} isCoolRoll - Whether this is a COOL-based roll
+   * @returns {number} Penalty/bonus (e.g. +1 for Fresh on COOL, -1 to -5 for negative conditions)
+   */
+  getStressPenalty(isCoolRoll = false) {
+    const level = this.getStressLevel();
+    if (level === 0) return 0;
+    const conditionId = STRESS_LEVEL_TO_CONDITION[level];
+    if (!conditionId) return 0;
+    return isCoolRoll
+      ? (STRESS_COOL_PENALTIES[conditionId] || 0)
+      : (STRESS_GENERAL_PENALTIES[conditionId] || 0);
+  }
+
+  /**
+   * Synchronize the stress condition on this actor's token(s) based on current stress points.
+   * Removes any existing stress condition and applies the appropriate one.
+   * Called automatically when stress or COOL changes.
+   */
+  async updateStressStatus() {
+    const level = this.getStressLevel();
+    const newConditionId = STRESS_LEVEL_TO_CONDITION[level] || null;
+
+    let currentStressCondition = null;
+    for (const id of STRESS_CONDITION_IDS) {
+      if (this.statuses.has(id)) {
+        currentStressCondition = id;
+        break;
+      }
+    }
+
+    if (currentStressCondition === newConditionId) return;
+
+    if (currentStressCondition) {
+      await this.toggleStatusEffect(currentStressCondition, { active: false });
+    }
+    if (newConditionId) {
+      await this.toggleStatusEffect(newConditionId, { active: true });
+    }
+  }
+
+  /**
+   * Synchronize the fatigue condition on this actor's token(s) based on current fatigue points.
+   * Removes any existing fatigue condition and applies the appropriate one.
+   * Called automatically when fatigue or BODY changes.
+   */
+  async updateFatigueStatus() {
+    const level = this.getFatigueLevel();
+    const newConditionId = FATIGUE_LEVEL_TO_CONDITION[level] || null;
+
+    let currentFatigueCondition = null;
+    for (const id of FATIGUE_CONDITION_IDS) {
+      if (this.statuses.has(id)) {
+        currentFatigueCondition = id;
+        break;
+      }
+    }
+
+    if (currentFatigueCondition === newConditionId) return;
+
+    if (currentFatigueCondition) {
+      await this.toggleStatusEffect(currentFatigueCondition, { active: false });
+    }
+    if (newConditionId) {
+      await this.toggleStatusEffect(newConditionId, { active: true });
+    }
+  }
+
+  /**
    * Synchronize the wound condition on this actor's token(s) based on current damage.
    * Removes any existing wound condition and applies the appropriate one.
    * Called automatically when damage changes.
@@ -489,6 +605,16 @@ export class CyberpunkActor extends Actor {
     // Sync wound condition when damage changes
     if (changed.system?.damage !== undefined) {
       await this.updateWoundStatus();
+    }
+
+    // Sync fatigue condition when fatigue points or BODY stat changes
+    if (changed.system?.fatigue !== undefined || changed.system?.stats?.bt) {
+      await this.updateFatigueStatus();
+    }
+
+    // Sync stress condition when stress points or COOL stat changes
+    if (changed.system?.stress !== undefined || changed.system?.fright !== undefined || changed.system?.stats?.cool) {
+      await this.updateStressStatus();
     }
   }
 
@@ -597,6 +723,10 @@ export class CyberpunkActor extends Actor {
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     // Grappling: -2 penalty on all checks
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    // Fatigue penalty (varies by fatigue level)
+    const fatiguePenalty = this.getFatiguePenalty();
+    // Stress penalty (varies by stress level and whether this is a COOL roll)
+    const stressPenalty = this.getStressPenalty(skill.system.stat === "cool");
 
     // Awareness/Notice condition penalties (Unconscious -8, Blinded -4, Deafened -2)
     let awarenessConditionPenalty = 0;
@@ -668,6 +798,8 @@ export class CyberpunkActor extends Actor {
       fastDrawPenalty || null,
       restrainedPenalty || null,
       grapplingPenalty || null,
+      fatiguePenalty || null,
+      stressPenalty || null,
       awarenessConditionPenalty || null,
       skillBonus || null
     ].filter(Boolean);
@@ -745,6 +877,10 @@ export class CyberpunkActor extends Actor {
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     // Grappling: -2 penalty on all checks
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    // Fatigue penalty (varies by fatigue level)
+    const fatiguePenalty = this.getFatiguePenalty();
+    // Stress penalty (varies by stress level and whether this is a COOL roll)
+    const stressPenalty = this.getStressPenalty(stat === "cool");
 
     // Build roll parts
     const rollParts = [
@@ -754,7 +890,9 @@ export class CyberpunkActor extends Actor {
       actionSurgePenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
-      grapplingPenalty || null
+      grapplingPenalty || null,
+      fatiguePenalty || null,
+      stressPenalty || null
     ].filter(Boolean);
 
     const makeRoll = () => buildD10Roll(rollParts, this.system);
@@ -801,12 +939,18 @@ export class CyberpunkActor extends Actor {
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     // Grappling: -2 penalty on all checks
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    // Fatigue penalty (varies by fatigue level)
+    const fatiguePenalty = this.getFatiguePenalty();
+    // Stress penalty (varies by stress level and whether this is a COOL roll)
+    const stressPenalty = this.getStressPenalty(statName === "cool");
 
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
     if (restrainedPenalty) parts.push(restrainedPenalty);
     if (grapplingPenalty) parts.push(grapplingPenalty);
+    if (fatiguePenalty) parts.push(fatiguePenalty);
+    if (stressPenalty) parts.push(stressPenalty);
 
     let roll = new RollBundle(fullStatName);
     roll.addRoll(buildD10Roll(parts, this.system));
@@ -838,6 +982,10 @@ export class CyberpunkActor extends Actor {
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     // Grappling: -2 penalty on all checks
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    // Fatigue penalty (varies by fatigue level)
+    const fatiguePenalty = this.getFatiguePenalty();
+    // Stress penalty (varies by stress level and whether this is a COOL roll)
+    const stressPenalty = this.getStressPenalty(skill.system.stat === "cool");
 
     // Awareness/Notice condition penalties (Unconscious -8, Blinded -4, Deafened -2)
     let awarenessConditionPenalty = 0;
@@ -903,6 +1051,8 @@ export class CyberpunkActor extends Actor {
       fastDrawPenalty || null,
       restrainedPenalty || null,
       grapplingPenalty || null,
+      fatiguePenalty || null,
+      stressPenalty || null,
       awarenessConditionPenalty || null,
       skillBonus || null
     ].filter(Boolean);
@@ -957,6 +1107,8 @@ export class CyberpunkActor extends Actor {
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    const fatiguePenalty = this.getFatiguePenalty();
+    const stressPenalty = this.getStressPenalty(stat === "cool");
 
     const rollParts = [
       bonus.value,
@@ -965,7 +1117,9 @@ export class CyberpunkActor extends Actor {
       actionSurgePenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
-      grapplingPenalty || null
+      grapplingPenalty || null,
+      fatiguePenalty || null,
+      stressPenalty || null
     ].filter(Boolean);
 
     const roll = buildD10Roll(rollParts, this.system);
@@ -1002,12 +1156,16 @@ export class CyberpunkActor extends Actor {
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    const fatiguePenalty = this.getFatiguePenalty();
+    const stressPenalty = this.getStressPenalty(statName === "cool");
 
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
     if (restrainedPenalty) parts.push(restrainedPenalty);
     if (grapplingPenalty) parts.push(grapplingPenalty);
+    if (fatiguePenalty) parts.push(fatiguePenalty);
+    if (stressPenalty) parts.push(stressPenalty);
     if (extraMod) parts.push(extraMod);
 
     const roll = buildD10Roll(parts, this.system);

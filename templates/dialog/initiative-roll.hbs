@@ -10,10 +10,13 @@
     <span class="fire-mode-label">{{localize "CYBERPUNK.Initiative"}}</span>
   </div>
 
-  {{!-- Fast Draw button - single, full width --}}
-  <div class="conditions-grid conditions-grid--single">
+  {{!-- Condition buttons --}}
+  <div class="conditions-grid">
     <button type="button" class="condition-btn{{#if fastDraw}} selected{{/if}}" data-condition="fast-draw">
       {{localize "CYBERPUNK.FastDraw"}} +3
+    </button>
+    <button type="button" class="condition-btn{{#if surprised}} selected{{/if}}" data-condition="surprised">
+      {{localize "CYBERPUNK.Surprised"}} –5
     </button>
   </div>
 

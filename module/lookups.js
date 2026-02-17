@@ -79,7 +79,8 @@ export const toolBonusProperties = {
     "stunSaveMod": "PropStunSave",
     "deathSaveMod": "PropDeathSave",
     "poisonSaveMod": "PropPoisonSave",
-    "unarmedDamageMultiplier": "PropUnarmedMultiplier"
+    "unarmedDamageMultiplier": "PropUnarmedMultiplier",
+    "healingRateBoost": "PropHealingRateBoost"
 };
 
 /** Program class types */

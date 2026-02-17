@@ -4363,7 +4363,8 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.range-selection-dialog,
 .app.window-app.melee-attack-dialog,
 .app.window-app.skill-roll-dialog,
-.app.window-app.defence-roll-dialog {
+.app.window-app.defence-roll-dialog,
+.app.window-app.initiative-roll-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -4374,7 +4375,8 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.range-selection-dialog .window-header,
 .app.window-app.melee-attack-dialog .window-header,
 .app.window-app.skill-roll-dialog .window-header,
-.app.window-app.defence-roll-dialog .window-header {
+.app.window-app.defence-roll-dialog .window-header,
+.app.window-app.initiative-roll-dialog .window-header {
   display: none;
 }
 .app.window-app.reload-dialog .window-content,
@@ -4382,7 +4384,8 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.range-selection-dialog .window-content,
 .app.window-app.melee-attack-dialog .window-content,
 .app.window-app.skill-roll-dialog .window-content,
-.app.window-app.defence-roll-dialog .window-content {
+.app.window-app.defence-roll-dialog .window-content,
+.app.window-app.initiative-roll-dialog .window-content {
   background: transparent;
   padding: 0;
   margin: 0;

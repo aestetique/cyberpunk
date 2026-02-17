@@ -25,9 +25,10 @@ export class CyberpunkCombat extends Combat {
             if (!combatant?.actor) continue;
 
             let luckMod = 0;
+            let surprisedPenalty = 0;
 
-            // Show dialog for player-owned actors
-            if (combatant.actor.isOwner && combatant.actor.hasPlayerOwner) {
+            // Show dialog for actors owned by the current user
+            if (combatant.actor.isOwner) {
                 const result = await InitiativeRollDialog.show(
                     combatant.actor,
                     combatant,
@@ -37,7 +38,8 @@ export class CyberpunkCombat extends Combat {
                 // If dialog was cancelled, skip this combatant
                 if (result === null) continue;
 
-                luckMod = result;
+                luckMod = result.luckMod;
+                surprisedPenalty = result.surprisedPenalty;
             }
 
             // Use the provided formula or the system's initiative formula from system.json
@@ -46,6 +48,11 @@ export class CyberpunkCombat extends Combat {
             // Add luck modifier if any
             if (luckMod > 0) {
                 rollFormula = `${rollFormula} + ${luckMod}`;
+            }
+
+            // Apply surprised penalty if any
+            if (surprisedPenalty) {
+                rollFormula = `${rollFormula} + ${surprisedPenalty}`;
             }
 
             const roll = await new Roll(rollFormula, combatant.actor.getRollData()).evaluate();

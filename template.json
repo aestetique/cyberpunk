@@ -770,7 +770,10 @@
 				"gear",
 				"netrun"
 			],
-			"damage": 0
+			"damage": 0,
+			"fatigue": 0,
+			"stress": 0,
+			"fright": 0
 		}
 	},
 	"Item": {

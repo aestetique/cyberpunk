@@ -67,7 +67,7 @@ export class UnarmedAttackDialog extends Application {
         return;
       }
 
-      if (action === "Punch" || action === "Kick" || action === "Disarm" || action === "Sweep" || action === "Grapple" || action === "Hold" || action === "Break" || action === "Choke" || action === "Crush" || action === "Throw") {
+      if (action === "Punch" || action === "Kick" || action === "Disarm" || action === "Sweep" || action === "Grapple" || action === "Hold" || action === "Break" || action === "Choke" || action === "Crush" || action === "Throw" || action === "Ram") {
         new PunchDialog(this.actor, { actionKey: action }).render(true);
         this.close();
       }

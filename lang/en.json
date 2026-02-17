@@ -305,6 +305,8 @@
     "CYBERPUNK.Parry": "Parry",
     "CYBERPUNK.Sweep": "Sweep",
     "CYBERPUNK.Ram": "Ram",
+    "CYBERPUNK.NoTokenForRam": "No token found for Ram attack",
+    "CYBERPUNK.ClickRamDestination": "Click where you want to charge to (Right-click or Esc to cancel)",
     "CYBERPUNK.Release": "Release",
     "CYBERPUNK.DefenceRoll": "Defence Roll",
     "CYBERPUNK.DefenceNoActor": "Select a token or assign a character to defend.",

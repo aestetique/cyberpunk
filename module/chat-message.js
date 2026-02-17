@@ -926,7 +926,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                         ? `${effectiveSP} SP(AP)`
                         : ammoType === "hollowPoint"
                             ? `${effectiveSP} SP(HP)`
-                            : `${armorSP} SP`;
+                            : `${effectiveSP} SP`;
 
                 // Cyberlimb damage hint (no BTM, shows SDP)
                 if (hasCyberlimb && finalDamage > 0) {
@@ -973,7 +973,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                     locationWoundDamage += finalDamage;
                 } else {
                     // No damage penetrated
-                    if (armorSP > 0 || dmgTypeLabel) {
+                    if (effectiveSP > 0 || dmgTypeLabel) {
                         hintParts.push(`${location}: ${rawDamage} - ${spLabel} = 0`);
                     } else {
                         hintParts.push(`${location}: ${rawDamage} = 0`);

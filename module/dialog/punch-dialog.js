@@ -1,5 +1,5 @@
 import { localize } from "../utils.js";
-import { getSkillsForCategory, meleeDamageBonus } from "../lookups.js";
+import { getSkillsForCategory, meleeDamageBonus, ramBaseDamage } from "../lookups.js";
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { rollLocation } from "../utils.js";
 
@@ -17,12 +17,13 @@ export class PunchDialog extends Application {
     super();
     this.actor = actor;
     this._actionKey = actionKey;
-    const martialKeys = { Kick: "kick", Disarm: "disarm", Sweep: "sweep", Grapple: "grapple", Hold: "hold", Break: "hold", Choke: "choke", Crush: "choke", Throw: "throw" };
+    const martialKeys = { Kick: "kick", Disarm: "disarm", Sweep: "sweep", Grapple: "grapple", Hold: "hold", Break: "hold", Choke: "choke", Crush: "choke", Throw: "throw", Ram: "ram" };
     this._martialKey = martialKeys[actionKey] || "strike";
     const noDamageActions = ["Disarm", "Sweep", "Grapple", "Hold"];
     // Break, Choke, and Crush use same base damage as Punch, but Crush multiplies by 2
     const baseDmg = noDamageActions.includes(actionKey) ? null
       : actionKey === "Kick" ? actor.system.kickBaseDamage
+      : actionKey === "Ram" ? ramBaseDamage(actor.system.stats.bt.total)
       : actor.system.unarmedBaseDamage;
 
     // Crush doubles the base damage
@@ -145,7 +146,8 @@ export class PunchDialog extends Application {
     const showLocation = !noDamageActions.includes(this._actionKey)
                       && this._actionKey !== "Choke"
                       && this._actionKey !== "Crush"
-                      && this._actionKey !== "Throw";
+                      && this._actionKey !== "Throw"
+                      && this._actionKey !== "Ram";
 
     // Break: show location with Head/Torso disabled, location required
     const isBreak = this._actionKey === "Break";
@@ -291,6 +293,11 @@ export class PunchDialog extends Application {
    * Execute the punch attack — roll attack, damage, location, post chat message.
    */
   async _executeRoll() {
+    // Special handling for Ram attack (movement-based)
+    if (this._actionKey === "Ram") {
+      return this._executeRamRoll();
+    }
+
     // Validate: Break requires location selection
     if (this._actionKey === "Break" && !this._selectedLocation) {
       ui.notifications.warn(localize("MustSelectLimbForBreak"));
@@ -439,6 +446,282 @@ export class PunchDialog extends Application {
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
     new RollBundle(localize(this._actionKey))
       .execute(speaker, "systems/cyberpunk/templates/chat/melee-hit.hbs", templateData);
+  }
+
+  /**
+   * Execute Ram attack with movement-based mechanics
+   */
+  async _executeRamRoll() {
+    const system = this.actor.system;
+
+    // Spend luck if any was used
+    if (this._luckToSpend > 0) {
+      const currentSpent = system.stats.luck.spent || 0;
+      const currentSpentAt = system.stats.luck.spentAt;
+      await this.actor.update({
+        "system.stats.luck.spent": currentSpent + this._luckToSpend,
+        "system.stats.luck.spentAt": currentSpentAt || Date.now()
+      });
+    }
+
+    // Close dialog
+    this.close();
+
+    // Minimize all open windows
+    Object.values(ui.windows).forEach(w => w.minimize());
+
+    // Get starting position
+    const actorToken = this.actor.getActiveTokens()?.[0];
+    if (!actorToken) {
+      ui.notifications.error(localize("NoTokenForRam"));
+      return;
+    }
+
+    const startPos = { x: actorToken.center.x, y: actorToken.center.y };
+
+    // Show movement ruler and get destination
+    let destination;
+    try {
+      destination = await this._placeRamDestination(actorToken);
+    } catch (e) {
+      return; // User cancelled
+    }
+
+    // Move token to destination (convert center position to top-left corner)
+    await actorToken.document.update({
+      x: destination.x - (actorToken.document.width * canvas.grid.size) / 2,
+      y: destination.y - (actorToken.document.height * canvas.grid.size) / 2
+    });
+
+    // Calculate distance moved (in meters)
+    const distanceMoved = canvas.grid.measureDistance(
+      startPos,
+      destination,
+      { gridSpaces: false }
+    );
+
+    // Calculate distance-based modifiers
+    const runDistance = system.stats.ma.run;
+    const walkDistance = system.stats.ma.total;
+
+    const quarterRun = runDistance / 4;
+    const thirdRun = runDistance / 3;
+    const halfRun = runDistance / 2;
+
+    let distancePenalty = 0;
+    let distanceBonus = 0;
+
+    if (distanceMoved >= halfRun) {
+      distancePenalty = -6;
+      distanceBonus = Math.floor(walkDistance / 2);
+    } else if (distanceMoved >= thirdRun) {
+      distancePenalty = -4;
+      distanceBonus = Math.floor(walkDistance / 3);
+    } else if (distanceMoved >= quarterRun) {
+      distancePenalty = -2;
+      distanceBonus = Math.floor(walkDistance / 4);
+    }
+    // else: no penalty, no bonus
+
+    // === ATTACK ROLL ===
+    const isBlinded = this.actor.statuses.has("blinded");
+    const attackStat = isBlinded ? "luck" : "ref";
+
+    const extraMod = (this._conditions.prepared ? 2 : 0)
+                   + (this._conditions.ambush ? 5 : 0)
+                   + (this._conditions.distracted ? -2 : 0)
+                   + (this._conditions.indirect ? -5 : 0)
+                   + distancePenalty  // Ram distance penalty
+                   + this._luckToSpend;
+
+    const attackTerms = [`@stats.${attackStat}.total`];
+
+    // Add skill value and martial bonus
+    let skillValue = 0;
+    let martialBonus = 0;
+    if (this._selectedSkill) {
+      skillValue = this._selectedSkill.value;
+      if (skillValue) attackTerms.push(skillValue);
+
+      // Martial bonus (only if Ram aspect > 0)
+      if (this._selectedSkill.martialBonus) {
+        martialBonus = this._selectedSkill.martialBonus;
+        attackTerms.push(martialBonus);
+      }
+    }
+
+    if (extraMod) attackTerms.push(extraMod);
+
+    // Status penalties (no grappling exception for Ram)
+    if (this.actor.statuses.has("fast-draw")) attackTerms.push(-3);
+    if (this.actor.statuses.has("action-surge")) attackTerms.push(-3);
+    if (this.actor.statuses.has("restrained")) attackTerms.push(-2);
+    if (this.actor.statuses.has("grappling")) attackTerms.push(-2);
+    if (this.actor.statuses.has("prone")) attackTerms.push(-2);
+
+    const attackRoll = await buildD10Roll(attackTerms, system).evaluate();
+
+    // Trigger Dice So Nice
+    if (game.dice3d) {
+      await game.dice3d.showForRoll(attackRoll, game.user, true);
+    }
+
+    // Check for fumble
+    const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
+    if (isNatural1) {
+      await this.actor.rollFumble();
+    }
+
+    // === DAMAGE ROLL ===
+    const baseDamageFormula = this._baseDamage;  // Already set to ramBaseDamage in constructor
+    const baseDamageRoll = await new Roll(baseDamageFormula).evaluate();
+
+    if (game.dice3d && baseDamageRoll.dice.length > 0) {
+      await game.dice3d.showForRoll(baseDamageRoll, game.user, true);
+    }
+
+    // Total damage: base + martial skill (if Ram aspect > 0) + distance bonus
+    const martialDamageBonus = (martialBonus > 0) ? skillValue : 0;
+    const totalDamage = Math.floor(baseDamageRoll.total) + martialDamageBonus + distanceBonus;
+
+    // Build clean display formula
+    const displayParts = [baseDamageFormula];
+    if (martialDamageBonus) displayParts.push(String(martialDamageBonus));
+    if (distanceBonus) displayParts.push(String(distanceBonus));
+    const displayFormula = displayParts.join(' + ');
+
+    // Random location roll
+    const locationRoll = await rollLocation(null, null);
+    const hitLocation = locationRoll.areaHit;
+
+    // Build areaDamages
+    const areaDamages = {};
+    areaDamages[hitLocation] = [{
+      damage: totalDamage,
+      formula: displayFormula,
+      dice: baseDamageRoll.dice.map(term => ({
+        faces: term.faces,
+        results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
+      })),
+      ignoreArmor: false  // Ram does NOT ignore armor
+    }];
+
+    // === CHAT MESSAGE ===
+    const templateData = {
+      actionIcon: "ref",
+      fireModeLabel: localize("Ram"),
+      attackRoll: attackRoll,
+      hasDamage: true,
+      hasApply: true,
+      areaDamages: areaDamages,
+      weaponName: localize("UnarmedAttack"),
+      weaponImage: "systems/cyberpunk/img/ui/unarmed.svg",
+      weaponType: "Melee · 1 m",
+      loadedAmmoType: "standard",
+      damageType: "blunt",
+      weaponEffect: "",
+      hasEffect: false,
+      effectIcon: null,
+      effectLabel: null,
+      hitLocation: hitLocation
+    };
+
+    const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+    new RollBundle(localize("Ram"))
+      .execute(speaker, "systems/cyberpunk/templates/chat/melee-hit.hbs", templateData);
+  }
+
+  /**
+   * Place destination for Ram attack using movement ruler
+   * @param {Token} actorToken - The actor's token
+   * @returns {Promise<{x: number, y: number}>} Destination position
+   */
+  async _placeRamDestination(actorToken) {
+    return new Promise((resolve, reject) => {
+      const handlers = {};
+      let hoveredPos = null;
+      let ruler = null;
+
+      // Create ruler visualization
+      const startPos = actorToken.center;
+
+      // Get movement distances for color coding
+      const walkDistance = this.actor.system.stats?.ma?.total ?? 0;
+      const runDistance = this.actor.system.stats?.ma?.run ?? (walkDistance * 3);
+
+      // Mouse move - show ruler to cursor
+      handlers.mm = (event) => {
+        event.stopPropagation();
+        const pos = event.getLocalPosition(canvas.tokens);
+        const snapped = canvas.grid.getSnappedPosition(pos.x, pos.y, 2);
+        hoveredPos = snapped;
+
+        // Calculate distance for color coding
+        const distance = canvas.grid.measureDistance(startPos, snapped, { gridSpaces: false });
+
+        // Determine color based on distance (same as CyberpunkTokenRuler)
+        let color;
+        if (distance <= walkDistance) {
+          color = 0x1A804D;  // Green - within walk range
+        } else if (distance <= runDistance) {
+          color = 0xB8A46A;  // Yellow - requires running
+        } else {
+          color = 0xB60F3C;  // Red - exceeds run distance
+        }
+
+        // Update ruler visualization
+        if (!ruler) {
+          ruler = new PIXI.Graphics();
+          canvas.controls.addChild(ruler);
+        }
+
+        ruler.clear();
+        ruler.lineStyle(5, color, 0.8);
+        ruler.moveTo(startPos.x, startPos.y);
+        ruler.lineTo(snapped.x, snapped.y);
+      };
+
+      // Left click - confirm destination
+      handlers.lc = (event) => {
+        if (hoveredPos) {
+          cleanup();
+          resolve(hoveredPos);
+        }
+      };
+
+      // Right click - cancel
+      handlers.rc = (event) => {
+        event.preventDefault();
+        cleanup();
+        reject(new Error("cancelled"));
+      };
+
+      // Escape key - cancel
+      handlers.esc = (event) => {
+        if (event.key === "Escape") {
+          cleanup();
+          reject(new Error("cancelled"));
+        }
+      };
+
+      function cleanup() {
+        canvas.stage.off("pointermove", handlers.mm);
+        canvas.stage.off("pointerdown", handlers.lc);
+        canvas.app.view.removeEventListener("contextmenu", handlers.rc);
+        document.removeEventListener("keydown", handlers.esc);
+        if (ruler) {
+          canvas.controls.removeChild(ruler);
+          ruler.destroy();
+        }
+      }
+
+      canvas.stage.on("pointermove", handlers.mm);
+      canvas.stage.once("pointerdown", handlers.lc);
+      canvas.app.view.addEventListener("contextmenu", handlers.rc);
+      document.addEventListener("keydown", handlers.esc);
+
+      ui.notifications.info(localize("ClickRamDestination"));
+    });
   }
 
   /** @override */

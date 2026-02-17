@@ -724,9 +724,31 @@ export function meleeDamageBonus(bt) {
 
     switch(bt) {
         case 11:
-        case 12: return 4 
+        case 12: return 4
         case 13:
         case 14: return 6
         default: return 8
     }
+}
+
+/**
+ * Get base damage formula for Ram attack based on BODY stat
+ * @param {number} body - BODY stat value
+ * @returns {string} Dice formula for ram base damage
+ */
+export function ramBaseDamage(body) {
+  if (body <= 2) return "1d6-2";
+  if (body <= 4) return "1d6-1";
+  if (body === 5) return "1d6";
+  if (body <= 7) return "2d6";
+  if (body <= 9) return "2d6+1";
+  if (body === 10) return "2d6+2";
+  if (body <= 12) return "3d6+4";
+  if (body <= 14) return "3d6+6";
+  if (body === 15) return "3d6+8";
+  if (body <= 20) return "4d6+8";
+
+  // 21+: 4d6+8 + 1d6 per point above 20
+  const extraDice = body - 20;
+  return `${4 + extraDice}d6+8`;
 }

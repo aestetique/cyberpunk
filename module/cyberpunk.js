@@ -17,6 +17,7 @@ import { CyberpunkChatMessage } from "./chat-message.js";
 import { CyberpunkCombat } from "./combat.js";
 import { processFormulaRoll } from "./dice.js";
 import { CYBERPUNK_CONDITIONS, CONDITION_EFFECTS } from "./conditions.js";
+import { CyberpunkTokenRuler } from "./canvas/token-ruler.js";
 
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
@@ -43,6 +44,9 @@ Hooks.once('init', async function () {
 
     // Register system conditions (status effects)
     CONFIG.statusEffects = CYBERPUNK_CONDITIONS;
+
+    // Register custom token ruler for color-coded movement
+    CONFIG.Token.rulerClass = CyberpunkTokenRuler;
 
     // Register sheets, unregister original core sheets
     Actors.unregisterSheet("core", ActorSheet);

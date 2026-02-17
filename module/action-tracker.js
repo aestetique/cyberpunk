@@ -29,7 +29,6 @@ export async function registerAction(actor, actionType = "action") {
   // This is called AFTER the action completes, so it doesn't affect the first action
   if (newActionCount === 1 && !actor.statuses.has("action-surge")) {
     await actor.toggleStatusEffect("action-surge", { active: true });
-    console.log(`CYBERPUNK: Applied Action Surge to ${actor.name} after first action (${actionType})`);
   }
 
   return newActionCount > 1;

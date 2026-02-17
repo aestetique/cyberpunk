@@ -244,7 +244,7 @@ export class RollBundle {
             user: game.user.id,
             speaker,
             sound: "sounds/dice.wav",
-            content: await renderTemplate(templatePath, templateData)
+            content: await foundry.applications.handlebars.renderTemplate(templatePath, templateData)
         });
         return this;
     }

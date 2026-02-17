@@ -1029,11 +1029,6 @@ export class CyberpunkChatMessage extends ChatMessage {
         const weaponEffect = targetSelector.dataset.weaponEffect || null;
         const hitLocation = targetSelector.dataset.hitLocation || null;
 
-        // DEBUG: Log weaponEffect value to identify the issue
-        console.log("DEBUG _onApplyDamage - weaponEffect:", JSON.stringify(weaponEffect));
-        console.log("DEBUG _onApplyDamage - raw dataset.weaponEffect:", JSON.stringify(targetSelector.dataset.weaponEffect));
-        console.log("DEBUG _onApplyDamage - hitLocation:", JSON.stringify(hitLocation));
-
         // Get active tab mode
         const activeTab = html.querySelector(".target-selector__tab--active");
         const mode = activeTab?.dataset.mode || "targeted";

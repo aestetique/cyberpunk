@@ -583,7 +583,7 @@ export class CyberpunkItem extends Item {
       results.push({ hitsRoll, areaDamages });
     }
 
-    const html = await renderTemplate(
+    const html = await foundry.applications.handlebars.renderTemplate(
       "systems/cyberpunk/templates/chat/suppressive.hbs",
       { weaponName: this.name, rounds, width, saveDC, dmgFormula, results, loadedAmmoType: sys.loadedAmmoType || "standard" }
     );

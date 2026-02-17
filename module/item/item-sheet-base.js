@@ -84,7 +84,7 @@ export class CyberpunkItemSheet extends ItemSheet {
 
     // Make window draggable via header
     const header = html.find('.sheet-header')[0];
-    new Draggable(this, html, header, this.options.resizable);
+    new foundry.applications.ux.Draggable.implementation(this, html, header, this.options.resizable);
   }
 
   /**

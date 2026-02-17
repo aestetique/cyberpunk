@@ -261,7 +261,7 @@ Hooks.on("preCreateChatMessage", async (message, data, options, userId) => {
     const templateData = processFormulaRoll(roll);
 
     // Render the new content
-    const newContent = await renderTemplate(
+    const newContent = await foundry.applications.handlebars.renderTemplate(
         "systems/cyberpunk/templates/chat/formula-roll.hbs",
         templateData
     );
@@ -367,7 +367,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             // Post to chat with expandable roll details
             const speaker = ChatMessage.getSpeaker({ actor });
             const rollData = processFormulaRoll(damageRoll);
-            const content = await renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+            const content = await foundry.applications.handlebars.renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                 label: game.i18n.localize("CYBERPUNK.BurningDamage"),
                 icon: "fire",
                 formula: rollData.formula,
@@ -421,7 +421,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
                     const newSP = Math.max(0, currentSP - spReduction);
                     await item.update({ [`system.coverage.${hitLocation}.stoppingPower`]: newSP });
                 }
-                const content = await renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+                const content = await foundry.applications.handlebars.renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                     label: game.i18n.localize("CYBERPUNK.AcidDamage"),
                     icon: "acid",
                     formula: rollData.formula,
@@ -439,7 +439,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
                 // No armor - deal wound damage instead
                 const currentDamage = actor.system.damage || 0;
                 await actor.update({ "system.damage": Math.min(currentDamage + spReduction, 40) });
-                const content = await renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+                const content = await foundry.applications.handlebars.renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                     label: game.i18n.localize("CYBERPUNK.AcidWounds"),
                     icon: "acid",
                     formula: rollData.formula,
@@ -541,21 +541,14 @@ Hooks.on("updateToken", async (tokenDocument, change, options, userId) => {
     // Get walk distance from actor
     const walkDistance = actor.system.stats?.ma?.total ?? 0;
 
-    console.log(`CYBERPUNK Movement: ${actor.name} moved ${Math.round(moveDistance)}m, cumulative: ${Math.round(newCumulative)}m (walk: ${walkDistance}m)`);
-
     // Check if we've already registered movement as an action this turn
     const movementRegistered = actor.getFlag("cyberpunk", "movementActionRegistered");
 
     // If cumulative distance exceeds walk distance and haven't registered yet, register as action
     if (newCumulative > walkDistance && !movementRegistered) {
-        console.log(`CYBERPUNK Movement: Registering as action (${Math.round(newCumulative)}m > ${walkDistance}m walk)`);
         const { registerAction } = await import("./action-tracker.js");
         await registerAction(actor, `movement (${Math.round(newCumulative)}m > ${walkDistance}m walk)`);
         // Mark that we've registered movement this turn
         await actor.setFlag("cyberpunk", "movementActionRegistered", true);
-    } else if (newCumulative <= walkDistance) {
-        console.log(`CYBERPUNK Movement: Within walk distance (${Math.round(newCumulative)}m ≤ ${walkDistance}m walk)`);
-    } else if (movementRegistered) {
-        console.log(`CYBERPUNK Movement: Already registered movement action this turn`);
     }
 });

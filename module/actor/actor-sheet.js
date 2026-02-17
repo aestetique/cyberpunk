@@ -1369,7 +1369,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       const appElement = html.closest('.app');
       if (appElement.length) {
         // Create new Draggable instance each time (DOM elements are new after re-render)
-        this._customDraggable = new Draggable(this, appElement, sheetHeader, this.options.resizable);
+        this._customDraggable = new foundry.applications.ux.Draggable.implementation(this, appElement, sheetHeader, this.options.resizable);
 
         // Hook up our custom resize handle
         const resizeHandle = html[0].querySelector('.sheet-resize');
@@ -2172,7 +2172,7 @@ export class CyberpunkActorSheet extends ActorSheet {
                 html.find('.header-control.close').click(() => dialog.close());
                 // Make header draggable
                 const header = html.find('.reload-header')[0];
-                if (header) new Draggable(dialog, html, header, false);
+                if (header) new foundry.applications.ux.Draggable.implementation(dialog, html, header, false);
               }
             }, {
               width: 300,
@@ -2233,7 +2233,7 @@ export class CyberpunkActorSheet extends ActorSheet {
           render: html => {
             html.find('.header-control.close').click(() => dialog.close());
             const header = html.find('.reload-header')[0];
-            if (header) new Draggable(dialog, html, header, false);
+            if (header) new foundry.applications.ux.Draggable.implementation(dialog, html, header, false);
           }
         }, {
           width: 300,
@@ -2348,7 +2348,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
           // Show roll in chat with custom humanity template
           const templateData = processFormulaRoll(roll);
-          const content = await renderTemplate(
+          const content = await foundry.applications.handlebars.renderTemplate(
             "systems/cyberpunk/templates/chat/humanity-roll.hbs",
             templateData
           );
@@ -2387,7 +2387,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       // Show roll in chat with custom humanity template
       const templateData = processFormulaRoll(roll);
-      const content = await renderTemplate(
+      const content = await foundry.applications.handlebars.renderTemplate(
         "systems/cyberpunk/templates/chat/humanity-roll.hbs",
         templateData
       );

@@ -73,7 +73,7 @@ export class RangedAttackDialog extends Application {
     // Make header draggable
     const header = html.find('.reload-header')[0];
     if (header) {
-      new Draggable(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
     }
 
     // Close button

@@ -302,6 +302,12 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     // Only run for GM to avoid duplicate rolls/updates
     if (!game.user.isGM) return;
 
+    // Reset all initiative when a new round starts (CP2020: roll every round)
+    if (current.round > prior.round && current.round > 1) {
+        const updates = combat.combatants.map(c => ({ _id: c.id, initiative: null }));
+        await combat.updateEmbeddedDocuments("Combatant", updates);
+    }
+
     // Handle turn END for the previous combatant
     if (prior?.combatantId) {
         const previousCombatant = combat.combatants.get(prior.combatantId);

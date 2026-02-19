@@ -646,6 +646,11 @@ export class CyberpunkActor extends Actor {
   async _onUpdate(changed, options, userId) {
     await super._onUpdate(changed, options, userId);
 
+    // Only sync conditions on the client that triggered the update
+    // Prevents permission errors on player clients and race conditions
+    // when multiple clients try to toggle the same ActiveEffect
+    if (userId !== game.user.id) return;
+
     // Sync wound condition when damage changes
     if (changed.system?.damage !== undefined) {
       await this.updateWoundStatus();

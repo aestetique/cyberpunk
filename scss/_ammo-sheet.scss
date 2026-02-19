@@ -21,7 +21,11 @@
 .app.window-app.melee-attack-dialog,
 .app.window-app.skill-roll-dialog,
 .app.window-app.defence-roll-dialog,
-.app.window-app.initiative-roll-dialog {
+.app.window-app.initiative-roll-dialog,
+.app.window-app.medical-help-dialog,
+.app.window-app.heal-dialog,
+.app.window-app.stress-roll-dialog,
+.app.window-app.fright-roll-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -47,7 +51,11 @@
 .range-selection-wrapper,
 .melee-attack-wrapper,
 .skill-roll-wrapper,
-.defence-roll-wrapper {
+.defence-roll-wrapper,
+.medical-help-wrapper,
+.heal-wrapper,
+.stress-roll-wrapper,
+.fright-roll-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -583,4 +591,9 @@
       }
     }
   }
+}
+
+// Heal dialog: full-width action button
+.heal-wrapper .action-btn {
+  width: 100%;
 }

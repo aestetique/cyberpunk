@@ -1,0 +1,12 @@
+<div class="cyberpunk-card cyberpunk-card--medical-help" data-actor-id="{{actorId}}" data-wound-count="{{woundCount}}">
+    {{!-- Section Bar: Medical Treatment --}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "MedicalTreatment") icon="medical"}}
+
+    {{!-- Result-style wound count (non-expandable) --}}
+    <div class="result-row result-row--neutral">
+        <span class="result-row__value">{{woundCount}}</span>
+    </div>
+
+    {{!-- Help action button --}}
+    <button class="apply-damage-btn medical-help-btn" type="button">{{loc "Help"}}</button>
+</div>

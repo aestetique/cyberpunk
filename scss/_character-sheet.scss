@@ -1572,3 +1572,162 @@ input.skill-value.skill-level-input {
     }
   }
 }
+
+// ============================================
+// State Tab
+// ============================================
+
+.tab.state .gear-block {
+  gap: 8px;
+}
+
+.state-row {
+  display: flex;
+  padding: 0 4px;
+  gap: 16px;
+}
+
+.state-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background-image: url(../img/ui/state-back.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: auto;
+}
+
+.state-label {
+  height: 16px;
+  color: #B9B29D;
+  font-family: var(--font-orbitron);
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.state-value-row {
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.state-btn {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+
+  &:hover {
+    filter: brightness(1.3);
+  }
+}
+
+.state-value {
+  width: 60px;
+  height: 32px;
+  color: var(--chat-text);
+  text-align: center;
+  font-family: var(--font-blender);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.state-status {
+  height: 16px;
+  color: #B9B29D;
+  font-family: var(--font-orbitron);
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+// ============================================
+// Cover / Conditions Rows (State Tab)
+// ============================================
+
+.cover-row {
+  display: flex;
+  padding: 0 4px;
+  justify-content: space-between;
+}
+
+.conditions-row {
+  display: flex;
+  padding: 0 4px;
+  justify-content: space-between;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+// ============================================
+// Condition Toggle (reusable component)
+// ============================================
+
+.condition-toggle {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+  gap: 4px;
+  cursor: pointer;
+  overflow: visible;
+  transition: filter 0.15s ease;
+
+  &:hover {
+    filter: brightness(1.2);
+  }
+}
+
+.condition-toggle-icon {
+  width: 36px;
+  height: 36px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.condition-toggle-number {
+  width: 36px;
+  font-family: var(--font-blender);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 36px;
+  text-align: center;
+  color: #444856;
+}
+
+.condition-toggle-label {
+  font-family: var(--font-orbitron);
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 14px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #444856;
+  white-space: nowrap;
+}
+
+.condition-toggle.active {
+  .condition-toggle-number {
+    color: #B9B29D;
+  }
+  .condition-toggle-label {
+    color: #B9B29D;
+  }
+}

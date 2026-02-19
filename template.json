@@ -773,7 +773,8 @@
 			"damage": 0,
 			"fatigue": 0,
 			"stress": 0,
-			"fright": 0
+			"fright": 0,
+			"activeCover": null
 		}
 	},
 	"Item": {

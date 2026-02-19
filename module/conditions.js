@@ -36,6 +36,32 @@ export const WOUND_STATE_TO_CONDITION = {
 };
 
 /**
+ * Cover type definitions: key -> { sp, label }
+ */
+export const COVER_TYPES = {
+    drywall:  { sp: 5,  label: "Drywall" },
+    concrete: { sp: 10, label: "Concrete" },
+    hardwood: { sp: 15, label: "Hardwood" },
+    steel:    { sp: 20, label: "Steel" },
+    brick:    { sp: 25, label: "Brick" },
+    stone:    { sp: 30, label: "Stone" },
+    utility:  { sp: 35, label: "Utility" },
+    kevlar:   { sp: 40, label: "Kevlar" }
+};
+
+/**
+ * All condition IDs that represent cover states (for easy iteration)
+ */
+export const COVER_CONDITION_IDS = Object.values(COVER_TYPES).map(c => `cover-${c.sp}`);
+
+/**
+ * Map cover key (e.g. "drywall") to condition ID (e.g. "cover-5")
+ */
+export const COVER_KEY_TO_CONDITION = Object.fromEntries(
+    Object.entries(COVER_TYPES).map(([key, { sp }]) => [key, `cover-${sp}`])
+);
+
+/**
  * Condition definitions for CONFIG.statusEffects
  * These appear in the token HUD and can be toggled on tokens
  */
@@ -291,7 +317,32 @@ export const CYBERPUNK_CONDITIONS = [
         name: "CYBERPUNK.Conditions.Cracked",
         img: "systems/cyberpunk/img/conditions/cracked.svg",
         statuses: ["cracked"]
-    }
+    },
+    {
+        id: "suffocating",
+        name: "CYBERPUNK.Conditions.Suffocating",
+        img: "systems/cyberpunk/img/conditions/suffocating.svg",
+        statuses: ["suffocating"]
+    },
+    {
+        id: "jacked-in",
+        name: "CYBERPUNK.Conditions.JackedIn",
+        img: "systems/cyberpunk/img/conditions/jacked-in.svg",
+        statuses: ["jacked-in"]
+    },
+    {
+        id: "cyberpsycho",
+        name: "CYBERPUNK.Conditions.Cyberpsycho",
+        img: "systems/cyberpunk/img/conditions/cyberpsycho.svg",
+        statuses: ["cyberpsycho"]
+    },
+    // Cover conditions
+    ...Object.entries(COVER_TYPES).map(([key, { sp, label }]) => ({
+        id: `cover-${sp}`,
+        name: `CYBERPUNK.Conditions.Cover${label}`,
+        img: "systems/cyberpunk/img/conditions/cover.svg",
+        statuses: [`cover-${sp}`]
+    }))
 ];
 
 /**
@@ -502,7 +553,21 @@ export const CONDITION_EFFECTS = {
     "cracked": {
         // -5 on COOL rolls, -3 on other rolls - applied manually in rolls
         changes: []
-    }
+    },
+    "suffocating": {
+        // No mechanical effect for now
+        changes: []
+    },
+    "jacked-in": {
+        // No mechanical effect for now
+        changes: []
+    },
+    "cyberpsycho": {
+        // No mechanical effect for now
+        changes: []
+    },
+    // Cover conditions - no stat changes, handled via armor stacking in prepareDerivedData
+    ...Object.fromEntries(COVER_CONDITION_IDS.map(id => [id, { changes: [] }]))
 };
 
 /**
@@ -592,3 +657,40 @@ export const STRESS_GENERAL_PENALTIES = {
     "stressed": -2,
     "cracked": -3
 };
+
+/**
+ * Condition toggle layout for the State tab.
+ * 3 rows of 8 toggles each. icon = SVG base name (without path/extension).
+ */
+export const CONDITION_TOGGLE_ROWS = [
+    [
+        { id: "grappling",    label: "Grappling",    icon: "grappling" },
+        { id: "restrained",   label: "Restrained",   icon: "restrained" },
+        { id: "immobilized",  label: "Immobilized",  icon: "immobilized" },
+        { id: "prone",        label: "Prone",        icon: "prone" },
+        { id: "action-surge", label: "Action Surge", icon: "action-surge" },
+        { id: "shocked",      label: "Shocked",      icon: "shocked" },
+        { id: "stabilized",   label: "Stabilized",   icon: "stabilized" },
+        { id: "unconscious",  label: "Unconscious",  icon: "unconscious" }
+    ],
+    [
+        { id: "poisoned",  label: "Poisoned", icon: "poisoned" },
+        { id: "confused",  label: "Confused", icon: "confused" },
+        { id: "tearing",   label: "Tearing",  icon: "tearing" },
+        { id: "burning",   label: "Burning",  icon: "burning" },
+        { id: "acid",      label: "Acid",     icon: "acid" },
+        { id: "shorted",   label: "Shorted",  icon: "microwave" },
+        { id: "blinded",   label: "Blinded",  icon: "blinded" },
+        { id: "deafened",  label: "Deafened",  icon: "deafened" }
+    ],
+    [
+        { id: "lost-left-arm",  label: "Left Arm",    icon: "lost-left-arm" },
+        { id: "lost-right-arm", label: "Right Arm",   icon: "lost-right-arm" },
+        { id: "lost-left-leg",  label: "Left Leg",    icon: "lost-left-leg" },
+        { id: "lost-right-leg", label: "Right Leg",   icon: "lost-right-leg" },
+        { id: "suffocating",    label: "Suffocating",  icon: "suffocating" },
+        { id: "jacked-in",      label: "Jacked In",    icon: "jacked-in" },
+        { id: "cyberpsycho",    label: "Cyberpsycho",  icon: "cyberpsycho" },
+        { id: "dead",           label: "Dead",         icon: "dead" }
+    ]
+];

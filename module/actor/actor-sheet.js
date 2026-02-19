@@ -10,6 +10,11 @@ import { OrdnanceAttackDialog } from "../dialog/ordnance-attack-dialog.js"
 import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
 import { SortModes } from "./skill-sort.js";
+import { MedicalHelpDialog } from "../dialog/medical-help-dialog.js"
+import { HealDialog } from "../dialog/heal-dialog.js"
+import { StressRollDialog } from "../dialog/stress-roll-dialog.js"
+import { FrightRollDialog } from "../dialog/fright-roll-dialog.js"
+import { COVER_TYPES, CONDITION_TOGGLE_ROWS } from "../conditions.js"
 
 /**
  * Character sheet for Cyberpunk 2020 actors.
@@ -34,6 +39,12 @@ export class CyberpunkActorSheet extends ActorSheet {
    * @type {number}
    */
   _cyberwareScrollTop = 0;
+
+  /**
+   * Preserved scroll position for state container
+   * @type {number}
+   */
+  _stateScrollTop = 0;
 
   /**
    * Minimized state for the sheet
@@ -94,8 +105,10 @@ export class CyberpunkActorSheet extends ActorSheet {
     if (this.rendered && this.element?.length) {
       const gearTab = this.element.find('.tab.gear')[0];
       const cyberTab = this.element.find('.tab.cyber')[0];
+      const stateTab = this.element.find('.tab.state')[0];
       if (gearTab) this._gearScrollTop = gearTab.scrollTop;
       if (cyberTab) this._cyberwareScrollTop = cyberTab.scrollTop;
+      if (stateTab) this._stateScrollTop = stateTab.scrollTop;
     }
 
     // On first render, use remembered height or default minimum
@@ -120,6 +133,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
       if (cyberTab && this._cyberwareScrollTop) {
         cyberTab.scrollTop = this._cyberwareScrollTop;
+      }
+      const stateTab = this.element.find('.tab.state')[0];
+      if (stateTab && this._stateScrollTop) {
+        stateTab.scrollTop = this._stateScrollTop;
       }
     }
 
@@ -234,10 +251,11 @@ export class CyberpunkActorSheet extends ActorSheet {
         const dots = [];
         for (let i = 0; i < 4; i++) {
           const dotDamage = blockStart + i;
-          dots.push({
-            damage: dotDamage,
-            state: damage >= dotDamage ? 'taken' : 'fresh'
-          });
+          let state;
+          if (damage >= dotDamage) state = 'taken';
+          else if (damage >= dotDamage - 0.5) state = 'half-taken';
+          else state = 'fresh';
+          dots.push({ damage: dotDamage, state });
         }
 
         return { label, hasWound, dots };
@@ -444,6 +462,45 @@ export class CyberpunkActorSheet extends ActorSheet {
       value: interfaceValue,
       itemId: interfaceItemId
     };
+
+    // State tab status labels
+    const stressLevel = this.actor.getStressLevel();
+    const stressLabels = { "-1": "Fresh", 0: "Normal", 1: "Anxious", 2: "Tense", 3: "Stressed", 4: "Cracked" };
+    sheetData.stressStatus = stressLabels[stressLevel] ?? "Normal";
+
+    const fright = system.fright || 0;
+    if (fright === 0) sheetData.frightStatus = "Normal";
+    else if (fright <= 2) sheetData.frightStatus = "Stunned";
+    else if (fright <= 5) sheetData.frightStatus = "Surprised";
+    else if (fright <= 12) sheetData.frightStatus = "Shocked";
+    else if (fright <= 18) sheetData.frightStatus = "Overwhelmed";
+    else sheetData.frightStatus = "Blown Away";
+
+    const fatigueLevel = this.actor.getFatigueLevel();
+    const fatigueLabels = { 0: "Fresh", 1: "Tired", 2: "Fatigued", 3: "Exhausted", 4: "Debilitated", 5: "Collapse" };
+    sheetData.fatigueStatus = fatigueLabels[fatigueLevel] ?? "Fresh";
+
+    const woundLevel = this.actor.getWoundLevel();
+    const damage = system.damage || 0;
+    if (damage > 40) sheetData.woundStatus = "Dead";
+    else if (woundLevel === 0) sheetData.woundStatus = "Healthy";
+    else {
+      const woundLabels = { 1: "Light", 2: "Serious", 3: "Critical" };
+      sheetData.woundStatus = woundLabels[woundLevel] || `Mortal ${woundLevel - 4}`;
+    }
+
+    // Cover toggles for state tab
+    const activeCover = system.activeCover || null;
+    sheetData.coverToggles = Object.entries(COVER_TYPES).map(([key, { sp, label }]) => ({
+      key, sp, label, active: activeCover === key
+    }));
+
+    // Condition toggles for state tab
+    sheetData.conditionToggleRows = CONDITION_TOGGLE_ROWS.map(row =>
+      row.map(({ id, label, icon }) => ({
+        id, label, icon, active: this.actor.statuses.has(id)
+      }))
+    );
 
     return sheetData;
   }
@@ -1631,21 +1688,33 @@ export class CyberpunkActorSheet extends ActorSheet {
       function() { // mouseenter
         const hoverDamage = Number(this.dataset.damage);
         const currentDamage = self.actor.system.damage || 0;
+        const hasHalf = currentDamage % 1 !== 0;
+        const halfDot = hasHalf ? Math.ceil(currentDamage) : -1;
 
         if (hoverDamage <= currentDamage) {
           // Hovering on a taken dot - show darkened hover for dots that would be restored
           html.find('.wound-dot').each(function() {
             const dotDamage = Number(this.dataset.damage);
-            // Show darkened hover for taken dots from hoverDamage+1 to currentDamage
             if (dotDamage > hoverDamage && dotDamage <= currentDamage) {
               $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-hover-dark.svg');
             }
+            // Half dot beyond hover target also gets removed
+            if (dotDamage === halfDot && dotDamage > hoverDamage) {
+              $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-half-hover-dark.svg');
+            }
           });
+        } else if (hoverDamage === halfDot) {
+          // Hovering on the half-filled dot — show it would be filled
+          $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-hover.svg');
         } else {
           // Hovering on a fresh dot - show hover for dots that would be filled
           html.find('.wound-dot').each(function() {
             const dotDamage = Number(this.dataset.damage);
             if (dotDamage <= hoverDamage && dotDamage > currentDamage) {
+              $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-hover.svg');
+            }
+            // Half dot would also be filled
+            if (dotDamage === halfDot && dotDamage <= hoverDamage) {
               $(this).attr('src', 'systems/cyberpunk/img/ui/wounds-hover.svg');
             }
           });
@@ -1655,11 +1724,76 @@ export class CyberpunkActorSheet extends ActorSheet {
         const currentDamage = self.actor.system.damage || 0;
         html.find('.wound-dot').each(function() {
           const dotDamage = Number(this.dataset.damage);
-          const state = currentDamage >= dotDamage ? 'taken' : 'fresh';
+          let state;
+          if (currentDamage >= dotDamage) state = 'taken';
+          else if (currentDamage >= dotDamage - 0.5) state = 'half-taken';
+          else state = 'fresh';
           $(this).attr('src', `systems/cyberpunk/img/ui/wounds-${state}.svg`);
         });
       }
     );
+
+    // State block: increment/decrement stress, fright, fatigue
+    html.find('.state-up').click(ev => {
+      ev.preventDefault();
+      const field = ev.currentTarget.dataset.field;
+
+      // Stress uses a roll dialog instead of direct increment
+      if (field === "system.stress") {
+        new StressRollDialog(this.actor).render(true);
+        return;
+      }
+
+      // Fright uses a COOL check dialog
+      if (field === "system.fright") {
+        new FrightRollDialog(this.actor).render(true);
+        return;
+      }
+
+      const current = foundry.utils.getProperty(this.actor, field) || 0;
+      this.actor.update({ [field]: current + 1 });
+    });
+
+    html.find('.state-down').click(ev => {
+      ev.preventDefault();
+      const field = ev.currentTarget.dataset.field;
+      const current = foundry.utils.getProperty(this.actor, field) || 0;
+      if (current > 0) this.actor.update({ [field]: current - 1 });
+    });
+
+    // Request Help button (wounds)
+    html.find('.stabilize-btn').click(ev => {
+      ev.preventDefault();
+      if (!this.actor.system.damage) {
+        return ui.notifications.warn(localize("FullHealth"));
+      }
+      this._requestMedicalHelp();
+    });
+
+    // Heal button (wounds)
+    html.find('.heal-btn').click(ev => {
+      ev.preventDefault();
+      if (!this.actor.system.damage) {
+        return ui.notifications.warn(localize("FullHealth"));
+      }
+      new HealDialog(this.actor).render(true);
+    });
+
+    // Cover toggle: mutually exclusive radio behavior
+    html.find('.cover-toggle').click(ev => {
+      ev.preventDefault();
+      const coverKey = ev.currentTarget.dataset.coverKey;
+      const current = this.actor.system.activeCover;
+      this.actor.update({ "system.activeCover": current === coverKey ? null : coverKey });
+    });
+
+    // Condition toggle: direct status effect toggle
+    html.find('.cond-toggle').click(async ev => {
+      ev.preventDefault();
+      const conditionId = ev.currentTarget.dataset.conditionId;
+      const isActive = this.actor.statuses.has(conditionId);
+      await this.actor.toggleStatusEffect(conditionId, { active: !isActive });
+    });
 
     // Skill level changes
     html.find(".skill-level").click((event) => event.target.select()).change(async (event) => {
@@ -2935,5 +3069,24 @@ export class CyberpunkActorSheet extends ActorSheet {
     }
 
     return super._onDropItem(event, data);
+  }
+
+  /* -------------------------------------------- */
+  /*  Medical Help                                 */
+  /* -------------------------------------------- */
+
+  /**
+   * Post a "Request Help" chat message for medical treatment.
+   */
+  async _requestMedicalHelp() {
+    const woundCount = this.actor.system.damage || 0;
+    if (woundCount <= 0) return;
+
+    const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+    const content = await foundry.applications.handlebars.renderTemplate(
+      "systems/cyberpunk/templates/chat/medical-help.hbs",
+      { actorId: this.actor.id, woundCount }
+    );
+    ChatMessage.create({ speaker, content });
   }
 }

@@ -1,0 +1,32 @@
+<div class="stress-roll-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{localize "CYBERPUNK.StressRoll"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Severity section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/stress.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.Severity"}}</span>
+  </div>
+
+  {{!-- Severity dropdown --}}
+  <div class="range-dropdown">
+    <button type="button" class="range-dropdown-btn">
+      <span class="range-label">{{selectedSeverityLabel}}</span>
+      <i class="fas fa-chevron-down"></i>
+    </button>
+    <div class="range-dropdown-list">
+      {{#each severityOptions}}
+        <div class="range-option{{#if selected}} selected{{/if}}" data-severity="{{key}}" data-formula="{{formula}}">
+          {{label}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+
+  {{!-- Roll button --}}
+  <button type="button" class="reload-apply-btn roll-btn">
+    {{localize "CYBERPUNK.Roll"}}
+  </button>
+</div>

@@ -2,7 +2,7 @@ import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes, sortSkills } from "./skill-sort.js";
 import { bodyTypeModifier } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
-import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES } from "../conditions.js"
+import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION } from "../conditions.js"
 
 /**
  * Actor document for Cyberpunk 2020 characters.
@@ -155,6 +155,18 @@ export class CyberpunkActor extends Actor {
         }
       }
     });
+
+    // Add cover SP to ALL hit locations (cover is hard armor)
+    const activeCover = system.activeCover;
+    if (activeCover && COVER_TYPES[activeCover]) {
+      const coverSP = COVER_TYPES[activeCover].sp;
+      for (const loc of Object.keys(system.hitLocations)) {
+        const location = system.hitLocations[loc];
+        if (location !== undefined) {
+          location.stoppingPower = stackArmorSP(Number(location.stoppingPower), coverSP);
+        }
+      }
+    }
 
     stats.ref.total = stats.ref.base + stats.ref.tempMod + stats.ref.armorMod;
 
@@ -342,6 +354,11 @@ export class CyberpunkActor extends Actor {
         }
       });
 
+      // Cover is always hard armor
+      if (activeCover && COVER_TYPES[activeCover]) {
+        hasHardArmor = true;
+      }
+
       // Determine state for background image
       let state;
       if (isLost) {
@@ -486,7 +503,7 @@ export class CyberpunkActor extends Actor {
    */
   getStressLevel() {
     const stress = (this.system.stress || 0) + (this.system.fright || 0);
-    if (stress <= 0) return 0;
+    if (stress < 0) return 0;
     const cool = this.system.stats.cool.total;
     const half = Math.ceil(cool / 2);
     if (stress < half) return -1;        // (0, COOL/2) → Fresh
@@ -598,6 +615,33 @@ export class CyberpunkActor extends Actor {
     }
   }
 
+  /**
+   * Synchronize the cover condition on this actor's token(s) based on activeCover.
+   * Removes any existing cover condition and applies the appropriate one.
+   * Called automatically when activeCover changes.
+   */
+  async updateCoverStatus() {
+    const coverKey = this.system.activeCover;
+    const newConditionId = coverKey ? (COVER_KEY_TO_CONDITION[coverKey] || null) : null;
+
+    let currentCoverCondition = null;
+    for (const id of COVER_CONDITION_IDS) {
+      if (this.statuses.has(id)) {
+        currentCoverCondition = id;
+        break;
+      }
+    }
+
+    if (currentCoverCondition === newConditionId) return;
+
+    if (currentCoverCondition) {
+      await this.toggleStatusEffect(currentCoverCondition, { active: false });
+    }
+    if (newConditionId) {
+      await this.toggleStatusEffect(newConditionId, { active: true });
+    }
+  }
+
   /** @override */
   async _onUpdate(changed, options, userId) {
     await super._onUpdate(changed, options, userId);
@@ -615,6 +659,11 @@ export class CyberpunkActor extends Actor {
     // Sync stress condition when stress points or COOL stat changes
     if (changed.system?.stress !== undefined || changed.system?.fright !== undefined || changed.system?.stats?.cool) {
       await this.updateStressStatus();
+    }
+
+    // Sync cover condition when activeCover changes
+    if (changed.system?.activeCover !== undefined) {
+      await this.updateCoverStatus();
     }
   }
 
@@ -1183,6 +1232,58 @@ export class CyberpunkActor extends Actor {
         difficulty: difficulty,
         success: success
       });
+
+    // Roll fumble on natural 1
+    if (isNatural1) {
+      await this.rollFumble();
+    }
+  }
+
+  /**
+   * Roll a COOL-based fright check against a difficulty target.
+   * On failure, (difficulty − result) is added as fright points.
+   * @param {number} difficulty - Target number
+   * @param {number} extraMod - Additional modifier (familiarity + luck)
+   */
+  async rollFrightCheck(difficulty, extraMod = 0) {
+    const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
+    const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
+    const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
+    const fatiguePenalty = this.getFatiguePenalty();
+    const stressPenalty = this.getStressPenalty(true); // COOL-based roll
+
+    const parts = ["@stats.cool.total"];
+    if (actionSurgePenalty) parts.push(actionSurgePenalty);
+    if (fastDrawPenalty) parts.push(fastDrawPenalty);
+    if (restrainedPenalty) parts.push(restrainedPenalty);
+    if (grapplingPenalty) parts.push(grapplingPenalty);
+    if (fatiguePenalty) parts.push(fatiguePenalty);
+    if (stressPenalty) parts.push(stressPenalty);
+    if (extraMod) parts.push(extraMod);
+
+    const roll = buildD10Roll(parts, this.system);
+    await roll.evaluate();
+
+    const d10Result = roll.dice[0]?.results[0]?.result;
+    const isNatural1 = d10Result === 1;
+    const success = !isNatural1 && roll.total >= difficulty;
+
+    const speaker = ChatMessage.getSpeaker({ actor: this });
+    new RollBundle(localize("FrightRoll"))
+      .addRoll(roll)
+      .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
+        statIcon: "stress",
+        difficulty: difficulty,
+        success: success
+      });
+
+    // On failure, add fright points equal to the difference
+    if (!success) {
+      const frightPoints = difficulty - roll.total;
+      const currentFright = this.system.fright || 0;
+      await this.update({ "system.fright": currentFright + frightPoints });
+    }
 
     // Roll fumble on natural 1
     if (isNatural1) {

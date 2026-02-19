@@ -1,0 +1,27 @@
+<div class="heal-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{localize "CYBERPUNK.Heal"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Medical Treatment section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/medical.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.MedicalTreatment"}}</span>
+  </div>
+
+  {{!-- Condition buttons (radio-style: First Aid or Medical Tech) --}}
+  <div class="conditions-grid">
+    <button type="button" class="condition-btn" data-condition="firstAid">
+      {{localize "CYBERPUNK.ConditionFirstAid"}}
+    </button>
+    <button type="button" class="condition-btn" data-condition="medTech">
+      {{localize "CYBERPUNK.ConditionMedTech"}}
+    </button>
+  </div>
+
+  {{!-- Action button --}}
+  <button type="button" class="reload-apply-btn action-btn">
+    {{actionLabel}}
+  </button>
+</div>

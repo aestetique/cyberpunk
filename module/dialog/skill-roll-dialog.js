@@ -71,7 +71,8 @@ export class SkillRollDialog extends Application {
       { key: "average", value: 15, label: localize("DifficultyAverage") },
       { key: "difficult", value: 20, label: localize("DifficultyDifficult") },
       { key: "veryDifficult", value: 25, label: localize("DifficultyVeryDifficult") },
-      { key: "nearlyImpossible", value: 30, label: localize("DifficultyNearlyImpossible") }
+      { key: "nearlyImpossible", value: 30, label: localize("DifficultyNearlyImpossible") },
+      { key: "impossible", value: 40, label: localize("DifficultyImpossible") }
     ];
 
     // Mark the selected difficulty

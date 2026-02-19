@@ -29,6 +29,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/suppressive.hbs",
         "systems/cyberpunk/templates/chat/formula-roll.hbs",
         "systems/cyberpunk/templates/chat/humanity-roll.hbs",
+        "systems/cyberpunk/templates/chat/stress-roll.hbs",
         "systems/cyberpunk/templates/chat/condition-damage.hbs",
         "systems/cyberpunk/templates/chat/skill-check.hbs",
         "systems/cyberpunk/templates/chat/fumble.hbs",
@@ -84,6 +85,8 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
         "systems/cyberpunk/templates/dialog/melee-attack.hbs",
         "systems/cyberpunk/templates/dialog/defence-roll.hbs",
+        "systems/cyberpunk/templates/dialog/stress-roll.hbs",
+        "systems/cyberpunk/templates/dialog/fright-roll.hbs",
 
         // Program
         "systems/cyberpunk/templates/item/parts/program/summary.hbs",

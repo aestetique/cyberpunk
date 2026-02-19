@@ -253,9 +253,91 @@
             {{> "systems/cyberpunk/templates/actor/parts/netrunning.hbs"}}
           </div>
 
-          <div class="tab life" data-group="primary" data-tab="life">
-            <div class="biography">
-              {{editor system.notes target="system.notes" button=true owner=owner editable=options.editable}}
+          <div class="tab state" data-group="primary" data-tab="state">
+            <div class="gear-container">
+              <div class="gear-block">
+                <header class="tab-header">
+                  <span class="tab-title">STATE</span>
+                  <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-state.svg" alt="">
+                </header>
+                <div class="tab-content state-row">
+                  {{!-- Stress --}}
+                  <div class="state-block">
+                    <span class="state-label">Stress</span>
+                    <div class="state-value-row">
+                      <img class="state-btn state-up" data-field="system.stress" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
+                      <span class="state-value">{{system.stress}}</span>
+                      <img class="state-btn state-down" data-field="system.stress" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
+                    </div>
+                    <span class="state-status">{{stressStatus}}</span>
+                  </div>
+                  {{!-- Fright --}}
+                  <div class="state-block">
+                    <span class="state-label">Fright</span>
+                    <div class="state-value-row">
+                      <img class="state-btn state-up" data-field="system.fright" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
+                      <span class="state-value">{{system.fright}}</span>
+                      <img class="state-btn state-down" data-field="system.fright" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
+                    </div>
+                    <span class="state-status">{{frightStatus}}</span>
+                  </div>
+                  {{!-- Fatigue --}}
+                  <div class="state-block">
+                    <span class="state-label">Fatigue</span>
+                    <div class="state-value-row">
+                      <img class="state-btn state-up" data-field="system.fatigue" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
+                      <span class="state-value">{{system.fatigue}}</span>
+                      <img class="state-btn state-down" data-field="system.fatigue" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
+                    </div>
+                    <span class="state-status">{{fatigueStatus}}</span>
+                  </div>
+                  {{!-- Wounds --}}
+                  <div class="state-block">
+                    <span class="state-label">Wounds</span>
+                    <div class="state-value-row">
+                      <img class="state-btn stabilize-btn" src="systems/cyberpunk/img/ui/badge-stabilize.svg" alt="Stabilize">
+                      <span class="state-value">{{system.damage}}</span>
+                      <img class="state-btn heal-btn" src="systems/cyberpunk/img/ui/badge-heal.svg" alt="Heal">
+                    </div>
+                    <span class="state-status">{{woundStatus}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="gear-block">
+                <header class="tab-header">
+                  <span class="tab-title">COVER</span>
+                  <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-cover.svg" alt="">
+                </header>
+                <div class="cover-row">
+                  {{#each coverToggles}}
+                  <div class="condition-toggle cover-toggle {{#if this.active}}active{{/if}}" data-cover-key="{{this.key}}">
+                    <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/cover-{{#if this.active}}on{{else}}off{{/if}}.svg')">
+                      <span class="condition-toggle-number">{{this.sp}}</span>
+                    </div>
+                    <span class="condition-toggle-label">{{this.label}}</span>
+                  </div>
+                  {{/each}}
+                </div>
+              </div>
+
+              <div class="gear-block">
+                <header class="tab-header">
+                  <span class="tab-title">CONDITIONS</span>
+                  <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-conditions.svg" alt="">
+                </header>
+                {{#each conditionToggleRows}}
+                <div class="conditions-row">
+                  {{#each this}}
+                  <div class="condition-toggle cond-toggle {{#if this.active}}active{{/if}}" data-condition-id="{{this.id}}">
+                    <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/{{this.icon}}-{{#if this.active}}on{{else}}off{{/if}}.svg')">
+                    </div>
+                    <span class="condition-toggle-label">{{this.label}}</span>
+                  </div>
+                  {{/each}}
+                </div>
+                {{/each}}
+              </div>
             </div>
           </div>
         </div>
@@ -285,9 +367,9 @@
         <img class="tab-empty" src="systems/cyberpunk/img/ui/tabs-net-empty.svg" alt="Netrunning">
         <img class="tab-filled" src="systems/cyberpunk/img/ui/tabs-net.svg" alt="Netrunning">
       </a>
-      <a class="tab-btn" data-tab="life" title="Life">
-        <img class="tab-empty" src="systems/cyberpunk/img/ui/tabs-life-empty.svg" alt="Life">
-        <img class="tab-filled" src="systems/cyberpunk/img/ui/tabs-life.svg" alt="Life">
+      <a class="tab-btn" data-tab="state" title="State">
+        <img class="tab-empty" src="systems/cyberpunk/img/ui/tabs-state-empty.svg" alt="State">
+        <img class="tab-filled" src="systems/cyberpunk/img/ui/tabs-state.svg" alt="State">
       </a>
     </nav>
   </div>

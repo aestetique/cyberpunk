@@ -1,6 +1,8 @@
 import { RollBundle } from "./dice.js";
 import { localize } from "./utils.js";
+import { getSkillsForCategory } from "./lookups.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
+import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
 
 /**
  * Custom ChatMessage rendering for the Cyberpunk system.
@@ -337,6 +339,15 @@ export class CyberpunkChatMessage extends ChatMessage {
                 }
             }
         }
+
+        // Medical Help button
+        const medicalCard = html.querySelector(".cyberpunk-card--medical-help");
+        if (medicalCard) {
+            const helpBtn = medicalCard.querySelector(".medical-help-btn");
+            if (helpBtn) {
+                helpBtn.addEventListener("click", (event) => this._onMedicalHelp(event, medicalCard));
+            }
+        }
     }
 
     /* -------------------------------------------- */
@@ -586,6 +597,49 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /* -------------------------------------------- */
+    /*  Medical Help                                 */
+    /* -------------------------------------------- */
+
+    /**
+     * Handle clicking the Help button on a medical-help card.
+     * Opens the MedicalHelpDialog for the selected/assigned actor.
+     * @param {Event} event - The click event
+     * @param {HTMLElement} card - The medical-help card element
+     * @private
+     */
+    _onMedicalHelp(event, card) {
+        event.preventDefault();
+        const woundedActorId = card.dataset.actorId;
+
+        // Determine the helping actor: selected token or assigned character
+        let actor = canvas.tokens.controlled[0]?.actor;
+        if (!actor) actor = game.user.character;
+
+        if (!actor) {
+            ui.notifications.warn(localize("HelpNoActor"));
+            return;
+        }
+
+        // Don't allow self-help
+        if (actor.id === woundedActorId) {
+            ui.notifications.warn(localize("HelpNoSelf"));
+            return;
+        }
+
+        // Check if the helper has any stabilisation skills
+        const mappedNames = getSkillsForCategory("stabilisationSkills");
+        const hasSkills = mappedNames.some(name =>
+            actor.itemTypes.skill.find(s => s.name === name && actor.resolveSkillTotal(name) > 0)
+        );
+        if (!hasSkills) {
+            ui.notifications.warn(localize("HelpNoSkills"));
+            return;
+        }
+
+        new MedicalHelpDialog(actor, woundedActorId).render(true);
+    }
+
+    /* -------------------------------------------- */
     /*  Target Selector Methods                      */
     /* -------------------------------------------- */
 
@@ -820,7 +874,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                         i.type === "armor" && i.system.equipped &&
                         i.system.armorType === "hard" &&
                         i.system.coverage?.[location]?.stoppingPower > 0
-                    );
+                    ) || !!actor.system.activeCover;
 
                     // Apply melee damage type modifiers to effective SP
                     effectiveSP = armorSP;
@@ -1140,7 +1194,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                     i.type === "armor" && i.system.equipped &&
                     i.system.armorType === "hard" &&
                     i.system.coverage?.[location]?.stoppingPower > 0
-                );
+                ) || !!actor.system.activeCover;
                 let effectiveSP = armorSP;
                 if (damageType === "edged" && !hasHardArmorAblate && armorSP > 0) {
                     effectiveSP = Math.floor(armorSP / 2);

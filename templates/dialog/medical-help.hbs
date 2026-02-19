@@ -1,0 +1,75 @@
+<div class="medical-help-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{localize "CYBERPUNK.HelpRoll"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Medical Treatment section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/medical.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.MedicalTreatment"}}</span>
+  </div>
+
+  {{!-- Skill dropdown --}}
+  {{#if hasSkills}}
+  <div class="range-dropdown">
+    <button type="button" class="range-dropdown-btn">
+      <span class="range-label">{{selectedSkillLabel}}</span>
+      <i class="fas fa-chevron-down"></i>
+    </button>
+    <div class="range-dropdown-list">
+      {{#each skills}}
+        <div class="range-option{{#if @first}} selected{{/if}}" data-skill-id="{{id}}">
+          {{label}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+  {{else}}
+  <div class="range-dropdown range-dropdown--disabled">
+    <button type="button" class="range-dropdown-btn disabled" disabled>
+      <span class="range-label">{{noSkillsLabel}}</span>
+    </button>
+  </div>
+  {{/if}}
+
+  {{!-- Conditions section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/conditions.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.ConditionsHeader"}}</span>
+  </div>
+
+  {{!-- Condition buttons (radio-style: Ambulance +3 or Hospital +5) --}}
+  <div class="conditions-grid">
+    <button type="button" class="condition-btn" data-condition="ambulance">
+      {{localize "CYBERPUNK.ConditionAmbulance"}}
+    </button>
+    <button type="button" class="condition-btn" data-condition="hospital">
+      {{localize "CYBERPUNK.ConditionHospital"}}
+    </button>
+  </div>
+
+  {{!-- Luck section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/luck.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.LuckFull"}}</span>
+  </div>
+
+  {{!-- Luck controls --}}
+  <div class="luck-controls{{#unless hasAnyLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+    </button>
+    <div class="luck-display">
+      <span class="luck-value">{{luckToSpend}}</span>
+    </div>
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+    </button>
+  </div>
+
+  {{!-- Roll button --}}
+  <button type="button" class="reload-apply-btn roll-btn">
+    {{localize "CYBERPUNK.Roll"}}
+  </button>
+</div>

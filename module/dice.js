@@ -61,7 +61,7 @@ export function getActorName(speaker) {
         return user.name;
     }
 
-    return "Unknown";
+    return game.i18n.localize("CYBERPUNK.Unknown");
 }
 
 /**
@@ -79,7 +79,7 @@ export function getPlayerName(speaker) {
     }
 
     // Fall back to current user
-    return game.user?.name || "Player";
+    return game.user?.name || game.i18n.localize("CYBERPUNK.Player");
 }
 
 // Check whether a formula string contains dice notation

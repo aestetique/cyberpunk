@@ -864,5 +864,14 @@
     "CYBERPUNK.SeverityVeryDisturbing": "Very Disturbing / 3d6",
     "CYBERPUNK.SeverityLifeShattering": "Life Shattering / 4d6",
     "CYBERPUNK.FrightRoll": "Fright Roll",
-    "CYBERPUNK.Familiarity": "Familiarity"
+    "CYBERPUNK.Familiarity": "Familiarity",
+
+    "CYBERPUNK.CyberwareTypeMismatch": "Option type must match base cyberware type.",
+    "CYBERPUNK.OnlyOptionsCanAttach": "Only options can be attached to base cyberware.",
+    "CYBERPUNK.CannotAttachToOptions": "Cannot attach options to other options.",
+    "CYBERPUNK.NotEnoughSlots": "Not enough option slots. Available: {available}, Needed: {needed}",
+    "CYBERPUNK.SkillAlreadyAdded": "This skill is already added.",
+    "CYBERPUNK.CopiedUUID": "Copied UUID: {uuid}",
+    "CYBERPUNK.Unknown": "Unknown",
+    "CYBERPUNK.Player": "Player"
 }

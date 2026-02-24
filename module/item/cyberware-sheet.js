@@ -7,6 +7,7 @@ import {
     cyberwareTypes, cyberwareSubtypes, surgeryCodes,
     getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor
 } from "../lookups.js";
+import { localize } from "../utils.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
 
 /**
@@ -319,12 +320,12 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
 
         // Coverage grid (same pattern as outfit-sheet)
         const locationOrder = [
-            { key: "lArm", label: "Left Arm" },
-            { key: "Head", label: "Head" },
-            { key: "rArm", label: "Right Arm" },
-            { key: "lLeg", label: "Left Leg" },
-            { key: "Torso", label: "Torso" },
-            { key: "rLeg", label: "Right Leg" }
+            { key: "lArm", label: localize("lArm") },
+            { key: "Head", label: localize("Head") },
+            { key: "rArm", label: localize("rArm") },
+            { key: "lLeg", label: localize("lLeg") },
+            { key: "Torso", label: localize("Torso") },
+            { key: "rLeg", label: localize("rLeg") }
         ];
 
         const coverage = armor.coverage || {};
@@ -368,6 +369,44 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             if (uuid) {
                 const item = await fromUuid(uuid);
                 if (item) item.sheet.render(true);
+            }
+        });
+
+        // Roll humanity loss (works in locked mode)
+        html.find('.humanity-roll-btn').click(async ev => {
+            ev.preventDefault();
+            const formula = this.item.system.humanityCost;
+            if (!formula || this.item.system.humanityRolled) return;
+
+            const roll = new Roll(formula);
+            await roll.evaluate();
+
+            const { processFormulaRoll } = await import("../dice.js");
+            const templateData = processFormulaRoll(roll);
+            const content = await foundry.applications.handlebars.renderTemplate(
+                "systems/cyberpunk/templates/chat/humanity-roll.hbs",
+                templateData
+            );
+            const speaker = this.item.actor
+                ? ChatMessage.getSpeaker({ actor: this.item.actor })
+                : ChatMessage.getSpeaker();
+            await ChatMessage.create({
+                speaker,
+                content,
+                rolls: [roll],
+                sound: CONFIG.sounds.dice
+            });
+
+            await this.item.update({
+                "system.humanityLoss": roll.total,
+                "system.humanityRolled": true
+            });
+
+            if (this.item.actor) {
+                const currentDamage = this.item.actor.system.stats.emp.humanityDamage || 0;
+                await this.item.actor.update({
+                    "system.stats.emp.humanityDamage": currentDamage + roll.total
+                });
             }
         });
 

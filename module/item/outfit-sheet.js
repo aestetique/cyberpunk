@@ -1,4 +1,5 @@
 import { availability } from "../lookups.js";
+import { localize } from "../utils.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
 
 /**
@@ -50,12 +51,12 @@ export class CyberpunkOutfitSheet extends CyberpunkItemSheet {
 
     // Coverage data for the SP grid
     const locationOrder = [
-      { key: "lArm", label: "Left Arm" },
-      { key: "Head", label: "Head" },
-      { key: "rArm", label: "Right Arm" },
-      { key: "lLeg", label: "Left Leg" },
-      { key: "Torso", label: "Torso" },
-      { key: "rLeg", label: "Right Leg" }
+      { key: "lArm", label: localize("lArm") },
+      { key: "Head", label: localize("Head") },
+      { key: "rArm", label: localize("rArm") },
+      { key: "lLeg", label: localize("lLeg") },
+      { key: "Torso", label: localize("Torso") },
+      { key: "rLeg", label: localize("rLeg") }
     ];
 
     data.coverageRows = [

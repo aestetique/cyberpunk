@@ -28,7 +28,7 @@ import { defaultTargetLocations, fireModes } from "../lookups.js"
         disadvantage: false,
         closeOnSubmit: false,
 
-        onConfirm: (results) => console.log(results)
+        onConfirm: () => {}
       });
     }
   

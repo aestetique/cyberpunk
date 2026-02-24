@@ -1,13 +1,13 @@
 import { weaponTypes, sortedAttackTypes, concealability, availability, reliability, attackSkills, meleeAttackTypes, getStatNames, ammoCalibersByWeaponType, weaponToAmmoType } from "../lookups.js";
 import { containsDice } from "../dice.js";
 import { localize } from "../utils.js";
-import { getMartialKeyByName } from '../translations.js'
+import { getMartialKeyByName } from '../utils.js'
 
 /**
  * Item sheet for the Cyberpunk 2020 system.
  * @extends {ItemSheet}
  */
-export class CyberpunkItemSheet extends ItemSheet {
+export class CyberpunkLegacyItemSheet extends ItemSheet {
 
   /** @override */
   static get defaultOptions() {
@@ -75,7 +75,6 @@ export class CyberpunkItemSheet extends ItemSheet {
     ];
 
 
-    // TODO: Be not so inefficient for this
     if(!sheet.attackSkills.length && this.actor) {
       if(this.actor) {
         sheet.attackSkills = this.actor.itemTypes.skill.map(skill => skill.name).sort();

@@ -1,6 +1,6 @@
 import { weaponTypes, rangedAttackTypes, meleeAttackTypes, fireModes, ranges, rangeDCs, rangeResolve, attackSkills, martialActions, meleeDamageBonus, exoticEffects } from "../lookups.js"
 import { RollBundle, buildD10Roll }  from "../dice.js"
-import { clamp, getByPath, localize, formatLocale, rollLocation } from "../utils.js"
+import { clamp, getByPath, localize, rollLocation } from "../utils.js"
 import { CyberpunkActor } from "../actor/actor.js";
 
 /**
@@ -121,7 +121,6 @@ export class CyberpunkItem extends Item {
         }
       }
       
-      // TODO: Strict bodytypes option?
       // Add any areas the owner has but the armor doesn't.
       for(let ownerLoc in ownerLocs) {
         if(!system.coverage[ownerLoc]) {
@@ -154,7 +153,6 @@ export class CyberpunkItem extends Item {
     }
   }
 
-  // TODO: For 0.8.1, we want to also add flavor text to the different modifiers
   // Get the roll modifiers to add when given a certain set of modifiers
   _rangedModifiers({
     aimRounds,
@@ -318,10 +316,10 @@ export class CyberpunkItem extends Item {
   static getRangeLabel(range, actualRange) {
     const labels = {
       [ranges.pointBlank]: localize("RangePointBlankLabel"),
-      [ranges.close]: formatLocale("RangeCloseLabel", { range: actualRange }),
-      [ranges.medium]: formatLocale("RangeMediumLabel", { range: actualRange }),
-      [ranges.long]: formatLocale("RangeLongLabel", { range: actualRange }),
-      [ranges.extreme]: formatLocale("RangeExtremeLabel", { range: actualRange })
+      [ranges.close]: localize("RangeCloseLabel", { range: actualRange }),
+      [ranges.medium]: localize("RangeMediumLabel", { range: actualRange }),
+      [ranges.long]: localize("RangeLongLabel", { range: actualRange }),
+      [ranges.extreme]: localize("RangeExtremeLabel", { range: actualRange })
     };
     return labels[range] || range;
   }
@@ -1026,7 +1024,7 @@ export class CyberpunkItem extends Item {
     let martialSkillLevel = actor.resolveSkillTotal(martialArt);
     let flavor = game.i18n.has(`CYBERPUNK.${action + "Text"}`) ? localize(action + "Text") : "";
 
-    let results = new RollBundle(formatLocale("MartialTitle", {action: localize(action), martialArt: localize("Skill" + martialArt)}), flavor);
+    let results = new RollBundle(localize("MartialTitle", {action: localize(action), martialArt: localize("Skill" + martialArt)}), flavor);
 
     // All martial arts are contested
     let attackRoll = new Roll(`1d10x10+@stats.ref.total+@attackBonus+@keyTechniqueBonus`, {

@@ -1,5 +1,5 @@
 import { fireModes, ranges } from "../lookups.js";
-import { localize, formatLocale } from "../utils.js";
+import { localize } from "../utils.js";
 
 /**
  * Range Selection Dialog — select range band before opening attack modifiers.
@@ -62,10 +62,10 @@ export class RangeSelectionDialog extends Application {
     // Build range options with calculated distances
     const rangeOptions = [
       { key: ranges.pointBlank, distance: 1, label: localize("RangePointBlankLabel") },
-      { key: ranges.close, distance: Math.round(weaponRange / 4), label: formatLocale("RangeCloseLabel", { range: Math.round(weaponRange / 4) }) },
-      { key: ranges.medium, distance: Math.round(weaponRange / 2), label: formatLocale("RangeMediumLabel", { range: Math.round(weaponRange / 2) }) },
-      { key: ranges.long, distance: weaponRange, label: formatLocale("RangeLongLabel", { range: weaponRange }) },
-      { key: ranges.extreme, distance: weaponRange * 2, label: formatLocale("RangeExtremeLabel", { range: weaponRange * 2 }) }
+      { key: ranges.close, distance: Math.round(weaponRange / 4), label: localize("RangeCloseLabel", { range: Math.round(weaponRange / 4) }) },
+      { key: ranges.medium, distance: Math.round(weaponRange / 2), label: localize("RangeMediumLabel", { range: Math.round(weaponRange / 2) }) },
+      { key: ranges.long, distance: weaponRange, label: localize("RangeLongLabel", { range: weaponRange }) },
+      { key: ranges.extreme, distance: weaponRange * 2, label: localize("RangeExtremeLabel", { range: weaponRange * 2 }) }
     ];
 
     // Mark the selected range

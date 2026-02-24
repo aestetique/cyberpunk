@@ -130,7 +130,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         }
 
         // Last resort - use alias even if it matches author (better than "Unknown")
-        return this.alias || "Unknown";
+        return this.alias || localize("Unknown");
     }
 
     /**
@@ -184,7 +184,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         // Player name
         const playerName = document.createElement("span");
         playerName.classList.add("cyberpunk-player-name");
-        playerName.textContent = this.author?.name || "Player";
+        playerName.textContent = this.author?.name || localize("Player");
 
         // Timestamp - use our helper that checks Simple Calendar first
         const timestamp = document.createElement("span");

@@ -39,7 +39,6 @@ export function migrateSkillMappings() {
 
   if (changed) {
     game.settings.set("cyberpunk", "skillMappings", migrated);
-    console.log("CYBERPUNK: Skill mappings migrated to match current defaults.");
   }
 }
 

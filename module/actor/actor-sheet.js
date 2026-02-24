@@ -1,5 +1,5 @@
 import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus } from "../lookups.js"
-import { localize, formatLocale, tabBeautifying, toTitleCase } from "../utils.js"
+import { localize, tabBeautifying, toTitleCase } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { ReloadDialog } from "../dialog/reload-dialog.js"
@@ -1568,7 +1568,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       let item = getEventItem(this, ev);
       let confirmDialog = new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        content: `<p>${localize("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -2067,7 +2067,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: skill.name})}</p>`,
+        content: `<p>${localize("ItemDeleteConfirmText", {itemName: skill.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -2172,7 +2172,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        content: `<p>${localize("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -2676,19 +2676,19 @@ export class CyberpunkActorSheet extends ActorSheet {
 
         // Validate: option must match base cyberware type
         if (optionItem.system.cyberwareType !== baseItem.system.cyberwareType) {
-          ui.notifications.warn("Option type must match base cyberware type.");
+          ui.notifications.warn(localize("CyberwareTypeMismatch"));
           return;
         }
 
         // Validate: option must be an option
         if (!optionItem.system.isOption) {
-          ui.notifications.warn("Only options can be attached to base cyberware.");
+          ui.notifications.warn(localize("OnlyOptionsCanAttach"));
           return;
         }
 
         // Validate: base must not be an option
         if (baseItem.system.isOption) {
-          ui.notifications.warn("Cannot attach options to other options.");
+          ui.notifications.warn(localize("CannotAttachToOptions"));
           return;
         }
 
@@ -2700,7 +2700,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         const neededSlots = optionItem.system.takesSpace || 1;
 
         if (usedSlots + neededSlots > availableSlots) {
-          ui.notifications.warn(`Not enough option slots. Available: ${availableSlots - usedSlots}, Needed: ${neededSlots}`);
+          ui.notifications.warn(localize("NotEnoughSlots", { available: availableSlots - usedSlots, needed: neededSlots }));
           return;
         }
 
@@ -2744,7 +2744,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (!item) return;
       let confirmDialog = new Dialog({
         title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${formatLocale("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
+        content: `<p>${localize("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
         buttons: {
           yes: {
             label: localize("Yes"),
@@ -2960,7 +2960,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         i.type === "skill" && i.flags?.core?.sourceId === item.uuid
       );
       if (existingByUUID) {
-        ui.notifications.info("This skill is already added.");
+        ui.notifications.info(localize("SkillAlreadyAdded"));
         return;
       }
       // Also check by name as fallback
@@ -2968,7 +2968,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         i.type === "skill" && i.name.toLowerCase() === item.name.toLowerCase()
       );
       if (existingByName) {
-        ui.notifications.info("This skill is already added.");
+        ui.notifications.info(localize("SkillAlreadyAdded"));
         return;
       }
     }

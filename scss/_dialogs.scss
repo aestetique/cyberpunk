@@ -1,0 +1,602 @@
+// ============================================
+// Dialog Styles (shared across all game dialogs)
+// ============================================
+
+// Override Foundry's default Application window chrome
+.app.window-app.reload-dialog,
+.app.window-app.ranged-attack-dialog,
+.app.window-app.range-selection-dialog,
+.app.window-app.melee-attack-dialog,
+.app.window-app.skill-roll-dialog,
+.app.window-app.defence-roll-dialog,
+.app.window-app.initiative-roll-dialog,
+.app.window-app.medical-help-dialog,
+.app.window-app.heal-dialog,
+.app.window-app.stress-roll-dialog,
+.app.window-app.fright-roll-dialog,
+.app.window-app.create-item-dialog {
+  background: var(--chat-back, #1A1A1A);
+  border: 2px solid var(--chat-stroke, #252730);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+
+  // Remove default window header
+  .window-header {
+    display: none;
+  }
+
+  // Remove default window content padding/styling
+  .window-content {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+  }
+}
+
+// Dialog content wrapper (shared by all attack/roll dialogs)
+.reload-dialog-wrapper,
+.ranged-attack-wrapper,
+.range-selection-wrapper,
+.melee-attack-wrapper,
+.skill-roll-wrapper,
+.defence-roll-wrapper,
+.medical-help-wrapper,
+.heal-wrapper,
+.stress-roll-wrapper,
+.fright-roll-wrapper,
+.create-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px;
+
+  // Header row
+  .reload-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    height: 26px;
+    cursor: move;
+
+    .reload-title {
+      font-family: var(--font-refinery);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 26px;
+      color: var(--chat-text, #FFF);
+      text-align: center;
+    }
+
+    .header-control.close {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 0 4px;
+      margin: 0;
+      font-size: 14px;
+      line-height: 26px;
+      color: var(--chat-text, #FFF);
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  // Ammo selection buttons
+  .reload-ammo-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: lighten(#444856, 5%);
+    }
+
+    &.selected {
+      background: var(--chat-green, #24563D);
+
+      &:hover {
+        background: lighten(#24563D, 5%);
+      }
+    }
+
+    .ammo-name,
+    .ammo-qty {
+      font-family: var(--font-blender);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 24px;
+      color: var(--chat-text, #FFF);
+      text-transform: uppercase;
+    }
+  }
+
+  // Apply button
+  .reload-apply-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chat-red-text, #86223D);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+
+    &:hover {
+      background: lighten(#86223D, 5%);
+    }
+  }
+
+  // Empty state message
+  .reload-empty {
+    display: flex;
+    height: 36px;
+    padding: 0 6px;
+    justify-content: center;
+    align-items: center;
+    align-self: stretch;
+    border-radius: 2px;
+
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    color: #444856;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  // Fire mode buttons (Ranged Attack dialog) - centered text
+  .fire-mode-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+
+    &:hover {
+      background: lighten(#444856, 5%);
+    }
+  }
+
+  // Remove default red box-shadow from interactive elements
+  .reload-ammo-btn,
+  .reload-apply-btn,
+  .fire-mode-btn,
+  .range-dropdown-btn {
+    box-shadow: none;
+  }
+
+  // Fire mode section bar (Range Selection dialog)
+  .fire-mode-section {
+    display: flex;
+    height: 26px;
+    padding: 1px 0;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    align-self: stretch;
+    background: #26282F;
+
+    img {
+      width: 16px;
+      height: 16px;
+      filter: brightness(0) invert(1);
+      border: none;
+    }
+
+    .fire-mode-label {
+      font-family: var(--font-blender);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 24px;
+      color: var(--chat-text, #FFF);
+      text-transform: uppercase;
+    }
+  }
+
+  // Range dropdown container
+  .range-dropdown {
+    position: relative;
+    width: 100%;
+  }
+
+  // Range dropdown button
+  .range-dropdown-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: lighten(#444856, 5%);
+    }
+
+    &.open {
+      border-radius: 2px 2px 0 0;
+    }
+
+    .range-label {
+      font-family: var(--font-blender);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 24px;
+      color: var(--chat-text, #FFF);
+      text-transform: uppercase;
+    }
+
+    i {
+      font-size: 12px;
+      color: var(--chat-text, #FFF);
+      transition: transform 0.2s;
+    }
+
+    &.open i {
+      transform: rotate(180deg);
+    }
+  }
+
+  // Range dropdown list (hidden by default)
+  .range-dropdown-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--chat-back, #1A1A1A);
+    border: 1px solid var(--chat-stroke, #252730);
+    border-top: none;
+    border-radius: 0 0 2px 2px;
+    max-height: 200px;
+    overflow-y: auto;
+
+    &.open {
+      display: block;
+    }
+  }
+
+  // Range dropdown options
+  .range-option {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    font-family: var(--font-blender);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+
+    &:hover {
+      background: var(--chat-gray, #444856);
+    }
+
+    &.selected {
+      background: var(--chat-green, #24563D);
+
+      &:hover {
+        background: lighten(#24563D, 5%);
+      }
+    }
+  }
+
+  // Conditions grid (2x2)
+  .conditions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+
+    &.disabled {
+      pointer-events: none;
+
+      .condition-btn {
+        background: #26282F;
+        color: #444856;
+        cursor: default;
+      }
+    }
+  }
+
+  // Condition buttons
+  .condition-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+    box-shadow: none;
+
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+
+    &:hover {
+      background: lighten(#444856, 5%);
+    }
+
+    &.selected {
+      background: var(--chat-green, #24563D);
+
+      &:hover {
+        background: lighten(#24563D, 5%);
+      }
+    }
+  }
+
+  // Luck controls row
+  .luck-controls {
+    display: flex;
+    gap: 6px;
+
+    &.disabled {
+      pointer-events: none;
+
+      .luck-btn {
+        background: #26282F;
+        cursor: default;
+      }
+
+      .luck-display {
+        .luck-value {
+          color: #444856;
+        }
+      }
+    }
+  }
+
+  // Luck +/- buttons
+  .luck-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px;
+    height: 36px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+    box-shadow: none;
+
+    img {
+      width: 24px;
+      height: 24px;
+      border: none;
+    }
+
+    &:hover:not(.disabled) {
+      background: lighten(#444856, 5%);
+    }
+
+    &.disabled {
+      background: #26282F;
+      cursor: not-allowed;
+    }
+  }
+
+  // Luck value display (center)
+  .luck-display {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    background: #26282F;
+    border-radius: 2px;
+
+    .luck-value {
+      font-family: var(--font-blender);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 36px;
+      color: var(--chat-text, #FFF);
+      text-align: center;
+    }
+  }
+
+  // Location grid (2x3)
+  .location-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+
+    &.disabled {
+      pointer-events: none;
+
+      .location-btn {
+        background: #26282F;
+        cursor: default;
+
+        img {
+          filter: none;
+        }
+      }
+    }
+  }
+
+  // Location buttons
+  .location-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+    box-shadow: none;
+
+    img {
+      width: 24px;
+      height: 24px;
+      filter: brightness(0) invert(1);
+      border: none;
+    }
+
+    &:hover {
+      background: lighten(#444856, 5%);
+    }
+
+    &.selected {
+      background: var(--chat-green, #24563D);
+
+      &:hover {
+        background: lighten(#24563D, 5%);
+      }
+    }
+
+    // Individual location button disabled state (for Break action)
+    &.disabled {
+      background: #26282F;
+      cursor: default;
+      pointer-events: none;
+
+      img {
+        filter: none;
+      }
+    }
+  }
+
+  // Single-button variant (Melee execute toggle)
+  .conditions-grid--single {
+    display: block;
+
+    .execute-btn {
+      width: 100%;
+    }
+  }
+
+  // Execute button (Coup De Grace / Knockout) with custom colors
+  .execute-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: #444856;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+    box-shadow: none;
+
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+
+    &:hover {
+      background: lighten(#444856, 5%);
+    }
+
+    &.selected {
+      background: #1A804D;
+
+      &:hover {
+        background: lighten(#1A804D, 5%);
+      }
+    }
+  }
+
+  // Unarmed actions grid (2 columns)
+  &.ranged-attack-wrapper {
+    .unarmed-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+  }
+
+  // Create Item dialog grid - 6 rows x 2 columns
+  .create-item-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .create-item-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  // Defence dialog disabled dropdown styling
+  &.defence-roll-wrapper {
+    .range-dropdown--disabled {
+      .range-dropdown-btn.disabled {
+        background: #26282F;
+        color: #444856;
+        cursor: default;
+        pointer-events: none;
+
+        .range-label {
+          color: #444856;
+        }
+      }
+    }
+  }
+}
+
+// Heal dialog: full-width action button
+.heal-wrapper .action-btn {
+  width: 100%;
+}

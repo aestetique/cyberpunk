@@ -33,7 +33,17 @@
       {{else}}
         <input type="text" class="humanity-formula-input" name="system.humanityCost" value="{{system.humanityCost}}" placeholder="1d6">
       {{/if}}
-      {{!-- Roll button removed - humanity is auto-rolled on first turn-on from inventory --}}
+      {{#if canRollHumanity}}
+        <button class="humanity-roll-btn" type="button" title="Roll Humanity Loss">
+          <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
+        </button>
+      {{else}}
+        {{#if humanityRolled}}
+          <button class="humanity-roll-btn" type="button" disabled title="Humanity Loss Rolled">
+            <img src="systems/cyberpunk/img/dice/d10gray.png" alt="Rolled">
+          </button>
+        {{/if}}
+      {{/if}}
       <span class="humanity-result {{#if humanityRolled}}rolled{{/if}}">{{system.humanityLoss}}</span>
     </div>
   </div>

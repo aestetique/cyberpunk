@@ -36,6 +36,21 @@
       "lang": "en",
       "name": "English",
       "path": "lang/en.json"
+    },
+    {
+      "lang": "ru",
+      "name": "Russian",
+      "path": "lang/ru.json"
+    },
+    {
+      "lang": "it",
+      "name": "Italian",
+      "path": "lang/it.json"
+    },
+    {
+      "lang": "es",
+      "name": "Spanish",
+      "path": "lang/es.json"
     }
   ],
   "socket": false,

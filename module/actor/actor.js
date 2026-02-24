@@ -409,7 +409,6 @@ export class CyberpunkActor extends Actor {
   reorderSkills(sortOrder = "Name") {
     let allSkills = this.itemTypes.skill;
     sortOrder = sortOrder || Object.keys(SortModes)[0];
-    console.log(`Sorting skills by ${sortOrder}`);
     let sortedView = sortSkills(allSkills, SortModes[sortOrder]).map(skill => skill.id);
 
     this.update({
@@ -679,7 +678,6 @@ export class CyberpunkActor extends Actor {
       .map(martial => martial.name);
   }
 
-  // TODO: Make this doable with just skill name
   static effectiveSkillLevel(skill) {
     // Sometimes we use this to sort raw item data before it becomes a full-fledged item. So we use either system or data, as needed
     if (!skill) return 0;
@@ -1299,13 +1297,11 @@ export class CyberpunkActor extends Actor {
   /*
    * Adds this actor to the current encounter - if there isn't one, this just shows an error - and rolls their initiative
    */
-  async enterCombatWithInitiative(modificator, options = {createCombatants: true}) {
+  async enterCombatWithInitiative(modifier, options = {createCombatants: true}) {
     if(!game.combat) {
       ui.notifications.error(localize("NoCombatError"));
       return;
     }
-  
-    console.log(modificator);
   
     const combat = game.combat;
     let combatant = combat.combatants.find(c => c.actorId === this.id);

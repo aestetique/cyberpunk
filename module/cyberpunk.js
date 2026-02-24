@@ -1,7 +1,7 @@
 import { CyberpunkActor } from "./actor/actor.js";
 import { CyberpunkActorSheet } from "./actor/actor-sheet.js";
 import { CyberpunkItem } from "./item/item.js";
-import { CyberpunkItemSheet } from "./item/item-sheet.js";
+import { CyberpunkLegacyItemSheet } from "./item/item-sheet.js";
 import { CyberpunkRoleSheet } from "./item/role-sheet.js";
 import { CyberpunkSkillSheet } from "./item/skill-sheet.js";
 import { CyberpunkCommoditySheet } from "./item/commodity-sheet.js";
@@ -29,7 +29,7 @@ Hooks.once('init', async function () {
 
     // Place classes in system namespace for later reference.
     game.cyberpunk = {
-        entities: {
+        documents: {
             CyberpunkActor,
             CyberpunkItem,
         },
@@ -63,7 +63,7 @@ Hooks.once('init', async function () {
     Actors.unregisterSheet("core", ActorSheet);
     Actors.registerSheet("cyberpunk", CyberpunkActorSheet, { makeDefault: true });
     Items.unregisterSheet("core", ItemSheet);
-    Items.registerSheet("cyberpunk", CyberpunkItemSheet, { makeDefault: true });
+    Items.registerSheet("cyberpunk", CyberpunkLegacyItemSheet, { makeDefault: true });
     Items.registerSheet("cyberpunk", CyberpunkRoleSheet, {
         types: ["role"],
         makeDefault: true,

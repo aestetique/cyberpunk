@@ -4157,7 +4157,7 @@ input.skill-value.skill-level-input:focus {
 }
 .role-card .skill-drop.filled .remove-special-skill {
   width: 16px;
-  height: 16px;
+  height: 26px;
   padding: 0;
   border: none;
   background: transparent;
@@ -4191,7 +4191,7 @@ input.skill-value.skill-level-input:focus {
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 24px;
 }
 
 .role-card .career-skills-frame {
@@ -4219,7 +4219,7 @@ input.skill-value.skill-level-input:focus {
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 24px;
   text-align: center;
 }
 
@@ -4271,7 +4271,7 @@ input.skill-value.skill-level-input:focus {
 }
 .role-card .career-skill-item .remove-career-skill {
   width: 16px;
-  height: 16px;
+  height: 26px;
   padding: 0;
   border: none;
   background: transparent;
@@ -4431,7 +4431,7 @@ input.skill-value.skill-level-input:focus {
 
 .outfit-card .sp-row {
   display: flex;
-  gap: 24px;
+  gap: 40px;
   width: 100%;
   justify-content: center;
 }
@@ -4440,7 +4440,7 @@ input.skill-value.skill-level-input:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
 }
 
 .outfit-card .sp-values {
@@ -6178,7 +6178,7 @@ input.skill-value.skill-level-input:focus {
   font-family: var(--font-blender);
   font-size: 14px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 24px;
 }
 
 .tool-card .remove-bonus,
@@ -6606,7 +6606,7 @@ input.skill-value.skill-level-input:focus {
   flex-shrink: 0;
 }
 .cyberware-card .bonus-indicator {
-  color: #6B8E23;
+  color: #1A804D;
   font-family: var(--font-blender);
   font-size: 12px;
   font-weight: 400;
@@ -6616,7 +6616,7 @@ input.skill-value.skill-level-input:focus {
 }
 .cyberware-card .dual-value.with-bonus,
 .cyberware-card .variable-value.with-bonus {
-  color: #6B8E23;
+  color: #1A804D;
 }
 .cyberware-card .bonus-row {
   display: flex;
@@ -6761,7 +6761,7 @@ input.skill-value.skill-level-input:focus {
   font-family: var(--font-blender);
   font-size: 14px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 24px;
 }
 .cyberware-card .weapon-divider {
   width: 100%;
@@ -6797,7 +6797,7 @@ input.skill-value.skill-level-input:focus {
 }
 .cyberware-card .sp-row {
   display: flex;
-  gap: 24px;
+  gap: 40px;
   width: 100%;
   justify-content: center;
 }
@@ -6805,7 +6805,7 @@ input.skill-value.skill-level-input:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
 }
 .cyberware-card .sp-values {
   display: flex;
@@ -6878,3 +6878,5 @@ input.skill-value.skill-level-input:focus {
 .cyberware-card .sp-input {
   -moz-appearance: textfield;
 }
+
+/*# sourceMappingURL=cyberpunk.css.map */

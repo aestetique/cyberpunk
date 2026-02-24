@@ -25,8 +25,9 @@ export function safeLocalize(key, fallback = key) {
     return game.i18n.has(fullKey) ? game.i18n.localize(fullKey) : fallback;
 }
 
-export function formatLocale(key, data) {
-    return game.i18n.format(I18N_PREFIX + key, data);
+export function getMartialKeyByName(name) {
+    const martials = game.i18n.translations.CYBERPUNK?.martials ?? {};
+    return Object.entries(martials).find(([, v]) => v === name)?.[0];
 }
 
 export function localizeShort(key) {

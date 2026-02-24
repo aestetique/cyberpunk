@@ -1,3 +1,5 @@
+import { localize } from "../utils.js";
+
 /**
  * Base Item Sheet with custom card design and lock/unlock functionality
  * All item sheets (skill, role, etc.) should extend this class
@@ -73,7 +75,7 @@ export class CyberpunkItemSheet extends ItemSheet {
     html.find('[data-action="copyUuid"]').click(ev => {
       ev.preventDefault();
       game.clipboard.copyPlainText(this.item.uuid);
-      ui.notifications.info(`Copied UUID: ${this.item.uuid}`);
+      ui.notifications.info(localize("CopiedUUID", { uuid: this.item.uuid }));
     });
 
     // Portrait click handler

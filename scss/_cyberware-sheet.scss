@@ -254,7 +254,7 @@
 
   // Bonus indicator for SDP bonuses from attached options
   .bonus-indicator {
-    color: #6B8E23; // Olive green for positive bonus
+    color: #1A804D;
     font-family: var(--font-blender);
     font-size: 12px;
     font-weight: 400;
@@ -266,7 +266,7 @@
   // Boosted value styling (green text)
   .dual-value.with-bonus,
   .variable-value.with-bonus {
-    color: #6B8E23;
+    color: #1A804D;
   }
 
   // ============================================
@@ -438,7 +438,7 @@
       font-family: var(--font-blender);
       font-size: 14px;
       font-weight: 400;
-      line-height: 16px;
+      line-height: 24px;
     }
   }
 
@@ -488,7 +488,7 @@
 
   .sp-row {
     display: flex;
-    gap: 24px;
+    gap: 40px;
     width: 100%;
     justify-content: center;
   }
@@ -497,7 +497,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 10px;
   }
 
   .sp-values {

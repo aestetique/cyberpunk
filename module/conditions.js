@@ -36,17 +36,17 @@ export const WOUND_STATE_TO_CONDITION = {
 };
 
 /**
- * Cover type definitions: key -> { sp, label }
+ * Cover type definitions: key -> { sp, label, desc }
  */
 export const COVER_TYPES = {
-    drywall:  { sp: 5,  label: "Drywall" },
-    concrete: { sp: 10, label: "Concrete" },
-    hardwood: { sp: 15, label: "Hardwood" },
-    steel:    { sp: 20, label: "Steel" },
-    brick:    { sp: 25, label: "Brick" },
-    stone:    { sp: 30, label: "Stone" },
-    utility:  { sp: 35, label: "Utility" },
-    kevlar:   { sp: 40, label: "Kevlar" }
+    drywall:  { sp: 5,  label: "Drywall",  desc: "Thin interior wall. Reduces incoming damage by 5." },
+    concrete: { sp: 10, label: "Concrete", desc: "Solid concrete barrier. Reduces incoming damage by 10." },
+    hardwood: { sp: 15, label: "Hardwood", desc: "Heavy wooden furniture or wall. Reduces incoming damage by 15." },
+    steel:    { sp: 20, label: "Steel",    desc: "Steel door or plate. Reduces incoming damage by 20." },
+    brick:    { sp: 25, label: "Brick",    desc: "Brick wall. Reduces incoming damage by 25." },
+    stone:    { sp: 30, label: "Stone",    desc: "Stone wall or pillar. Reduces incoming damage by 30." },
+    utility:  { sp: 35, label: "Utility",  desc: "Utility pole or heavy machinery. Reduces incoming damage by 35." },
+    kevlar:   { sp: 40, label: "Kevlar",   desc: "Kevlar-reinforced barricade. Reduces incoming damage by 40." }
 };
 
 /**
@@ -664,33 +664,33 @@ export const STRESS_GENERAL_PENALTIES = {
  */
 export const CONDITION_TOGGLE_ROWS = [
     [
-        { id: "grappling",    label: "Grappling",    icon: "grappling" },
-        { id: "restrained",   label: "Restrained",   icon: "restrained" },
-        { id: "immobilized",  label: "Immobilized",  icon: "immobilized" },
-        { id: "prone",        label: "Prone",        icon: "prone" },
-        { id: "action-surge", label: "Action Surge", icon: "action-surge" },
-        { id: "shocked",      label: "Shocked",      icon: "shocked" },
-        { id: "stabilized",   label: "Stabilized",   icon: "stabilized" },
-        { id: "unconscious",  label: "Unconscious",  icon: "unconscious" }
+        { id: "grappling",    label: "Grappling",    icon: "grappling",    flavor: "Locked in a close-quarters struggle with an opponent.", calc: "−2 on all checks" },
+        { id: "restrained",   label: "Restrained",   icon: "restrained",   flavor: "Bound or held in place by physical restraints.", calc: "−2 on all checks" },
+        { id: "immobilized",  label: "Immobilized",  icon: "immobilized",  flavor: "Unable to move from current position.", calc: "MA = 0" },
+        { id: "prone",        label: "Prone",        icon: "prone",        flavor: "Knocked down or lying flat on the ground.", calc: "MA = 0" },
+        { id: "action-surge", label: "Action Surge", icon: "action-surge", flavor: "Pushing beyond normal limits to act twice in a single turn.", calc: "Extra action | −3 on all checks" },
+        { id: "shocked",      label: "Shocked",      icon: "shocked",      flavor: "Overwhelmed by pain or trauma, unable to respond.", calc: "Cannot act" },
+        { id: "stabilized",   label: "Stabilized",   icon: "stabilized",   flavor: "Vital signs stabilized by medical intervention.", calc: "Skip Death Save at turn start" },
+        { id: "unconscious",  label: "Unconscious",  icon: "unconscious",  flavor: "Completely unaware and unresponsive.", calc: "Cannot act | −8 Awareness" }
     ],
     [
-        { id: "poisoned",  label: "Poisoned", icon: "poisoned" },
-        { id: "confused",  label: "Confused", icon: "confused" },
-        { id: "tearing",   label: "Tearing",  icon: "tearing" },
-        { id: "burning",   label: "Burning",  icon: "burning" },
-        { id: "acid",      label: "Acid",     icon: "acid" },
-        { id: "shorted",   label: "Shorted",  icon: "microwave" },
-        { id: "blinded",   label: "Blinded",  icon: "blinded" },
-        { id: "deafened",  label: "Deafened",  icon: "deafened" }
+        { id: "poisoned",  label: "Poisoned", icon: "poisoned",  flavor: "Toxins coursing through the body, impairing reflexes.", calc: "REF −4" },
+        { id: "confused",  label: "Confused", icon: "confused",  flavor: "Mental faculties scrambled, unable to think clearly.", calc: "INT −4" },
+        { id: "tearing",   label: "Tearing",  icon: "tearing",   flavor: "Eyes burning from tear gas exposure.", calc: "REF −2" },
+        { id: "burning",   label: "Burning",  icon: "burning",   flavor: "Engulfed in flames, taking escalating damage each turn.", calc: "2d10 → 1d10 → 1d6 over 3 turns" },
+        { id: "acid",      label: "Acid",     icon: "acid",      flavor: "Corrosive substance eating through protective gear.", calc: "Armor −1d6 SP/round for 3 rounds" },
+        { id: "shorted",   label: "Shorted",  icon: "microwave", flavor: "Neural circuits disrupted by electromagnetic pulse.", calc: "REF −3" },
+        { id: "blinded",   label: "Blinded",  icon: "blinded",   flavor: "Unable to see, relying on other senses.", calc: "Cannot see | −4 Awareness" },
+        { id: "deafened",  label: "Deafened",  icon: "deafened",  flavor: "Hearing compromised, struggling to perceive surroundings.", calc: "−2 Awareness" }
     ],
     [
-        { id: "lost-left-arm",  label: "Left Arm",    icon: "lost-left-arm" },
-        { id: "lost-right-arm", label: "Right Arm",   icon: "lost-right-arm" },
-        { id: "lost-left-leg",  label: "Left Leg",    icon: "lost-left-leg" },
-        { id: "lost-right-leg", label: "Right Leg",   icon: "lost-right-leg" },
-        { id: "suffocating",    label: "Suffocating",  icon: "suffocating" },
-        { id: "jacked-in",      label: "Jacked In",    icon: "jacked-in" },
-        { id: "cyberpsycho",    label: "Cyberpsycho",  icon: "cyberpsycho" },
-        { id: "dead",           label: "Dead",         icon: "dead" }
+        { id: "lost-left-arm",  label: "Left Arm",    icon: "lost-left-arm",  flavor: "Limb severed or rendered completely nonfunctional.", calc: "Left arm destroyed" },
+        { id: "lost-right-arm", label: "Right Arm",   icon: "lost-right-arm", flavor: "Limb severed or rendered completely nonfunctional.", calc: "Right arm destroyed" },
+        { id: "lost-left-leg",  label: "Left Leg",    icon: "lost-left-leg",  flavor: "Limb severed or rendered completely nonfunctional.", calc: "Left leg destroyed | MA = 0" },
+        { id: "lost-right-leg", label: "Right Leg",   icon: "lost-right-leg", flavor: "Limb severed or rendered completely nonfunctional.", calc: "Right leg destroyed | MA = 0" },
+        { id: "suffocating",    label: "Suffocating",  icon: "suffocating",   flavor: "Running out of breathable air.", calc: "Risk of death" },
+        { id: "jacked-in",      label: "Jacked In",    icon: "jacked-in",     flavor: "Mind plugged directly into cyberspace.", calc: "Connected to the Net" },
+        { id: "cyberpsycho",    label: "Cyberpsycho",  icon: "cyberpsycho",   flavor: "Humanity stripped away by excessive cyberware.", calc: "EMP = 0 | GM control" },
+        { id: "dead",           label: "Dead",         icon: "dead",          flavor: "Flatlined. No coming back without extraordinary measures.", calc: "Cannot act" }
     ]
 ];

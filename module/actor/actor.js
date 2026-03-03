@@ -204,6 +204,13 @@ export class CyberpunkActor extends Actor {
     else if(woundState == 2) {
       woundStat(stats.ref, total => total - 2);
     }
+
+    // Save thresholds (stored for Monk's Token Bar accessibility)
+    const stunBase = body.total - woundState + 1;
+    system.stunSave = stunBase + (system.stunSaveMod || 0);
+    system.poisonSave = stunBase + (system.poisonSaveMod || 0);
+    system.deathSave = stunBase + 3 + (system.deathSaveMod || 0);
+
     // Calculate and configure humanity
     // Humanity damage is PERMANENT (only restored through therapy)
     const emp = stats.emp;
@@ -1119,6 +1126,19 @@ export class CyberpunkActor extends Actor {
     // Determine success: natural 1 always fails, otherwise compare to difficulty
     const success = !isNatural1 && roll.total >= difficulty;
 
+    // Auto IP gain on success (not for chipped skills)
+    let ipGained = 0;
+    if (success && !isChipped) {
+      const firstDigit = parseInt(String(roll.total)[0]);
+      const isCrit = d10Result === 10;
+      ipGained = firstDigit + (isCrit ? 1 : 0);
+      const currentIp = skill.system.ip || 0;
+      await this.updateEmbeddedDocuments("Item", [{
+        _id: skillId,
+        "system.ip": currentIp + ipGained
+      }]);
+    }
+
     // Create chat message
     const speaker = ChatMessage.getSpeaker({ actor: this });
     new RollBundle(skill.name)
@@ -1126,7 +1146,8 @@ export class CyberpunkActor extends Actor {
       .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: skill.system.stat,
         difficulty: difficulty,
-        success: success
+        success: success,
+        ipGained: ipGained
       });
 
     // Roll fumble on natural 1

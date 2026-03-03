@@ -31,15 +31,15 @@
               <img class="portrait-img" src="{{actor.img}}" title="{{actor.name}}">
             </div>
             <div class="action-buttons">
-              <button class="action-btn stun-save" type="button" title="Roll Stun Save">
+              <button class="action-btn stun-save" type="button" data-flavor="{{stunSaveFlavor}}" data-calc="{{stunSaveCalc}}" data-token-path="@stunSave">
                 <span class="action-btn-name">Shock</span>
                 <span class="btn-value">{{stunSaveTotal}}</span>
               </button>
-              <button class="action-btn poison-save" type="button" title="Roll Poison Save">
+              <button class="action-btn poison-save" type="button" data-flavor="{{poisonSaveFlavor}}" data-calc="{{poisonSaveCalc}}" data-token-path="@poisonSave">
                 <span class="action-btn-name">Poison</span>
                 <span class="btn-value">{{poisonSaveTotal}}</span>
               </button>
-              <button class="action-btn death-save" type="button" title="Roll Death Save">
+              <button class="action-btn death-save" type="button" data-flavor="{{deathSaveFlavor}}" data-calc="{{deathSaveCalc}}" data-token-path="@deathSave">
                 <span class="action-btn-name">Death</span>
                 <span class="btn-value">{{deathSaveTotal}}</span>
               </button>
@@ -56,7 +56,7 @@
             <div class="armor-content">
               {{!-- Column 1: Left Arm, Left Leg --}}
               <div class="armor-column">
-                <div class="armor-slot armor-arm">
+                <div class="armor-slot armor-arm" {{#if armorBlocks.lArm.flavor}}data-tooltip-name="{{armorBlocks.lArm.tooltipName}}" data-flavor="{{armorBlocks.lArm.flavor}}" data-calc="{{armorBlocks.lArm.calc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/larm-{{armorBlocks.lArm.state}}.svg" alt="Left Arm">
                   {{#unless armorBlocks.lArm.isLost}}
                     {{#if armorBlocks.lArm.sdp}}
@@ -67,7 +67,7 @@
                     {{/if}}
                   {{/unless}}
                 </div>
-                <div class="armor-slot armor-leg">
+                <div class="armor-slot armor-leg" {{#if armorBlocks.lLeg.flavor}}data-tooltip-name="{{armorBlocks.lLeg.tooltipName}}" data-flavor="{{armorBlocks.lLeg.flavor}}" data-calc="{{armorBlocks.lLeg.calc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/lleg-{{armorBlocks.lLeg.state}}.svg" alt="Left Leg">
                   {{#unless armorBlocks.lLeg.isLost}}
                     {{#if armorBlocks.lLeg.sp}}
@@ -82,19 +82,19 @@
 
               {{!-- Column 2: Head, Torso, BTM --}}
               <div class="armor-column armor-column-center">
-                <div class="armor-slot armor-head">
+                <div class="armor-slot armor-head" {{#if armorBlocks.Head.flavor}}data-tooltip-name="{{armorBlocks.Head.tooltipName}}" data-flavor="{{armorBlocks.Head.flavor}}" data-calc="{{armorBlocks.Head.calc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/head-{{armorBlocks.Head.state}}.svg" alt="Head">
                   {{#if armorBlocks.Head.sp}}
                     <span class="armor-sp">{{armorBlocks.Head.sp}}</span>
                   {{/if}}
                 </div>
-                <div class="armor-slot armor-torso">
+                <div class="armor-slot armor-torso" {{#if armorBlocks.Torso.flavor}}data-tooltip-name="{{armorBlocks.Torso.tooltipName}}" data-flavor="{{armorBlocks.Torso.flavor}}" data-calc="{{armorBlocks.Torso.calc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/torso-{{armorBlocks.Torso.state}}.svg" alt="Torso">
                   {{#if armorBlocks.Torso.sp}}
                     <span class="armor-sp">{{armorBlocks.Torso.sp}}</span>
                   {{/if}}
                 </div>
-                <div class="armor-slot armor-btm">
+                <div class="armor-slot armor-btm" {{#if armorBlocks.btmFlavor}}data-tooltip-name="{{armorBlocks.btmTooltipName}}" data-flavor="{{armorBlocks.btmFlavor}}" data-calc="{{armorBlocks.btmCalc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/btm.svg" alt="BTM">
                   {{#if armorBlocks.btm}}
                     <span class="armor-sp">{{armorBlocks.btm}}</span>
@@ -104,7 +104,7 @@
 
               {{!-- Column 3: Right Arm, Right Leg --}}
               <div class="armor-column">
-                <div class="armor-slot armor-arm">
+                <div class="armor-slot armor-arm" {{#if armorBlocks.rArm.flavor}}data-tooltip-name="{{armorBlocks.rArm.tooltipName}}" data-flavor="{{armorBlocks.rArm.flavor}}" data-calc="{{armorBlocks.rArm.calc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/rarm-{{armorBlocks.rArm.state}}.svg" alt="Right Arm">
                   {{#unless armorBlocks.rArm.isLost}}
                     {{#if armorBlocks.rArm.sdp}}
@@ -115,7 +115,7 @@
                     {{/if}}
                   {{/unless}}
                 </div>
-                <div class="armor-slot armor-leg">
+                <div class="armor-slot armor-leg" {{#if armorBlocks.rLeg.flavor}}data-tooltip-name="{{armorBlocks.rLeg.tooltipName}}" data-flavor="{{armorBlocks.rLeg.flavor}}" data-calc="{{armorBlocks.rLeg.calc}}"{{/if}}>
                   <img class="armor-bg" src="systems/cyberpunk/img/armor/rleg-{{armorBlocks.rLeg.state}}.svg" alt="Right Leg">
                   {{#unless armorBlocks.rLeg.isLost}}
                     {{#if armorBlocks.rLeg.sp}}
@@ -136,7 +136,7 @@
           <div class="character-identity">
             <div class="identity-left">
               <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#if isLocked}}readonly{{/if}}>
-              <div class="role-display" data-drop-target="role">
+              <div class="role-display" data-drop-target="role" data-flavor="{{roleFlavor}}">
                 <span class="role-label">{{#if roleLabel}}{{roleLabel}}{{else}}{{localize 'CYBERPUNK.DropRoleHere'}}{{/if}}</span>
                 {{#if roleUuid}}
                   <img class="role-view-icon" src="systems/cyberpunk/img/ui/icon-view.svg" alt="View" title="View Role" data-role-uuid="{{roleUuid}}">
@@ -165,12 +165,12 @@
           <div class="attributes-row">
             {{#each statButtons as |stat|}}
               {{#if ../isLocked}}
-              <button class="stat-btn stat-roll" type="button" data-stat-name="{{stat.key}}" title="{{stat.label}}">
+              <button class="stat-btn stat-roll" type="button" data-stat-name="{{stat.key}}" data-tooltip-name="{{stat.tooltipName}}" data-flavor="{{stat.flavor}}" data-calc="{{stat.calc}}" data-token-path="{{stat.tokenPath}}">
                 <span class="stat-name">{{stat.label}}</span>
                 <span class="stat-value">{{stat.total}}</span>
               </button>
               {{else}}
-              <div class="stat-btn stat-edit">
+              <div class="stat-btn stat-edit" data-tooltip-name="{{stat.tooltipName}}" data-flavor="{{stat.flavor}}" data-calc="{{stat.calc}}" data-token-path="{{stat.tokenPath}}">
                 <span class="stat-name">{{stat.label}}</span>
                 <input type="number" class="stat-value stat-input" name="{{stat.path}}" value="{{stat.base}}" min="1" max="10">
               </div>
@@ -181,7 +181,7 @@
           {{!-- Wounds + Humanity Block (620px, 66px, 16px gap from attributes) --}}
           <div class="wounds-humanity-block">
             {{!-- Wounds Row --}}
-            <div class="tracker-row wounds-row">
+            <div class="tracker-row wounds-row" data-tooltip-name="Wounds" data-flavor="{{woundsFlavor}}" data-calc="{{woundsCalc}}" data-token-path="@damage">
               <img class="tracker-badge" src="systems/cyberpunk/img/ui/badge-wounds.svg" alt="Wounds">
               {{#each woundBlocks as |block|}}
               <div class="tracker-block {{#if block.hasWound}}active{{/if}}">
@@ -199,7 +199,7 @@
             </div>
 
             {{!-- Humanity Row (click lost dots to restore via therapy) --}}
-            <div class="tracker-row humanity-row">
+            <div class="tracker-row humanity-row" data-tooltip-name="Humanity" data-flavor="{{humanityFlavor}}" data-calc="{{humanityCalc}}" data-token-path="@stats.emp.humanity.total">
               <img class="tracker-badge" src="systems/cyberpunk/img/ui/badge-humanity.svg" alt="Humanity">
               {{#each humanityBlocks as |block|}}
               <div class="tracker-block {{#if block.active}}active{{/if}} {{#if block.disabled}}disabled{{/if}}">
@@ -221,7 +221,7 @@
           {{!-- Info Row (620px, 50px, 16px gap from trackers) --}}
           <div class="info-row">
             {{#each infoBlocks as |info|}}
-            <div class="info-block">
+            <div class="info-block" data-tooltip-name="{{info.label}}" data-flavor="{{info.flavor}}" {{#if info.calc}}data-calc="{{info.calc}}"{{/if}} data-token-path="{{info.tokenPath}}">
               <span class="info-name">{{info.label}}</span>
               {{#if info.editable}}
                 {{#if ../isLocked}}
@@ -262,42 +262,42 @@
                 </header>
                 <div class="tab-content state-row">
                   {{!-- Stress --}}
-                  <div class="state-block">
+                  <div class="state-block" data-tooltip-name="Stress" data-flavor="{{stressTooltipFlavor}}" data-calc="{{stressTooltipCalc}}" data-token-path="@stress">
                     <span class="state-label">Stress</span>
                     <div class="state-value-row">
-                      <img class="state-btn state-up" data-field="system.stress" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
+                      <img class="state-btn state-up" data-field="system.stress" title="Roll Stress" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
                       <span class="state-value">{{system.stress}}</span>
-                      <img class="state-btn state-down" data-field="system.stress" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
+                      <img class="state-btn state-down" data-field="system.stress" title="Decrease" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
                     </div>
                     <span class="state-status">{{stressStatus}}</span>
                   </div>
                   {{!-- Fright --}}
-                  <div class="state-block">
+                  <div class="state-block" data-tooltip-name="Fright" data-flavor="{{frightTooltipFlavor}}" data-calc="{{frightTooltipCalc}}" data-token-path="@fright">
                     <span class="state-label">Fright</span>
                     <div class="state-value-row">
-                      <img class="state-btn state-up" data-field="system.fright" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
+                      <img class="state-btn state-up" data-field="system.fright" title="Increase" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
                       <span class="state-value">{{system.fright}}</span>
-                      <img class="state-btn state-down" data-field="system.fright" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
+                      <img class="state-btn state-down" data-field="system.fright" title="Decrease" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
                     </div>
                     <span class="state-status">{{frightStatus}}</span>
                   </div>
                   {{!-- Fatigue --}}
-                  <div class="state-block">
+                  <div class="state-block" data-tooltip-name="Fatigue" data-flavor="{{fatigueTooltipFlavor}}" data-calc="{{fatigueTooltipCalc}}" data-token-path="@fatigue">
                     <span class="state-label">Fatigue</span>
                     <div class="state-value-row">
-                      <img class="state-btn state-up" data-field="system.fatigue" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
+                      <img class="state-btn state-up" data-field="system.fatigue" title="Increase" src="systems/cyberpunk/img/ui/badge-up.svg" alt="Increase">
                       <span class="state-value">{{system.fatigue}}</span>
-                      <img class="state-btn state-down" data-field="system.fatigue" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
+                      <img class="state-btn state-down" data-field="system.fatigue" title="Decrease" src="systems/cyberpunk/img/ui/badge-down.svg" alt="Decrease">
                     </div>
                     <span class="state-status">{{fatigueStatus}}</span>
                   </div>
                   {{!-- Wounds --}}
-                  <div class="state-block">
+                  <div class="state-block" data-tooltip-name="Wounds" data-flavor="{{woundsTooltipFlavor}}" data-calc="{{woundsTooltipCalc}}" data-token-path="@damage">
                     <span class="state-label">Wounds</span>
                     <div class="state-value-row">
-                      <img class="state-btn stabilize-btn" src="systems/cyberpunk/img/ui/badge-stabilize.svg" alt="Stabilize">
+                      <img class="state-btn stabilize-btn" title="First Aid" src="systems/cyberpunk/img/ui/badge-stabilize.svg" alt="Stabilize">
                       <span class="state-value">{{system.damage}}</span>
-                      <img class="state-btn heal-btn" src="systems/cyberpunk/img/ui/badge-heal.svg" alt="Heal">
+                      <img class="state-btn heal-btn" title="Heal" src="systems/cyberpunk/img/ui/badge-heal.svg" alt="Heal">
                     </div>
                     <span class="state-status">{{woundStatus}}</span>
                   </div>
@@ -311,7 +311,7 @@
                 </header>
                 <div class="cover-row">
                   {{#each coverToggles}}
-                  <div class="condition-toggle cover-toggle {{#if this.active}}active{{/if}}" data-cover-key="{{this.key}}">
+                  <div class="condition-toggle cover-toggle {{#if this.active}}active{{/if}}" data-cover-key="{{this.key}}" data-tooltip-name="{{this.label}}" data-flavor="{{this.desc}}">
                     <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/cover-{{#if this.active}}on{{else}}off{{/if}}.svg')">
                       <span class="condition-toggle-number">{{this.sp}}</span>
                     </div>
@@ -329,7 +329,7 @@
                 {{#each conditionToggleRows}}
                 <div class="conditions-row">
                   {{#each this}}
-                  <div class="condition-toggle cond-toggle {{#if this.active}}active{{/if}}" data-condition-id="{{this.id}}">
+                  <div class="condition-toggle cond-toggle {{#if this.active}}active{{/if}}" data-condition-id="{{this.id}}" data-tooltip-name="{{this.label}}" data-flavor="{{this.flavor}}" data-calc="{{this.calc}}">
                     <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/{{this.icon}}-{{#if this.active}}on{{else}}off{{/if}}.svg')">
                     </div>
                     <span class="condition-toggle-label">{{this.label}}</span>

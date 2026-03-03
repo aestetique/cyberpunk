@@ -11,3 +11,6 @@ package-lock.json
 # Node Modules
 node_modules/
 npm-debug.log
+
+# Import scripts (one-time use)
+scripts/

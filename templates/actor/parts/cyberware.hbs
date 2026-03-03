@@ -36,7 +36,7 @@
             <span class="field-top">{{cyber.slotDisplay}}</span>
             <span class="field-bottom">Option Slots</span>
           </div>
-          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" data-structurally-broken="{{cyber.isStructurallyBroken}}">
+          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" data-structurally-broken="{{cyber.isStructurallyBroken}}" title="{{#if cyber.isStructurallyBroken}}Broken{{else if cyber.equipped}}Disable{{else}}Enable{{/if}}">
             {{#if cyber.isStructurallyBroken}}
               {{#if cyber.equipped}}
                 <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Broken">
@@ -198,7 +198,7 @@
             <span class="field-top">{{cyber.slotDisplay}}</span>
             <span class="field-bottom">Option Slots</span>
           </div>
-          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" data-structurally-broken="{{cyber.isStructurallyBroken}}">
+          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" data-structurally-broken="{{cyber.isStructurallyBroken}}" title="{{#if cyber.isStructurallyBroken}}Broken{{else if cyber.equipped}}Disable{{else}}Enable{{/if}}">
             {{#if cyber.isStructurallyBroken}}
               {{#if cyber.equipped}}
                 <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Broken">
@@ -354,7 +354,7 @@
             <span class="field-bottom">Humanity Loss</span>
           </div>
           <div class="gear-field" style="width: 80px;"></div>
-          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}">
+          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" title="{{#if cyber.equipped}}Disable{{else}}Enable{{/if}}">
             {{#if cyber.equipped}}
               <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
             {{else}}
@@ -411,7 +411,7 @@
             <span class="field-bottom">Humanity Loss</span>
           </div>
           <div class="gear-field" style="width: 80px;"></div>
-          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}">
+          <div class="gear-action-btn toggle-cyberware" data-item-id="{{cyber.id}}" data-equipped="{{cyber.equipped}}" title="{{#if cyber.equipped}}Disable{{else}}Enable{{/if}}">
             {{#if cyber.equipped}}
               <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
             {{else}}

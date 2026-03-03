@@ -52,4 +52,11 @@
         </div>
     </div>
     {{/each}}
+
+    {{!-- IP Gain Hint (on success) --}}
+    {{#if ipGained}}
+    <div class="fumble-hint-container">
+        <span class="card-hint">+{{ipGained}} IP</span>
+    </div>
+    {{/if}}
 </div>

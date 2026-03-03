@@ -8,7 +8,7 @@
   <div class="tab-content skills-content">
     <div class="skills-column">
       {{#each skillsLeft as |skill|}}
-        <div class="skill-row{{#if skill.isVirtual}} virtual-skill{{/if}}" data-skill-id="{{skill.id}}">
+        <div class="skill-row{{#if skill.isVirtual}} virtual-skill{{/if}}" data-skill-id="{{skill.id}}" data-flavor="{{skill.flavor}}">
           <div class="skill-type-icon">
             {{#if skill.isChipped}}
               <img src="systems/cyberpunk/img/ui/icon-chipped.svg" alt="Chipped" title="Chipped">
@@ -50,7 +50,7 @@
     </div>
     <div class="skills-column">
       {{#each skillsRight as |skill|}}
-        <div class="skill-row{{#if skill.isVirtual}} virtual-skill{{/if}}" data-skill-id="{{skill.id}}">
+        <div class="skill-row{{#if skill.isVirtual}} virtual-skill{{/if}}" data-skill-id="{{skill.id}}" data-flavor="{{skill.flavor}}">
           <div class="skill-type-icon">
             {{#if skill.isChipped}}
               <img src="systems/cyberpunk/img/ui/icon-chipped.svg" alt="Chipped" title="Chipped">

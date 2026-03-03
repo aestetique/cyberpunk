@@ -179,7 +179,7 @@ export class CyberpunkActorSheet extends ActorSheet {
   /* -------------------------------------------- */
 
   /** @override */
-  getData(options) {
+  async getData(options) {
     const sheetData = super.getData(options);
     const actor = this.actor;
     const system = actor.system;
@@ -196,23 +196,26 @@ export class CyberpunkActorSheet extends ActorSheet {
         system.transient = { skillFilter: "" };
       }
 
+      // Role data for template - fetch from compendium or world
+      sheetData.roleUuid = system.role?.uuid || "";
+      let roleItem = null;
+      if (sheetData.roleUuid) {
+        roleItem = await fromUuid(sheetData.roleUuid);
+        sheetData.roleLabel = roleItem?.name || game.i18n.localize("CYBERPUNK.NoRoleSelected");
+        sheetData.roleFlavor = roleItem?.system?.flavor || "";
+      } else {
+        sheetData.roleLabel = game.i18n.localize("CYBERPUNK.NoRoleSelected");
+        sheetData.roleFlavor = "";
+      }
+
       // Prepare character-related items and data
       this._organizeInventory(sheetData);
       this._buildWoundLabels(sheetData);
-      this._buildSkillDisplay(sheetData);
+      this._buildSkillDisplay(sheetData, roleItem);
       this._buildGearDisplay(sheetData);
       this._buildCyberwareDisplay(sheetData);
 
       sheetData.weaponTypes = weaponTypes;
-
-      // Role data for template - fetch current name from role item
-      sheetData.roleUuid = system.role?.uuid || "";
-      if (sheetData.roleUuid) {
-        const roleItem = fromUuidSync(sheetData.roleUuid);
-        sheetData.roleLabel = roleItem?.name || game.i18n.localize("CYBERPUNK.NoRoleSelected");
-      } else {
-        sheetData.roleLabel = game.i18n.localize("CYBERPUNK.NoRoleSelected");
-      }
 
       // Calculate totals for the action buttons
       const refTotal = system.stats?.ref?.total || system.stats?.ref?.base || 0;
@@ -246,22 +249,94 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       // Overriding B.T to body and M.A to Move so it matches the design
       const stats = system.stats || {};
+
+      // Save tooltip data
+      const woundLevel = actor.getWoundLevel();
+
+      const buildSaveCalc = (baseThreshold, mod, label) => {
+        const parts = [`BT ${btTotal}`];
+        if (woundLevel > 0) parts.push(`\u2212 Wounds ${woundLevel}`);
+        parts.push("+ 1");
+        if (label === "Death") {
+          parts.push("+ 3");
+        }
+        if (mod !== 0) parts.push(`${mod > 0 ? "+" : "\u2212"} Mod ${Math.abs(mod)}`);
+        const total = baseThreshold + mod;
+        return `${parts.join(" ")} = ${total}`;
+      };
+
+      sheetData.stunSaveFlavor = "Roll 1d10 under threshold to avoid being Stunned. Threshold decreases as you take more wounds.";
+      sheetData.stunSaveCalc = buildSaveCalc(stunThreshold, stunSaveMod, "Shock");
+      sheetData.poisonSaveFlavor = "Roll 1d10 under threshold to resist poison effects. Uses the same base threshold as Shock Save.";
+      sheetData.poisonSaveCalc = buildSaveCalc(stunThreshold, poisonSaveMod, "Poison");
+      sheetData.deathSaveFlavor = "Roll 1d10 under threshold to avoid death. Threshold is 3 higher than Shock Save, decreasing with mortal wounds.";
+      sheetData.deathSaveCalc = buildSaveCalc(deathThreshold, deathSaveMod, "Death");
       const getStatLabel = (key) => {
         const overrides = { 'bt': 'body', 'ma': 'move' };
         return overrides[key] || game.i18n.localize(`CYBERPUNK.${key.charAt(0).toUpperCase() + key.slice(1)}`);
       };
-      
+
+      const statFlavors = {
+        int: "Problem solving ability, awareness, perception, memory, and the ability to learn quickly.",
+        ref: "Combined agility, manual dexterity, and reaction speed. Affects combat initiative and ranged weapon accuracy.",
+        tech: "Ability to manipulate tools or instruments. How well you relate to hardware and operate machinery.",
+        cool: "Ability to withstand stress, fear, pressure, physical pain, and/or torture.",
+        attr: "How good-looking you are. Determines first impressions and social interactions based on appearance.",
+        bt: "Size, toughness, and resistance to damage. Determines carrying capacity and Body Type Modifier.",
+        emp: "Ability to relate to and care about others. Reduced by cyberware through humanity loss.",
+        ma: "How fast you can move. Determines zones of movement per combat round.",
+        luck: "How the Universe smiles upon you. Spend Luck points to adjust important die rolls."
+      };
+
+      const buildStatCalc = (key) => {
+        const s = stats[key];
+        if (!s) return "";
+        const base = s.base ?? 0;
+        const parts = [`Base ${base}`];
+        const tempMod = s.tempMod || 0;
+        if (tempMod !== 0) parts.push(`Gear ${tempMod > 0 ? "+" : ""}${tempMod}`);
+        if (key === "ref" && s.armorMod) parts.push(`Armor ${s.armorMod}`);
+        if (key === "emp") {
+          const hloss = Math.floor((s.humanityDamage || 0) / 10);
+          if (hloss > 0) parts.push(`Humanity \u2212${hloss}`);
+        }
+        if (key === "luck" && (s.spent || 0) > 0) parts.push(`Spent \u2212${s.spent}`);
+        if (["ref", "int", "cool"].includes(key) && s.woundMod) parts.push(`Wounds ${s.woundMod}`);
+        const total = key === "luck" ? (s.effective ?? s.total ?? base) : (s.total ?? base);
+        let calc = parts.length > 1 ? `${parts.join(" ")} = ${total}` : `Base ${base}`;
+        if (key === "ma") calc += ` | Run ${s.run ?? 0} | Leap ${s.leap ?? 0}`;
+        if (key === "bt") calc += ` | Carry ${s.carry ?? 0}kg | Lift ${s.lift ?? 0}kg | BTM ${s.modifier ?? 0}`;
+        return calc;
+      };
+
+      const getStatFullName = (key) => {
+        const k = key.charAt(0).toUpperCase() + key.slice(1);
+        return game.i18n.localize(`CYBERPUNK.${k}Full`);
+      };
+
       sheetData.statButtons = [
-        { key: 'int', label: getStatLabel('int'), total: stats.int?.total ?? stats.int?.base ?? 0, base: stats.int?.base ?? 0, path: 'system.stats.int.base' },
-        { key: 'ref', label: getStatLabel('ref'), total: stats.ref?.total ?? stats.ref?.base ?? 0, base: stats.ref?.base ?? 0, path: 'system.stats.ref.base' },
-        { key: 'tech', label: getStatLabel('tech'), total: stats.tech?.total ?? stats.tech?.base ?? 0, base: stats.tech?.base ?? 0, path: 'system.stats.tech.base' },
-        { key: 'cool', label: getStatLabel('cool'), total: stats.cool?.total ?? stats.cool?.base ?? 0, base: stats.cool?.base ?? 0, path: 'system.stats.cool.base' },
-        { key: 'attr', label: getStatLabel('attr'), total: stats.attr?.total ?? stats.attr?.base ?? 0, base: stats.attr?.base ?? 0, path: 'system.stats.attr.base' },
-        { key: 'bt', label: getStatLabel('bt'), total: stats.bt?.total ?? stats.bt?.base ?? 0, base: stats.bt?.base ?? 0, path: 'system.stats.bt.base' },
-        { key: 'emp', label: getStatLabel('emp'), total: stats.emp?.total ?? stats.emp?.base ?? 0, base: stats.emp?.base ?? 0, path: 'system.stats.emp.base' },
-        { key: 'ma', label: getStatLabel('ma'), total: stats.ma?.total ?? stats.ma?.base ?? 0, base: stats.ma?.base ?? 0, path: 'system.stats.ma.base' },
-        { key: 'luck', label: getStatLabel('luck'), total: stats.luck?.effective ?? stats.luck?.total ?? stats.luck?.base ?? 0, base: stats.luck?.base ?? 0, path: 'system.stats.luck.base' }
+        { key: 'int', label: getStatLabel('int'), tooltipName: getStatFullName('int'), total: stats.int?.total ?? stats.int?.base ?? 0, base: stats.int?.base ?? 0, path: 'system.stats.int.base' },
+        { key: 'ref', label: getStatLabel('ref'), tooltipName: getStatFullName('ref'), total: stats.ref?.total ?? stats.ref?.base ?? 0, base: stats.ref?.base ?? 0, path: 'system.stats.ref.base' },
+        { key: 'tech', label: getStatLabel('tech'), tooltipName: getStatFullName('tech'), total: stats.tech?.total ?? stats.tech?.base ?? 0, base: stats.tech?.base ?? 0, path: 'system.stats.tech.base' },
+        { key: 'cool', label: getStatLabel('cool'), tooltipName: getStatFullName('cool'), total: stats.cool?.total ?? stats.cool?.base ?? 0, base: stats.cool?.base ?? 0, path: 'system.stats.cool.base' },
+        { key: 'attr', label: getStatLabel('attr'), tooltipName: getStatFullName('attr'), total: stats.attr?.total ?? stats.attr?.base ?? 0, base: stats.attr?.base ?? 0, path: 'system.stats.attr.base' },
+        { key: 'bt', label: getStatLabel('bt'), tooltipName: getStatFullName('bt'), total: stats.bt?.total ?? stats.bt?.base ?? 0, base: stats.bt?.base ?? 0, path: 'system.stats.bt.base' },
+        { key: 'emp', label: getStatLabel('emp'), tooltipName: getStatFullName('emp'), total: stats.emp?.total ?? stats.emp?.base ?? 0, base: stats.emp?.base ?? 0, path: 'system.stats.emp.base' },
+        { key: 'ma', label: getStatLabel('ma'), tooltipName: getStatFullName('ma'), total: stats.ma?.total ?? stats.ma?.base ?? 0, base: stats.ma?.base ?? 0, path: 'system.stats.ma.base' },
+        { key: 'luck', label: getStatLabel('luck'), tooltipName: getStatFullName('luck'), total: stats.luck?.effective ?? stats.luck?.total ?? stats.luck?.base ?? 0, base: stats.luck?.base ?? 0, path: 'system.stats.luck.base' }
       ];
+      const statTokenPaths = {
+        int: '@stats.int.total', ref: '@stats.ref.total',
+        tech: '@stats.tech.total', cool: '@stats.cool.total',
+        attr: '@stats.attr.total', bt: '@stats.bt.total',
+        emp: '@stats.emp.total', ma: '@stats.ma.total',
+        luck: '@stats.luck.effective'
+      };
+      for (const btn of sheetData.statButtons) {
+        btn.flavor = statFlavors[btn.key] || "";
+        btn.calc = buildStatCalc(btn.key);
+        btn.tokenPath = statTokenPaths[btn.key] || "";
+      }
 
       // Wound blocks data for template
       const damage = system.damage || 0;
@@ -338,20 +413,42 @@ export class CyberpunkActorSheet extends ActorSheet {
         });
       }
 
+      // Wounds tooltip data
+      const woundStatusLabel = damage > 40 ? "Dead"
+        : woundLevel === 0 ? "Healthy"
+        : { 1: "Light", 2: "Serious", 3: "Critical" }[woundLevel] || `Mortal ${woundLevel - 4}`;
+      sheetData.woundsFlavor = "Track wounds taken in 4-point blocks. Each wound level imposes cumulative penalties to Stun and Death saves.";
+      sheetData.woundsCalc = `Damage ${damage} / 40 \u2014 ${woundStatusLabel}`;
+
+      // Humanity tooltip data
+      const humanityDamage = emp.humanityDamage || 0;
+      sheetData.humanityFlavor = "Tracks humanity lost to cyberware and trauma. Every 10 points lost reduces current EMP by 1.";
+      sheetData.humanityCalc = humanityDamage > 0
+        ? `EMP ${emp.base || 0} \u00d7 10 \u2212 Loss ${humanityDamage} = ${humanityTotal}`
+        : `EMP ${emp.base || 0} \u00d7 10 = ${humanityBase}`;
+
       // Info blocks data for template
       const ma = stats.ma || {};
       const bt = stats.bt || {};
       const info = system.info || {};
 
       sheetData.infoBlocks = [
-        { key: 'walk', label: 'Walk', displayValue: `${ma.total ?? 0} m`, editable: false },
-        { key: 'run', label: 'Run', displayValue: `${ma.run ?? 0} m`, editable: false },
-        { key: 'leap', label: 'Leap', displayValue: `${ma.leap ?? 0} m`, editable: false },
-        { key: 'carry', label: 'Carry', displayValue: `${bt.carry ?? 0} kg`, editable: false },
-        { key: 'lift', label: 'Lift', displayValue: `${bt.lift ?? 0} kg`, editable: false },
-        { key: 'weight', label: 'Weight', displayValue: `${info.weight ?? 70} kg`, rawValue: info.weight ?? 70, path: 'system.info.weight', editable: true },
-        { key: 'height', label: 'Height', displayValue: `${info.height ?? 170} cm`, rawValue: info.height ?? 170, path: 'system.info.height', editable: true },
-        { key: 'age', label: 'Age', displayValue: `${info.age ?? 25}`, rawValue: info.age ?? 25, path: 'system.info.age', editable: true }
+        { key: 'walk', label: 'Walk', displayValue: `${ma.total ?? 0} m`, editable: false,
+          flavor: 'Base walking speed per combat turn.', calc: `MA ${ma.total ?? 0} \u00d7 1 = ${ma.total ?? 0} m`, tokenPath: '@stats.ma.total' },
+        { key: 'run', label: 'Run', displayValue: `${ma.run ?? 0} m`, editable: false,
+          flavor: 'Maximum running speed per combat turn.', calc: `MA ${ma.total ?? 0} \u00d7 3 = ${ma.run ?? 0} m`, tokenPath: '@stats.ma.run' },
+        { key: 'leap', label: 'Leap', displayValue: `${ma.leap ?? 0} m`, editable: false,
+          flavor: 'Maximum standing leap distance.', calc: `Run ${ma.run ?? 0} \u00f7 4 = ${ma.leap ?? 0} m`, tokenPath: '@stats.ma.leap' },
+        { key: 'carry', label: 'Carry', displayValue: `${bt.carry ?? 0} kg`, editable: false,
+          flavor: 'Maximum weight that can be carried without penalty.', calc: `BT ${bt.total ?? 0} \u00d7 10 = ${bt.carry ?? 0} kg`, tokenPath: '@stats.bt.carry' },
+        { key: 'lift', label: 'Lift', displayValue: `${bt.lift ?? 0} kg`, editable: false,
+          flavor: 'Maximum dead lift weight.', calc: `BT ${bt.total ?? 0} \u00d7 40 = ${bt.lift ?? 0} kg`, tokenPath: '@stats.bt.lift' },
+        { key: 'weight', label: 'Weight', displayValue: `${info.weight ?? 70} kg`, rawValue: info.weight ?? 70, path: 'system.info.weight', editable: true,
+          flavor: "Character's body weight.", tokenPath: '@info.weight' },
+        { key: 'height', label: 'Height', displayValue: `${info.height ?? 170} cm`, rawValue: info.height ?? 170, path: 'system.info.height', editable: true,
+          flavor: "Character's height.", tokenPath: '@info.height' },
+        { key: 'age', label: 'Age', displayValue: `${info.age ?? 25}`, rawValue: info.age ?? 25, path: 'system.info.age', editable: true,
+          flavor: "Character's age.", tokenPath: '@info.age' }
       ];
 
       // Character creation point tracking (for unlock mode)
@@ -361,21 +458,17 @@ export class CyberpunkActorSheet extends ActorSheet {
       }, 0);
       sheetData.charPoints = charPoints;
 
-      // Career and Pickup points from skills
-      const role = system.role;
+      // Career and Pickup points from skills (reuse roleItem fetched above)
       const allSkills = this.actor.itemTypes.skill || [];
       const careerSkillNames = new Set();
-      if (role?.uuid) {
-        const roleItem = fromUuidSync(role.uuid);
-        if (roleItem?.system?.careerSkills) {
-          roleItem.system.careerSkills.forEach(s => {
-            const name = typeof s === 'string' ? s : s.name;
-            careerSkillNames.add(name.toLowerCase());
-          });
-        }
-        if (roleItem?.system?.specialSkill?.name) {
-          careerSkillNames.add(roleItem.system.specialSkill.name.toLowerCase());
-        }
+      if (roleItem?.system?.careerSkills) {
+        roleItem.system.careerSkills.forEach(s => {
+          const name = typeof s === 'string' ? s : s.name;
+          careerSkillNames.add(name.toLowerCase());
+        });
+      }
+      if (roleItem?.system?.specialSkill?.name) {
+        careerSkillNames.add(roleItem.system.specialSkill.name.toLowerCase());
       }
 
       let careerPoints = 0;
@@ -456,6 +549,60 @@ export class CyberpunkActorSheet extends ActorSheet {
           isLost: armorState.rLeg?.state === 'lost'
         }
       };
+
+      // Armor location tooltip data
+      const locFullNames = { Head: 'Head', Torso: 'Torso', lArm: 'Left Arm', rArm: 'Right Arm', lLeg: 'Left Leg', rLeg: 'Right Leg' };
+      const equippedArmor = this.actor.items.filter(i => i.type === "armor" && i.system.equipped);
+      const equippedCyberarmor = this.actor.items.filter(i => i.type === "cyberware" && i.system.isArmor && i.system.equipped);
+      const activeCover = system.activeCover;
+
+      for (const loc of ['Head', 'Torso', 'lArm', 'rArm', 'lLeg', 'rLeg']) {
+        const block = sheetData.armorBlocks[loc];
+        if (!block) continue;
+
+        const layers = [];
+        equippedArmor.forEach(a => {
+          const cov = a.system.coverage?.[loc];
+          const sp = Math.max(0, (Number(cov?.stoppingPower) || 0) - (Number(cov?.ablation) || 0));
+          if (sp > 0) {
+            const type = a.system.armorType === 'hard' ? 'Hard' : 'Soft';
+            layers.push(`${a.name} (${type}): SP ${sp}`);
+          }
+        });
+        equippedCyberarmor.forEach(c => {
+          const cov = (c.system.armor?.coverage || {})[loc];
+          const sp = Math.max(0, (Number(cov?.stoppingPower) || 0) - (Number(cov?.ablation) || 0));
+          if (sp > 0) {
+            const type = (c.system.armor?.armorType === 'hard') ? 'Hard' : 'Soft';
+            layers.push(`${c.name} (${type}): SP ${sp}`);
+          }
+        });
+        if (activeCover && COVER_TYPES[activeCover]) {
+          layers.push(`Cover: ${COVER_TYPES[activeCover].label}: SP ${COVER_TYPES[activeCover].sp}`);
+        }
+
+        // Cyberlimb info (limbs only)
+        if (block.hasCyber) {
+          let cyberLine = `Cyberlimb SDP: ${block.sdp}/${block.maxSdp}`;
+          if (block.isBroken) cyberLine += ' (Disabled)';
+          else if (block.isDamaged) cyberLine += ' (Damaged)';
+          layers.push(cyberLine);
+        }
+
+        if (layers.length > 0) {
+          block.tooltipName = locFullNames[loc];
+          block.flavor = 'Stopping power at this hit location.';
+          block.calc = layers.join('<br>');
+        }
+      }
+
+      // BTM tooltip
+      if (btm > 0) {
+        const btTotal = stats.bt?.total ?? stats.bt?.base ?? 0;
+        sheetData.armorBlocks.btmTooltipName = 'BTM';
+        sheetData.armorBlocks.btmFlavor = 'Body Type Modifier — subtracted from all damage taken.';
+        sheetData.armorBlocks.btmCalc = `BT ${btTotal} → BTM −${btm}`;
+      }
     }
 
     // Collect all programs
@@ -486,10 +633,30 @@ export class CyberpunkActorSheet extends ActorSheet {
       itemId: interfaceItemId
     };
 
-    // State tab status labels
+    // State tab status labels + tooltip data
     const stressLevel = this.actor.getStressLevel();
     const stressLabels = { "-1": "Fresh", 0: "Normal", 1: "Anxious", 2: "Tense", 3: "Stressed", 4: "Cracked" };
     sheetData.stressStatus = stressLabels[stressLevel] ?? "Normal";
+
+    const cool = system.stats.cool.total;
+    const stressTooltipFlavors = {
+      "-1": "+1 on all COOL checks.",
+      0: "No effect.",
+      1: "-1 on COOL checks. Insomnia.",
+      2: "-2 on COOL checks, -1 on all other checks. Insomnia. Addiction checks at -2.",
+      3: "-3 on COOL checks, -2 on all other checks. Insomnia (-4). Addiction checks at -4.",
+      4: "-5 on COOL checks, -3 on all other checks. Insomnia (-6). Addiction checks at -6. Roll Over The Edge."
+    };
+    const stressTooltipCalcs = {
+      "-1": `Next: Normal at ${Math.ceil(cool / 2)} StP`,
+      0: `Next: Anxious at ${cool} StP`,
+      1: `Next: Tense at ${cool * 2} StP`,
+      2: `Next: Stressed at ${cool * 3} StP`,
+      3: `Next: Cracked at ${cool * 4} StP`,
+      4: ""
+    };
+    sheetData.stressTooltipFlavor = stressTooltipFlavors[stressLevel] ?? "No effect.";
+    sheetData.stressTooltipCalc = stressTooltipCalcs[stressLevel] ?? "";
 
     const fright = system.fright || 0;
     if (fright === 0) sheetData.frightStatus = "Normal";
@@ -499,9 +666,41 @@ export class CyberpunkActorSheet extends ActorSheet {
     else if (fright <= 18) sheetData.frightStatus = "Overwhelmed";
     else sheetData.frightStatus = "Blown Away";
 
+    const frightTooltips = {
+      Normal:      { flavor: "No fright effect.", calc: "" },
+      Stunned:     { flavor: "Surprised. -5 Initiative this turn.", calc: "1d6-3 Stress Points gained (min. 0)" },
+      Surprised:   { flavor: "Surprised for 1 turn.", calc: "1d6 Stress Points gained" },
+      Shocked:     { flavor: "Surprised. Freeze (1-3) 2 turns, or Flee (4-6) 1d6+1 turns.", calc: "2d6 Stress Points gained" },
+      Overwhelmed: { flavor: "Surprised. Freeze (1-4) 1d6+3 turns, or Flee (5-6) 1d6+3 turns.", calc: "3d6 Stress Points gained" },
+      "Blown Away": { flavor: "Over The Edge. Roll 1d10 on the table.", calc: "4d6 Stress Points gained" }
+    };
+    const frightTip = frightTooltips[sheetData.frightStatus] || frightTooltips.Normal;
+    sheetData.frightTooltipFlavor = frightTip.flavor;
+    sheetData.frightTooltipCalc = frightTip.calc;
+
     const fatigueLevel = this.actor.getFatigueLevel();
     const fatigueLabels = { 0: "Fresh", 1: "Tired", 2: "Fatigued", 3: "Exhausted", 4: "Debilitated", 5: "Collapse" };
     sheetData.fatigueStatus = fatigueLabels[fatigueLevel] ?? "Fresh";
+
+    const body = system.stats.bt.total;
+    const fatigueTooltipFlavors = {
+      0: "No penalties.",
+      1: "-1 on all checks.",
+      2: "-2 on all checks.",
+      3: "-3 on all checks. Sleep check at -2.",
+      4: "-5 on all checks. Sleep check at -4.",
+      5: "-8 on all checks. Sleep check at -8."
+    };
+    const fatigueTooltipCalcs = {
+      0: `Next: Tired at ${body} FP`,
+      1: `Next: Fatigued at ${body * 2} FP`,
+      2: `Next: Exhausted at ${body * 3} FP`,
+      3: `Next: Debilitated at ${body * 4} FP`,
+      4: `Next: Collapse at ${body * 5} FP`,
+      5: ""
+    };
+    sheetData.fatigueTooltipFlavor = fatigueTooltipFlavors[fatigueLevel] ?? "No penalties.";
+    sheetData.fatigueTooltipCalc = fatigueTooltipCalcs[fatigueLevel] ?? "";
 
     const woundLevel = this.actor.getWoundLevel();
     const damage = system.damage || 0;
@@ -512,25 +711,46 @@ export class CyberpunkActorSheet extends ActorSheet {
       sheetData.woundStatus = woundLabels[woundLevel] || `Mortal ${woundLevel - 4}`;
     }
 
+    const woundsFlavorMap = {
+      Healthy: "No penalties.",
+      Light: "Stun Save required when hit.",
+      Serious: "REF -2. Stun Save required when hit.",
+      Critical: "REF, INT, COOL halved. Stun Save when hit.",
+      Dead: "Dead."
+    };
+    if (sheetData.woundStatus.startsWith("Mortal")) {
+      sheetData.woundsTooltipFlavor = "REF, INT, COOL at 1/3. Death Save each round.";
+    } else {
+      sheetData.woundsTooltipFlavor = woundsFlavorMap[sheetData.woundStatus] || "No penalties.";
+    }
+    if (sheetData.woundStatus === "Healthy") {
+      sheetData.woundsTooltipCalc = "";
+    } else if (sheetData.woundStatus === "Dead") {
+      sheetData.woundsTooltipCalc = "Damage 41+";
+    } else {
+      const lo = (woundLevel - 1) * 4 + 1;
+      const hi = woundLevel * 4;
+      sheetData.woundsTooltipCalc = `Damage ${lo}-${hi}`;
+    }
+
     // Cover toggles for state tab
     const activeCover = system.activeCover || null;
-    sheetData.coverToggles = Object.entries(COVER_TYPES).map(([key, { sp, label }]) => ({
-      key, sp, label, active: activeCover === key
+    sheetData.coverToggles = Object.entries(COVER_TYPES).map(([key, { sp, label, desc }]) => ({
+      key, sp, label, desc, active: activeCover === key
     }));
 
     // Condition toggles for state tab
     sheetData.conditionToggleRows = CONDITION_TOGGLE_ROWS.map(row =>
-      row.map(({ id, label, icon }) => ({
-        id, label, icon, active: this.actor.statuses.has(id)
+      row.map(({ id, label, icon, flavor, calc }) => ({
+        id, label, icon, flavor, calc, active: this.actor.statuses.has(id)
       }))
     );
 
     return sheetData;
   }
 
-  _buildSkillDisplay(sheetData) {
+  _buildSkillDisplay(sheetData, roleItem = null) {
     const skills = this.actor.items.filter(i => i.type === "skill");
-    const role = this.actor.system.role;
 
     // Stat label mapping
     const statLabels = {
@@ -548,17 +768,14 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Get career skill names and special skill from role
     const careerSkillNames = new Set();
     let specialSkillName = null;
-    if (role?.uuid) {
-      const roleItem = fromUuidSync(role.uuid);
-      if (roleItem?.system?.careerSkills) {
-        roleItem.system.careerSkills.forEach(s => {
-          const name = typeof s === 'string' ? s : s.name;
-          careerSkillNames.add(name.toLowerCase());
-        });
-      }
-      if (roleItem?.system?.specialSkill?.name) {
-        specialSkillName = roleItem.system.specialSkill.name.toLowerCase();
-      }
+    if (roleItem?.system?.careerSkills) {
+      roleItem.system.careerSkills.forEach(s => {
+        const name = typeof s === 'string' ? s : s.name;
+        careerSkillNames.add(name.toLowerCase());
+      });
+    }
+    if (roleItem?.system?.specialSkill?.name) {
+      specialSkillName = roleItem.system.specialSkill.name.toLowerCase();
     }
 
     // Get equipped tools, drugs, and cyberware for skill bonus calculation
@@ -672,7 +889,8 @@ export class CyberpunkActorSheet extends ActorSheet {
         diffMod,
         canIncrease,
         isCareer,
-        isSpecial
+        isSpecial,
+        flavor: skill.system.flavor || ""
       };
     });
 
@@ -959,6 +1177,22 @@ export class CyberpunkActorSheet extends ActorSheet {
     } else {
       sheetData.unarmedDamage = baseDamageStr;
     }
+
+    // Kick damage (for unarmed tooltip)
+    const kickBase = this.actor.system.kickBaseDamage;
+    let kickDamageStr;
+    if (unarmedMult <= 1) {
+      kickDamageStr = kickBase;
+    } else {
+      const dm = kickBase.match(/^(\d+)d(\d+)$/);
+      kickDamageStr = dm ? `${Number(dm[1]) * unarmedMult}d${dm[2]}` : kickBase;
+    }
+    if (bodyBonus !== 0) {
+      const sign = bodyBonus > 0 ? "+" : "";
+      kickDamageStr = `${kickDamageStr} ${sign}${bodyBonus}`;
+    }
+    sheetData.unarmedTooltipFlavor = 'Base damage for Punch, Break, Choke, and Throw attacks.';
+    sheetData.unarmedTooltipCalc = `Kick: ${kickDamageStr}`;
 
     // Prepare ordnance data
     sheetData.ordnanceItems = ordnance.map(o => {
@@ -1648,12 +1882,12 @@ export class CyberpunkActorSheet extends ActorSheet {
     });
 
     // ----- View Role Icon -----
-    html.find('.role-view-icon').click(ev => {
+    html.find('.role-view-icon').click(async ev => {
       ev.preventDefault();
       ev.stopPropagation();
       const roleUuid = ev.currentTarget.dataset.roleUuid;
       if (roleUuid) {
-        const roleItem = fromUuidSync(roleUuid);
+        const roleItem = await fromUuid(roleUuid);
         if (roleItem) {
           roleItem.sheet.render(true);
         }
@@ -2080,6 +2314,54 @@ export class CyberpunkActorSheet extends ActorSheet {
         },
         default: "no"
       }).render(true);
+    });
+
+    // Clean up any orphaned tooltips from previous render
+    document.querySelectorAll('.cyberpunk-tooltip').forEach(t => t.remove());
+
+    // Skill, Role & Stat hover tooltips (follow cursor)
+    html.find('.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor]').on('mouseenter', ev => {
+      const el = ev.currentTarget;
+      const flavor = el.dataset.flavor;
+      if (!flavor) return;
+      const name = el.dataset.tooltipName
+        || el.querySelector('.skill-name')?.textContent
+        || el.querySelector('.role-label')?.textContent
+        || el.querySelector('.stat-name')?.textContent
+        || el.querySelector('.action-btn-name')?.textContent
+        || el.querySelector('.info-name')?.textContent || "";
+      if (!name) return;
+
+      const calc = el.dataset.calc;
+      const tokenPath = el.dataset.tokenPath;
+      const tip = document.createElement('div');
+      tip.className = 'cyberpunk-tooltip';
+      tip.innerHTML = `<div class="tooltip-header"><div class="tooltip-name">${name}</div>${tokenPath ? `<span class="tooltip-label">${tokenPath}</span>` : ''}</div><div class="tooltip-desc">${flavor}</div>`
+        + (calc ? `<div class="tooltip-calc">${calc}</div>` : '');
+      document.body.appendChild(tip);
+      el._cpTooltip = tip;
+
+      let top = ev.clientY + 16;
+      let left = ev.clientX + 12;
+      if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
+      if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
+      tip.style.top = `${top}px`;
+      tip.style.left = `${left}px`;
+    }).on('mousemove', ev => {
+      const tip = ev.currentTarget._cpTooltip;
+      if (!tip) return;
+      let top = ev.clientY + 16;
+      let left = ev.clientX + 12;
+      if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
+      if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
+      tip.style.top = `${top}px`;
+      tip.style.left = `${left}px`;
+    }).on('mouseleave mousedown', ev => {
+      const tip = ev.currentTarget._cpTooltip;
+      if (tip) {
+        tip.remove();
+        ev.currentTarget._cpTooltip = null;
+      }
     });
 
     // Generic condition toggle (Stabilized, Fast Draw, Action Surge, etc.)
@@ -2882,8 +3164,30 @@ export class CyberpunkActorSheet extends ActorSheet {
   }
 
   /**
-   * Apply career skills and special skill from a role to the actor
-   * Fetches skills by UUID and adds them to the character
+   * Search for a skill by name in world items, then compendium packs.
+   * @param {string} skillName - The skill name to search for
+   * @returns {Promise<Item|null>} The found skill item, or null
+   */
+  async _findSkillByName(skillName) {
+    const lowerName = skillName.toLowerCase();
+    const worldSkill = game.items.find(i =>
+      i.type === "skill" && i.name.toLowerCase() === lowerName
+    );
+    if (worldSkill) return worldSkill;
+    for (const pack of game.packs.filter(p => p.documentName === "Item")) {
+      const index = await pack.getIndex({ fields: ["type"] });
+      const entry = index.find(e =>
+        e.type === "skill" && e.name.toLowerCase() === lowerName
+      );
+      if (entry) return await pack.getDocument(entry._id);
+    }
+    return null;
+  }
+
+  /**
+   * Apply career skills and special skill from a role to the actor.
+   * Fetches skills by UUID, falling back to name-based search.
+   * Corrects stale UUIDs on the role item when found via fallback.
    * @param {string} roleUUID - The UUID of the role item
    */
   async applyCareerSkills(roleUUID) {
@@ -2891,7 +3195,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     const role = await fromUuid(roleUUID);
     if (!role) return;
 
-    // Combine career skills and special skill
+    // Separate career skills and special skill for UUID correction tracking
     const careerSkills = role.system?.careerSkills || [];
     const specialSkill = role.system?.specialSkill;
 
@@ -2908,9 +3212,14 @@ export class CyberpunkActorSheet extends ActorSheet {
       .filter(i => i.type === "skill")
       .map(s => s.name.toLowerCase());
 
-    // Find skills to add
+    // Find skills to add, tracking UUID corrections
     const skillsToAdd = [];
-    for (const skillEntry of skillsToProcess) {
+    const updatedCareerSkills = careerSkills.map(s => typeof s === 'object' ? { ...s } : s);
+    let updatedSpecialSkill = specialSkill ? { ...specialSkill } : null;
+    let roleNeedsUpdate = false;
+
+    for (let i = 0; i < skillsToProcess.length; i++) {
+      const skillEntry = skillsToProcess[i];
       // Support both old format (string) and new format (object with uuid/name)
       const skillName = typeof skillEntry === 'string' ? skillEntry : skillEntry.name;
       const skillUUID = typeof skillEntry === 'object' ? skillEntry.uuid : null;
@@ -2920,11 +3229,26 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       let skillData = null;
 
-      // Try to fetch by UUID first (new format)
+      // Try to fetch by UUID first
       if (skillUUID) {
         const skill = await fromUuid(skillUUID);
         if (skill) {
           skillData = skill.toObject();
+        }
+      }
+
+      // Fallback: search by name in world items and compendium packs
+      if (!skillData && skillName) {
+        const resolved = await this._findSkillByName(skillName);
+        if (resolved) {
+          skillData = resolved.toObject();
+          // Save corrected UUID back to role
+          if (i < careerSkills.length) {
+            updatedCareerSkills[i] = { name: skillName, uuid: resolved.uuid };
+          } else {
+            updatedSpecialSkill = { name: skillName, uuid: resolved.uuid };
+          }
+          roleNeedsUpdate = true;
         }
       }
 
@@ -2934,6 +3258,13 @@ export class CyberpunkActorSheet extends ActorSheet {
         delete skillData._id;
         skillsToAdd.push(skillData);
       }
+    }
+
+    // Update role's stale UUIDs with corrected compendium UUIDs
+    if (roleNeedsUpdate) {
+      const updateData = { "system.careerSkills": updatedCareerSkills };
+      if (updatedSpecialSkill) updateData["system.specialSkill"] = updatedSpecialSkill;
+      await role.update(updateData);
     }
 
     // Add skills to actor

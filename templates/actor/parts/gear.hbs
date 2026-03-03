@@ -24,7 +24,7 @@
           <span class="price-value">0</span>
           <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
         </div>
-        <div class="gear-field" style="width: 60px;">
+        <div class="gear-field unarmed-damage-tooltip" style="width: 60px;" data-tooltip-name="Unarmed Damage" data-flavor="{{unarmedTooltipFlavor}}" data-calc="{{unarmedTooltipCalc}}">
           <span class="field-top">{{unarmedDamage}}</span>
           <span class="field-bottom">Damage</span>
         </div>
@@ -59,7 +59,7 @@
               <span class="field-top">{{weapon.shotsLeft}} / {{weapon.shots}}</span>
               <span class="field-bottom">Magazine</span>
             </div>
-            <div class="gear-action-btn reload-weapon" data-item-id="{{weapon.id}}" data-can-reload="{{weapon.canReload}}">
+            <div class="gear-action-btn reload-weapon" data-item-id="{{weapon.id}}" data-can-reload="{{weapon.canReload}}" title="{{#if weapon.canReload}}Reload{{else}}Magazine full{{/if}}">
               <img src="systems/cyberpunk/img/ui/badge-reload{{#unless weapon.canReload}}-disabled{{/unless}}.svg" alt="Reload">
             </div>
           {{else if weapon.isExotic}}
@@ -68,7 +68,7 @@
               <span class="field-top">{{weapon.chargesDisplay}}</span>
               <span class="field-bottom">Charges</span>
             </div>
-            <div class="gear-action-btn charge-weapon" data-item-id="{{weapon.id}}" data-can-charge="{{weapon.canCharge}}">
+            <div class="gear-action-btn charge-weapon" data-item-id="{{weapon.id}}" data-can-charge="{{weapon.canCharge}}" title="{{#if weapon.canCharge}}Recharge{{else}}Fully charged{{/if}}">
               <img src="systems/cyberpunk/img/ui/badge-charge{{#unless weapon.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
             </div>
           {{else}}
@@ -127,7 +127,7 @@
             <span class="field-bottom">Charges</span>
           </div>
           {{#unless ordnance.removeOnZero}}
-            <div class="gear-action-btn charge-weapon" data-item-id="{{ordnance.id}}" data-can-charge="{{ordnance.canCharge}}">
+            <div class="gear-action-btn charge-weapon" data-item-id="{{ordnance.id}}" data-can-charge="{{ordnance.canCharge}}" title="{{#if ordnance.canCharge}}Recharge{{else}}Fully charged{{/if}}">
               <img src="systems/cyberpunk/img/ui/badge-charge{{#unless ordnance.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
             </div>
           {{else}}
@@ -174,14 +174,14 @@
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{armor.sp}}</span>
-            <span class="field-bottom">SP</span>
+            <span class="field-bottom" title="Stopping Power">SP</span>
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{armor.encumbrance}}</span>
-            <span class="field-bottom">EV</span>
+            <span class="field-bottom" title="Encumbrance Value">EV</span>
           </div>
           {{#unless armor.isCyberware}}
-            <div class="gear-action-btn toggle-equip" data-item-id="{{armor.id}}" data-equipped="{{armor.equipped}}">
+            <div class="gear-action-btn toggle-equip" data-item-id="{{armor.id}}" data-equipped="{{armor.equipped}}" title="{{#if armor.equipped}}Unequip{{else}}Equip{{/if}}">
               <img src="systems/cyberpunk/img/ui/badge-outfit{{#unless armor.equipped}}-disabled{{/unless}}.svg" alt="Equip">
             </div>
           {{else}}
@@ -228,7 +228,7 @@
           </div>
           <div class="gear-field" style="width: 60px;"></div>
           <div class="gear-field" style="width: 60px;"></div>
-          <div class="gear-action-btn toggle-tool" data-item-id="{{tool.id}}" data-equipped="{{tool.equipped}}">
+          <div class="gear-action-btn toggle-tool" data-item-id="{{tool.id}}" data-equipped="{{tool.equipped}}" title="{{#if tool.equipped}}Disable{{else}}Enable{{/if}}">
             <img src="systems/cyberpunk/img/ui/badge-{{#if tool.equipped}}on{{else}}off{{/if}}.svg" alt="Toggle">
           </div>
           <div class="gear-actions">
@@ -272,10 +272,10 @@
           </div>
           <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{drug.quantity}}</span>
-            <span class="field-bottom">Qty</span>
+            <span class="field-bottom">Quantity</span>
           </div>
           <div class="gear-field" style="width: 60px;"></div>
-          <div class="gear-action-btn toggle-drug" data-item-id="{{drug.id}}" data-equipped="{{drug.equipped}}">
+          <div class="gear-action-btn toggle-drug" data-item-id="{{drug.id}}" data-equipped="{{drug.equipped}}" title="{{#if drug.equipped}}Wear Off{{else}}Use{{/if}}">
             <img src="systems/cyberpunk/img/ui/badge-{{#if drug.equipped}}used{{else}}wearoff{{/if}}.svg" alt="{{#if drug.equipped}}Wear Off{{else}}Use{{/if}}">
           </div>
           <div class="gear-actions">

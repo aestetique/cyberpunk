@@ -89,9 +89,9 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/dialog/fright-roll.hbs",
         "systems/cyberpunk/templates/dialog/create-item.hbs",
 
-        // Program
-        "systems/cyberpunk/templates/item/parts/program/summary.hbs",
-        "systems/cyberpunk/templates/item/parts/program/settings.hbs",
+        // Netware
+        "systems/cyberpunk/templates/item/parts/netware/tab-description.hbs",
+        "systems/cyberpunk/templates/item/parts/netware/tab-details.hbs",
 
         // Role
         "systems/cyberpunk/templates/item/role-sheet.hbs",

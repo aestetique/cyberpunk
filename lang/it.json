@@ -492,9 +492,8 @@
     "CYBERPUNK.Drug": "DROGA",
     "CYBERPUNK.DrugSheet": "Scheda Droga",
 
-    "CYBERPUNK.Program": "PROGRAMMA",
-    "CYBERPUNK.ProgramSheet": "Scheda Programma",
-    "CYBERPUNK.MU": "MU",
+    "CYBERPUNK.Netware": "NETWARE",
+    "CYBERPUNK.NetwareSheet": "Scheda Netware",
 
     "CYBERPUNK.CyberwareSheet": "Scheda Cibernetica",
     "CYBERPUNK.CyberTypeSensor": "Sensore",

@@ -392,6 +392,73 @@ details[open] summary ~ * {
   display: none;
 }
 
+.cyberpunk-tooltip {
+  position: fixed;
+  width: 290px;
+  padding: 8px;
+  background: #1A1A1A;
+  border: 2px solid #252730;
+  border-radius: 2px;
+  z-index: 10000;
+  pointer-events: none;
+}
+.cyberpunk-tooltip .tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.cyberpunk-tooltip .tooltip-name {
+  overflow: hidden;
+  color: var(--chat-text, #FFF);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Refinery 55";
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.cyberpunk-tooltip .tooltip-desc {
+  overflow: hidden;
+  color: #808090;
+  text-overflow: ellipsis;
+  font-family: "Blender Pro";
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 12px;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.cyberpunk-tooltip .tooltip-calc {
+  overflow: hidden;
+  color: #B9B29D;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Blender Pro";
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 12px;
+  margin-top: 4px;
+}
+.cyberpunk-tooltip .tooltip-label {
+  overflow: hidden;
+  color: #808090;
+  text-align: right;
+  text-overflow: ellipsis;
+  font-family: "Blender Pro";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  background: #26282F;
+  border-radius: 2px;
+  padding: 0 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .statsrow {
   display: flex;
   flex-direction: row;
@@ -2910,76 +2977,6 @@ input.skill-value.skill-level-input:focus {
   width: 100%;
   height: 100%;
   border: none;
-}
-
-/* Hover tooltips for skills & roles */
-.cyberpunk-tooltip {
-  position: fixed;
-  width: 290px;
-  padding: 8px;
-  background: #1A1A1A;
-  border: 2px solid #252730;
-  border-radius: 2px;
-  z-index: 10000;
-  pointer-events: none;
-}
-.cyberpunk-tooltip .tooltip-name {
-  overflow: hidden;
-  color: var(--chat-text, #FFF);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: "Refinery 55";
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 16px;
-}
-.cyberpunk-tooltip .tooltip-desc {
-  overflow: hidden;
-  color: #808090;
-  text-overflow: ellipsis;
-  font-family: "Blender Pro";
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 12px;
-  margin-top: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-.cyberpunk-tooltip .tooltip-calc {
-  overflow: hidden;
-  color: #B9B29D;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: "Blender Pro";
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 12px;
-  margin-top: 4px;
-}
-
-.cyberpunk-tooltip .tooltip-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.cyberpunk-tooltip .tooltip-label {
-  overflow: hidden;
-  color: #808090;
-  text-align: right;
-  text-overflow: ellipsis;
-  font-family: "Blender Pro";
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 16px;
-  background: #26282F;
-  border-radius: 2px;
-  padding: 0 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .sheet-content {
@@ -6346,105 +6343,48 @@ input.skill-value.skill-level-input:focus {
   min-height: 400px;
 }
 
-.cyberpunk.program-sheet.app {
+.cyberpunk.netware-sheet.app {
   background: transparent;
   box-shadow: none;
   border: none;
 }
-.cyberpunk.program-sheet > .window-header {
+.cyberpunk.netware-sheet > .window-header {
   display: none;
 }
-.cyberpunk.program-sheet > .window-content {
+.cyberpunk.netware-sheet > .window-content {
   padding: 0;
   overflow: visible;
   background: transparent;
   border-radius: 0;
   margin: 0;
 }
-.cyberpunk.program-sheet > .window-resizable-handle {
+.cyberpunk.netware-sheet > .window-resizable-handle {
   display: none;
 }
-.cyberpunk.program-sheet button, .cyberpunk.program-sheet a {
+.cyberpunk.netware-sheet button, .cyberpunk.netware-sheet a {
   --button-focus-outline-color: transparent;
 }
-.cyberpunk.program-sheet button:focus, .cyberpunk.program-sheet a:focus {
+.cyberpunk.netware-sheet button:focus, .cyberpunk.netware-sheet a:focus {
   box-shadow: none;
   outline: none;
 }
-.cyberpunk.program-sheet img {
+.cyberpunk.netware-sheet img {
   border: none;
 }
-.cyberpunk.program-sheet h1, .cyberpunk.program-sheet h2 {
+.cyberpunk.netware-sheet h1, .cyberpunk.netware-sheet h2 {
   border: none;
   border-bottom: none;
 }
 
-.program-card {
+.netware-card {
   min-height: 400px;
 }
-.program-card .dual-field {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  flex: 1 0 0;
-}
-.program-card .dual-value {
-  display: flex;
-  width: 47px;
-  height: 26px;
-  padding: 5px 8px;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: #808090;
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-}
-.program-card .dual-value-narrow {
-  width: 40px;
-}
-.program-card .dual-input {
-  display: flex;
-  width: 47px;
-  height: 26px;
-  padding: 5px 8px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-  outline: none;
-}
-.program-card .dual-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-.program-card .dual-input::-webkit-inner-spin-button, .program-card .dual-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.program-card .dual-input {
-  -moz-appearance: textfield;
-}
-.program-card .dual-input-narrow {
-  width: 40px;
-}
-.program-card .dual-separator {
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
+.netware-card .cyber-divider {
+  width: 100%;
+  height: 1px;
   flex-shrink: 0;
+  margin: 8px 0;
+  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
 }
 
 .cyberpunk.cyberware-sheet.app {

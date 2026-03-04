@@ -21,3 +21,76 @@
 .invisible {
     display: none;
 }
+
+// Hover tooltips for skills & roles
+.cyberpunk-tooltip {
+  position: fixed;
+  width: 290px;
+  padding: 8px;
+  background: #1A1A1A;
+  border: 2px solid #252730;
+  border-radius: 2px;
+  z-index: 10000;
+  pointer-events: none;
+
+  .tooltip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .tooltip-name {
+    overflow: hidden;
+    color: var(--chat-text, #FFF);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: "Refinery 55";
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+
+  .tooltip-desc {
+    overflow: hidden;
+    color: #808090;
+    text-overflow: ellipsis;
+    font-family: "Blender Pro";
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 12px;
+    margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  .tooltip-calc {
+    overflow: hidden;
+    color: #B9B29D;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: "Blender Pro";
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 12px;
+    margin-top: 4px;
+  }
+
+  .tooltip-label {
+    overflow: hidden;
+    color: #808090;
+    text-align: right;
+    text-overflow: ellipsis;
+    font-family: "Blender Pro";
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 16px;
+    background: #26282F;
+    border-radius: 2px;
+    padding: 0 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}

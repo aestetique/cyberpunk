@@ -1,0 +1,247 @@
+{{!-- Details Tab --}}
+
+{{!-- Row 1: Type + Has Slots / Takes Space --}}
+<div class="variables-row">
+  <div class="variable-field">
+    <label class="variable-label">{{localize "CYBERPUNK.NetwareType"}}</label>
+    {{#if isLocked}}
+      <div class="dropdown">
+        <span class="dropdown-text">{{selectedNetwareTypeLabel}}</span>
+        <div class="dropdown-chevron">
+          <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+        </div>
+      </div>
+    {{else}}
+      <div class="dropdown-wrapper">
+        <select class="dropdown-select" name="system.netwareType">
+          {{#each netwareTypeOptions}}
+            <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+        <div class="dropdown-chevron">
+          <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+        </div>
+      </div>
+    {{/if}}
+  </div>
+
+  {{#if isCyberdeck}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.HasSlots"}}</label>
+      {{#if isLocked}}
+        <span class="variable-value">{{system.slots}}</span>
+      {{else}}
+        <input type="number" class="variable-input" name="system.slots" value="{{system.slots}}" min="0">
+      {{/if}}
+    </div>
+  {{else}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.TakesSpace"}}</label>
+      {{#if isLocked}}
+        <span class="variable-value">{{system.takesSpace}}</span>
+      {{else}}
+        <input type="number" class="variable-input" name="system.takesSpace" value="{{system.takesSpace}}" min="0">
+      {{/if}}
+    </div>
+  {{/if}}
+</div>
+
+{{!-- Program-specific rows --}}
+{{#if isProgram}}
+  {{!-- Row 2: Subtype + REZ / ATK --}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.ProgramSubtype"}}</label>
+      {{#if isLocked}}
+        <div class="dropdown">
+          <span class="dropdown-text">{{selectedProgramSubtypeLabel}}</span>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{else}}
+        <div class="dropdown-wrapper">
+          <select class="dropdown-select" name="system.programSubtype">
+            {{#each programSubtypeOptions}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+          </select>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{/if}}
+    </div>
+
+    {{#if isAttacker}}
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.ATK"}}</label>
+        {{#if isLocked}}
+          <span class="variable-value">{{system.atk}}</span>
+        {{else}}
+          <input type="number" class="variable-input" name="system.atk" value="{{system.atk}}" min="0">
+        {{/if}}
+      </div>
+    {{else}}
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.REZ"}}</label>
+        {{#if isLocked}}
+          <span class="variable-value">{{system.rez}}</span>
+        {{else}}
+          <input type="number" class="variable-input" name="system.rez" value="{{system.rez}}" min="0">
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+
+  {{!-- Row 3: Divider --}}
+  <div class="cyber-divider"></div>
+
+  {{!-- ===================== --}}
+  {{!-- BOOSTER               --}}
+  {{!-- ===================== --}}
+  {{#if isBooster}}
+    {{!-- Row 4: Bonus + Value --}}
+    <div class="variables-row">
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.BoosterBonus"}}</label>
+        {{#if isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{selectedBoosterBonusLabel}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select" name="system.boosterBonus">
+              {{#each boosterBonusOptions}}
+                <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      </div>
+
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.BoosterValue"}}</label>
+        {{#if isLocked}}
+          <span class="variable-value">{{system.boosterValue}}</span>
+        {{else}}
+          <input type="number" class="variable-input" name="system.boosterValue" value="{{system.boosterValue}}">
+        {{/if}}
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- ===================== --}}
+  {{!-- DEFENDER               --}}
+  {{!-- ===================== --}}
+  {{#if isDefender}}
+    {{!-- Row 4: Defence + Value (only for Armor) --}}
+    <div class="variables-row">
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.DefenderDefence"}}</label>
+        {{#if isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{selectedDefenderDefenceLabel}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select" name="system.defenderDefence">
+              {{#each defenderDefenceOptions}}
+                <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      </div>
+
+      {{#if isArmorDefence}}
+        <div class="variable-field">
+          <label class="variable-label">{{localize "CYBERPUNK.DefenderValue"}}</label>
+          {{#if isLocked}}
+            <span class="variable-value">{{system.defenderValue}}</span>
+          {{else}}
+            <input type="number" class="variable-input" name="system.defenderValue" value="{{system.defenderValue}}">
+          {{/if}}
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{!-- ===================== --}}
+  {{!-- ATTACKER               --}}
+  {{!-- ===================== --}}
+  {{#if isAttacker}}
+    {{!-- Row 4: Class + Damage --}}
+    <div class="variables-row">
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.AttackerClass"}}</label>
+        {{#if isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{selectedAttackerClassLabel}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select" name="system.attackerClass">
+              {{#each attackerClassOptions}}
+                <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      </div>
+
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.AttackerDamage"}}</label>
+        {{#if isLocked}}
+          <span class="variable-value">{{system.attackerDamage}}</span>
+        {{else}}
+          <input type="text" class="variable-input" name="system.attackerDamage" value="{{system.attackerDamage}}">
+        {{/if}}
+      </div>
+    </div>
+
+    {{!-- Row 5: Effect --}}
+    <div class="variables-row">
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.AttackerEffect"}}</label>
+        {{#if isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{selectedAttackerEffectLabel}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select" name="system.attackerEffect">
+              {{#each attackerEffectOptions}}
+                <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  {{/if}}
+{{/if}}

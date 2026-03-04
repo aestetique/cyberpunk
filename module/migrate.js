@@ -14,6 +14,9 @@ export async function migrateWorld() {
         return;
     }
 
+    // Convert deprecated "program" items to "netware"
+    await _migrateProgramsToNetware();
+
     for(let actor of game.actors.contents) {
         processDocument(actor);
         actor.items.forEach(item => processDocument(item));
@@ -168,4 +171,70 @@ export function legacySkillToItem(name, skillData) {
         isRoleSkill: skillData.isSpecial || false,
         stat: skillData.stat
     }};
+}
+
+/**
+ * Convert deprecated "program" items to "netware".
+ * Type field is immutable, so we delete and recreate.
+ */
+async function _migrateProgramsToNetware() {
+    const netwareDefaults = {
+        netwareType: "program",
+        slots: 1,
+        takesSpace: 1,
+        programSubtype: "booster",
+        rez: 1,
+        atk: 1,
+        boosterBonus: "scanner",
+        boosterValue: 2,
+        defenderDefence: "armor",
+        defenderValue: 4,
+        attackerClass: "antiProgram",
+        attackerDamage: "2d6",
+        attackerEffect: "none"
+    };
+
+    function buildNetwareData(oldItem) {
+        const d = oldItem.toObject();
+        d.type = "netware";
+        const oldSys = d.system || {};
+        d.system = Object.assign({}, netwareDefaults, {
+            cost: oldSys.cost ?? 0,
+            weight: oldSys.weight ?? 0,
+            flavor: oldSys.flavor ?? "",
+            source: oldSys.source ?? "",
+            availability: oldSys.availability ?? "common"
+        });
+        return d;
+    }
+
+    // World-level items
+    const worldPrograms = game.items.filter(i => i.type === "program");
+    for (const item of worldPrograms) {
+        try {
+            const data = buildNetwareData(item);
+            await item.delete();
+            await Item.create(data);
+            console.log(`CYBERPUNK | Migrated world program "${data.name}" to netware`);
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to migrate world program "${item.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
+
+    // Actor embedded items
+    for (const actor of game.actors) {
+        const programs = actor.items.filter(i => i.type === "program");
+        if (!programs.length) continue;
+        try {
+            const ids = programs.map(i => i.id);
+            const newData = programs.map(i => buildNetwareData(i));
+            await actor.deleteEmbeddedDocuments("Item", ids);
+            await actor.createEmbeddedDocuments("Item", newData);
+            console.log(`CYBERPUNK | Migrated ${ids.length} program(s) to netware on actor "${actor.name}"`);
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to migrate programs on actor "${actor.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
 }

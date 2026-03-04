@@ -82,18 +82,56 @@ export const toolBonusProperties = {
     "healingRateBoost": "PropHealingRateBoost"
 };
 
-/** Program class types */
-export const programClasses = {
-    Intrusion: "ProgramIntrusion",
-    Decryption: "ProgramDecryption",
-    Detection: "ProgramDetection",
-    AntiSystem: "ProgramAntiSystem",
-    Stealth: "ProgramStealth",
-    Protection: "ProgramProtection",
-    AntiICE: "ProgramAntiICE",
-    AntiPersonnel: "ProgramAntiPersonnel",
-    Controller: "ProgramController",
-    Utility: "ProgramUtility"
+/** Netware types */
+export const netwareTypes = {
+    cyberdeck: "NetwareTypeCyberdeck",
+    upgrade: "NetwareTypeUpgrade",
+    program: "NetwareTypeProgram"
+};
+
+/** Program subtypes (when netwareType === "program") */
+export const programSubtypes = {
+    booster: "ProgramSubBooster",
+    defender: "ProgramSubDefender",
+    attacker: "ProgramSubAttacker"
+};
+
+/** Booster bonus types */
+export const boosterBonuses = {
+    scanner: "BoosterScanner",
+    backdoor: "BoosterBackdoor",
+    cloak: "BoosterCloak",
+    control: "BoosterControl",
+    eyedee: "BoosterEyeDee",
+    pathfinder: "BoosterPathfinder",
+    slide: "BoosterSlide",
+    speed: "BoosterSpeed",
+    zap: "BoosterZap"
+};
+
+/** Defender defence types */
+export const defenderDefences = {
+    armor: "DefenderArmor",
+    flak: "DefenderFlak",
+    shield: "DefenderShield"
+};
+
+/** Attacker class types */
+export const attackerClasses = {
+    antiProgram: "AttackerAntiProgram",
+    antiPersonnel: "AttackerAntiPersonnel"
+};
+
+/** Attacker effect types */
+export const attackerEffects = {
+    none: "EffectNone",
+    gridlocked: "EffectGridlocked",
+    scrambled: "EffectScrambled",
+    desynced: "EffectDesynced",
+    lagging: "EffectLagging",
+    tagged: "EffectTagged",
+    burning: "EffectBurning",
+    crashed: "EffectCrashed"
 };
 
 /** Cyberware types */

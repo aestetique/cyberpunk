@@ -40,7 +40,7 @@ export class CreateItemDialog extends Application {
       ],
       [
         { type: "cyberware", label: game.i18n.localize("TYPES.Item.cyberware") },
-        { type: "program",   label: game.i18n.localize("TYPES.Item.program") }
+        { type: "netware",   label: game.i18n.localize("TYPES.Item.netware") }
       ],
       [
         { type: "tool",      label: game.i18n.localize("TYPES.Item.tool") },

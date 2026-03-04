@@ -11,7 +11,7 @@ import { CyberpunkWeaponSheet } from "./item/weapon-sheet.js";
 import { CyberpunkOrdnanceSheet } from "./item/ordnance-sheet.js";
 import { CyberpunkToolSheet } from "./item/tool-sheet.js";
 import { CyberpunkDrugSheet } from "./item/drug-sheet.js";
-import { CyberpunkProgramSheet } from "./item/program-sheet.js";
+import { CyberpunkNetwareSheet } from "./item/netware-sheet.js";
 import { CyberpunkCyberwareSheet } from "./item/cyberware-sheet.js";
 import { CyberpunkChatMessage } from "./chat-message.js";
 import { CyberpunkCombat } from "./combat.js";
@@ -109,10 +109,10 @@ Hooks.once('init', async function () {
         makeDefault: true,
         label: "CYBERPUNK.DrugSheet"
     });
-    Items.registerSheet("cyberpunk", CyberpunkProgramSheet, {
-        types: ["program"],
+    Items.registerSheet("cyberpunk", CyberpunkNetwareSheet, {
+        types: ["netware"],
         makeDefault: true,
-        label: "CYBERPUNK.ProgramSheet"
+        label: "CYBERPUNK.NetwareSheet"
     });
     Items.registerSheet("cyberpunk", CyberpunkCyberwareSheet, {
         types: ["cyberware"],
@@ -231,7 +231,7 @@ Hooks.once("ready", async function() {
     // We do need to try migrating if we haven't run before - as it stands, previous worlds didn't use this setting, or by default had it set to current version
 
     // The version migrations need to begin - if you make a change from 0.1 to 0.2, this should be 0.2
-    const NEEDS_MIGRATION_VERSION = "0.3.0";
+    const NEEDS_MIGRATION_VERSION = "1.0.5";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;

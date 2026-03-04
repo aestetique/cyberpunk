@@ -778,7 +778,7 @@
 		}
 	},
 	"Item": {
-		"types": ["skill", "weapon", "armor", "cyberware", "vehicle", "misc", "program", "role", "ammo", "ordnance", "tool", "drug"],
+		"types": ["skill", "weapon", "armor", "cyberware", "vehicle", "misc", "netware", "program", "role", "ammo", "ordnance", "tool", "drug"],
 		"templates": {
 			"common": {
 				"flavor": "",
@@ -819,12 +819,25 @@
 				"ram": 0
 			}
 		},
+		"netware": {
+			"templates": ["common"],
+			"netwareType": "program",
+			"slots": 1,
+			"takesSpace": 1,
+			"programSubtype": "booster",
+			"rez": 1,
+			"atk": 1,
+			"boosterBonus": "scanner",
+			"boosterValue": 2,
+			"defenderDefence": "armor",
+			"defenderValue": 4,
+			"attackerClass": "antiProgram",
+			"attackerDamage": "2d6",
+			"attackerEffect": "none"
+		},
 		"program": {
 			"templates": ["common"],
-			"power": 0,
-			"mu": 0,
-			"programType": "",
-			"actionFormula": ""
+			"class": ""
 		},
 		"weapon": {
 			"templates": ["common"],

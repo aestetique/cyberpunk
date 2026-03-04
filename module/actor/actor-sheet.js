@@ -605,16 +605,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
     }
 
-    // Collect all programs
-    const allPrograms = this.actor.items.filter(i => i.type === "program");
-    allPrograms.sort((a, b) => a.name.localeCompare(b.name));
-    sheetData.netrunPrograms = allPrograms;
-    sheetData.programsTotalCost = allPrograms.reduce((sum, p) => sum + Number(p.system.cost || 0), 0);
-
-    // Active programs
-    const activeProgIds = this.actor.system.activePrograms || [];
-    const activePrograms = allPrograms.filter(p => activeProgIds.includes(p.id));
-    sheetData.netrunActivePrograms = activePrograms;
+    // Collect all netware
+    const allNetware = this.actor.items.filter(i => i.type === "netware");
+    allNetware.sort((a, b) => a.name.localeCompare(b.name));
+    sheetData.netrunNetware = allNetware;
 
     // Interface skill
     const allSkills = this.actor.items.filter(i => i.type === "skill");
@@ -975,7 +969,7 @@ export class CyberpunkActorSheet extends ActorSheet {
   }
 
   _getDisplayableGear(allItems) {
-    let hideThese = new Set(["cyberware", "skill", "program"]);
+    let hideThese = new Set(["cyberware", "skill", "netware"]);
     let nameSorter = new Intl.Collator();
     let showItems = allItems
       .filter((item) => !hideThese.has(item.type))
@@ -3011,58 +3005,6 @@ export class CyberpunkActorSheet extends ActorSheet {
       });
     });
 
-    function getNetrunProgramItem(sheet, ev) {
-      ev.stopPropagation();
-      const itemId = ev.currentTarget.closest(".netrun-program").dataset.itemId;
-      return sheet.actor.items.get(itemId);
-    }
-    html.find('.netrun-program .fa-edit').click(ev => {
-      const item = getNetrunProgramItem(this, ev);
-      if (!item) return;
-      item.sheet.render(true);
-    });
-    html.find('.netrun-program .fa-trash').click(ev => {
-      const item = getNetrunProgramItem(this, ev);
-      if (!item) return;
-      let confirmDialog = new Dialog({
-        title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${localize("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
-        buttons: {
-          yes: {
-            label: localize("Yes"),
-            callback: () => item.delete()
-          },
-          no: { label: localize("No") },
-        },
-        default:"no"
-      });
-      confirmDialog.render(true);
-    });
-
-    // Netrun program drag and drop
-    html.find('.netrun-program').each((_, programElem) => {
-      programElem.setAttribute("draggable", true);
-
-      programElem.addEventListener("dragstart", ev => {
-        const itemId = programElem.dataset.itemId;
-        const item = this.actor.items.get(itemId);
-        if ( !item ) return;
-
-        const dragData = {
-          type: "Item",
-          actorId: this.actor.id,
-          data: item.toObject()
-        };
-
-        ev.dataTransfer.setData("text/plain", JSON.stringify(dragData));
-        programElem.classList.add("is-dragging");
-      });
-
-      programElem.addEventListener("dragend", ev => {
-        programElem.classList.remove("is-dragging");
-      });
-    });
-
     // Auto-save changes for fields with data-edit
     html.find('input[data-edit], select[data-edit], textarea[data-edit]').on('change', ev => {
       ev.preventDefault();
@@ -3394,66 +3336,6 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     const dropTarget = event.target.closest("[data-drop-target]");
     if (!dropTarget) return super._onDropItem(event, data);
-
-    if (dropTarget.dataset.dropTarget === "program-list") {
-      const itemData = item;
-
-      if (itemData.type !== "program") {
-        return ui.notifications.warn(localize("NotAProgram", { name: itemData.name }));
-      }
-
-      const sameActor = (data.actorId === this.actor.id);
-      const existingItem = sameActor ? this.actor.items.get(itemData._id) : null;
-      if (existingItem) {
-        ui.notifications.warn(localize("ProgramAlreadyExists", { name: existingItem.name }));
-        return;
-      }
-
-      return this.actor.createEmbeddedDocuments("Item", [ itemData ]);
-    }
-
-    if (dropTarget.dataset.dropTarget === "active-programs") {
-      const itemData = item;
-
-      if (itemData.type !== "program") {
-        return ui.notifications.warn(localize("OnlyProgramsCanBeActivated", { name: itemData.name }));
-      }
-
-      let programItem = this.actor.items.get(itemData._id);
-      if (!programItem) {
-        const [created] = await this.actor.createEmbeddedDocuments("Item", [itemData]);
-        programItem = created;
-      }
-
-      const currentActive = this.actor.system.activePrograms || [];
-      const newMu = Number(programItem.system.mu) || 0;
-
-      const usedMu = currentActive.reduce((sum, id) => {
-        const p = this.actor.items.get(id);
-        return sum + (Number(p?.system.mu) || 0);
-      }, 0);
-
-      const ramMax = Number(this.actor.system.ramMax) || 0;
-
-      if (ramMax && (usedMu + newMu) > ramMax) {
-        return ui.notifications.warn(
-          localize("NotEnoughRAM", { name: programItem.name, used: usedMu, max: ramMax })
-        );
-      }
-
-      if (!currentActive.includes(programItem.id)) {
-        currentActive.push(programItem.id);
-
-        const totalMu = usedMu + newMu;
-        await this.actor.update({
-          "system.activePrograms": currentActive,
-          "system.ramUsed": totalMu
-        });
-
-        this.render(true);
-      }
-      return;
-    }
 
     return super._onDropItem(event, data);
   }

@@ -103,7 +103,11 @@
         {{!-- Description Tab --}}
         <div class="flavour-section">
           {{#if isLocked}}
-            <p class="flavour-text">{{system.flavor}}</p>
+            <div class="flavour-text">
+              {{#each flavorLines}}
+                <p>{{this}}</p>
+              {{/each}}
+            </div>
           {{else}}
             <textarea class="flavour-text" name="system.flavor" placeholder="Weapon description...">{{system.flavor}}</textarea>
           {{/if}}

@@ -89,6 +89,26 @@
     }
   }
 
+  .humanity-reset-btn {
+    width: 26px;
+    height: 26px;
+    padding: 3px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
   .humanity-result {
     display: flex;
     width: 32px;

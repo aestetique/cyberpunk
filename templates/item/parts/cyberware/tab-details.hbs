@@ -39,9 +39,15 @@
         </button>
       {{else}}
         {{#if humanityRolled}}
-          <button class="humanity-roll-btn" type="button" disabled title="Humanity Loss Rolled">
-            <img src="systems/cyberpunk/img/dice/d10gray.png" alt="Rolled">
-          </button>
+          {{#if isLocked}}
+            <button class="humanity-roll-btn" type="button" disabled title="Humanity Loss Rolled">
+              <img src="systems/cyberpunk/img/dice/d10gray.png" alt="Rolled">
+            </button>
+          {{else}}
+            <button class="humanity-reset-btn" type="button" title="Reset Humanity Roll">
+              <img src="systems/cyberpunk/img/ui/badge-reset.svg" alt="Reset">
+            </button>
+          {{/if}}
         {{/if}}
       {{/if}}
       <span class="humanity-result {{#if humanityRolled}}rolled{{/if}}">{{system.humanityLoss}}</span>

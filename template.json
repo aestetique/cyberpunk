@@ -833,7 +833,8 @@
 			"defenderValue": 4,
 			"attackerClass": "antiProgram",
 			"attackerDamage": "2d6",
-			"attackerEffect": "none"
+			"attackerEffect": "none",
+			"programState": "inactive"
 		},
 		"program": {
 			"templates": ["common"],

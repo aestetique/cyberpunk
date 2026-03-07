@@ -320,7 +320,7 @@
   padding: 4px 0;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   flex: 1 0 0;
   align-self: stretch;
   color: var(--Chat-Text, #FFF);
@@ -332,6 +332,10 @@
   margin: 0;
   user-select: text;
   cursor: text;
+
+  p {
+    margin: 0;
+  }
 }
 
 // Unlocked flavour textarea

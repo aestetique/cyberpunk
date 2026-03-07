@@ -851,7 +851,8 @@ export class CyberpunkItem extends Item {
           stunAt4: "Stun at –4",
           burning: "Burning",
           acid: "Acid",
-          microwave: "Microwave"
+          microwave: "Microwave",
+          blindness: "Blindness"
       };
       return labels[effect] || effect;
   }
@@ -871,7 +872,8 @@ export class CyberpunkItem extends Item {
           stunAt4: "shocked",
           burning: "burning",
           acid: "acid",
-          microwave: "microwave"
+          microwave: "microwave",
+          blindness: "blinded"
       };
       return icons[effect] || effect;
   }

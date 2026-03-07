@@ -1,4 +1,4 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus } from "../lookups.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes } from "../lookups.js"
 import { localize, tabBeautifying, toTitleCase } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
@@ -605,10 +605,8 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
     }
 
-    // Collect all netware
-    const allNetware = this.actor.items.filter(i => i.type === "netware");
-    allNetware.sort((a, b) => a.name.localeCompare(b.name));
-    sheetData.netrunNetware = allNetware;
+    // Build netware display data for the Net tab
+    this._buildNetwareDisplay(sheetData);
 
     // Interface skill
     const allSkills = this.actor.items.filter(i => i.type === "skill");
@@ -1651,6 +1649,99 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Add to sheet data
     sheetData.cyberwareCategories = categories;
     sheetData.hasCyberware = cyberware.length > 0;
+  }
+
+  _buildNetwareDisplay(sheetData) {
+    const allNetware = this.actor.itemTypes.netware || [];
+
+    const category = { items: [], detachedOptions: [] };
+
+    // Build context string for netware items
+    const buildContext = (item) => {
+      const sys = item.system;
+      const type = sys.netwareType;
+      if (type === 'cyberdeck') return `Cyberdeck \u00B7 ${sys.slots || 0} slots`;
+      if (type === 'upgrade') return 'Upgrade';
+      if (type === 'program') {
+        const subtypeKey = programSubtypes[sys.programSubtype];
+        const subtypeLabel = subtypeKey ? game.i18n.localize(`CYBERPUNK.${subtypeKey}`) : sys.programSubtype;
+        return `Program \u00B7 ${subtypeLabel}`;
+      }
+      return '';
+    };
+
+    // Separate cyberdecks (bases) from programs/upgrades (options)
+    const decks = allNetware.filter(n => n.system.netwareType === 'cyberdeck');
+    const options = allNetware.filter(n => n.system.netwareType !== 'cyberdeck');
+
+    // Build attachment map (same pattern as cyberware)
+    const attachmentMap = new Map();
+    const detachedOptions = [];
+
+    for (const opt of options) {
+      const parentId = opt.getFlag('cyberpunk', 'attachedTo') || null;
+      if (parentId && decks.some(d => d.id === parentId)) {
+        if (!attachmentMap.has(parentId)) attachmentMap.set(parentId, []);
+        attachmentMap.get(parentId).push(opt);
+      } else {
+        detachedOptions.push(opt);
+      }
+    }
+
+    // Process each cyberdeck
+    for (const deck of decks) {
+      const sys = deck.system;
+      const attached = attachmentMap.get(deck.id) || [];
+      let usedSlots = 0;
+
+      const preparedOptions = attached.map(opt => {
+        const optSys = opt.system;
+        usedSlots += (optSys.takesSpace || 1);
+        const hasStateSwitch = optSys.netwareType === 'program' &&
+          (optSys.programSubtype === 'booster' || optSys.programSubtype === 'defender');
+        return {
+          id: opt.id, img: opt.img, name: opt.name,
+          context: buildContext(opt),
+          price: optSys.cost || 0,
+          takesSpace: optSys.takesSpace || 1,
+          parentId: deck.id,
+          hasStateSwitch,
+          programState: optSys.programState || 'inactive',
+        };
+      });
+
+      category.items.push({
+        id: deck.id, img: deck.img, name: deck.name,
+        context: buildContext(deck),
+        price: sys.cost || 0,
+        slots: sys.slots || 0,
+        usedSlots,
+        slotDisplay: `${usedSlots} / ${sys.slots || 0}`,
+        equipped: sys.equipped ?? false,
+        attachedOptions: preparedOptions,
+      });
+    }
+
+    // Process detached (unslotted) programs/upgrades
+    for (const opt of detachedOptions) {
+      const optSys = opt.system;
+      const hasStateSwitch = optSys.netwareType === 'program' &&
+        (optSys.programSubtype === 'booster' || optSys.programSubtype === 'defender');
+      category.detachedOptions.push({
+        id: opt.id, img: opt.img, name: opt.name,
+        context: buildContext(opt),
+        price: optSys.cost || 0,
+        takesSpace: optSys.takesSpace || 1,
+        hasStateSwitch,
+        programState: optSys.programState || 'inactive',
+      });
+    }
+
+    // Sort alphabetically
+    category.items.sort((a, b) => a.name.localeCompare(b.name));
+    category.detachedOptions.sort((a, b) => a.name.localeCompare(b.name));
+
+    sheetData.netwareCategory = category;
   }
 
   _organizeInventory(sheetData) {
@@ -3002,6 +3093,189 @@ export class CyberpunkActorSheet extends ActorSheet {
           const newCurrentSdp = Math.min(currentSdp + optionSdpBonus, newMaxSdp);
           await baseItem.update({ "system.structure.current": newCurrentSdp });
         }
+      });
+    });
+
+    // ----- Net Tab Event Listeners -----
+
+    // Toggle cyberdeck on/off (jacked-in condition)
+    html.find('.toggle-netware-deck').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      const currentEquipped = item.system.equipped ?? false;
+      const turningOn = !currentEquipped;
+
+      if (turningOn) {
+        // Check no other deck is already active
+        const activeDeck = this.actor.items.find(i =>
+          i.type === 'netware' &&
+          i.system.netwareType === 'cyberdeck' &&
+          i.id !== item.id &&
+          i.system.equipped
+        );
+        if (activeDeck) {
+          ui.notifications.error(`Cannot jack in: ${activeDeck.name} is already active. Jack out first.`);
+          return;
+        }
+
+        // Turn on deck and apply jacked-in condition
+        await item.update({ "system.equipped": true });
+        await this.actor.toggleStatusEffect("jacked-in", { active: true });
+      } else {
+        // Turn off deck: deactivate all attached booster/defender programs first
+        const attachedPrograms = this.actor.items.filter(i =>
+          i.type === 'netware' &&
+          i.system.netwareType === 'program' &&
+          (i.system.programSubtype === 'booster' || i.system.programSubtype === 'defender') &&
+          i.getFlag('cyberpunk', 'attachedTo') === item.id &&
+          i.system.programState === 'active'
+        );
+        if (attachedPrograms.length) {
+          const updates = attachedPrograms.map(p => ({
+            _id: p.id,
+            "system.programState": "inactive"
+          }));
+          await this.actor.updateEmbeddedDocuments("Item", updates);
+        }
+
+        // Turn off deck and remove jacked-in condition
+        await item.update({ "system.equipped": false });
+        await this.actor.toggleStatusEffect("jacked-in", { active: false });
+      }
+    });
+
+    // Toggle program state (booster/defender: inactive <-> active)
+    html.find('.toggle-program-state').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      const currentState = item.system.programState || 'inactive';
+
+      // Derezzed/Destroyed cannot be toggled from UI
+      if (currentState === 'derezzed' || currentState === 'destroyed') {
+        ui.notifications.warn(`${item.name} is ${currentState} and cannot be toggled.`);
+        return;
+      }
+
+      // Check parent deck is ON to activate
+      if (currentState === 'inactive') {
+        const parentId = item.getFlag('cyberpunk', 'attachedTo');
+        const parent = parentId ? this.actor.items.get(parentId) : null;
+        if (!parent || !parent.system.equipped) {
+          ui.notifications.warn("Cannot activate: cyberdeck is not jacked in.");
+          return;
+        }
+      }
+
+      const newState = currentState === 'inactive' ? 'active' : 'inactive';
+      await item.update({ "system.programState": newState });
+    });
+
+    // Detach netware option from cyberdeck
+    html.find('.detach-netware-option').click(async ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+
+      // Check if parent deck is ON — block detach
+      const parentId = item.getFlag('cyberpunk', 'attachedTo');
+      const parent = parentId ? this.actor.items.get(parentId) : null;
+      if (parent && parent.system.equipped) {
+        ui.notifications.warn("Cannot unslot: jack out of the cyberdeck first.");
+        return;
+      }
+
+      // Reset program state on detach and remove attachment
+      const updates = { "system.programState": "inactive" };
+      await item.update(updates);
+      await item.unsetFlag('cyberpunk', 'attachedTo');
+    });
+
+    // Make unslotted netware draggable
+    html.find('.netware-row.cyberware-option.detached').each((_, optionEl) => {
+      optionEl.setAttribute('draggable', 'true');
+
+      optionEl.addEventListener('dragstart', ev => {
+        const itemId = optionEl.dataset.itemId;
+        ev.dataTransfer.setData('text/plain', JSON.stringify({
+          type: 'netware-option',
+          itemId: itemId,
+          actorId: this.actor.id
+        }));
+        optionEl.classList.add('is-dragging');
+      });
+
+      optionEl.addEventListener('dragend', () => {
+        optionEl.classList.remove('is-dragging');
+      });
+    });
+
+    // Make cyberdeck rows drop targets for netware options
+    html.find('.netware-row[data-is-base="true"]').each((_, baseEl) => {
+      baseEl.addEventListener('dragover', ev => {
+        ev.preventDefault();
+        baseEl.classList.add('drag-over');
+      });
+
+      baseEl.addEventListener('dragleave', () => {
+        baseEl.classList.remove('drag-over');
+      });
+
+      baseEl.addEventListener('drop', async ev => {
+        ev.preventDefault();
+        baseEl.classList.remove('drag-over');
+
+        let data;
+        try {
+          data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+        } catch (err) {
+          return;
+        }
+
+        if (data.type !== 'netware-option') return;
+        if (data.actorId !== this.actor.id) return;
+
+        const optionItem = this.actor.items.get(data.itemId);
+        const deckItem = this.actor.items.get(baseEl.dataset.itemId);
+
+        if (!optionItem || !deckItem) return;
+
+        // Validate: target must be a cyberdeck
+        if (deckItem.system.netwareType !== 'cyberdeck') return;
+
+        // Validate: option must not be a cyberdeck
+        if (optionItem.system.netwareType === 'cyberdeck') {
+          ui.notifications.warn("Cannot slot a cyberdeck into another cyberdeck.");
+          return;
+        }
+
+        // Validate: deck must be OFF
+        if (deckItem.system.equipped) {
+          ui.notifications.warn("Cannot slot into an active cyberdeck. Jack out first.");
+          return;
+        }
+
+        // Validate: check available slots
+        const usedSlots = this.actor.items
+          .filter(i => i.type === 'netware' && i.getFlag('cyberpunk', 'attachedTo') === deckItem.id)
+          .reduce((sum, i) => sum + (i.system.takesSpace || 1), 0);
+        const availableSlots = deckItem.system.slots || 0;
+        const neededSlots = optionItem.system.takesSpace || 1;
+
+        if (usedSlots + neededSlots > availableSlots) {
+          ui.notifications.warn(`Not enough slots. Available: ${availableSlots - usedSlots}, needed: ${neededSlots}.`);
+          return;
+        }
+
+        // Attach and reset state
+        await optionItem.update({ "system.programState": "inactive" });
+        await optionItem.setFlag('cyberpunk', 'attachedTo', deckItem.id);
       });
     });
 

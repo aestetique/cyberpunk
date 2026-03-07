@@ -14,3 +14,6 @@ npm-debug.log
 
 # Import scripts (one-time use)
 scripts/
+
+# Deploy script
+deploy.sh

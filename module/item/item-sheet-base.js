@@ -47,6 +47,7 @@ export class CyberpunkItemSheet extends ItemSheet {
     data.system = this.item.system;
     data.isLocked = this._isLocked;
     data.isMinimized = this._isMinimized;
+    data.flavorLines = (this.item.system.flavor || "").split("\n");
     return data;
   }
 

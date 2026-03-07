@@ -410,6 +410,15 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             }
         });
 
+        // Reset humanity roll (unlocked mode only)
+        html.find('.humanity-reset-btn').click(async ev => {
+            ev.preventDefault();
+            await this.item.update({
+                "system.humanityLoss": 0,
+                "system.humanityRolled": false
+            });
+        });
+
         if (this._isLocked) return;
 
         // --- Checkbox toggle (standard pattern from ordnance-sheet) ---

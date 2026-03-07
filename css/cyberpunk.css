@@ -3741,7 +3741,7 @@ input.skill-value.skill-level-input:focus {
   padding: 4px 0;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   flex: 1 0 0;
   align-self: stretch;
   color: var(--Chat-Text, #FFF);
@@ -3753,6 +3753,9 @@ input.skill-value.skill-level-input:focus {
   margin: 0;
   user-select: text;
   cursor: text;
+}
+.item-card:not(.unlocked) .flavour-text p {
+  margin: 0;
 }
 
 .item-card.unlocked .flavour-text {
@@ -6483,6 +6486,23 @@ input.skill-value.skill-level-input:focus {
   cursor: not-allowed;
   opacity: 0.7;
 }
+.cyberware-card .humanity-reset-btn {
+  width: 26px;
+  height: 26px;
+  padding: 3px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cyberware-card .humanity-reset-btn img {
+  width: 100%;
+  height: 100%;
+}
+.cyberware-card .humanity-reset-btn:hover {
+  transform: scale(1.1);
+}
 .cyberware-card .humanity-result {
   display: flex;
   width: 32px;
@@ -6888,5 +6908,3 @@ input.skill-value.skill-level-input:focus {
 .cyberware-card .sp-input {
   -moz-appearance: textfield;
 }
-
-/*# sourceMappingURL=cyberpunk.css.map */

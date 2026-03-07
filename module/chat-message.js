@@ -1354,6 +1354,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 await this._rollMicrowaveEffect(actor);
                 break;
 
+            case "blindness":
+                await actor.toggleStatusEffect("blinded", { active: true });
+                await this._setConditionDuration(actor, "blinded", 3);
+                break;
+
             case "coupDeGrace":
                 // Coup De Grace: instant death, no save
                 await actor.toggleStatusEffect("dead", { active: true });

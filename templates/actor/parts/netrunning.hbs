@@ -1,1 +1,142 @@
-{{!-- Netrunning tab - placeholder --}}
+{{!-- Net Tab --}}
+<div class="cyberware-container">
+  {{!-- NETWARE Block --}}
+  <div class="gear-block netware-block" data-netware-type="netware">
+    <header class="tab-header">
+      <span class="tab-title">NETWARE</span>
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-netware.svg" alt="">
+    </header>
+    <div class="tab-content gear-content" data-drop-target="netware">
+      {{#each netwareCategory.items as |deck|}}
+        {{!-- Cyberdeck row (base) --}}
+        <div class="gear-row cyberware-row netware-row" data-item-id="{{deck.id}}" data-is-base="true" data-netware-type="cyberdeck">
+          <div class="option-icon-spacer"></div>
+          <div class="gear-icon">
+            <img src="{{deck.img}}" alt="{{deck.name}}">
+          </div>
+          <div class="gear-info">
+            <span class="gear-name">{{deck.name}}</span>
+            <span class="gear-context">{{deck.context}}</span>
+          </div>
+          <div class="gear-price">
+            <span class="price-value">{{deck.price}}</span>
+            <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+          </div>
+          <div class="gear-field" style="width: 80px;">
+            <span class="field-top">{{deck.slotDisplay}}</span>
+            <span class="field-bottom">Program Slots</span>
+          </div>
+          <div class="gear-action-btn toggle-netware-deck" data-item-id="{{deck.id}}" data-equipped="{{deck.equipped}}" title="{{#if deck.equipped}}Jack Out{{else}}Jack In{{/if}}">
+            {{#if deck.equipped}}
+              <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
+            {{else}}
+              <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
+            {{/if}}
+          </div>
+          <div class="gear-actions">
+            <button class="gear-view" type="button" data-item-id="{{deck.id}}" title="View">
+              <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+            </button>
+            <button class="gear-delete" type="button" data-item-id="{{deck.id}}" title="Delete">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+            </button>
+          </div>
+        </div>
+
+        {{!-- Attached programs/upgrades --}}
+        {{#each deck.attachedOptions as |opt|}}
+          <div class="gear-row cyberware-row netware-row cyberware-option attached" data-item-id="{{opt.id}}" data-parent-id="{{opt.parentId}}">
+            <div class="option-icon detach-netware-option" data-item-id="{{opt.id}}" title="Unslot">
+              <img src="systems/cyberpunk/img/ui/badge-option-on.svg" alt="Slotted">
+            </div>
+            <div class="gear-icon">
+              <img src="{{opt.img}}" alt="{{opt.name}}">
+            </div>
+            <div class="gear-info">
+              <span class="gear-name">{{opt.name}}</span>
+              <span class="gear-context">{{opt.context}}</span>
+            </div>
+            <div class="gear-price">
+              <span class="price-value">{{opt.price}}</span>
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+            </div>
+            <div class="gear-field" style="width: 80px;">
+              <span class="field-top">{{opt.takesSpace}}</span>
+              <span class="field-bottom">Slots Used</span>
+            </div>
+            {{#if opt.hasStateSwitch}}
+              <div class="gear-action-btn toggle-program-state" data-item-id="{{opt.id}}" data-program-state="{{opt.programState}}" title="{{opt.programState}}">
+                {{#if (eq opt.programState "active")}}
+                  <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="Active">
+                {{else if (eq opt.programState "derezzed")}}
+                  <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Derezzed">
+                {{else if (eq opt.programState "destroyed")}}
+                  <img src="systems/cyberpunk/img/ui/badge-destroyed.svg" alt="Destroyed">
+                {{else}}
+                  <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Inactive">
+                {{/if}}
+              </div>
+            {{else}}
+              <div class="gear-action-btn"></div>
+            {{/if}}
+            <div class="gear-actions">
+              <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+              </button>
+              <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+              </button>
+            </div>
+          </div>
+        {{/each}}
+      {{/each}}
+
+      {{!-- Unslotted Section --}}
+      {{#if netwareCategory.detachedOptions.length}}
+        <div class="detached-options-header">
+          <span>UNSLOTTED</span>
+        </div>
+        {{#each netwareCategory.detachedOptions as |opt|}}
+          <div class="gear-row cyberware-row netware-row cyberware-option detached" data-item-id="{{opt.id}}" data-netware-type="option" draggable="true">
+            <div class="option-icon">
+              <img src="systems/cyberpunk/img/ui/badge-option-off.svg" alt="Unslotted">
+            </div>
+            <div class="gear-icon">
+              <img src="{{opt.img}}" alt="{{opt.name}}">
+            </div>
+            <div class="gear-info">
+              <span class="gear-name">{{opt.name}}</span>
+              <span class="gear-context">{{opt.context}}</span>
+            </div>
+            <div class="gear-price">
+              <span class="price-value">{{opt.price}}</span>
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+            </div>
+            <div class="gear-field" style="width: 80px;">
+              <span class="field-top">{{opt.takesSpace}}</span>
+              <span class="field-bottom">Slots Used</span>
+            </div>
+            <div class="gear-action-btn"></div>
+            <div class="gear-actions">
+              <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+              </button>
+              <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+              </button>
+            </div>
+          </div>
+        {{/each}}
+      {{/if}}
+
+      {{!-- Empty state --}}
+      {{#unless netwareCategory.items.length}}
+        {{#unless netwareCategory.detachedOptions.length}}
+          <div class="gear-row gear-empty">
+            <span class="gear-empty-text">No netware installed</span>
+          </div>
+        {{/unless}}
+      {{/unless}}
+    </div>
+  </div>
+</div>

@@ -79,7 +79,9 @@ export const toolBonusProperties = {
     "deathSaveMod": "PropDeathSave",
     "poisonSaveMod": "PropPoisonSave",
     "unarmedDamageMultiplier": "PropUnarmedMultiplier",
-    "healingRateBoost": "PropHealingRateBoost"
+    "healingRateBoost": "PropHealingRateBoost",
+    "stayAwakeBonus": "PropStayAwakeBonus",
+    "fallAsleepBonus": "PropFallAsleepBonus"
 };
 
 /** Netware types */
@@ -529,6 +531,7 @@ export let reliability = {
 export let fireModes = {
     fullAuto: "FullAuto",
     threeRoundBurst: "ThreeRoundBurst",
+    twoRoundBurst: "TwoRoundBurst",
     suppressive: "Suppressive",
     // Single shot is any non-auto fire with RoF of 1 or more
     singleShot: "SingleShot"

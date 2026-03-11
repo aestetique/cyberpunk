@@ -2,7 +2,8 @@ import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes, sortSkills } from "./skill-sort.js";
 import { bodyTypeModifier } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
-import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION } from "../conditions.js"
+import { HealDialog } from "../dialog/heal-dialog.js"
+import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
 
 /**
  * Actor document for Cyberpunk 2020 characters.
@@ -175,6 +176,10 @@ export class CyberpunkActor extends Actor {
     if (this.statuses.has("immobilized") || this.statuses.has("prone")) {
       move.total = 0;
     }
+    // Desynced: MOVE -1 (min 2)
+    if (this.statuses.has("desynced")) {
+      move.total = Math.max(2, move.total - 1);
+    }
     move.run = move.total * 3;
     move.leap = Math.floor(move.run / 4); 
 
@@ -205,6 +210,17 @@ export class CyberpunkActor extends Actor {
       woundStat(stats.ref, total => total - 2);
     }
 
+    // Scrambled: reduce INT and REF by stored penalty (min 2)
+    if (this.statuses.has("scrambled")) {
+      const scramblePenalty = this.getFlag("cyberpunk", "scrambledPenalty") || 0;
+      if (scramblePenalty > 0) {
+        stats.int.scrambledMod = -scramblePenalty;
+        stats.ref.scrambledMod = -scramblePenalty;
+        stats.int.total = Math.max(2, stats.int.total - scramblePenalty);
+        stats.ref.total = Math.max(2, stats.ref.total - scramblePenalty);
+      }
+    }
+
     // Save thresholds (stored for Monk's Token Bar accessibility)
     const stunBase = body.total - woundState + 1;
     system.stunSave = stunBase + (system.stunSaveMod || 0);
@@ -224,6 +240,25 @@ export class CyberpunkActor extends Actor {
 
     // EMP reduction: -1 per 10 humanity lost
     emp.total = emp.base + emp.tempMod - Math.floor(humanityDamage / 10);
+
+    // Sleep deprivation: escalating stat penalties (min 2 for REF/INT/COOL, min 0 for EMP)
+    const sleepLevel = this.getSleepDeprivationLevel();
+    if (sleepLevel >= 2) {
+      const refPen  = [0, 0, -1, -2, -3, -4, -5];
+      const intPen  = [0, 0,  0, -1, -1, -2, -3];
+      const coolPen = [0, 0,  0, -1, -2, -3, -4];
+      const empPen  = [0, 0,  0,  0, -1, -2, -3];
+      stats.ref.sleepMod = refPen[sleepLevel];
+      stats.int.sleepMod = intPen[sleepLevel];
+      stats.cool.sleepMod = coolPen[sleepLevel];
+      stats.emp.sleepMod = empPen[sleepLevel];
+      stats.ref.total = Math.max(2, stats.ref.total + refPen[sleepLevel]);
+      stats.int.total = Math.max(2, stats.int.total + intPen[sleepLevel]);
+      stats.cool.total = Math.max(2, stats.cool.total + coolPen[sleepLevel]);
+      if (empPen[sleepLevel]) {
+        stats.emp.total = Math.max(0, stats.emp.total + empPen[sleepLevel]);
+      }
+    }
 
     // Calculate cyberlimb data from equipped cyberware items
     const subtypeToLocation = {
@@ -406,6 +441,8 @@ export class CyberpunkActor extends Actor {
     const data = super.getRollData();
     // Fast Draw: +3 to initiative
     data.fastDrawMod = this.statuses.has("fast-draw") ? 3 : 0;
+    // Surprised: -5 to initiative
+    data.surprisedMod = this.statuses.has("surprised") ? -5 : 0;
     return data;
   }
 
@@ -521,6 +558,45 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Current fright level based on raw fright points.
+   * 0 = Normal, 1 = Stunned, 2 = Surprised, 3 = Shocked, 4 = Overwhelmed, 5 = Blown Away.
+   * @returns {number} Fright level from 0 to 5
+   */
+  getFrightLevel() {
+    const fright = this.system.fright || 0;
+    if (fright === 0) return 0;
+    if (fright <= 2) return 1;
+    if (fright <= 5) return 2;
+    if (fright <= 12) return 3;
+    if (fright <= 18) return 4;
+    return 5;
+  }
+
+  /**
+   * Current sleep deprivation level (0 = well rested, 1–6 = escalating deprivation).
+   * @returns {number} Sleep deprivation level from 0 to 6
+   */
+  getSleepDeprivationLevel() {
+    const sleep = this.system.sleep || 0;
+    if (sleep <= 0) return 0;
+    return Math.min(sleep, 6);
+  }
+
+  /**
+   * Get the skill roll penalty for the current sleep deprivation level.
+   * Level 1 only penalizes Awareness; levels 2+ penalize all skill rolls.
+   * @param {boolean} isAwareness - Whether this is an Awareness/Notice roll
+   * @returns {number} Penalty (e.g. -1 to -5) or 0
+   */
+  getSleepDeprivationPenalty(isAwareness = false) {
+    const level = this.getSleepDeprivationLevel();
+    if (level === 0) return 0;
+    if (level === 1) return isAwareness ? -1 : 0;
+    const conditionId = SLEEP_LEVEL_TO_CONDITION[level];
+    return SLEEP_SKILL_PENALTIES[conditionId] || 0;
+  }
+
+  /**
    * Get the roll penalty (or bonus) for the current stress level.
    * @param {boolean} isCoolRoll - Whether this is a COOL-based roll
    * @returns {number} Penalty/bonus (e.g. +1 for Fresh on COOL, -1 to -5 for negative conditions)
@@ -563,6 +639,80 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Auto-apply or remove conditions derived from stress level changes.
+   * Insomnia at Anxious+, Insane at Cracked.
+   * @param {number} oldStress - Stress value before the update
+   * @param {number} oldFright - Fright value before the update
+   */
+  async updateStressDerivedConditions(oldStress, oldFright) {
+    const oldCombined = (oldStress || 0) + (oldFright || 0);
+    const newCombined = (this.system.stress || 0) + (this.system.fright || 0);
+    const increased = newCombined > oldCombined;
+    const level = this.getStressLevel();
+
+    // Anxious+ → Insomnia (auto-remove when below Anxious)
+    if (increased && level >= 1 && !this.statuses.has("insomnia")) {
+      await this.toggleStatusEffect("insomnia", { active: true });
+    } else if (level < 1 && this.statuses.has("insomnia")) {
+      await this.toggleStatusEffect("insomnia", { active: false });
+    }
+
+    // Cracked → Insane (auto-remove only when below Cracked AND fright below Blown Away)
+    if (increased && level >= 4 && !this.statuses.has("insane")) {
+      await this.toggleStatusEffect("insane", { active: true });
+    } else if (level < 4 && this.getFrightLevel() < 5 && this.statuses.has("insane")) {
+      await this.toggleStatusEffect("insane", { active: false });
+    }
+  }
+
+  /**
+   * Auto-apply or remove conditions derived from fright level changes.
+   * Surprised at any fright, Frightened/Fleeing at Shocked/Overwhelmed, Insane at Blown Away.
+   * @param {number} oldFright - Fright value before the update
+   */
+  async updateFrightConditions(oldFright) {
+    const newFright = this.system.fright || 0;
+    const increased = newFright > oldFright;
+    const level = this.getFrightLevel();
+
+    // Any fright → Surprised (auto-remove when fright drops to 0)
+    if (increased && newFright > 0 && !this.statuses.has("surprised")) {
+      await this.toggleStatusEffect("surprised", { active: true });
+    } else if (newFright === 0 && this.statuses.has("surprised")) {
+      await this.toggleStatusEffect("surprised", { active: false });
+    }
+
+    // Shocked/Overwhelmed → Frightened or Fleeing via 1d6 roll
+    if (increased && (level === 3 || level === 4)
+        && !this.statuses.has("frightened") && !this.statuses.has("fleeing")) {
+      const frightenedThreshold = level === 3 ? 3 : 4;
+      await this._rollFrightReaction(frightenedThreshold);
+    } else if (level < 3) {
+      // Auto-remove when dropping below Shocked
+      if (this.statuses.has("frightened")) await this.toggleStatusEffect("frightened", { active: false });
+      if (this.statuses.has("fleeing")) await this.toggleStatusEffect("fleeing", { active: false });
+    }
+
+    // Blown Away → Insane (auto-remove only when stress also below Cracked)
+    if (increased && level === 5 && !this.statuses.has("insane")) {
+      await this.toggleStatusEffect("insane", { active: true });
+    } else if (level < 5 && this.getStressLevel() < 4 && this.statuses.has("insane")) {
+      await this.toggleStatusEffect("insane", { active: false });
+    }
+  }
+
+  /**
+   * Roll 1d6 to determine Frightened vs Fleeing reaction.
+   * @param {number} frightenedThreshold - Roll at or below = Frightened, above = Fleeing
+   */
+  async _rollFrightReaction(frightenedThreshold) {
+    const roll = new Roll("1d6");
+    await roll.evaluate();
+    const conditionId = roll.total <= frightenedThreshold ? "frightened" : "fleeing";
+    await this.toggleStatusEffect(conditionId, { active: true });
+  }
+
+  /**
    * Synchronize the fatigue condition on this actor's token(s) based on current fatigue points.
    * Removes any existing fatigue condition and applies the appropriate one.
    * Called automatically when fatigue or BODY changes.
@@ -583,6 +733,33 @@ export class CyberpunkActor extends Actor {
 
     if (currentFatigueCondition) {
       await this.toggleStatusEffect(currentFatigueCondition, { active: false });
+    }
+    if (newConditionId) {
+      await this.toggleStatusEffect(newConditionId, { active: true });
+    }
+  }
+
+  /**
+   * Synchronize the sleep deprivation condition based on days awake.
+   * Removes any existing sleep deprivation condition and applies the appropriate one.
+   * Called automatically when system.sleep changes.
+   */
+  async updateSleepDeprivationStatus() {
+    const level = this.getSleepDeprivationLevel();
+    const newConditionId = SLEEP_LEVEL_TO_CONDITION[level] || null;
+
+    let currentCondition = null;
+    for (const id of SLEEP_CONDITION_IDS) {
+      if (this.statuses.has(id)) {
+        currentCondition = id;
+        break;
+      }
+    }
+
+    if (currentCondition === newConditionId) return;
+
+    if (currentCondition) {
+      await this.toggleStatusEffect(currentCondition, { active: false });
     }
     if (newConditionId) {
       await this.toggleStatusEffect(newConditionId, { active: true });
@@ -649,6 +826,16 @@ export class CyberpunkActor extends Actor {
   }
 
   /** @override */
+  _preUpdate(changed, options, user) {
+    super._preUpdate(changed, options, user);
+    // Snapshot current stress/fright before the update so _onUpdate can detect increases
+    if (changed.system?.stress !== undefined || changed.system?.fright !== undefined) {
+      options._oldStress = this.system.stress || 0;
+      options._oldFright = this.system.fright || 0;
+    }
+  }
+
+  /** @override */
   async _onUpdate(changed, options, userId) {
     await super._onUpdate(changed, options, userId);
 
@@ -670,6 +857,19 @@ export class CyberpunkActor extends Actor {
     // Sync stress condition when stress points or COOL stat changes
     if (changed.system?.stress !== undefined || changed.system?.fright !== undefined || changed.system?.stats?.cool) {
       await this.updateStressStatus();
+    }
+
+    // Auto-apply/remove derived conditions from stress/fright changes
+    if (changed.system?.stress !== undefined || changed.system?.fright !== undefined) {
+      const oldStress = options._oldStress ?? (this.system.stress || 0);
+      const oldFright = options._oldFright ?? (this.system.fright || 0);
+      await this.updateStressDerivedConditions(oldStress, oldFright);
+      await this.updateFrightConditions(oldFright);
+    }
+
+    // Sync sleep deprivation condition when days awake changes
+    if (changed.system?.sleep !== undefined) {
+      await this.updateSleepDeprivationStatus();
     }
 
     // Sync cover condition when activeCover changes
@@ -796,6 +996,9 @@ export class CyberpunkActor extends Actor {
       if (this.statuses.has("deafened")) awarenessConditionPenalty -= 2;
     }
 
+    // Sleep deprivation penalty (level 1 = awareness only, levels 2+ = all skills)
+    const sleepPenalty = this.getSleepDeprivationPenalty(skill.name === awarenessSkillName);
+
     // Check if this skill is chipped by equipped chipware
     const equippedChipware = this.items.contents.filter(i =>
       i.type === "cyberware" &&
@@ -860,6 +1063,7 @@ export class CyberpunkActor extends Actor {
       fatiguePenalty || null,
       stressPenalty || null,
       awarenessConditionPenalty || null,
+      sleepPenalty || null,
       skillBonus || null
     ].filter(Boolean);
 
@@ -940,6 +1144,8 @@ export class CyberpunkActor extends Actor {
     const fatiguePenalty = this.getFatiguePenalty();
     // Stress penalty (varies by stress level and whether this is a COOL roll)
     const stressPenalty = this.getStressPenalty(stat === "cool");
+    // Sleep deprivation penalty (virtual skills are general skill rolls)
+    const sleepPenalty = this.getSleepDeprivationPenalty(false);
 
     // Build roll parts
     const rollParts = [
@@ -951,7 +1157,8 @@ export class CyberpunkActor extends Actor {
       restrainedPenalty || null,
       grapplingPenalty || null,
       fatiguePenalty || null,
-      stressPenalty || null
+      stressPenalty || null,
+      sleepPenalty || null
     ].filter(Boolean);
 
     const makeRoll = () => buildD10Roll(rollParts, this.system);
@@ -1055,6 +1262,9 @@ export class CyberpunkActor extends Actor {
       if (this.statuses.has("deafened")) awarenessConditionPenalty -= 2;
     }
 
+    // Sleep deprivation penalty (level 1 = awareness only, levels 2+ = all skills)
+    const sleepPenalty = this.getSleepDeprivationPenalty(skill.name === awarenessSkillName);
+
     // Check if this skill is chipped by equipped chipware
     const equippedChipware = this.items.contents.filter(i =>
       i.type === "cyberware" &&
@@ -1113,6 +1323,7 @@ export class CyberpunkActor extends Actor {
       fatiguePenalty || null,
       stressPenalty || null,
       awarenessConditionPenalty || null,
+      sleepPenalty || null,
       skillBonus || null
     ].filter(Boolean);
 
@@ -1261,6 +1472,54 @@ export class CyberpunkActor extends Actor {
     if (isNatural1) {
       await this.rollFumble();
     }
+  }
+
+  /**
+   * Roll a sleep check (Stay Awake or Fall Asleep).
+   * Uses 1d10 + INT vs INT as DV. No fumble on natural 1.
+   * @param {string} mode - "stayAwake" or "fallAsleep"
+   * @param {number} extraMod - Combined modifier (conditions + luck + fatigue/stress penalty)
+   */
+  async rollSleepCheck(mode, extraMod = 0) {
+    const isStayAwake = mode === "stayAwake";
+    const title = isStayAwake ? localize("StayAwake") : localize("FallAsleep");
+    const chatIcon = isStayAwake ? "awake" : "sleep";
+    const dv = this.system.stats.int.total;
+
+    const parts = ["@stats.int.total"];
+    const itemBonus = this.system[isStayAwake ? "stayAwakeBonus" : "fallAsleepBonus"] || 0;
+    if (itemBonus) parts.push(itemBonus);
+    if (extraMod) parts.push(extraMod);
+
+    const roll = buildD10Roll(parts, this.system);
+    await roll.evaluate();
+
+    const success = roll.total >= dv;
+
+    // Update sleep based on result
+    const currentSleep = this.system.sleep || 0;
+    if (isStayAwake) {
+      // Success = stayed awake (+1), failure = fell asleep (-1)
+      const newSleep = success ? currentSleep + 1 : Math.max(0, currentSleep - 1);
+      await this.update({ "system.sleep": newSleep });
+    } else {
+      // Success = fell asleep (-1), failure = couldn't sleep (+1)
+      const newSleep = success ? Math.max(0, currentSleep - 1) : currentSleep + 1;
+      await this.update({ "system.sleep": newSleep });
+    }
+
+    // Create chat message
+    const speaker = ChatMessage.getSpeaker({ actor: this });
+    new RollBundle(title)
+      .addRoll(roll)
+      .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
+        statIcon: chatIcon,
+        difficulty: dv,
+        success: success
+      });
+
+    // A day has passed — open the healing dialog
+    new HealDialog(this).render(true);
   }
 
   /**

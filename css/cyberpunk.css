@@ -2164,6 +2164,36 @@ div.statderive .value.rightborder {
   color: var(--chat-text);
 }
 
+.stabilize-action-btn {
+  background-image: url(../img/ui/button-treat.svg);
+}
+.stabilize-action-btn.stabilize--healthy {
+  background-image: url(../img/ui/button-healthy.svg);
+  cursor: default;
+}
+.stabilize-action-btn.stabilize--healthy:hover, .stabilize-action-btn.stabilize--healthy:focus {
+  filter: none;
+}
+
+.btn-value--dim {
+  color: #444856 !important;
+}
+
+.stabilize-label--healthy {
+  color: #444856 !important;
+  letter-spacing: 0.8px;
+}
+
+.stabilize-label--wounded {
+  color: var(--sheet-crimson) !important;
+  letter-spacing: 0.8px;
+}
+
+.stabilize-label--critical {
+  color: var(--sheet-crimson) !important;
+  letter-spacing: 0.4px;
+}
+
 .sidebar-header {
   width: 200px;
   height: 36px;

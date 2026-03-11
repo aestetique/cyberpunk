@@ -234,6 +234,10 @@
               {{/if}}
             </div>
             {{/each}}
+            <button class="action-btn stabilize-action-btn {{#if stabilizeBtnHealthy}}stabilize--healthy{{/if}}" type="button" data-tooltip-name="Medical Attention" data-flavor="Request first aid or stabilization. Posts a medical help request to chat." data-calc="{{stabilizeBtnCalc}}" data-token-path="@damage">
+              <span class="action-btn-name stabilize-btn-label {{stabilizeBtnLabelClass}}">{{stabilizeBtnLabel}}</span>
+              <span class="btn-value {{#if stabilizeBtnHealthy}}btn-value--dim{{/if}}">{{stabilizeBtnWounds}}</span>
+            </button>
           </div>
 
           {{!-- Tab content areas --}}
@@ -291,15 +295,15 @@
                     </div>
                     <span class="state-status">{{fatigueStatus}}</span>
                   </div>
-                  {{!-- Wounds --}}
-                  <div class="state-block" data-tooltip-name="Wounds" data-flavor="{{woundsTooltipFlavor}}" data-calc="{{woundsTooltipCalc}}" data-token-path="@damage">
-                    <span class="state-label">Wounds</span>
+                  {{!-- Sleep --}}
+                  <div class="state-block" data-tooltip-name="Sleep" data-flavor="Days the character has stayed awake." data-calc="{{sleepTooltipCalc}}" data-token-path="@sleep">
+                    <span class="state-label">Sleep</span>
                     <div class="state-value-row">
-                      <img class="state-btn stabilize-btn" title="First Aid" src="systems/cyberpunk/img/ui/badge-stabilize.svg" alt="Stabilize">
-                      <span class="state-value">{{system.damage}}</span>
-                      <img class="state-btn heal-btn" title="Heal" src="systems/cyberpunk/img/ui/badge-heal.svg" alt="Heal">
+                      <img class="state-btn sleep-up" title="Stay Awake" src="systems/cyberpunk/img/ui/badge-awake.svg" alt="Stay Awake">
+                      <span class="state-value">{{system.sleep}}</span>
+                      <img class="state-btn sleep-down" title="Fall Asleep" src="systems/cyberpunk/img/ui/badge-sleep.svg" alt="Fall Asleep">
                     </div>
-                    <span class="state-status">{{woundStatus}}</span>
+                    <span class="state-status">DAYS AWAKE</span>
                   </div>
                 </div>
               </div>

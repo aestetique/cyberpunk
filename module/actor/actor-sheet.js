@@ -11,11 +11,12 @@ import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
 import { SortModes } from "./skill-sort.js";
 import { MedicalHelpDialog } from "../dialog/medical-help-dialog.js"
-import { HealDialog } from "../dialog/heal-dialog.js"
 import { StressRollDialog } from "../dialog/stress-roll-dialog.js"
 import { FrightRollDialog } from "../dialog/fright-roll-dialog.js"
 import { COVER_TYPES, CONDITION_TOGGLE_ROWS } from "../conditions.js"
 import { CreateItemDialog } from "../dialog/create-item-dialog.js"
+import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
+import { HealDialog } from "../dialog/heal-dialog.js"
 
 /**
  * Character sheet for Cyberpunk 2020 actors.
@@ -302,6 +303,8 @@ export class CyberpunkActorSheet extends ActorSheet {
         }
         if (key === "luck" && (s.spent || 0) > 0) parts.push(`Spent \u2212${s.spent}`);
         if (["ref", "int", "cool"].includes(key) && s.woundMod) parts.push(`Wounds ${s.woundMod}`);
+        if (s.scrambledMod) parts.push(`Scrambled ${s.scrambledMod}`);
+        if (s.sleepMod) parts.push(`Sleep ${s.sleepMod}`);
         const total = key === "luck" ? (s.effective ?? s.total ?? base) : (s.total ?? base);
         let calc = parts.length > 1 ? `${parts.join(" ")} = ${total}` : `Base ${base}`;
         if (key === "ma") calc += ` | Run ${s.run ?? 0} | Leap ${s.leap ?? 0}`;
@@ -694,35 +697,29 @@ export class CyberpunkActorSheet extends ActorSheet {
     sheetData.fatigueTooltipFlavor = fatigueTooltipFlavors[fatigueLevel] ?? "No penalties.";
     sheetData.fatigueTooltipCalc = fatigueTooltipCalcs[fatigueLevel] ?? "";
 
-    const woundLevel = this.actor.getWoundLevel();
-    const damage = system.damage || 0;
-    if (damage > 40) sheetData.woundStatus = "Dead";
-    else if (woundLevel === 0) sheetData.woundStatus = "Healthy";
-    else {
-      const woundLabels = { 1: "Light", 2: "Serious", 3: "Critical" };
-      sheetData.woundStatus = woundLabels[woundLevel] || `Mortal ${woundLevel - 4}`;
-    }
+    // Sleep block data (state tab)
+    const sleep = system.sleep || 0;
+    sheetData.sleepTooltipCalc = sleep === 0 ? "Well rested" : `${sleep} day${sleep !== 1 ? "s" : ""} awake`;
 
-    const woundsFlavorMap = {
-      Healthy: "No penalties.",
-      Light: "Stun Save required when hit.",
-      Serious: "REF -2. Stun Save required when hit.",
-      Critical: "REF, INT, COOL halved. Stun Save when hit.",
-      Dead: "Dead."
-    };
-    if (sheetData.woundStatus.startsWith("Mortal")) {
-      sheetData.woundsTooltipFlavor = "REF, INT, COOL at 1/3. Death Save each round.";
+    // Stabilize button data (info row)
+    const damage = system.damage || 0;
+    const isStabilized = this.actor.statuses.has("stabilized");
+    const isMortal = damage > 12;
+    sheetData.stabilizeBtnWounds = damage;
+    sheetData.stabilizeBtnHealthy = damage === 0;
+
+    if (damage === 0) {
+      sheetData.stabilizeBtnLabel = "HEALTHY";
+      sheetData.stabilizeBtnLabelClass = "stabilize-label--healthy";
+      sheetData.stabilizeBtnCalc = "No wounds";
+    } else if (!isMortal || isStabilized) {
+      sheetData.stabilizeBtnLabel = "DAYCARE";
+      sheetData.stabilizeBtnLabelClass = "stabilize-label--wounded";
+      sheetData.stabilizeBtnCalc = `Damage ${damage} \u2014 Needs Treatment`;
     } else {
-      sheetData.woundsTooltipFlavor = woundsFlavorMap[sheetData.woundStatus] || "No penalties.";
-    }
-    if (sheetData.woundStatus === "Healthy") {
-      sheetData.woundsTooltipCalc = "";
-    } else if (sheetData.woundStatus === "Dead") {
-      sheetData.woundsTooltipCalc = "Damage 41+";
-    } else {
-      const lo = (woundLevel - 1) * 4 + 1;
-      const hi = woundLevel * 4;
-      sheetData.woundsTooltipCalc = `Damage ${lo}-${hi}`;
+      sheetData.stabilizeBtnLabel = "STABILIZE";
+      sheetData.stabilizeBtnLabelClass = "stabilize-label--critical";
+      sheetData.stabilizeBtnCalc = `Damage ${damage} \u2014 Mortally Wounded, needs stabilization`;
     }
 
     // Cover toggles for state tab
@@ -2112,22 +2109,31 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (current > 0) this.actor.update({ [field]: current - 1 });
     });
 
-    // Request Help button (wounds)
-    html.find('.stabilize-btn').click(ev => {
+    // Sleep block: stay awake / fall asleep
+    html.find('.sleep-up').click(ev => {
+      ev.preventDefault();
+      new SleepRollDialog(this.actor, "stayAwake").render(true);
+    });
+
+    html.find('.sleep-down').click(async ev => {
+      ev.preventDefault();
+      if (this.actor.statuses.has("insomnia")) {
+        new SleepRollDialog(this.actor, "fallAsleep").render(true);
+      } else {
+        const current = this.actor.system.sleep || 0;
+        if (current > 0) await this.actor.update({ "system.sleep": current - 1 });
+        // A day has passed — open the healing dialog
+        new HealDialog(this.actor).render(true);
+      }
+    });
+
+    // Stabilize button (info row)
+    html.find('.stabilize-action-btn').click(ev => {
       ev.preventDefault();
       if (!this.actor.system.damage) {
         return ui.notifications.warn(localize("FullHealth"));
       }
       this._requestMedicalHelp();
-    });
-
-    // Heal button (wounds)
-    html.find('.heal-btn').click(ev => {
-      ev.preventDefault();
-      if (!this.actor.system.damage) {
-        return ui.notifications.warn(localize("FullHealth"));
-      }
-      new HealDialog(this.actor).render(true);
     });
 
     // Cover toggle: mutually exclusive radio behavior
@@ -2143,6 +2149,21 @@ export class CyberpunkActorSheet extends ActorSheet {
       ev.preventDefault();
       const conditionId = ev.currentTarget.dataset.conditionId;
       const isActive = this.actor.statuses.has(conditionId);
+
+      // Scrambled: auto-roll 1d6 penalty on apply, clear on remove
+      if (conditionId === "scrambled") {
+        if (!isActive) {
+          const roll = await new Roll("1d6").evaluate();
+          await this.actor.setFlag("cyberpunk", "scrambledPenalty", roll.total);
+          roll.toMessage({
+            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+            flavor: `<strong>Scrambled!</strong> INT and REF reduced by ${roll.total}`
+          });
+        } else {
+          await this.actor.unsetFlag("cyberpunk", "scrambledPenalty");
+        }
+      }
+
       await this.actor.toggleStatusEffect(conditionId, { active: !isActive });
     });
 
@@ -2405,7 +2426,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     document.querySelectorAll('.cyberpunk-tooltip').forEach(t => t.remove());
 
     // Skill, Role & Stat hover tooltips (follow cursor)
-    html.find('.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor]').on('mouseenter', ev => {
+    html.find('.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor], .stabilize-action-btn[data-flavor]').on('mouseenter', ev => {
       const el = ev.currentTarget;
       const flavor = el.dataset.flavor;
       if (!flavor) return;

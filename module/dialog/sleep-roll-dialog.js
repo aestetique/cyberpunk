@@ -1,41 +1,47 @@
 import { localize } from "../utils.js";
 
+// Stay Awake: fatigue makes it harder, stress/insomnia makes it easier
+const STAY_AWAKE_FATIGUE_PENALTIES = { 2: -1, 3: -2, 4: -4, 5: -8 };
+const STAY_AWAKE_STRESS_BONUSES = { 2: 2, 3: 4, 4: 6 };
+
+// Fall Asleep: stress makes it harder, fatigue makes it easier
+const FALL_ASLEEP_STRESS_PENALTIES = { 2: -2, 3: -4, 4: -6 };
+const FALL_ASLEEP_FATIGUE_BONUSES = { 2: 1, 3: 2, 4: 4, 5: 8 };
+
 /**
- * Initiative Roll Dialog — select Fast Draw and Luck before rolling initiative.
+ * Sleep Roll Dialog — roll to Stay Awake or Fall Asleep.
+ * Stay Awake: 1d10 + INT vs INT DV, fatigue penalties.
+ * Fall Asleep: 1d10 + INT vs INT DV, stress penalties (only when Insomnia).
  */
-export class InitiativeRollDialog extends Application {
+export class SleepRollDialog extends Application {
 
   /**
-   * @param {Actor} actor        The owning actor
-   * @param {Combatant} combatant The combatant in combat
-   * @param {Combat} combat      The combat encounter
-   * @param {Function} callback  Callback to execute the roll with options
+   * @param {Actor} actor  The owning actor
+   * @param {string} mode  "stayAwake" or "fallAsleep"
    */
-  constructor(actor, combatant, combat, callback) {
+  constructor(actor, mode) {
     super();
     this.actor = actor;
-    this.combatant = combatant;
-    this.combat = combat;
-    this.callback = callback;
+    this.mode = mode;
 
     // Condition toggles
-    this._fastDraw = false;
+    this._conditions = {
+      prepared: false,
+      distracted: false
+    };
 
     // Luck spending
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ??
                           actor.system.stats.luck?.total ?? 0;
-
-    // Track if roll was executed (vs cancelled)
-    this._rolled = false;
   }
 
   /** @override */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "initiative-roll-dialog",
-      classes: ["cyberpunk", "initiative-roll-dialog"],
-      template: "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
+      id: "sleep-roll-dialog",
+      classes: ["cyberpunk", "skill-roll-dialog"],
+      template: "systems/cyberpunk/templates/dialog/sleep-roll.hbs",
       width: 300,
       height: "auto",
       popOut: true,
@@ -46,14 +52,39 @@ export class InitiativeRollDialog extends Application {
 
   /** @override */
   get title() {
-    return localize("InitiativeRoll");
+    return this.mode === "stayAwake" ? localize("StayAwake") : localize("FallAsleep");
+  }
+
+  /**
+   * Get the combined situational modifier based on mode.
+   * Each roll has penalties from one condition and bonuses from the opposite.
+   */
+  _getSituationalMod() {
+    const fatigueLevel = this.actor.getFatigueLevel();
+    const stressLevel = this.actor.getStressLevel();
+
+    if (this.mode === "stayAwake") {
+      // Fatigue makes it harder, stress makes it easier
+      return (STAY_AWAKE_FATIGUE_PENALTIES[fatigueLevel] || 0) +
+             (STAY_AWAKE_STRESS_BONUSES[stressLevel] || 0);
+    } else {
+      // Stress makes it harder, fatigue makes it easier
+      return (FALL_ASLEEP_STRESS_PENALTIES[stressLevel] || 0) +
+             (FALL_ASLEEP_FATIGUE_BONUSES[fatigueLevel] || 0);
+    }
   }
 
   /** @override */
   getData() {
+    const isStayAwake = this.mode === "stayAwake";
+    const title = isStayAwake ? localize("StayAwake") : localize("FallAsleep");
+    const chatIcon = isStayAwake ? "awake" : "sleep";
+    const dv = this.actor.system.stats.int.total;
     return {
-      title: localize("InitiativeRoll"),
-      fastDraw: this._fastDraw,
+      title,
+      chatIcon,
+      dv,
+      conditions: this._conditions,
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
       canIncreaseLuck: this._luckToSpend < this._availableLuck,
@@ -75,10 +106,12 @@ export class InitiativeRollDialog extends Application {
     // Close button
     html.find('.header-control.close').click(() => this.close());
 
-    // Fast Draw toggle button
-    html.find('.condition-btn[data-condition="fast-draw"]').click(ev => {
-      this._fastDraw = !this._fastDraw;
-      ev.currentTarget.classList.toggle('selected', this._fastDraw);
+    // Condition button toggles
+    html.find('.condition-btn').click(ev => {
+      const btn = ev.currentTarget;
+      const condition = btn.dataset.condition;
+      this._conditions[condition] = !this._conditions[condition];
+      btn.classList.toggle('selected', this._conditions[condition]);
     });
 
     // Luck plus button
@@ -127,54 +160,25 @@ export class InitiativeRollDialog extends Application {
    * Execute roll with selected options
    */
   async _executeRoll() {
-    // Apply Fast Draw condition if selected
-    if (this._fastDraw) {
-      await this.actor.toggleStatusEffect("fast-draw", { active: true });
-    }
+    // Calculate condition modifiers
+    const conditionMod = (this._conditions.prepared ? 2 : 0) +
+                         (this._conditions.distracted ? -2 : 0);
+    const situationalMod = this._getSituationalMod();
+    const extraMod = conditionMod + this._luckToSpend + situationalMod;
 
     // Spend luck if any was used
     if (this._luckToSpend > 0) {
       const currentSpent = this.actor.system.stats.luck.spent || 0;
       const currentSpentAt = this.actor.system.stats.luck.spentAt;
-      await this.actor.update({
+      this.actor.update({
         "system.stats.luck.spent": currentSpent + this._luckToSpend,
         "system.stats.luck.spentAt": currentSpentAt || Date.now()
       });
     }
 
-    this._rolled = true;
     this.close();
 
-    // Execute the callback with roll modifiers
-    if (this.callback) {
-      this.callback({
-        luckMod: this._luckToSpend
-      });
-    }
-  }
-
-  /**
-   * Static method to show the dialog and return a Promise
-   * @param {Actor} actor
-   * @param {Combatant} combatant
-   * @param {Combat} combat
-   * @returns {Promise<{luckMod: number}|null>} Resolves with modifiers, or null if cancelled
-   */
-  static async show(actor, combatant, combat) {
-    return new Promise((resolve) => {
-      const dialog = new InitiativeRollDialog(actor, combatant, combat, (modifiers) => {
-        resolve(modifiers);
-      });
-      dialog.render(true);
-
-      // Override close to handle cancellation
-      const originalClose = dialog.close.bind(dialog);
-      dialog.close = async (options) => {
-        if (!dialog._rolled) {
-          resolve(null); // Cancelled
-        }
-        return originalClose(options);
-      };
-    });
+    // Perform the roll via actor method
+    await this.actor.rollSleepCheck(this.mode, extraMod);
   }
 }

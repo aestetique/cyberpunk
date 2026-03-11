@@ -216,8 +216,8 @@ export class CyberpunkItem extends Item {
       terms.push(multiplier * Math.floor(bullets/10))
     }
 
-    // +3 mod for 3-round-burst at close or medium range
-    if(fireMode === fireModes.threeRoundBurst
+    // +3 mod for burst at close or medium range
+    if((fireMode === fireModes.threeRoundBurst || fireMode === fireModes.twoRoundBurst)
       && (range === ranges.close || range === ranges.medium)) {
         terms.push(+3);
     }
@@ -270,7 +270,11 @@ export class CyberpunkItem extends Item {
     }
     // Three-round burst. Shares... a lot in common with full auto actually
     else if(attackMods.fireMode === fireModes.threeRoundBurst) {
-      return this._fireBurst(attackMods);
+      return this._fireBurst(attackMods, 3);
+    }
+    // Two-round burst — same mechanics, capped at 2
+    else if(attackMods.fireMode === fireModes.twoRoundBurst) {
+      return this._fireBurst(attackMods, 2);
     }
     else if(attackMods.fireMode === fireModes.singleShot) {
       return this._fireSingle(attackMods);
@@ -286,8 +290,12 @@ export class CyberpunkItem extends Item {
       return [];
     }
     const wd = this.weaponData;
-    if (wd.attackType === rangedAttackTypes.auto || wd.attackType === rangedAttackTypes.autoshotgun){
-      return [fireModes.fullAuto, fireModes.suppressive, fireModes.threeRoundBurst, fireModes.singleShot];
+    if (wd.attackType === rangedAttackTypes.auto || wd.attackType === rangedAttackTypes.autoshotgun) {
+      const modes = [fireModes.singleShot];
+      if (wd.rof === 2) modes.unshift(fireModes.twoRoundBurst);
+      if (wd.rof >= 3) modes.unshift(fireModes.threeRoundBurst);
+      if (wd.rof > 3) modes.unshift(fireModes.suppressive, fireModes.fullAuto);
+      return modes;
     }
     return [fireModes.singleShot];
   }
@@ -301,6 +309,7 @@ export class CyberpunkItem extends Item {
     const labels = {
       [fireModes.fullAuto]: localize("FullAutoLabel"),
       [fireModes.threeRoundBurst]: localize("ThreeRoundBurstLabel"),
+      [fireModes.twoRoundBurst]: localize("TwoRoundBurstLabel"),
       [fireModes.singleShot]: localize("SingleShotLabel"),
       [fireModes.suppressive]: localize("SuppressiveLabel")
     };
@@ -476,7 +485,7 @@ export class CyberpunkItem extends Item {
       return rolls;
   }
 
-  async _fireBurst(attackMods) {
+  async _fireBurst(attackMods, maxRounds = 3) {
       const wd = this.weaponData;
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
       let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
@@ -497,14 +506,14 @@ export class CyberpunkItem extends Item {
       // Minimum Body penalty halves effective ROF
       const minBodyPenalty = this._getMinBodyPenalty();
       const effectiveRof = Math.max(1, Math.floor(wd.rof * minBodyPenalty.rofMultiplier));
-      let roundsFired = Math.min(wd.shotsLeft, effectiveRof, 3);
+      let roundsFired = Math.min(wd.shotsLeft, effectiveRof, maxRounds);
       let attackHits = attackRoll.total >= DC && !isNatural1;
       let areaDamages = {};
       let allDamageRolls = [];
       let roundsHit;
       if (attackHits) {
-          // In RAW this is 1d6/2, but this is functionally the same
-          roundsHit = await new Roll("1d3").evaluate();
+          const hitDie = maxRounds === 2 ? "1d2" : "1d3";
+          roundsHit = await new Roll(hitDie).evaluate();
           for (let i = 0; i < roundsHit.total; i++) {
               let damageRoll = await new Roll(wd.damage).evaluate();
               allDamageRolls.push(damageRoll);
@@ -536,7 +545,7 @@ export class CyberpunkItem extends Item {
           hits: attackHits ? roundsHit.total : 0,
           hit: attackHits,
           areaDamages: areaDamages,
-          fireModeLabel: CyberpunkItem.getFireModeLabel(fireModes.threeRoundBurst),
+          fireModeLabel: CyberpunkItem.getFireModeLabel(maxRounds === 2 ? fireModes.twoRoundBurst : fireModes.threeRoundBurst),
           rangeLabel: CyberpunkItem.getRangeLabel(attackMods.range, actualRangeBracket),
           weaponName: this.name,
           weaponImage: this.img,
@@ -545,7 +554,7 @@ export class CyberpunkItem extends Item {
           damageType: wd.damageType || "",
           hasDamage: true
       };
-      let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.threeRoundBurst));
+      let roll = new RollBundle(CyberpunkItem.getFireModeLabel(maxRounds === 2 ? fireModes.twoRoundBurst : fireModes.threeRoundBurst));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
       this.update({[this._weaponUpdatePath("shotsLeft")]: wd.shotsLeft - roundsFired});
       return roll;

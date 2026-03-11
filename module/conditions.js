@@ -331,11 +331,72 @@ export const CYBERPUNK_CONDITIONS = [
         statuses: ["jacked-in"]
     },
     {
-        id: "cyberpsycho",
-        name: "CYBERPUNK.Conditions.Cyberpsycho",
-        img: "systems/cyberpunk/img/conditions/cyberpsycho.svg",
-        statuses: ["cyberpsycho"]
+        id: "insane",
+        name: "CYBERPUNK.Conditions.Insane",
+        img: "systems/cyberpunk/img/conditions/insane.svg",
+        statuses: ["insane"]
     },
+    {
+        id: "scrambled",
+        name: "CYBERPUNK.Conditions.Scrambled",
+        img: "systems/cyberpunk/img/conditions/scrambled.svg",
+        statuses: ["scrambled"]
+    },
+    {
+        id: "desynced",
+        name: "CYBERPUNK.Conditions.Desynced",
+        img: "systems/cyberpunk/img/conditions/desynced.svg",
+        statuses: ["desynced"]
+    },
+    {
+        id: "gridlocked",
+        name: "CYBERPUNK.Conditions.Gridlocked",
+        img: "systems/cyberpunk/img/conditions/gridlocked.svg",
+        statuses: ["gridlocked"]
+    },
+    {
+        id: "lagging",
+        name: "CYBERPUNK.Conditions.Lagging",
+        img: "systems/cyberpunk/img/conditions/lagging.svg",
+        statuses: ["lagging"]
+    },
+    {
+        id: "tagged",
+        name: "CYBERPUNK.Conditions.Tagged",
+        img: "systems/cyberpunk/img/conditions/tagged.svg",
+        statuses: ["tagged"]
+    },
+    {
+        id: "insomnia",
+        name: "CYBERPUNK.Conditions.Insomnia",
+        img: "systems/cyberpunk/img/conditions/insomnia.svg",
+        statuses: ["insomnia"]
+    },
+    {
+        id: "surprised",
+        name: "CYBERPUNK.Conditions.Surprised",
+        img: "systems/cyberpunk/img/conditions/surprised.svg",
+        statuses: ["surprised"]
+    },
+    {
+        id: "frightened",
+        name: "CYBERPUNK.Conditions.Frightened",
+        img: "systems/cyberpunk/img/conditions/frightened.svg",
+        statuses: ["frightened"]
+    },
+    {
+        id: "fleeing",
+        name: "CYBERPUNK.Conditions.Fleeing",
+        img: "systems/cyberpunk/img/conditions/fleeing.svg",
+        statuses: ["fleeing"]
+    },
+    // Sleep deprivation conditions
+    ...Array.from({ length: 6 }, (_, i) => ({
+        id: `sleep-dep-${i + 1}`,
+        name: `CYBERPUNK.Conditions.SleepDep${i + 1}`,
+        img: `systems/cyberpunk/img/conditions/sleep${i + 1}.svg`,
+        statuses: [`sleep-dep-${i + 1}`]
+    })),
     // Cover conditions
     ...Object.entries(COVER_TYPES).map(([key, { sp, label }]) => ({
         id: `cover-${sp}`,
@@ -562,10 +623,48 @@ export const CONDITION_EFFECTS = {
         // No mechanical effect for now
         changes: []
     },
-    "cyberpsycho": {
-        // No mechanical effect for now
+    "insane": {
+        // Pushed Over the Edge — roll on Insanity table
         changes: []
     },
+    "scrambled": {
+        // INT and REF reduced by 1d6 (rolled on apply, stored as flag) — applied in _computeDerivedStats
+        changes: []
+    },
+    "desynced": {
+        // MOVE -1 (min 2) — applied in _computeDerivedStats
+        changes: []
+    },
+    "gridlocked": {
+        // Cannot progress deeper into Architecture or Jack Out safely
+        changes: []
+    },
+    "lagging": {
+        // -1 NET Actions next turn (min 2)
+        changes: []
+    },
+    "tagged": {
+        // -2 on Slide Checks
+        changes: []
+    },
+    "insomnia": {
+        // Must make checks to fall asleep
+        changes: []
+    },
+    "surprised": {
+        // -5 to initiative — applied in getRollData()
+        changes: []
+    },
+    "frightened": {
+        // Freezes in place, cannot act
+        changes: []
+    },
+    "fleeing": {
+        // Runs from fright source
+        changes: []
+    },
+    // Sleep deprivation conditions - stat/skill penalties applied manually in prepareDerivedData and rollSkillCheck
+    ...Object.fromEntries(Array.from({ length: 6 }, (_, i) => [`sleep-dep-${i + 1}`, { changes: [] }])),
     // Cover conditions - no stat changes, handled via armor stacking in prepareDerivedData
     ...Object.fromEntries(COVER_CONDITION_IDS.map(id => [id, { changes: [] }]))
 };
@@ -659,8 +758,37 @@ export const STRESS_GENERAL_PENALTIES = {
 };
 
 /**
+ * All condition IDs that represent sleep deprivation states (for easy iteration)
+ */
+export const SLEEP_CONDITION_IDS = [
+    "sleep-dep-1", "sleep-dep-2", "sleep-dep-3",
+    "sleep-dep-4", "sleep-dep-5", "sleep-dep-6"
+];
+
+/**
+ * Map sleep deprivation level (1–6) to condition ID
+ */
+export const SLEEP_LEVEL_TO_CONDITION = {
+    1: "sleep-dep-1", 2: "sleep-dep-2", 3: "sleep-dep-3",
+    4: "sleep-dep-4", 5: "sleep-dep-5", 6: "sleep-dep-6"
+};
+
+/**
+ * Skill roll penalties for each sleep deprivation level.
+ * Level 1 only affects Awareness; levels 2+ affect all skill rolls.
+ */
+export const SLEEP_SKILL_PENALTIES = {
+    "sleep-dep-1": 0,
+    "sleep-dep-2": -1,
+    "sleep-dep-3": -2,
+    "sleep-dep-4": -3,
+    "sleep-dep-5": -4,
+    "sleep-dep-6": -5
+};
+
+/**
  * Condition toggle layout for the State tab.
- * 3 rows of 8 toggles each. icon = SVG base name (without path/extension).
+ * 4 rows of 8 toggles each. icon = SVG base name (without path/extension).
  */
 export const CONDITION_TOGGLE_ROWS = [
     [
@@ -668,10 +796,10 @@ export const CONDITION_TOGGLE_ROWS = [
         { id: "restrained",   label: "Restrained",   icon: "restrained",   flavor: "Bound or held in place by physical restraints.", calc: "−2 on all checks" },
         { id: "immobilized",  label: "Immobilized",  icon: "immobilized",  flavor: "Unable to move from current position.", calc: "MA = 0" },
         { id: "prone",        label: "Prone",        icon: "prone",        flavor: "Knocked down or lying flat on the ground.", calc: "MA = 0" },
-        { id: "action-surge", label: "Action Surge", icon: "action-surge", flavor: "Pushing beyond normal limits to act twice in a single turn.", calc: "Extra action | −3 on all checks" },
+        { id: "unconscious",  label: "Unconscious",  icon: "unconscious",  flavor: "Completely unaware and unresponsive.", calc: "Cannot act | −8 Awareness" },
         { id: "shocked",      label: "Shocked",      icon: "shocked",      flavor: "Overwhelmed by pain or trauma, unable to respond.", calc: "Cannot act" },
         { id: "stabilized",   label: "Stabilized",   icon: "stabilized",   flavor: "Vital signs stabilized by medical intervention.", calc: "Skip Death Save at turn start" },
-        { id: "unconscious",  label: "Unconscious",  icon: "unconscious",  flavor: "Completely unaware and unresponsive.", calc: "Cannot act | −8 Awareness" }
+        { id: "dead",         label: "Dead",         icon: "dead",          flavor: "Flatlined. No coming back without extraordinary measures.", calc: "Cannot act" }
     ],
     [
         { id: "poisoned",  label: "Poisoned", icon: "poisoned",  flavor: "Toxins coursing through the body, impairing reflexes.", calc: "REF −4" },
@@ -684,13 +812,23 @@ export const CONDITION_TOGGLE_ROWS = [
         { id: "deafened",  label: "Deafened",  icon: "deafened",  flavor: "Hearing compromised, struggling to perceive surroundings.", calc: "−2 Awareness" }
     ],
     [
+        { id: "jacked-in",   label: "Jacked In",   icon: "jacked-in",   flavor: "Mind plugged directly into cyberspace.", calc: "Connected to the Net" },
+        { id: "scrambled",   label: "Scrambled",   icon: "scrambled",   flavor: "Nervous system overloaded by a hostile NET program like Nervescrub.", calc: "INT, REF −1d6 (min 2)" },
+        { id: "desynced",    label: "Desynced",    icon: "desynced",    flavor: "Motor functions disrupted by a hostile NET program like Scorpio.", calc: "MA −1 (min 2)" },
+        { id: "gridlocked",  label: "Gridlocked",  icon: "gridlocked",  flavor: "Locked in place on the NET by a hostile program like Superglue.", calc: "Cannot progress or Jack Out safely" },
+        { id: "lagging",     label: "Lagging",     icon: "lagging",     flavor: "Processing delays caused by a hostile NET program like Vrizzbolt.", calc: "−1 NET Actions next turn (min 2)" },
+        { id: "tagged",      label: "Tagged",      icon: "tagged",      flavor: "Marked by a hostile NET program like Skunk.", calc: "−2 on Slide Checks" },
+        { id: "suffocating", label: "Suffocating", icon: "suffocating", flavor: "Running out of breathable air.", calc: "Risk of death" },
+        { id: "insomnia",    label: "Insomnia",    icon: "insomnia",    flavor: "Accumulated stress prevents restful sleep.", calc: "Must check to fall asleep" }
+    ],
+    [
+        { id: "surprised",      label: "Surprised",   icon: "surprised",      flavor: "Caught off guard by a sudden threat.", calc: "−5 Initiative" },
+        { id: "frightened",     label: "Frightened",  icon: "frightened",     flavor: "Terrified and frozen in place, unable to act.", calc: "Cannot act" },
+        { id: "fleeing",        label: "Fleeing",     icon: "fleeing",        flavor: "Overcome with terror, running from the source of fright.", calc: "Must flee" },
+        { id: "insane",         label: "Insane",      icon: "insane",         flavor: "Pushed Over the Edge — must roll on the Insanity table.", calc: "Roll on Insanity table" },
         { id: "lost-left-arm",  label: "Left Arm",    icon: "lost-left-arm",  flavor: "Limb severed or rendered completely nonfunctional.", calc: "Left arm destroyed" },
         { id: "lost-right-arm", label: "Right Arm",   icon: "lost-right-arm", flavor: "Limb severed or rendered completely nonfunctional.", calc: "Right arm destroyed" },
         { id: "lost-left-leg",  label: "Left Leg",    icon: "lost-left-leg",  flavor: "Limb severed or rendered completely nonfunctional.", calc: "Left leg destroyed | MA = 0" },
-        { id: "lost-right-leg", label: "Right Leg",   icon: "lost-right-leg", flavor: "Limb severed or rendered completely nonfunctional.", calc: "Right leg destroyed | MA = 0" },
-        { id: "suffocating",    label: "Suffocating",  icon: "suffocating",   flavor: "Running out of breathable air.", calc: "Risk of death" },
-        { id: "jacked-in",      label: "Jacked In",    icon: "jacked-in",     flavor: "Mind plugged directly into cyberspace.", calc: "Connected to the Net" },
-        { id: "cyberpsycho",    label: "Cyberpsycho",  icon: "cyberpsycho",   flavor: "Humanity stripped away by excessive cyberware.", calc: "EMP = 0 | GM control" },
-        { id: "dead",           label: "Dead",         icon: "dead",          flavor: "Flatlined. No coming back without extraordinary measures.", calc: "Cannot act" }
+        { id: "lost-right-leg", label: "Right Leg",   icon: "lost-right-leg", flavor: "Limb severed or rendered completely nonfunctional.", calc: "Right leg destroyed | MA = 0" }
     ]
 ];

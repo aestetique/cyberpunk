@@ -774,6 +774,7 @@
 			"fatigue": 0,
 			"stress": 0,
 			"fright": 0,
+			"sleep": 0,
 			"activeCover": null
 		}
 	},

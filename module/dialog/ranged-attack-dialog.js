@@ -44,6 +44,7 @@ export class RangedAttackDialog extends Application {
       weaponName: this.weapon.name,
       showFullAuto: rof > 3 && shotsLeft > 3,
       showBurst: rof >= 3 && shotsLeft >= 3,
+      showTwoRoundBurst: rof === 2 && shotsLeft >= 2,
       showSingleShot: shotsLeft >= 1,
       outOfAmmo: shotsLeft < 1,
       showReload: hasAmmo

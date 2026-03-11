@@ -264,6 +264,40 @@
   }
 }
 
+// Stabilize / Medical Attention button (info row)
+.stabilize-action-btn {
+  background-image: url(../img/ui/button-treat.svg);
+
+  &.stabilize--healthy {
+    background-image: url(../img/ui/button-healthy.svg);
+    cursor: default;
+
+    &:hover, &:focus {
+      filter: none;
+    }
+  }
+}
+
+.btn-value--dim {
+  color: #444856 !important;
+}
+
+// Override .action-btn-name color for stabilize label states
+.stabilize-label--healthy {
+  color: #444856 !important;
+  letter-spacing: 0.8px;
+}
+
+.stabilize-label--wounded {
+  color: var(--sheet-crimson) !important;
+  letter-spacing: 0.8px;
+}
+
+.stabilize-label--critical {
+  color: var(--sheet-crimson) !important;
+  letter-spacing: 0.4px;
+}
+
 // Sidebar Header (reusable for Armor, Cyberware, etc.)
 .sidebar-header {
   width: 200px;

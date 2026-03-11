@@ -4,16 +4,34 @@
     <a class="header-control close"><i class="fas fa-times"></i></a>
   </header>
 
-  {{!-- Initiative section bar --}}
+  {{!-- Section bar with mode icon --}}
   <div class="fire-mode-section">
-    <img src="systems/cyberpunk/img/chat/initiative.svg" alt="">
-    <span class="fire-mode-label">{{localize "CYBERPUNK.Initiative"}}</span>
+    <img src="systems/cyberpunk/img/chat/{{chatIcon}}.svg" alt="">
+    <span class="fire-mode-label">{{title}}</span>
   </div>
 
-  {{!-- Fast Draw toggle --}}
-  <button type="button" class="condition-btn{{#if fastDraw}} selected{{/if}}" data-condition="fast-draw">
-    {{localize "CYBERPUNK.FastDraw"}} +3
-  </button>
+  {{!-- Static DV display --}}
+  <div class="range-dropdown">
+    <div class="range-dropdown-btn" style="pointer-events: none;">
+      <span class="range-label" style="text-align: center; width: 100%;">{{localize "CYBERPUNK.DifficultyValue"}} {{dv}}</span>
+    </div>
+  </div>
+
+  {{!-- Conditions section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/conditions.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.ConditionsHeader"}}</span>
+  </div>
+
+  {{!-- Condition buttons --}}
+  <div class="conditions-grid">
+    <button type="button" class="condition-btn" data-condition="prepared">
+      {{localize "CYBERPUNK.ConditionPrepared"}}
+    </button>
+    <button type="button" class="condition-btn" data-condition="distracted">
+      {{localize "CYBERPUNK.ConditionDistracted"}}
+    </button>
+  </div>
 
   {{!-- Luck section bar --}}
   <div class="fire-mode-section">

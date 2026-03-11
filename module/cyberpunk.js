@@ -302,10 +302,24 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     // Only run for GM to avoid duplicate rolls/updates
     if (!game.user.isGM) return;
 
-    // Reset all initiative when a new round starts (CP2020: roll every round)
+    // Reset and auto-roll all initiative when a new round starts (CP2020: roll every round)
     if (current.round > prior.round && current.round > 1) {
-        const updates = combat.combatants.map(c => ({ _id: c.id, initiative: null }));
-        await combat.updateEmbeddedDocuments("Combatant", updates);
+        const nullUpdates = combat.combatants.map(c => ({ _id: c.id, initiative: null }));
+        await combat.updateEmbeddedDocuments("Combatant", nullUpdates);
+
+        // Auto-roll for all combatants (no dialog, no Luck — conditions like Surprised apply via getRollData)
+        const rollFormula = game.system.initiative;
+        const rollUpdates = [];
+        for (const combatant of combat.combatants) {
+            if (!combatant?.actor) continue;
+            const roll = await new Roll(rollFormula, combatant.actor.getRollData()).evaluate();
+            rollUpdates.push({ _id: combatant.id, initiative: roll.total });
+        }
+        if (rollUpdates.length) {
+            await combat.updateEmbeddedDocuments("Combatant", rollUpdates);
+            // Reset turn to the top of the new initiative order
+            await combat.update({ turn: 0 });
+        }
     }
 
     // Handle turn END for the previous combatant
@@ -496,6 +510,24 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             } else {
                 await actor.setFlag("cyberpunk", flagKey, newDuration);
             }
+        }
+    }
+});
+
+/**
+ * Clean up combat-only conditions when combat ends.
+ * Removes Fast Draw and Action Surge from all combatants.
+ */
+Hooks.on("deleteCombat", async (combat) => {
+    if (!game.user.isGM) return;
+    for (const combatant of combat.combatants) {
+        if (!combatant?.actor) continue;
+        const actor = combatant.actor;
+        if (actor.statuses.has("fast-draw")) {
+            await actor.toggleStatusEffect("fast-draw", { active: false });
+        }
+        if (actor.statuses.has("action-surge")) {
+            await actor.toggleStatusEffect("action-surge", { active: false });
         }
     }
 });

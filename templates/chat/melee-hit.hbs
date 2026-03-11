@@ -90,4 +90,11 @@
         </div>
         {{#if hasApply}}<button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>{{/if}}
     </div>
+
+    {{!-- IP Gain Hint (on non-fumble) --}}
+    {{#if ipGained}}
+    <div class="fumble-hint-container">
+        <span class="card-hint">+{{ipGained}} IP</span>
+    </div>
+    {{/if}}
 </div>

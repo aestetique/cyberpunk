@@ -135,4 +135,11 @@
         <button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>
     </div>
     {{/if}}
+
+    {{!-- IP Gain Hint (on hit) --}}
+    {{#if ipGained}}
+    <div class="fumble-hint-container">
+        <span class="card-hint">+{{ipGained}} IP</span>
+    </div>
+    {{/if}}
 </div>

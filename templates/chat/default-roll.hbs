@@ -48,4 +48,11 @@
     {{#if flavor}}
     <div class="card-hint">{{flavor}}</div>
     {{/if}}
+
+    {{!-- IP Gain Hint --}}
+    {{#if ipGained}}
+    <div class="fumble-hint-container">
+        <span class="card-hint">+{{ipGained}} IP</span>
+    </div>
+    {{/if}}
 </div>

@@ -402,6 +402,7 @@ export class CyberpunkItem extends Item {
    */
   async _fireFullAuto(attackMods, targetTokens) {
       const wd = this.weaponData;
+      const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
       let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let DC = rangeDCs[attackMods.range];
@@ -414,6 +415,7 @@ export class CyberpunkItem extends Item {
       // This is a somewhat flawed multi-target thing - given target tokens, we could calculate distance (& therefore penalty) for each, and apply damage to them
       let rolls = [];
       let fumbleTriggered = false;
+      let ipGranted = false;
       for (let i = 0; i < targetCount; i++) {
           let attackRoll = await this.rollToHit(attackMods);
 
@@ -435,6 +437,14 @@ export class CyberpunkItem extends Item {
           if (roundsHit < 0) {
               roundsHit = 0;
           }
+
+          // Grant IP once per full-auto action (on first hit)
+          let ipGained = 0;
+          if (roundsHit > 0 && !ipGranted && this.actor) {
+              ipGained = await this.actor.grantCombatIP(attackRoll, resolvedSkill);
+              ipGranted = true;
+          }
+
           let areaDamages = {};
           let allDamageRolls = [];
           // Roll damage for each of the bullets that hit
@@ -476,7 +486,8 @@ export class CyberpunkItem extends Item {
               weaponType: this.getWeaponLineType(),
               loadedAmmoType: wd.loadedAmmoType || "standard",
               damageType: wd.damageType || "",
-              hasDamage: true
+              hasDamage: true,
+              ipGained: ipGained
           };
           let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.fullAuto));
           roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
@@ -487,6 +498,7 @@ export class CyberpunkItem extends Item {
 
   async _fireBurst(attackMods, maxRounds = 3) {
       const wd = this.weaponData;
+      const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
       // The kind of distance we're attacking at, so we can display Close: <50m or something like that
       let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let DC = rangeDCs[attackMods.range];
@@ -508,6 +520,13 @@ export class CyberpunkItem extends Item {
       const effectiveRof = Math.max(1, Math.floor(wd.rof * minBodyPenalty.rofMultiplier));
       let roundsFired = Math.min(wd.shotsLeft, effectiveRof, maxRounds);
       let attackHits = attackRoll.total >= DC && !isNatural1;
+
+      // Grant IP on hit
+      let ipGained = 0;
+      if (attackHits && this.actor) {
+          ipGained = await this.actor.grantCombatIP(attackRoll, resolvedSkill);
+      }
+
       let areaDamages = {};
       let allDamageRolls = [];
       let roundsHit;
@@ -552,7 +571,8 @@ export class CyberpunkItem extends Item {
           weaponType: this.getWeaponLineType(),
           loadedAmmoType: wd.loadedAmmoType || "standard",
           damageType: wd.damageType || "",
-          hasDamage: true
+          hasDamage: true,
+          ipGained: ipGained
       };
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(maxRounds === 2 ? fireModes.twoRoundBurst : fireModes.threeRoundBurst));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
@@ -604,6 +624,7 @@ export class CyberpunkItem extends Item {
 
   async _fireSingle(attackMods) {
       const wd = this.weaponData;
+      const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
 
       // Determine if this is an exotic weapon with an effect
       const isExotic = wd.weaponType === "Exotic";
@@ -627,6 +648,13 @@ export class CyberpunkItem extends Item {
 
       let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let attackHits = attackRoll.total >= DC && !isNatural1;
+
+      // Grant IP on hit
+      let ipGained = 0;
+      if (attackHits && this.actor) {
+          ipGained = await this.actor.grantCombatIP(attackRoll, resolvedSkill);
+      }
+
       // Exotic weapons use charges, regular weapons use shotsLeft
       const ammoLeft = isExotic ? (wd.charges || 0) : wd.shotsLeft;
       const roundsFired = Math.min(ammoLeft, 1);
@@ -686,7 +714,8 @@ export class CyberpunkItem extends Item {
           hasDamage: hasDamage,
           effectLabel: effectLabel,
           effectIcon: effectIcon,
-          hitLocation: hitLocation
+          hitLocation: hitLocation,
+          ipGained: ipGained
       };
 
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.singleShot));
@@ -739,6 +768,14 @@ export class CyberpunkItem extends Item {
           ? attackMods.actualDistance
           : rangeResolve[attackMods.range](system.range);
       let attackHits = attackRoll.total >= DC && !isNatural1;
+
+      // Grant IP on hit
+      let ipGained = 0;
+      if (attackHits && this.actor) {
+          const wd = this.weaponData;
+          const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
+          ipGained = await this.actor.grantCombatIP(attackRoll, resolvedSkill);
+      }
 
       // Scatter logic for circle ordnance on miss
       const isCircle = (system.templateType || "circle") === "circle";
@@ -828,7 +865,8 @@ export class CyberpunkItem extends Item {
           effectIcon: effectIcon,
           // Scatter data for circle ordnance
           isCircle: isCircle,
-          scatterDistance: scatterDistance
+          scatterDistance: scatterDistance,
+          ipGained: ipGained
       };
 
       let roll = new RollBundle(localize("OrdnanceAction"));
@@ -942,9 +980,15 @@ export class CyberpunkItem extends Item {
           await this.actor.rollFumble(this.weaponData.reliability);
       }
 
-      // Martial skill damage bonus (if the weapon's attack skill is a martial art)
+      // Grant IP on non-fumble (melee is contested, no DC)
       const wd = this.weaponData;
       const resolvedSkill = wd.attackSkill || (attackSkills[wd.weaponType] || [])[0] || "";
+      let ipGained = 0;
+      if (!isNatural1 && this.actor) {
+          ipGained = await this.actor.grantCombatIP(attackRoll, resolvedSkill);
+      }
+
+      // Martial skill damage bonus (if the weapon's attack skill is a martial art)
       let martialDamageBonus = 0;
       if (resolvedSkill) {
           const skill = this.actor.itemTypes.skill.find(s => s.name === resolvedSkill);
@@ -1010,7 +1054,8 @@ export class CyberpunkItem extends Item {
           weaponType: this.getWeaponLineType(),
           loadedAmmoType: "standard",
           damageType: this.weaponData.damageType || "",
-          hitLocation: hitLocation
+          hitLocation: hitLocation,
+          ipGained: ipGained
       };
 
       let roll = new RollBundle(localize("Strike"));
@@ -1043,7 +1088,16 @@ export class CyberpunkItem extends Item {
       attackBonus: martialSkillLevel,
       keyTechniqueBonus: keyTechniqueBonus,
     });
+    await attackRoll.evaluate();
     results.addRoll(attackRoll, {name: "Attack"});
+
+    // Grant IP on non-fumble (martial is contested, no DC)
+    const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
+    let ipGained = 0;
+    if (!isNatural1) {
+      ipGained = await actor.grantCombatIP(attackRoll, martialArt);
+    }
+
     let damageFormula = "";
 
     // Directly damaging things
@@ -1077,7 +1131,7 @@ export class CyberpunkItem extends Item {
         martialDamageBonus: isMartial ? martialSkillLevel : 0
       }), {name: localize("Damage")});
     }
-    results.defaultExecute({img: this.img}, this.actor);
+    results.defaultExecute({img: this.img, ipGained: ipGained}, this.actor);
     return results;
   }
 

@@ -1368,6 +1368,35 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Grant IP to a combat skill based on an attack roll.
+   * Same formula as skill checks: first digit of total + 1 if crit (nat 10).
+   * @param {Roll} attackRoll - The evaluated attack roll
+   * @param {string} skillName - The skill name (internal key or localized)
+   * @returns {number} IP gained (0 if skill not found or chipped)
+   */
+  async grantCombatIP(attackRoll, skillName) {
+    if (!skillName) return 0;
+    const nameLoc = localize("Skill" + skillName);
+    const targetName = nameLoc.includes("Skill") ? skillName : nameLoc;
+    let skill = this.itemTypes.skill.find(s => s.name === targetName);
+    if (!skill && targetName !== skillName) {
+      skill = this.itemTypes.skill.find(s => s.name === skillName);
+    }
+    if (!skill) return 0;
+    if (skill.system.isChipped) return 0;
+
+    const firstDigit = parseInt(String(attackRoll.total)[0]);
+    const isCrit = attackRoll.dice[0]?.results?.[0]?.result === 10;
+    const ipGained = firstDigit + (isCrit ? 1 : 0);
+    const currentIp = skill.system.ip || 0;
+    await this.updateEmbeddedDocuments("Item", [{
+      _id: skill.id,
+      "system.ip": currentIp + ipGained
+    }]);
+    return ipGained;
+  }
+
+  /**
    * Roll a virtual skill check (from chipware) against a difficulty
    * @param {string} virtualId - Format: "virtual-{chipwareId}-{skillName}"
    * @param {number} difficulty - Target number

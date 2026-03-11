@@ -370,6 +370,12 @@ export class PunchDialog extends Application {
       await this.actor.rollFumble();
     }
 
+    // Grant IP on non-fumble (unarmed is contested, no DC)
+    let ipGained = 0;
+    if (!isNatural1 && this._selectedSkill) {
+      ipGained = await this.actor.grantCombatIP(attackRoll, this._selectedSkill.name);
+    }
+
     // === DAMAGE & LOCATION ROLLS (skip for damageless actions like Disarm) ===
     let areaDamages = {};
     let hitLocation = "";
@@ -440,7 +446,8 @@ export class PunchDialog extends Application {
       hasEffect: !!this._weaponEffect,
       effectIcon: { prone: "prone", grapple: "restrained", hold: "immobilized", throw: "prone" }[this._weaponEffect] || null,
       effectLabel: { prone: localize("Conditions.Prone"), grapple: localize("Conditions.Restrained"), hold: localize("Conditions.Immobilized"), throw: localize("Conditions.Prone") }[this._weaponEffect] || null,
-      hitLocation: hitLocation
+      hitLocation: hitLocation,
+      ipGained: ipGained
     };
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
@@ -576,6 +583,12 @@ export class PunchDialog extends Application {
       await this.actor.rollFumble();
     }
 
+    // Grant IP on non-fumble (Ram is contested, no DC)
+    let ipGained = 0;
+    if (!isNatural1 && this._selectedSkill) {
+      ipGained = await this.actor.grantCombatIP(attackRoll, this._selectedSkill.name);
+    }
+
     // === DAMAGE ROLL ===
     const baseDamageFormula = this._baseDamage;  // Already set to ramBaseDamage in constructor
     const baseDamageRoll = await new Roll(baseDamageFormula).evaluate();
@@ -627,7 +640,8 @@ export class PunchDialog extends Application {
       hasEffect: false,
       effectIcon: null,
       effectLabel: null,
-      hitLocation: hitLocation
+      hitLocation: hitLocation,
+      ipGained: ipGained
     };
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });

@@ -442,6 +442,10 @@ details[open] summary ~ * {
   line-height: 12px;
   margin-top: 4px;
 }
+/* Hide TAH's default tooltips — we use our own cursor-following tooltips */
+#tooltip.tah-tooltip {
+  display: none !important;
+}
 .cyberpunk-tooltip .tooltip-label {
   overflow: hidden;
   color: #808090;

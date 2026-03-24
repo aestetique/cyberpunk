@@ -1547,8 +1547,10 @@ export class CyberpunkActor extends Actor {
         success: success
       });
 
-    // A day has passed — open the healing dialog
-    new HealDialog(this).render(true);
+    // A day has passed — open the healing dialog (only if wounded)
+    if (this.system.damage > 0) {
+      new HealDialog(this).render(true);
+    }
   }
 
   /**

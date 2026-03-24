@@ -2122,8 +2122,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       } else {
         const current = this.actor.system.sleep || 0;
         if (current > 0) await this.actor.update({ "system.sleep": current - 1 });
-        // A day has passed — open the healing dialog
-        new HealDialog(this.actor).render(true);
+        // A day has passed — open the healing dialog (only if wounded)
+        if (this.actor.system.damage > 0) {
+          new HealDialog(this.actor).render(true);
+        }
       }
     });
 

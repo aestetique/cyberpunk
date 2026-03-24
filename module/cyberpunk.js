@@ -20,6 +20,9 @@ import { CYBERPUNK_CONDITIONS, CONDITION_EFFECTS } from "./conditions.js";
 import { CyberpunkTokenRuler } from "./canvas/token-ruler.js";
 import { CreateItemDialog } from "./dialog/create-item-dialog.js";
 
+// Token Action HUD integration (optional — only activates if TAH Core is installed)
+import "./tah/init.js";
+
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
 import * as migrations from "./migrate.js";

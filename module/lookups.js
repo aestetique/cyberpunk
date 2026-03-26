@@ -81,7 +81,8 @@ export const toolBonusProperties = {
     "unarmedDamageMultiplier": "PropUnarmedMultiplier",
     "healingRateBoost": "PropHealingRateBoost",
     "stayAwakeBonus": "PropStayAwakeBonus",
-    "fallAsleepBonus": "PropFallAsleepBonus"
+    "fallAsleepBonus": "PropFallAsleepBonus",
+    "bonusActions": "PropBonusActions"
 };
 
 /** Netware types */

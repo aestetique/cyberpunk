@@ -14,7 +14,8 @@
 .app.window-app.heal-dialog,
 .app.window-app.stress-roll-dialog,
 .app.window-app.fright-roll-dialog,
-.app.window-app.create-item-dialog {
+.app.window-app.create-item-dialog,
+.app.window-app.game-time-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -45,7 +46,8 @@
 .heal-wrapper,
 .stress-roll-wrapper,
 .fright-roll-wrapper,
-.create-item-wrapper {
+.create-item-wrapper,
+.game-time-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -599,4 +601,38 @@
 // Heal dialog: full-width action button
 .heal-wrapper .action-btn {
   width: 100%;
+}
+
+// ============================================
+// Game Time Dialog (unique styles — layout/header/dropdown/buttons inherited from shared wrapper)
+// ============================================
+.game-time-wrapper {
+  .game-time-display {
+    background: var(--chat-accent, #26282F);
+    border-radius: 2px;
+    padding: 8px 12px;
+    text-align: center;
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+  }
+
+  // Override luck-btn width from 60px to 36px for compact +/- buttons
+  .luck-btn {
+    width: 36px;
+    min-width: 36px;
+  }
+
+  // Dropdown sits between the +/- buttons, takes remaining space
+  .range-dropdown {
+    flex: 1;
+  }
+}
+
+
+// Hide TAH's default tooltips — we use our own cursor-following tooltips
+#tooltip.tah-tooltip {
+  display: none !important;
 }

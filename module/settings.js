@@ -64,6 +64,28 @@ export function registerSystemSettings() {
   });
 
   /**
+   * Campaign start date (text input, parsed as UTC date)
+   */
+  game.settings.register("cyberpunk", "campaignStartDate", {
+    name: "SETTINGS.CampaignStartDate",
+    hint: "SETTINGS.CampaignStartDateHint",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "2045-01-01 00:00:00"
+  });
+
+  /**
+   * Game time offset from campaign start (ms). Hidden setting.
+   */
+  game.settings.register("cyberpunk", "gameTimeOffset", {
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0
+  });
+
+  /**
    * Settings menu button to open skill mapping configuration
    */
   game.settings.registerMenu("cyberpunk", "skillMappingMenu", {

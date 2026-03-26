@@ -1,4 +1,4 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes } from "../lookups.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
 import { localize, tabBeautifying, toTitleCase } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
@@ -1660,8 +1660,32 @@ export class CyberpunkActorSheet extends ActorSheet {
       if (type === 'cyberdeck') return `Cyberdeck \u00B7 ${sys.slots || 0} slots`;
       if (type === 'upgrade') return 'Upgrade';
       if (type === 'program') {
-        const subtypeKey = programSubtypes[sys.programSubtype];
-        const subtypeLabel = subtypeKey ? game.i18n.localize(`CYBERPUNK.${subtypeKey}`) : sys.programSubtype;
+        const subtype = sys.programSubtype;
+        if (subtype === 'defender') {
+          const defKey = defenderDefences[sys.defenderDefence];
+          const defLabel = defKey ? game.i18n.localize(`CYBERPUNK.${defKey}`) : sys.defenderDefence;
+          const valuePart = sys.defenderDefence === 'armor' && sys.defenderValue ? ` ${sys.defenderValue}` : '';
+          return `Defender \u00B7 ${defLabel}${valuePart}`;
+        }
+        if (subtype === 'booster') {
+          const bonusKey = boosterBonuses[sys.boosterBonus];
+          const bonusLabel = bonusKey ? game.i18n.localize(`CYBERPUNK.${bonusKey}`) : sys.boosterBonus;
+          return `Booster \u00B7 ${bonusLabel} +${sys.boosterValue || 0}`;
+        }
+        if (subtype === 'attacker') {
+          const classKey = attackerClasses[sys.attackerClass];
+          const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : sys.attackerClass;
+          const parts = ['Attacker', classLabel];
+          if (sys.attackerEffect && sys.attackerEffect !== 'none') {
+            const effectKey = attackerEffects[sys.attackerEffect];
+            const effectLabel = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : sys.attackerEffect;
+            parts.push(effectLabel);
+          }
+          if (sys.attackerDamage) parts.push(sys.attackerDamage);
+          return parts.join(' \u00B7 ');
+        }
+        const subtypeKey = programSubtypes[subtype];
+        const subtypeLabel = subtypeKey ? game.i18n.localize(`CYBERPUNK.${subtypeKey}`) : subtype;
         return `Program \u00B7 ${subtypeLabel}`;
       }
       return '';

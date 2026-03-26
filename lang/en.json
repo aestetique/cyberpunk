@@ -584,7 +584,7 @@
     "CYBERPUNK.AttackerAntiPersonnel": "Anti-Personnel",
     "CYBERPUNK.AttackerDamage": "Damage",
     "CYBERPUNK.AttackerEffect": "Effect",
-    "CYBERPUNK.EffectNone": "None",
+    "CYBERPUNK.EffectNone": "Basic",
     "CYBERPUNK.EffectGridlocked": "Gridlocked",
     "CYBERPUNK.EffectScrambled": "Scrambled",
     "CYBERPUNK.EffectDesynced": "Desynced",
@@ -853,6 +853,7 @@
     "CYBERPUNK.PropHealingRateBoost": "Healing Rate Boost",
     "CYBERPUNK.PropStayAwakeBonus": "Stay Awake Bonus",
     "CYBERPUNK.PropFallAsleepBonus": "Fall Asleep Bonus",
+    "CYBERPUNK.PropBonusActions": "Bonus Actions",
 
     "TYPES.Item.drug": "Drug",
     "CYBERPUNK.Drug": "DRUG",
@@ -925,5 +926,9 @@
     "CYBERPUNK.SkillAlreadyAdded": "This skill is already added.",
     "CYBERPUNK.CopiedUUID": "Copied UUID: {uuid}",
     "CYBERPUNK.Unknown": "Unknown",
-    "CYBERPUNK.Player": "Player"
+    "CYBERPUNK.Player": "Player",
+
+    "CYBERPUNK.GameTime": "Game Time",
+    "SETTINGS.CampaignStartDate": "Campaign Start Date",
+    "SETTINGS.CampaignStartDateHint": "The starting date and time for the campaign (YYYY-MM-DD HH:MM:SS)"
 }

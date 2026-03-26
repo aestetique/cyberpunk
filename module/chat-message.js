@@ -3,6 +3,7 @@ import { localize } from "./utils.js";
 import { getSkillsForCategory } from "./lookups.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
+import { formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
 
 /**
  * Custom ChatMessage rendering for the Cyberpunk system.
@@ -50,42 +51,19 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @private
      */
     _getTimestampDisplay() {
-        // Check for Simple Calendar's timestamp in flags
-        const scFlags = this.flags?.["foundryvtt-simple-calendar"];
-        if (scFlags?.["sc-timestamps"] && typeof SimpleCalendar !== "undefined") {
-            const scData = scFlags["sc-timestamps"];
-            if (scData.timestamp) {
-                try {
-                    // Convert timestamp to date object using Simple Calendar API
-                    const dt = SimpleCalendar.api.timestampToDate(scData.timestamp, scData.id);
-                    if (dt) {
-                        // Get month abbreviation (first 3 letters)
-                        const monthName = dt.display?.monthName || "";
-                        const monthAbbr = monthName.substring(0, 3);
-
-                        // Get day with zero padding
-                        const dayNum = dt.display?.day || dt.day || 1;
-                        const day = String(dayNum).padStart(2, "0");
-
-                        // Get year
-                        const year = dt.display?.year || dt.year || "";
-
-                        // Get time with zero padding
-                        const hour = String(dt.hour ?? 0).padStart(2, "0");
-                        const minute = String(dt.minute ?? 0).padStart(2, "0");
-
-                        // Format as "MMM DD, YYYY HH:mm" (e.g., "Feb 05, 2045 00:02")
-                        if (monthAbbr && day && year) {
-                            return `${monthAbbr} ${day}, ${year} ${hour}:${minute}`;
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Cyberpunk: Could not format Simple Calendar timestamp", e);
-                }
-            }
+        // Check for in-game timestamp (set by preCreateChatMessage hook)
+        const gameTs = this.flags?.cyberpunk?.gameTimestamp;
+        if (gameTs) {
+            return formatGameTimeShort(gameTs);
         }
 
-        // Fall back to formatting the real-world message timestamp
+        // Old messages without a game timestamp default to the campaign start date
+        try {
+            const startStr = game.settings.get("cyberpunk", "campaignStartDate");
+            return formatGameTimeShort(parseCampaignStartDate(startStr));
+        } catch (e) { /* settings not ready */ }
+
+        // Ultimate fallback: real-world timestamp
         const date = new Date(this.timestamp);
         return date.toLocaleString(game.i18n.lang, {
             month: "short",

@@ -19,6 +19,7 @@ import { processFormulaRoll } from "./dice.js";
 import { CYBERPUNK_CONDITIONS, CONDITION_EFFECTS } from "./conditions.js";
 import { CyberpunkTokenRuler } from "./canvas/token-ruler.js";
 import { CreateItemDialog } from "./dialog/create-item-dialog.js";
+import { getCurrentGameTime, formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
 
 // Token Action HUD integration (optional — only activates if TAH Core is installed)
 import "./tah/init.js";
@@ -37,7 +38,9 @@ Hooks.once('init', async function () {
             CyberpunkItem,
         },
         // A manual migrateworld.
-        migrateWorld: migrations.migrateWorld
+        migrateWorld: migrations.migrateWorld,
+        // Game time helpers (used by preCreateChatMessage hook)
+        _gameTime: { getCurrentGameTime, formatGameTimeShort, parseCampaignStartDate }
     };
 
     // Define custom Document classes
@@ -242,6 +245,41 @@ Hooks.once("ready", async function() {
 });
 
 /**
+ * Stamp every new chat message with the current in-game timestamp.
+ */
+Hooks.on("preCreateChatMessage", (message, data, options, userId) => {
+    try {
+        const { getCurrentGameTime } = game.cyberpunk._gameTime;
+        message.updateSource({ "flags.cyberpunk.gameTimestamp": getCurrentGameTime() });
+    } catch (e) { /* settings not ready yet */ }
+});
+
+/**
+ * Add Game Time button to Token Controls toolbar (Foundry V13 object-based API).
+ */
+Hooks.on("getSceneControlButtons", (controls) => {
+    controls.tokens.tools["game-time"] = {
+        name: "game-time",
+        title: "CYBERPUNK.GameTime",
+        icon: "fa-solid fa-calendar",
+        order: 99,
+        button: true,
+        onChange: async () => {
+            const { GameTimeDialog } = await import("./dialog/game-time-dialog.js");
+            if (!game.cyberpunk.gameTimeDialog) {
+                game.cyberpunk.gameTimeDialog = new GameTimeDialog();
+            }
+            const dlg = game.cyberpunk.gameTimeDialog;
+            if (dlg.rendered) {
+                dlg.close();
+            } else {
+                dlg.render(true);
+            }
+        }
+    };
+});
+
+/**
  * Broadcast target changes to chat messages for reactive UI updates
  */
 Hooks.on("targetToken", (user, token, targeted) => {
@@ -304,6 +342,12 @@ Hooks.on("preCreateChatMessage", async (message, data, options, userId) => {
 Hooks.on("combatTurnChange", async (combat, prior, current) => {
     // Only run for GM to avoid duplicate rolls/updates
     if (!game.user.isGM) return;
+
+    // Advance game time by 3 seconds per combat round
+    if (current.round > prior.round) {
+        const offset = game.settings.get("cyberpunk", "gameTimeOffset");
+        await game.settings.set("cyberpunk", "gameTimeOffset", offset + 3000);
+    }
 
     // Reset and auto-roll all initiative when a new round starts (CP2020: roll every round)
     if (current.round > prior.round && current.round > 1) {

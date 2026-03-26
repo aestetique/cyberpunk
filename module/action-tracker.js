@@ -25,9 +25,11 @@ export async function registerAction(actor, actionType = "action") {
   const newActionCount = actionCount + 1;
   await actor.setFlag("cyberpunk", "actionCount", newActionCount);
 
-  // If we just completed the first action (count is now 1), apply Action Surge
-  // This is called AFTER the action completes, so it doesn't affect the first action
-  if (newActionCount === 1 && !actor.statuses.has("action-surge")) {
+  // Apply Action Surge after free actions are used up
+  // Bonus actions from items (e.g. Sandevistan) increase the number of free actions
+  const bonusActions = actor.system.bonusActions || 0;
+  const threshold = 1 + bonusActions;
+  if (newActionCount === threshold && !actor.statuses.has("action-surge")) {
     await actor.toggleStatusEffect("action-surge", { active: true });
   }
 

@@ -1,0 +1,36 @@
+<div class="game-time-wrapper">
+    <header class="reload-header">
+        <span class="reload-title">{{localize "CYBERPUNK.GameTime"}}</span>
+        <a class="header-control close"><i class="fas fa-times"></i></a>
+    </header>
+
+    {{!-- Current game date/time display --}}
+    <div class="game-time-display">
+        {{displayTime}}
+    </div>
+
+    {{!-- Adjustment controls: reuse luck-controls layout --}}
+    <div class="luck-controls">
+        <button type="button" class="luck-btn game-time-minus">
+            <img src="systems/cyberpunk/img/chat/minus.svg" alt="-">
+        </button>
+
+        <div class="range-dropdown">
+            <button type="button" class="range-dropdown-btn">
+                <span class="range-label">{{selectedLabel}}</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="range-dropdown-list">
+                {{#each increments}}
+                <div class="range-option{{#if selected}} selected{{/if}}" data-index="{{index}}">
+                    {{label}}
+                </div>
+                {{/each}}
+            </div>
+        </div>
+
+        <button type="button" class="luck-btn game-time-plus">
+            <img src="systems/cyberpunk/img/chat/plus.svg" alt="+">
+        </button>
+    </div>
+</div>

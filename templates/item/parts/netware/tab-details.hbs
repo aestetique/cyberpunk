@@ -29,7 +29,7 @@
     <div class="variable-field">
       <label class="variable-label">{{localize "CYBERPUNK.HasSlots"}}</label>
       {{#if isLocked}}
-        <span class="variable-value">{{system.slots}}</span>
+        <div class="dropdown"><span class="dropdown-text">{{system.slots}}</span></div>
       {{else}}
         <input type="number" class="variable-input" name="system.slots" value="{{system.slots}}" min="0">
       {{/if}}
@@ -38,7 +38,7 @@
     <div class="variable-field">
       <label class="variable-label">{{localize "CYBERPUNK.TakesSpace"}}</label>
       {{#if isLocked}}
-        <span class="variable-value">{{system.takesSpace}}</span>
+        <div class="dropdown"><span class="dropdown-text">{{system.takesSpace}}</span></div>
       {{else}}
         <input type="number" class="variable-input" name="system.takesSpace" value="{{system.takesSpace}}" min="0">
       {{/if}}
@@ -77,7 +77,7 @@
       <div class="variable-field">
         <label class="variable-label">{{localize "CYBERPUNK.ATK"}}</label>
         {{#if isLocked}}
-          <span class="variable-value">{{system.atk}}</span>
+          <div class="dropdown"><span class="dropdown-text">{{system.atk}}</span></div>
         {{else}}
           <input type="number" class="variable-input" name="system.atk" value="{{system.atk}}" min="0">
         {{/if}}
@@ -86,7 +86,7 @@
       <div class="variable-field">
         <label class="variable-label">{{localize "CYBERPUNK.REZ"}}</label>
         {{#if isLocked}}
-          <span class="variable-value">{{system.rez}}</span>
+          <div class="dropdown"><span class="dropdown-text">{{system.rez}}</span></div>
         {{else}}
           <input type="number" class="variable-input" name="system.rez" value="{{system.rez}}" min="0">
         {{/if}}
@@ -129,7 +129,7 @@
       <div class="variable-field">
         <label class="variable-label">{{localize "CYBERPUNK.BoosterValue"}}</label>
         {{#if isLocked}}
-          <span class="variable-value">{{system.boosterValue}}</span>
+          <div class="dropdown"><span class="dropdown-text">{{system.boosterValue}}</span></div>
         {{else}}
           <input type="number" class="variable-input" name="system.boosterValue" value="{{system.boosterValue}}">
         {{/if}}
@@ -170,7 +170,7 @@
         <div class="variable-field">
           <label class="variable-label">{{localize "CYBERPUNK.DefenderValue"}}</label>
           {{#if isLocked}}
-            <span class="variable-value">{{system.defenderValue}}</span>
+            <div class="dropdown"><span class="dropdown-text">{{system.defenderValue}}</span></div>
           {{else}}
             <input type="number" class="variable-input" name="system.defenderValue" value="{{system.defenderValue}}">
           {{/if}}
@@ -211,7 +211,7 @@
       <div class="variable-field">
         <label class="variable-label">{{localize "CYBERPUNK.AttackerDamage"}}</label>
         {{#if isLocked}}
-          <span class="variable-value">{{system.attackerDamage}}</span>
+          <div class="dropdown"><span class="dropdown-text">{{system.attackerDamage}}</span></div>
         {{else}}
           <input type="text" class="variable-input" name="system.attackerDamage" value="{{system.attackerDamage}}">
         {{/if}}

@@ -30,6 +30,17 @@ export class OrdnanceAttackDialog extends Application {
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ?? actor.system.stats.luck?.total ?? 0;
 
+    // Laser damage slider: damage field is per-charge (e.g. "1d6"),
+    // slider controls how many charges to spend (1 to current charges)
+    this._isLaser = (ordnance.system.effect === "laser");
+    if (this._isLaser) {
+      const dmgMatch = (ordnance.system.damage || "").match(/^(\d+)d(\d+)/i);
+      this._baseDice = dmgMatch ? parseInt(dmgMatch[1]) : 1;
+      this._dieSize = dmgMatch ? parseInt(dmgMatch[2]) : 6;
+      this._maxCharges = ordnance.system.charges || 1;
+      this._chargesToSpend = 1;
+    }
+
     // Determine effective range based on template type
     const templateType = this.ordnance.system.templateType || "circle";
 
@@ -70,15 +81,26 @@ export class OrdnanceAttackDialog extends Application {
 
   /** @override */
   getData() {
-    return {
+    const data = {
       ordnanceName: this.ordnance.name,
       // Luck data
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
       canIncreaseLuck: this._luckToSpend < this._availableLuck,
       canDecreaseLuck: this._luckToSpend > 0,
-      hasAnyLuck: this._availableLuck > 0
+      hasAnyLuck: this._availableLuck > 0,
+      // Laser damage dice data
+      isLaser: this._isLaser
     };
+    if (this._isLaser) {
+      const totalDice = this._baseDice * this._chargesToSpend;
+      data.damageDice = totalDice;
+      data.dieSize = this._dieSize;
+      data.chargesToSpend = this._chargesToSpend;
+      data.canIncreaseDice = this._chargesToSpend < this._maxCharges;
+      data.canDecreaseDice = this._chargesToSpend > 1;
+    }
+    return data;
   }
 
   /**
@@ -132,6 +154,21 @@ export class OrdnanceAttackDialog extends Application {
       }
     });
 
+    // Laser damage dice controls (charges to spend)
+    html.find('.dice-plus-btn').click(() => {
+      if (this._chargesToSpend < this._maxCharges) {
+        this._chargesToSpend++;
+        this._updateDiceDisplay(html);
+      }
+    });
+
+    html.find('.dice-minus-btn').click(() => {
+      if (this._chargesToSpend > 1) {
+        this._chargesToSpend--;
+        this._updateDiceDisplay(html);
+      }
+    });
+
     // Roll button
     html.find('.roll-btn').click(() => {
       this._executeRoll();
@@ -153,6 +190,24 @@ export class OrdnanceAttackDialog extends Application {
 
     html.find('.luck-minus-btn img').attr('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
     html.find('.luck-plus-btn img').attr('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+  }
+
+  /**
+   * Update the damage dice display and button states (laser weapons only)
+   * @param {jQuery} html - The dialog HTML element
+   */
+  _updateDiceDisplay(html) {
+    const totalDice = this._baseDice * this._chargesToSpend;
+    html.find('.dice-value').text(`${totalDice}d${this._dieSize}`);
+
+    const minusDisabled = this._chargesToSpend <= 1;
+    const plusDisabled = this._chargesToSpend >= this._maxCharges;
+
+    html.find('.dice-minus-btn').toggleClass('disabled', minusDisabled);
+    html.find('.dice-plus-btn').toggleClass('disabled', plusDisabled);
+
+    html.find('.dice-minus-btn img').attr('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+    html.find('.dice-plus-btn img').attr('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
   /**
@@ -203,6 +258,8 @@ export class OrdnanceAttackDialog extends Application {
       templateId: placedPos.templateId,
       ambush: this._conditions.ambush,
       ricochet: this._conditions.ricochet,
+      damageOverride: this._isLaser ? `${this._baseDice * this._chargesToSpend}d${this._dieSize}` : null,
+      chargesUsed: this._isLaser ? this._chargesToSpend : null,
       extraMod: (this._conditions.prepared ? 2 : 0)
               + (this._conditions.distracted ? -2 : 0)
               + this._luckToSpend,

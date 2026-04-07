@@ -34,6 +34,60 @@ export class CyberpunkItem extends Item {
     if (placeholder && (!data.img || data.img === "icons/svg/mystery-man.svg")) {
       this.updateSource({ img: placeholder });
     }
+
+    // When an item is created as a world item (not embedded in an actor),
+    // reset it to pristine state if it came from an actor (drag to sidebar)
+    if (!this.parent && data.system) {
+      this._resetToFactory(data);
+    }
+  }
+
+  /**
+   * Reset an item to factory/pristine state — unequip, restore ammo/charges/SDP,
+   * clear ablation, reset humanity. Called when dragging items out of an actor.
+   * @param {Object} data - The source creation data
+   * @private
+   */
+  _resetToFactory(data) {
+    const updates = { "system.equipped": false };
+    const s = data.system;
+
+    switch (data.type) {
+      case "weapon":
+        // Restore full magazine
+        if (s.shots != null) updates["system.shotsLeft"] = s.shots;
+        // Restore charges (e.g. exotic weapons)
+        if (s.chargesMax) updates["system.charges"] = s.chargesMax;
+        break;
+
+      case "armor":
+        // Clear all ablation
+        if (s.coverage) {
+          for (const loc of Object.keys(s.coverage)) {
+            updates[`system.coverage.${loc}.ablation`] = 0;
+          }
+        }
+        break;
+
+      case "cyberware":
+        // Restore SDP to max
+        if (s.structure?.max) updates["system.structure.current"] = s.structure.max;
+        // Reset humanity tracking (not installed yet)
+        updates["system.humanityLoss"] = 0;
+        updates["system.humanityRolled"] = false;
+        updates["system.repaired"] = false;
+        // Restore embedded weapon ammo/charges
+        if (s.weapon?.shots != null) updates["system.weapon.shotsLeft"] = s.weapon.shots;
+        if (s.weapon?.chargesMax) updates["system.weapon.charges"] = s.weapon.chargesMax;
+        break;
+
+      case "ordnance":
+        // Restore charges to max
+        if (s.chargesMax) updates["system.charges"] = s.chargesMax;
+        break;
+    }
+
+    this.updateSource(updates);
   }
 
   prepareData() {
@@ -820,7 +874,8 @@ export class CyberpunkItem extends Item {
       let areaDamages = {};
 
       if ((attackHits || isCircle) && hasDamage) {
-          let damageRoll = await new Roll(system.damage).evaluate();
+          const damageFormula = attackMods.damageOverride || system.damage;
+          let damageRoll = await new Roll(damageFormula).evaluate();
 
           if (game.dice3d && damageRoll.dice.length > 0) {
               await game.dice3d.showForRoll(damageRoll, game.user, true);
@@ -872,8 +927,9 @@ export class CyberpunkItem extends Item {
       let roll = new RollBundle(localize("OrdnanceAction"));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/ordnance-hit.hbs", templateData);
 
-      // Deduct charge
-      const newCharges = (system.charges || 0) - 1;
+      // Deduct charges (laser weapons may spend multiple per shot)
+      const chargesUsed = attackMods.chargesUsed || 1;
+      const newCharges = (system.charges || 0) - chargesUsed;
       if (newCharges <= 0 && system.removeOnZero) {
           await this.delete();
       } else {
@@ -899,7 +955,8 @@ export class CyberpunkItem extends Item {
           burning: "Burning",
           acid: "Acid",
           microwave: "Microwave",
-          blindness: "Blindness"
+          blindness: "Blindness",
+          laser: "Laser"
       };
       return labels[effect] || effect;
   }
@@ -920,7 +977,8 @@ export class CyberpunkItem extends Item {
           burning: "burning",
           acid: "acid",
           microwave: "microwave",
-          blindness: "blinded"
+          blindness: "blinded",
+          laser: "burning"
       };
       return icons[effect] || effect;
   }

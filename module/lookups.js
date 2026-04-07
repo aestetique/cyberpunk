@@ -236,7 +236,8 @@ export const exoticEffects = {
     burning: "EffBurning",
     microwave: "EffMicrowave",
     acid: "EffAcid",
-    blindness: "EffBlindness"
+    blindness: "EffBlindness",
+    laser: "EffLaser"
 };
 
 /**

@@ -26,6 +26,26 @@
     </button>
   </div>
 
+  {{!-- Laser damage dice selector --}}
+  {{#if isLaser}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/damage.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.Damage"}}</span>
+  </div>
+
+  <div class="luck-controls">
+    <button type="button" class="luck-btn dice-minus-btn{{#unless canDecreaseDice}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canDecreaseDice}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+    </button>
+    <div class="luck-display">
+      <span class="dice-value">{{damageDice}}d{{dieSize}}</span>
+    </div>
+    <button type="button" class="luck-btn dice-plus-btn{{#unless canIncreaseDice}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canIncreaseDice}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+    </button>
+  </div>
+  {{/if}}
+
   {{!-- Luck section bar --}}
   <div class="fire-mode-section">
     <img src="systems/cyberpunk/img/chat/luck.svg" alt="">

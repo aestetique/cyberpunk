@@ -5626,6 +5626,26 @@ input.skill-value.skill-level-input:focus {
   color: var(--chat-text, #FFF);
   text-align: center;
 }
+.reload-dialog-wrapper .luck-display .dice-value,
+.ranged-attack-wrapper .luck-display .dice-value,
+.range-selection-wrapper .luck-display .dice-value,
+.melee-attack-wrapper .luck-display .dice-value,
+.skill-roll-wrapper .luck-display .dice-value,
+.defence-roll-wrapper .luck-display .dice-value,
+.medical-help-wrapper .luck-display .dice-value,
+.heal-wrapper .luck-display .dice-value,
+.stress-roll-wrapper .luck-display .dice-value,
+.fright-roll-wrapper .luck-display .dice-value,
+.create-item-wrapper .luck-display .dice-value,
+.game-time-wrapper .luck-display .dice-value {
+  font-family: var(--font-blender);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--chat-text, #FFF);
+  text-align: center;
+  text-transform: uppercase;
+}
 .reload-dialog-wrapper .location-grid,
 .ranged-attack-wrapper .location-grid,
 .range-selection-wrapper .location-grid,

@@ -19,7 +19,11 @@ export class CyberpunkChatMessage extends ChatMessage {
         const html = await super.renderHTML(options);
 
         await this._enrichChatCard(html);
-        this._activateListeners(html);
+        try {
+            this._activateListeners(html);
+        } catch (error) {
+            console.error("CyberpunkChatMessage | Error in listener activation:", error);
+        }
 
         // Call system hook for further customization by modules
         Hooks.callAll("cyberpunk.renderChatMessageHTML", this, html);
@@ -256,11 +260,16 @@ export class CyberpunkChatMessage extends ChatMessage {
                     applyBtn.textContent = "APPLIED";
                     applyBtn.disabled = true;
 
-                    // Hide the tabs and content for already-applied messages
+                    // Hide the tabs but keep content visible so target info remains
                     const tabs = targetSelector.querySelector(".target-selector__tabs");
-                    const content = targetSelector.querySelector(".target-selector__content");
                     if (tabs) tabs.style.display = "none";
-                    if (content) content.style.display = "none";
+
+                    // Restore saved target info from when damage was applied
+                    const savedHtml = this.getFlag("cyberpunk", "appliedTargetHtml");
+                    const content = targetSelector.querySelector(".target-selector__content");
+                    if (savedHtml && content) {
+                        content.innerHTML = savedHtml;
+                    }
                 } else {
                     applyBtn.addEventListener("click", (event) => this._onApplyDamage(event, html));
                 }
@@ -711,16 +720,24 @@ export class CyberpunkChatMessage extends ChatMessage {
             if (!actor) continue;
 
             // Calculate damage preview for this target
-            const preview = this._calculateDamagePreview(actor, damageData, ammoType, damageType);
+            let preview;
+            try {
+                preview = this._calculateDamagePreview(actor, damageData, ammoType, damageType);
+            } catch (error) {
+                console.error(`CyberpunkChatMessage | Error calculating damage for ${actor.name}:`, error);
+                preview = { total: 0, cyberlimbTotal: 0, hint: "Error calculating damage", byLocation: {} };
+            }
 
             // Simplified row: portrait | name | total damage
+            // Show wound damage + cyberlimb SDP damage combined
+            const displayDamage = preview.total + (preview.cyberlimbTotal || 0);
             infoHtml += `
                 <div class="target-info__selected" data-token-id="${token.id}">
                     <div class="target-info__portrait">
                         <img src="${actor.img}" alt="${actor.name}">
                     </div>
                     <span class="target-info__name">${actor.name}</span>
-                    ${hasDamage ? `<span class="target-info__damage">${preview.total}</span>` : ""}
+                    ${hasDamage ? `<span class="target-info__damage">${displayDamage}</span>` : ""}
                 </div>
             `;
 
@@ -841,11 +858,12 @@ export class CyberpunkChatMessage extends ChatMessage {
                 // Get armor SP for this location (skip if ignoring armor)
                 let effectiveSP = 0;
                 let dmgTypeLabel = "";
+                let armorSP = 0;
 
                 if (!ignoreArmor) {
                     const hitLocations = actor.system?.hitLocations || {};
                     const locData = hitLocations[location] || {};
-                    const armorSP = locData.stoppingPower || 0;
+                    armorSP = locData.stoppingPower || 0;
 
                     // Determine if armor at this location is hard or soft
                     const hasHardArmor = actor.items.some(i =>
@@ -1269,14 +1287,16 @@ export class CyberpunkChatMessage extends ChatMessage {
             applyBtn.disabled = true;
         }
 
-        // Hide the tabs and content after applying
+        // Hide the tabs but keep content visible so target info remains
         const tabs = html.querySelector(".target-selector__tabs");
-        const content = html.querySelector(".target-selector__content");
         if (tabs) tabs.style.display = "none";
-        if (content) content.style.display = "none";
 
-        // Persist the applied state in message flags
+        // Persist the applied state and the target info HTML so it survives reloads
+        const content = html.querySelector(".target-selector__content");
         await this.setFlag("cyberpunk", "damageApplied", true);
+        if (content) {
+            await this.setFlag("cyberpunk", "appliedTargetHtml", content.innerHTML);
+        }
     }
 
     /**

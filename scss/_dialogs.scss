@@ -462,6 +462,97 @@
     }
   }
 
+  // Generic number-input stepper (min/max/step + editable center field)
+  .number-input-controls {
+    display: flex;
+    gap: 6px;
+
+    &.disabled {
+      pointer-events: none;
+
+      .number-input-btn {
+        background: #26282F;
+        cursor: default;
+      }
+      .number-input-display .number-input-value {
+        color: #444856;
+      }
+    }
+  }
+
+  .number-input-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px;
+    height: 36px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+    box-shadow: none;
+
+    img {
+      width: 24px;
+      height: 24px;
+      border: none;
+    }
+
+    &:hover:not(.disabled) {
+      background: lighten(#444856, 5%);
+    }
+
+    &.disabled {
+      background: #26282F;
+      cursor: not-allowed;
+    }
+  }
+
+  .number-input-display {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    background: #26282F;
+    border-radius: 2px;
+
+    .number-input-value {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+
+      font-family: var(--font-blender);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 36px;
+      color: var(--chat-text, #FFF);
+      text-align: center;
+
+      // Suppress native number spinners
+      -moz-appearance: textfield;
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      &:focus {
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      &:invalid {
+        box-shadow: none;
+      }
+    }
+  }
+
   // Location grid (2x3)
   .location-grid {
     display: grid;

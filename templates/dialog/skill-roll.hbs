@@ -10,18 +10,18 @@
     <span class="fire-mode-label">{{localize "CYBERPUNK.Difficulty"}}</span>
   </div>
 
-  {{!-- Difficulty dropdown (uses same classes as range dropdown) --}}
-  <div class="range-dropdown">
-    <button type="button" class="range-dropdown-btn">
-      <span class="range-label">{{selectedDifficultyLabel}}</span>
-      <i class="fas fa-chevron-down"></i>
-    </button>
-    <div class="range-dropdown-list">
-      {{#each difficultyOptions}}
-        <div class="range-option{{#if selected}} selected{{/if}}" data-difficulty="{{key}}" data-value="{{value}}">
-          {{label}}
-        </div>
-      {{/each}}
+  {{!-- Difficulty number input --}}
+  <div class="difficulty-input-wrap">
+    <div class="number-input-controls" data-min="10" data-max="40" data-step="5">
+      <button type="button" class="number-input-btn number-input-minus-btn">
+        <img src="systems/cyberpunk/img/chat/minus.svg" alt="-">
+      </button>
+      <div class="number-input-display">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" class="number-input-value" value="{{difficulty}}">
+      </div>
+      <button type="button" class="number-input-btn number-input-plus-btn">
+        <img src="systems/cyberpunk/img/chat/plus.svg" alt="+">
+      </button>
     </div>
   </div>
 

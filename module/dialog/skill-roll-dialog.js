@@ -1,4 +1,5 @@
 import { localize } from "../utils.js";
+import { NumberInput } from "./number-input.js";
 
 /**
  * Skill/Attribute Roll Dialog — select difficulty and modifiers before rolling.
@@ -23,14 +24,8 @@ export class SkillRollDialog extends Application {
     this._dialogTitle = options.title || localize("Skill");
     this.statIcon = options.statIcon || null;
 
-    this._dropdownOpen = false;
-
-    // Difficulty selection (default: Average / 15)
-    this._selectedDifficulty = {
-      key: "average",
-      value: 15,
-      label: localize("DifficultyAverage")
-    };
+    // Difficulty selection (default: 15, clamped 10-40 by the NumberInput)
+    this._difficulty = 15;
 
     // Condition toggles (only Prepared and Distracted)
     this._conditions = {
@@ -65,26 +60,10 @@ export class SkillRollDialog extends Application {
 
   /** @override */
   getData() {
-    // Build difficulty options
-    const difficultyOptions = [
-      { key: "easy", value: 10, label: localize("DifficultyEasy") },
-      { key: "average", value: 15, label: localize("DifficultyAverage") },
-      { key: "difficult", value: 20, label: localize("DifficultyDifficult") },
-      { key: "veryDifficult", value: 25, label: localize("DifficultyVeryDifficult") },
-      { key: "nearlyImpossible", value: 30, label: localize("DifficultyNearlyImpossible") },
-      { key: "impossible", value: 40, label: localize("DifficultyImpossible") }
-    ];
-
-    // Mark the selected difficulty
-    difficultyOptions.forEach(opt => {
-      opt.selected = opt.key === this._selectedDifficulty.key;
-    });
-
     return {
       title: this._dialogTitle,
       statIcon: this.statIcon,
-      difficultyOptions,
-      selectedDifficultyLabel: this._selectedDifficulty.label,
+      difficulty: this._difficulty,
       conditions: this._conditions,
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
@@ -107,40 +86,10 @@ export class SkillRollDialog extends Application {
     // Close button
     html.find('.header-control.close').click(() => this.close());
 
-    // Difficulty dropdown toggle (uses same classes as range dropdown)
-    html.find('.range-dropdown-btn').click(ev => {
-      ev.stopPropagation();
-      this._dropdownOpen = !this._dropdownOpen;
-      html.find('.range-dropdown-list').toggleClass('open', this._dropdownOpen);
-      html.find('.range-dropdown-btn').toggleClass('open', this._dropdownOpen);
-    });
-
-    // Difficulty option selection
-    html.find('.range-option').click(ev => {
-      const key = ev.currentTarget.dataset.difficulty;
-      const value = Number(ev.currentTarget.dataset.value);
-      const label = ev.currentTarget.textContent.trim();
-
-      this._selectedDifficulty = { key, value, label };
-      this._dropdownOpen = false;
-
-      // Update display
-      html.find('.range-dropdown-btn .range-label').text(label);
-      html.find('.range-dropdown-list').removeClass('open');
-      html.find('.range-dropdown-btn').removeClass('open');
-
-      // Update visual selection
-      html.find('.range-option').removeClass('selected');
-      ev.currentTarget.classList.add('selected');
-    });
-
-    // Close dropdown when clicking outside
-    $(document).on('click.skillRollDropdown', (ev) => {
-      if (!$(ev.target).closest('.range-dropdown').length) {
-        this._dropdownOpen = false;
-        html.find('.range-dropdown-list').removeClass('open');
-        html.find('.range-dropdown-btn').removeClass('open');
-      }
+    // Difficulty number-input stepper
+    this._difficultyInput = new NumberInput(html, '.difficulty-input-wrap', {
+      min: 10, max: 40, step: 5, value: this._difficulty,
+      onChange: (v) => { this._difficulty = v; }
     });
 
     // Condition button toggles
@@ -218,13 +167,13 @@ export class SkillRollDialog extends Application {
     if (this.rollType === "skill") {
       this.actor.rollSkillCheck(
         this.skillId,
-        this._selectedDifficulty.value,
+        this._difficulty,
         extraMod
       );
     } else {
       this.actor.rollStatCheck(
         this.statName,
-        this._selectedDifficulty.value,
+        this._difficulty,
         extraMod
       );
     }
@@ -237,8 +186,6 @@ export class SkillRollDialog extends Application {
 
   /** @override */
   close(options) {
-    // Clean up document click handler
-    $(document).off('click.skillRollDropdown');
     return super.close(options);
   }
 }

@@ -1,4 +1,5 @@
 import { localize } from "../utils.js";
+import { NumberInput } from "./number-input.js";
 
 /**
  * Fright Roll Dialog — COOL check against a difficulty with familiarity and luck modifiers.
@@ -12,14 +13,9 @@ export class FrightRollDialog extends Application {
   constructor(actor) {
     super();
     this.actor = actor;
-    this._dropdownOpen = false;
 
-    // Default difficulty: Average / 15
-    this._selectedDifficulty = {
-      key: "average",
-      value: 15,
-      label: localize("DifficultyAverage")
-    };
+    // Default difficulty: 15 (clamped 10-40 by the NumberInput)
+    this._difficulty = 15;
 
     // Familiarity (0–10)
     this._familiarity = 0;
@@ -51,22 +47,8 @@ export class FrightRollDialog extends Application {
 
   /** @override */
   getData() {
-    const difficultyOptions = [
-      { key: "easy", value: 10, label: localize("DifficultyEasy") },
-      { key: "average", value: 15, label: localize("DifficultyAverage") },
-      { key: "difficult", value: 20, label: localize("DifficultyDifficult") },
-      { key: "veryDifficult", value: 25, label: localize("DifficultyVeryDifficult") },
-      { key: "nearlyImpossible", value: 30, label: localize("DifficultyNearlyImpossible") },
-      { key: "impossible", value: 40, label: localize("DifficultyImpossible") }
-    ];
-
-    difficultyOptions.forEach(opt => {
-      opt.selected = opt.key === this._selectedDifficulty.key;
-    });
-
     return {
-      difficultyOptions,
-      selectedDifficultyLabel: this._selectedDifficulty.label,
+      difficulty: this._difficulty,
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
       canIncreaseLuck: this._luckToSpend < this._availableLuck,
@@ -88,38 +70,10 @@ export class FrightRollDialog extends Application {
     // Close button
     html.find('.header-control.close').click(() => this.close());
 
-    // Difficulty dropdown toggle
-    html.find('.range-dropdown-btn').click(ev => {
-      ev.stopPropagation();
-      this._dropdownOpen = !this._dropdownOpen;
-      html.find('.range-dropdown-list').toggleClass('open', this._dropdownOpen);
-      html.find('.range-dropdown-btn').toggleClass('open', this._dropdownOpen);
-    });
-
-    // Difficulty option selection
-    html.find('.range-option').click(ev => {
-      const key = ev.currentTarget.dataset.difficulty;
-      const value = Number(ev.currentTarget.dataset.value);
-      const label = ev.currentTarget.textContent.trim();
-
-      this._selectedDifficulty = { key, value, label };
-      this._dropdownOpen = false;
-
-      html.find('.range-dropdown-btn .range-label').text(label);
-      html.find('.range-dropdown-list').removeClass('open');
-      html.find('.range-dropdown-btn').removeClass('open');
-
-      html.find('.range-option').removeClass('selected');
-      ev.currentTarget.classList.add('selected');
-    });
-
-    // Close dropdown when clicking outside
-    $(document).on('click.frightRollDropdown', (ev) => {
-      if (!$(ev.target).closest('.range-dropdown').length) {
-        this._dropdownOpen = false;
-        html.find('.range-dropdown-list').removeClass('open');
-        html.find('.range-dropdown-btn').removeClass('open');
-      }
+    // Difficulty number-input stepper
+    this._difficultyInput = new NumberInput(html, '.difficulty-input-wrap', {
+      min: 10, max: 40, step: 5, value: this._difficulty,
+      onChange: (v) => { this._difficulty = v; }
     });
 
     // Familiarity plus button
@@ -216,7 +170,7 @@ export class FrightRollDialog extends Application {
 
     // Perform the COOL check via actor method
     this.actor.rollFrightCheck(
-      this._selectedDifficulty.value,
+      this._difficulty,
       extraMod
     );
 
@@ -227,7 +181,6 @@ export class FrightRollDialog extends Application {
 
   /** @override */
   close(options) {
-    $(document).off('click.frightRollDropdown');
     return super.close(options);
   }
 }

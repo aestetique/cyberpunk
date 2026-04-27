@@ -5646,6 +5646,235 @@ input.skill-value.skill-level-input:focus {
   text-align: center;
   text-transform: uppercase;
 }
+.reload-dialog-wrapper .number-input-controls,
+.ranged-attack-wrapper .number-input-controls,
+.range-selection-wrapper .number-input-controls,
+.melee-attack-wrapper .number-input-controls,
+.skill-roll-wrapper .number-input-controls,
+.defence-roll-wrapper .number-input-controls,
+.medical-help-wrapper .number-input-controls,
+.heal-wrapper .number-input-controls,
+.stress-roll-wrapper .number-input-controls,
+.fright-roll-wrapper .number-input-controls,
+.create-item-wrapper .number-input-controls,
+.game-time-wrapper .number-input-controls {
+  display: flex;
+  gap: 6px;
+}
+.reload-dialog-wrapper .number-input-controls.disabled,
+.ranged-attack-wrapper .number-input-controls.disabled,
+.range-selection-wrapper .number-input-controls.disabled,
+.melee-attack-wrapper .number-input-controls.disabled,
+.skill-roll-wrapper .number-input-controls.disabled,
+.defence-roll-wrapper .number-input-controls.disabled,
+.medical-help-wrapper .number-input-controls.disabled,
+.heal-wrapper .number-input-controls.disabled,
+.stress-roll-wrapper .number-input-controls.disabled,
+.fright-roll-wrapper .number-input-controls.disabled,
+.create-item-wrapper .number-input-controls.disabled,
+.game-time-wrapper .number-input-controls.disabled {
+  pointer-events: none;
+}
+.reload-dialog-wrapper .number-input-controls.disabled .number-input-btn,
+.ranged-attack-wrapper .number-input-controls.disabled .number-input-btn,
+.range-selection-wrapper .number-input-controls.disabled .number-input-btn,
+.melee-attack-wrapper .number-input-controls.disabled .number-input-btn,
+.skill-roll-wrapper .number-input-controls.disabled .number-input-btn,
+.defence-roll-wrapper .number-input-controls.disabled .number-input-btn,
+.medical-help-wrapper .number-input-controls.disabled .number-input-btn,
+.heal-wrapper .number-input-controls.disabled .number-input-btn,
+.stress-roll-wrapper .number-input-controls.disabled .number-input-btn,
+.fright-roll-wrapper .number-input-controls.disabled .number-input-btn,
+.create-item-wrapper .number-input-controls.disabled .number-input-btn,
+.game-time-wrapper .number-input-controls.disabled .number-input-btn {
+  background: #26282F;
+  cursor: default;
+}
+.reload-dialog-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.ranged-attack-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.range-selection-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.melee-attack-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.skill-roll-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.defence-roll-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.medical-help-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.heal-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.stress-roll-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.fright-roll-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.create-item-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.game-time-wrapper .number-input-controls.disabled .number-input-display .number-input-value {
+  color: #444856;
+}
+.reload-dialog-wrapper .number-input-btn,
+.ranged-attack-wrapper .number-input-btn,
+.range-selection-wrapper .number-input-btn,
+.melee-attack-wrapper .number-input-btn,
+.skill-roll-wrapper .number-input-btn,
+.defence-roll-wrapper .number-input-btn,
+.medical-help-wrapper .number-input-btn,
+.heal-wrapper .number-input-btn,
+.stress-roll-wrapper .number-input-btn,
+.fright-roll-wrapper .number-input-btn,
+.create-item-wrapper .number-input-btn,
+.game-time-wrapper .number-input-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 36px;
+  background: var(--chat-gray, #444856);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+  box-shadow: none;
+}
+.reload-dialog-wrapper .number-input-btn img,
+.ranged-attack-wrapper .number-input-btn img,
+.range-selection-wrapper .number-input-btn img,
+.melee-attack-wrapper .number-input-btn img,
+.skill-roll-wrapper .number-input-btn img,
+.defence-roll-wrapper .number-input-btn img,
+.medical-help-wrapper .number-input-btn img,
+.heal-wrapper .number-input-btn img,
+.stress-roll-wrapper .number-input-btn img,
+.fright-roll-wrapper .number-input-btn img,
+.create-item-wrapper .number-input-btn img,
+.game-time-wrapper .number-input-btn img {
+  width: 24px;
+  height: 24px;
+  border: none;
+}
+.reload-dialog-wrapper .number-input-btn:hover:not(.disabled),
+.ranged-attack-wrapper .number-input-btn:hover:not(.disabled),
+.range-selection-wrapper .number-input-btn:hover:not(.disabled),
+.melee-attack-wrapper .number-input-btn:hover:not(.disabled),
+.skill-roll-wrapper .number-input-btn:hover:not(.disabled),
+.defence-roll-wrapper .number-input-btn:hover:not(.disabled),
+.medical-help-wrapper .number-input-btn:hover:not(.disabled),
+.heal-wrapper .number-input-btn:hover:not(.disabled),
+.stress-roll-wrapper .number-input-btn:hover:not(.disabled),
+.fright-roll-wrapper .number-input-btn:hover:not(.disabled),
+.create-item-wrapper .number-input-btn:hover:not(.disabled),
+.game-time-wrapper .number-input-btn:hover:not(.disabled) {
+  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+}
+.reload-dialog-wrapper .number-input-btn.disabled,
+.ranged-attack-wrapper .number-input-btn.disabled,
+.range-selection-wrapper .number-input-btn.disabled,
+.melee-attack-wrapper .number-input-btn.disabled,
+.skill-roll-wrapper .number-input-btn.disabled,
+.defence-roll-wrapper .number-input-btn.disabled,
+.medical-help-wrapper .number-input-btn.disabled,
+.heal-wrapper .number-input-btn.disabled,
+.stress-roll-wrapper .number-input-btn.disabled,
+.fright-roll-wrapper .number-input-btn.disabled,
+.create-item-wrapper .number-input-btn.disabled,
+.game-time-wrapper .number-input-btn.disabled {
+  background: #26282F;
+  cursor: not-allowed;
+}
+.reload-dialog-wrapper .number-input-display,
+.ranged-attack-wrapper .number-input-display,
+.range-selection-wrapper .number-input-display,
+.melee-attack-wrapper .number-input-display,
+.skill-roll-wrapper .number-input-display,
+.defence-roll-wrapper .number-input-display,
+.medical-help-wrapper .number-input-display,
+.heal-wrapper .number-input-display,
+.stress-roll-wrapper .number-input-display,
+.fright-roll-wrapper .number-input-display,
+.create-item-wrapper .number-input-display,
+.game-time-wrapper .number-input-display {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  background: #26282F;
+  border-radius: 2px;
+}
+.reload-dialog-wrapper .number-input-display .number-input-value,
+.ranged-attack-wrapper .number-input-display .number-input-value,
+.range-selection-wrapper .number-input-display .number-input-value,
+.melee-attack-wrapper .number-input-display .number-input-value,
+.skill-roll-wrapper .number-input-display .number-input-value,
+.defence-roll-wrapper .number-input-display .number-input-value,
+.medical-help-wrapper .number-input-display .number-input-value,
+.heal-wrapper .number-input-display .number-input-value,
+.stress-roll-wrapper .number-input-display .number-input-value,
+.fright-roll-wrapper .number-input-display .number-input-value,
+.create-item-wrapper .number-input-display .number-input-value,
+.game-time-wrapper .number-input-display .number-input-value {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-blender);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 36px;
+  color: var(--chat-text, #FFF);
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.reload-dialog-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button, .reload-dialog-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.ranged-attack-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.ranged-attack-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.range-selection-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.range-selection-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.melee-attack-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.melee-attack-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.skill-roll-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.skill-roll-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.defence-roll-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.defence-roll-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.medical-help-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.medical-help-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.heal-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.heal-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.stress-roll-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.stress-roll-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.fright-roll-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.fright-roll-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.create-item-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.create-item-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.game-time-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.game-time-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.reload-dialog-wrapper .number-input-display .number-input-value:focus,
+.ranged-attack-wrapper .number-input-display .number-input-value:focus,
+.range-selection-wrapper .number-input-display .number-input-value:focus,
+.melee-attack-wrapper .number-input-display .number-input-value:focus,
+.skill-roll-wrapper .number-input-display .number-input-value:focus,
+.defence-roll-wrapper .number-input-display .number-input-value:focus,
+.medical-help-wrapper .number-input-display .number-input-value:focus,
+.heal-wrapper .number-input-display .number-input-value:focus,
+.stress-roll-wrapper .number-input-display .number-input-value:focus,
+.fright-roll-wrapper .number-input-display .number-input-value:focus,
+.create-item-wrapper .number-input-display .number-input-value:focus,
+.game-time-wrapper .number-input-display .number-input-value:focus {
+  background: rgba(255, 255, 255, 0.04);
+}
+.reload-dialog-wrapper .number-input-display .number-input-value:invalid,
+.ranged-attack-wrapper .number-input-display .number-input-value:invalid,
+.range-selection-wrapper .number-input-display .number-input-value:invalid,
+.melee-attack-wrapper .number-input-display .number-input-value:invalid,
+.skill-roll-wrapper .number-input-display .number-input-value:invalid,
+.defence-roll-wrapper .number-input-display .number-input-value:invalid,
+.medical-help-wrapper .number-input-display .number-input-value:invalid,
+.heal-wrapper .number-input-display .number-input-value:invalid,
+.stress-roll-wrapper .number-input-display .number-input-value:invalid,
+.fright-roll-wrapper .number-input-display .number-input-value:invalid,
+.create-item-wrapper .number-input-display .number-input-value:invalid,
+.game-time-wrapper .number-input-display .number-input-value:invalid {
+  box-shadow: none;
+}
 .reload-dialog-wrapper .location-grid,
 .ranged-attack-wrapper .location-grid,
 .range-selection-wrapper .location-grid,

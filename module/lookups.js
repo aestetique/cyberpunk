@@ -435,6 +435,18 @@ export function getSkillsForCategory(categoryKey) {
     return [];
 }
 
+/**
+ * Get the actor's Interface skill rank from the configured single-skill mapping.
+ * @param {Actor} actor
+ * @returns {number} Skill rank, or 0 if no mapping or skill not found.
+ */
+export function getInterfaceSkillRank(actor) {
+    const names = getSkillsForCategory("interfaceSkills");
+    if (!names.length) return 0;
+    const skill = actor.itemTypes.skill?.find(s => names.includes(s.name));
+    return Number(skill?.system?.level) || 0;
+}
+
 // For backward compatibility - dynamic proxy that reads from settings
 export let attackSkills = new Proxy(DEFAULT_ATTACK_SKILLS, {
     get(target, prop) {

@@ -17,6 +17,7 @@ import { COVER_TYPES, CONDITION_TOGGLE_ROWS } from "../conditions.js"
 import { CreateItemDialog } from "../dialog/create-item-dialog.js"
 import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
+import { spendNetAction } from "../action-tracker.js"
 
 /**
  * Character sheet for Cyberpunk 2020 actors.
@@ -1763,6 +1764,30 @@ export class CyberpunkActorSheet extends ActorSheet {
     category.detachedOptions.sort((a, b) => a.name.localeCompare(b.name));
 
     sheetData.netwareCategory = category;
+
+    // NET Actions chips for the Netware section header.
+    // In combat: visual order (left → right) is available, used, disabled — spending
+    // consumes the rightmost available chip; refunding releases the leftmost used chip.
+    // Out of combat: all chips render as "used" (cosmetic) since the pool isn't in play.
+    const na = this.actor.system.netActions;
+    const inCombat = !!game.combat;
+    let chips = null;
+    if (na) {
+      chips = [];
+      if (!inCombat) {
+        for (let i = 0; i < na.total; i++) chips.push({ state: "used", src: 1 });
+      } else {
+        for (let i = 0; i < na.total; i++) {
+          let state, src;
+          if (i < na.available)                   { state = "available"; src = 3; }
+          else if (i < na.available + na.used)    { state = "used";      src = 1; }
+          else                                    { state = "disabled";  src = 0; }
+          chips.push({ state, src });
+        }
+      }
+    }
+    sheetData.netActionChips = chips;
+    sheetData.netActionsInteractive = !!chips && inCombat && this.actor.statuses.has("jacked-in");
   }
 
   _organizeInventory(sheetData) {
@@ -3145,6 +3170,26 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // ----- Net Tab Event Listeners -----
 
+    // NET Actions chip click: spend (available -> used) or refund (used -> available).
+    // Visual order: [available...][used...][disabled...] — spend pulls from the right
+    // edge of the available block, refund releases from the left edge of the used block.
+    // Only interactive when in combat AND the actor is jacked-in.
+    html.find('.netaction-chip').click(async ev => {
+      const idx = Number(ev.currentTarget.dataset.index);
+      const inCombat = !!game.combat;
+      const jackedIn = this.actor.statuses.has("jacked-in");
+      if (!(inCombat && jackedIn)) return;
+
+      const na = this.actor.system.netActions;
+      if (!na) return;
+      if (idx >= na.available + na.used) return; // disabled chip
+      const isUsed = idx >= na.available;
+      const newUsed = isUsed
+        ? Math.max(0, na.used - 1)                          // refund
+        : Math.min(na.total - na.disabled, na.used + 1);    // spend
+      await this.actor.setFlag("cyberpunk", "netActionsUsed", newUsed);
+    });
+
     // Toggle cyberdeck on/off (jacked-in condition)
     html.find('.toggle-netware-deck').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
@@ -3155,7 +3200,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       const turningOn = !currentEquipped;
 
       if (turningOn) {
-        // Check no other deck is already active
+        // Check no other deck is already active (validate before charging NET Action)
         const activeDeck = this.actor.items.find(i =>
           i.type === 'netware' &&
           i.system.netwareType === 'cyberdeck' &&
@@ -3167,10 +3212,16 @@ export class CyberpunkActorSheet extends ActorSheet {
           return;
         }
 
+        // NET Action cost: Jacking In costs 1 NET Action.
+        if (!await spendNetAction(this.actor, "jack in")) return;
+
         // Turn on deck and apply jacked-in condition
         await item.update({ "system.equipped": true });
         await this.actor.toggleStatusEffect("jacked-in", { active: true });
       } else {
+        // NET Action cost: Jacking Off costs 1 NET Action.
+        if (!await spendNetAction(this.actor, "jack out")) return;
+
         // Turn off deck: deactivate all attached booster/defender programs first
         const attachedPrograms = this.actor.items.filter(i =>
           i.type === 'netware' &&
@@ -3207,7 +3258,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         return;
       }
 
-      // Check parent deck is ON to activate
+      // Check parent deck is ON to activate (validate before charging NET Action)
       if (currentState === 'inactive') {
         const parentId = item.getFlag('cyberpunk', 'attachedTo');
         const parent = parentId ? this.actor.items.get(parentId) : null;
@@ -3216,6 +3267,10 @@ export class CyberpunkActorSheet extends ActorSheet {
           return;
         }
       }
+
+      // NET Action cost: Activate/Deactivate program costs 1 NET Action.
+      const actionLabel = currentState === 'inactive' ? "activate program" : "deactivate program";
+      if (!await spendNetAction(this.actor, actionLabel)) return;
 
       const newState = currentState === 'inactive' ? 'active' : 'inactive';
       await item.update({ "system.programState": newState });

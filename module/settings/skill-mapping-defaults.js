@@ -71,6 +71,11 @@ export const DEFAULT_SKILL_MAPPINGS = {
     labelKey: "SETTINGS.SkillMapAwareness",
     singleSkill: true,
     skills: []
+  },
+  interfaceSkills: {
+    labelKey: "SETTINGS.SkillMapInterface",
+    singleSkill: true,
+    skills: []
   }
 };
 

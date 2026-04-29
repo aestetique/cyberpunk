@@ -2821,6 +2821,27 @@ input.info-value.info-input::-webkit-outer-spin-button, input.info-value.info-in
   height: 16px;
 }
 
+.netactions-tracker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+.netactions-tracker .netaction-chip {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border: none;
+}
+.netactions-tracker .netaction-chip.disabled {
+  cursor: default;
+}
+.netactions-tracker.readonly .netaction-chip {
+  cursor: default;
+}
+
 .skills-content {
   flex: 1;
   min-height: 0;

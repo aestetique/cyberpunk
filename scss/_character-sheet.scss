@@ -1017,6 +1017,23 @@ input.info-value.info-input {
   height: 16px;
 }
 
+.netactions-tracker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+  .netaction-chip {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    border: none;
+    &.disabled { cursor: default; }
+  }
+  &.readonly .netaction-chip { cursor: default; }
+}
+
 .skills-content {
   flex: 1;
   min-height: 0; // Allow shrinking below content size

@@ -396,6 +396,9 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     // Reset action count at start of turn
     await actor.unsetFlag("cyberpunk", "actionCount");
 
+    // Reset NET Actions used at start of turn
+    await actor.unsetFlag("cyberpunk", "netActionsUsed");
+
     // Reset movement tracking for cumulative distance
     await actor.unsetFlag("cyberpunk", "movementActionRegistered");
     await actor.setFlag("cyberpunk", "cumulativeDistance", 0);

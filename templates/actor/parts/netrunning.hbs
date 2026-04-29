@@ -4,6 +4,14 @@
   <div class="gear-block netware-block" data-netware-type="netware">
     <header class="tab-header">
       <span class="tab-title">NETWARE</span>
+      {{#if netActionChips}}
+        <div class="netactions-tracker {{#unless netActionsInteractive}}readonly{{/unless}}" title="{{localize "CYBERPUNK.NetActions"}}">
+          {{#each netActionChips}}
+            <img class="netaction-chip {{state}}" data-index="{{@index}}"
+                 src="systems/cyberpunk/img/ui/skillchip-{{src}}.svg" alt="">
+          {{/each}}
+        </div>
+      {{/if}}
       <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-netware.svg" alt="">
     </header>
     <div class="tab-content gear-content" data-drop-target="netware">

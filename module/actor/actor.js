@@ -1,6 +1,6 @@
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes, sortSkills } from "./skill-sort.js";
-import { bodyTypeModifier } from "../lookups.js";
+import { bodyTypeModifier, getInterfaceSkillRank } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
@@ -431,6 +431,28 @@ export class CyberpunkActor extends Actor {
     }
 
     system.armorState = armorState;
+
+    // NET Actions: derived from Interface skill rank.
+    // Hidden entirely if no Interface mapping or rank 0.
+    const ifaceRank = getInterfaceSkillRank(this);
+    if (ifaceRank <= 0) {
+      system.netActions = null;
+    } else {
+      const baseTotal =
+        ifaceRank >= 10 ? 5 :
+        ifaceRank >= 7  ? 4 :
+        ifaceRank >= 4  ? 3 : 2;
+      const lagging = this.statuses.has("lagging");
+      const disabled = lagging ? Math.min(1, Math.max(0, baseTotal - 2)) : 0;
+      const used = this.getFlag("cyberpunk", "netActionsUsed") ?? 0;
+      const usedClamped = Math.min(used, baseTotal - disabled);
+      system.netActions = {
+        total: baseTotal,
+        disabled,
+        used: usedClamped,
+        available: Math.max(0, baseTotal - disabled - usedClamped)
+      };
+    }
   }
 
   /**

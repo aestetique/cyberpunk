@@ -35,3 +35,26 @@ export async function registerAction(actor, actionType = "action") {
 
   return newActionCount > 1;
 }
+
+/**
+ * Spend a NET Action. Tracks usage when an active combat exists and the actor has a
+ * NET Actions pool (Interface skill mapped, rank ≥ 1). Outside combat or for non-netrunners,
+ * the action passes through with no charge. Independent of Meat Action economy.
+ * @param {Actor} actor - The actor performing the NET action
+ * @param {string} actionType - Label for the action (used in the blocking notification)
+ * @returns {Promise<boolean>} True if the action may proceed, false if blocked (no actions left).
+ */
+export async function spendNetAction(actor, actionType = "NET action") {
+  if (!game.combat) return true;
+
+  const na = actor.system.netActions;
+  if (!na) return true;
+
+  if (na.available <= 0) {
+    ui.notifications.warn(`No NET Actions left this turn — cannot ${actionType}.`);
+    return false;
+  }
+
+  await actor.setFlag("cyberpunk", "netActionsUsed", na.used + 1);
+  return true;
+}

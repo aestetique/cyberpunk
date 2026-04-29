@@ -483,6 +483,7 @@
     "SETTINGS.SkillMapEscape": "Escape Skills",
     "SETTINGS.SkillMapStabilisation": "Stabilisation Skills",
     "SETTINGS.SkillMapAwareness": "Awareness / Notice",
+    "SETTINGS.SkillMapInterface": "Interface",
     "SETTINGS.SkillMappingRemove": "Remove skill",
     "SETTINGS.SkillMappingNoSkills": "No skills assigned",
     "SETTINGS.SkillMappingDropHere": "Drop skills here",
@@ -525,6 +526,7 @@
     "CYBERPUNK.CyberTerminus": "Cyber-terminus Options",
     
     "CYBERPUNK.NetRun": "Netrunning",
+    "CYBERPUNK.NetActions": "NET Actions",
     "CYBERPUNK.NetLabel": "LABEL",
     "CYBERPUNK.NetCyberdeckName": "MODEL NAME",
     "CYBERPUNK.NetInterface": "INTERFACE",

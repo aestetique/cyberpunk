@@ -275,8 +275,8 @@
             <span class="field-bottom">Quantity</span>
           </div>
           <div class="gear-field" style="width: 60px;"></div>
-          <div class="gear-action-btn toggle-drug" data-item-id="{{drug.id}}" data-equipped="{{drug.equipped}}" title="{{#if drug.equipped}}Wear Off{{else}}Use{{/if}}">
-            <img src="systems/cyberpunk/img/ui/badge-{{#if drug.equipped}}used{{else}}wearoff{{/if}}.svg" alt="{{#if drug.equipped}}Wear Off{{else}}Use{{/if}}">
+          <div class="gear-action-btn toggle-drug" data-item-id="{{drug.id}}" title="{{drug.nextActionLabel}}">
+            <img src="systems/cyberpunk/img/ui/{{drug.badgeFile}}" alt="{{drug.nextActionLabel}}">
           </div>
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{drug.id}}" title="View">

@@ -84,7 +84,10 @@ export class CyberpunkActor extends Actor {
       return false;
     });
     equippedWithBonuses.forEach(item => {
-      const bonuses = item.system.bonuses || [];
+      // Drugs in withdrawal phase apply their Withdrawal bonus list instead of Effect.
+      const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
+        ? (item.system.withdrawal || [])
+        : (item.system.bonuses || []);
       bonuses.forEach(bonus => {
         if (bonus.type === "property" && bonus.property) {
           // Property bonuses modify stats directly
@@ -187,11 +190,14 @@ export class CyberpunkActor extends Actor {
     body.carry = body.total * 10;
     body.lift = body.total * 40;
     body.modifier = bodyTypeModifier(body.total);
+    // Total carried-gear weight: every owned item except cyberware (installed in body)
+    // and vehicles (not carried). Includes equipped + unequipped — anything in inventory
+    // counts toward what the character is hauling around.
     system.carryWeight = 0;
-    equippedItems.forEach(item => {
-      let weight = item.system.weight || 0;
-      system.carryWeight += parseFloat(weight);
-    });
+    for (const item of this.items) {
+      if (item.type === "cyberware" || item.type === "vehicle") continue;
+      system.carryWeight += parseFloat(item.system?.weight) || 0;
+    }
 
     // Apply wound penalties to stats, tracking the delta in stat.woundMod
     let woundState = this.getWoundLevel();
@@ -555,6 +561,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Negative penalty (e.g. -1, -2, -3, -5, -8) or 0
    */
   getFatiguePenalty() {
+    if ((this.system.ignoreFatigue || 0) > 0) return 0;
     const level = this.getFatigueLevel();
     if (level === 0) return 0;
     const conditionId = FATIGUE_LEVEL_TO_CONDITION[level];
@@ -624,6 +631,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Penalty/bonus (e.g. +1 for Fresh on COOL, -1 to -5 for negative conditions)
    */
   getStressPenalty(isCoolRoll = false) {
+    if ((this.system.ignoreStressFright || 0) > 0) return 0;
     const level = this.getStressLevel();
     if (level === 0) return 0;
     const conditionId = STRESS_LEVEL_TO_CONDITION[level];
@@ -847,6 +855,33 @@ export class CyberpunkActor extends Actor {
     }
   }
 
+  /**
+   * Apply / remove the Immobilized condition based on whether total carried gear weight
+   * exceeds carry capacity (BT × 10). Uses a flag to track ownership, so we only auto-remove
+   * Immobilized that we ourselves applied — leaving grapple-applied Immobilized alone.
+   */
+  async updateEncumbranceStatus() {
+    const overweight = (this.system.carryWeight || 0) > (this.system.stats?.bt?.carry || 0);
+    const isImmobilized = this.statuses.has("immobilized");
+    const ownedByOverload = !!this.getFlag("cyberpunk", "overloaded");
+
+    if (overweight) {
+      // Need Immobilized on. If we're not the source, only act when nobody else has it on.
+      if (!isImmobilized) {
+        await this.toggleStatusEffect("immobilized", { active: true });
+        await this.setFlag("cyberpunk", "overloaded", true);
+      }
+      // If immobilized was already on for some other reason (grapple), leave the flag
+      // untouched so we don't auto-remove their state when they un-overload.
+    } else if (ownedByOverload) {
+      // We applied it; safe to remove.
+      if (isImmobilized) {
+        await this.toggleStatusEffect("immobilized", { active: false });
+      }
+      await this.unsetFlag("cyberpunk", "overloaded");
+    }
+  }
+
   /** @override */
   _preUpdate(changed, options, user) {
     super._preUpdate(changed, options, user);
@@ -874,6 +909,12 @@ export class CyberpunkActor extends Actor {
     // Sync fatigue condition when fatigue points or BODY stat changes
     if (changed.system?.fatigue !== undefined || changed.system?.stats?.bt) {
       await this.updateFatigueStatus();
+    }
+
+    // Re-evaluate encumbrance when BT changes (carry capacity = BT × 10).
+    // Item-driven changes are handled by createItem/updateItem/deleteItem hooks.
+    if (changed.system?.stats?.bt) {
+      await this.updateEncumbranceStatus();
     }
 
     // Sync stress condition when stress points or COOL stat changes

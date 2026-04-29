@@ -82,7 +82,9 @@ export const toolBonusProperties = {
     "healingRateBoost": "PropHealingRateBoost",
     "stayAwakeBonus": "PropStayAwakeBonus",
     "fallAsleepBonus": "PropFallAsleepBonus",
-    "bonusActions": "PropBonusActions"
+    "bonusActions": "PropBonusActions",
+    "ignoreStressFright": "PropIgnoreStressFright",
+    "ignoreFatigue": "PropIgnoreFatigue"
 };
 
 /** Netware types */

@@ -567,8 +567,16 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
 /**
  * Clean up combat-only conditions when combat ends.
  * Removes Fast Draw and Action Surge from all combatants.
+ * Also forces a re-render of any open combatant sheets so the NET Actions
+ * tracker switches to its out-of-combat visual (chips depend on global
+ * combat state, not on actor data — so updateActor wouldn't fire on its own).
  */
 Hooks.on("deleteCombat", async (combat) => {
+    // All clients: refresh open sheets to reflect the now-ended combat.
+    for (const combatant of combat.combatants) {
+        combatant?.actor?.sheet?.render(false);
+    }
+
     if (!game.user.isGM) return;
     for (const combatant of combat.combatants) {
         if (!combatant?.actor) continue;
@@ -579,7 +587,46 @@ Hooks.on("deleteCombat", async (combat) => {
         if (actor.statuses.has("action-surge")) {
             await actor.toggleStatusEffect("action-surge", { active: false });
         }
+        await actor.unsetFlag("cyberpunk", "netActionsUsed");
     }
+});
+
+/**
+ * When "Begin Encounter" is clicked, refresh open combatant sheets so the
+ * NET Actions tracker flips into in-combat visual mode.
+ */
+Hooks.on("combatStart", (combat) => {
+    for (const combatant of combat.combatants) {
+        combatant?.actor?.sheet?.render(false);
+    }
+});
+
+/**
+ * Re-evaluate encumbrance whenever an item on an actor is added/removed/changed.
+ * Cyberware and vehicles don't count toward carried weight, so skip them.
+ * Only the user that triggered the change runs the toggle (avoids duplicate writes).
+ */
+function _itemAffectsEncumbrance(item) {
+    if (!(item.parent instanceof Actor)) return false;
+    if (item.type === "cyberware" || item.type === "vehicle") return false;
+    return true;
+}
+Hooks.on("createItem", async (item, options, userId) => {
+    if (userId !== game.user.id) return;
+    if (!_itemAffectsEncumbrance(item)) return;
+    await item.parent.updateEncumbranceStatus();
+});
+Hooks.on("updateItem", async (item, change, options, userId) => {
+    if (userId !== game.user.id) return;
+    if (!_itemAffectsEncumbrance(item)) return;
+    // Only the weight field actually changes the sum; ignore unrelated edits.
+    if (change.system?.weight === undefined) return;
+    await item.parent.updateEncumbranceStatus();
+});
+Hooks.on("deleteItem", async (item, options, userId) => {
+    if (userId !== game.user.id) return;
+    if (!_itemAffectsEncumbrance(item)) return;
+    await item.parent.updateEncumbranceStatus();
 });
 
 /**

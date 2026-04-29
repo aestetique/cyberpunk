@@ -45,7 +45,8 @@ export async function registerAction(actor, actionType = "action") {
  * @returns {Promise<boolean>} True if the action may proceed, false if blocked (no actions left).
  */
 export async function spendNetAction(actor, actionType = "NET action") {
-  if (!game.combat) return true;
+  // Combat must be actually started — adding combatants without "Begin Encounter" is no-op territory.
+  if (!game.combat?.started) return true;
 
   const na = actor.system.netActions;
   if (!na) return true;

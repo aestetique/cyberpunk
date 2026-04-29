@@ -92,6 +92,9 @@
       <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-tab="effect">
         <span class="tab-text">{{localize "CYBERPUNK.Effect"}}</span>
       </a>
+      <a class="tab-header {{#if (eq activeTab 'withdrawal')}}active{{/if}}" data-tab="withdrawal">
+        <span class="tab-text">{{localize "CYBERPUNK.Withdrawal"}}</span>
+      </a>
     </div>
 
     {{!-- Horizontal Divider --}}
@@ -119,73 +122,10 @@
           <input type="text" class="source-input" name="system.source" value="{{system.source}}" placeholder="Core Rulebook, p.XX" {{#if isLocked}}readonly{{/if}}>
         </div>
 
+      {{else if (eq activeTab 'effect')}}
+        {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=bonuses propertyOptions=propertyOptions bonusSet="bonuses" isLocked=isLocked}}
       {{else}}
-        {{!-- Effect Tab --}}
-        <div class="effect-bonuses" data-drop-target="skill-bonus">
-          {{#each bonuses}}
-            <div class="bonus-row" data-index="{{@index}}">
-
-              {{#if this.isProperty}}
-                {{!-- Property bonus row --}}
-                <label class="variable-label">{{localize "CYBERPUNK.Property"}}</label>
-                {{#if ../isLocked}}
-                  <div class="dropdown">
-                    <span class="dropdown-text">{{this.label}}</span>
-                    <div class="dropdown-chevron">
-                      <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
-                    </div>
-                  </div>
-                {{else}}
-                  <div class="dropdown-wrapper">
-                    <select class="dropdown-select bonus-property-select" data-index="{{@index}}">
-                      <option value="{{this.property}}" selected>{{this.label}}</option>
-                      {{#each ../propertyOptions}}
-                        <option value="{{this.value}}">{{this.label}}</option>
-                      {{/each}}
-                    </select>
-                    <div class="dropdown-chevron">
-                      <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
-                    </div>
-                  </div>
-                {{/if}}
-              {{else}}
-                {{!-- Skill bonus row --}}
-                <label class="variable-label">{{localize "CYBERPUNK.Skill"}}</label>
-                {{#if this.hasFilled}}
-                  <div class="skill-drop filled">
-                    <span class="skill-name" data-uuid="{{this.skillUuid}}">{{this.skillName}}</span>
-                  </div>
-                {{else}}
-                  <div class="skill-drop empty" data-drop-target="skill-bonus">
-                    <span class="placeholder">{{#if ../isLocked}}{{localize "CYBERPUNK.DropSkillLocked"}}{{else}}{{localize "CYBERPUNK.DropSkillHere"}}{{/if}}</span>
-                  </div>
-                {{/if}}
-              {{/if}}
-
-              {{!-- Bonus value --}}
-              {{#if ../isLocked}}
-                <span class="bonus-value">{{this.value}}</span>
-              {{else}}
-                <input type="number" class="bonus-value-input" data-index="{{@index}}" value="{{this.value}}">
-              {{/if}}
-
-              {{!-- Trash icon --}}
-              {{#unless ../isLocked}}
-                <button type="button" class="remove-bonus" data-index="{{@index}}" title="Remove">
-                  <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
-                </button>
-              {{/unless}}
-            </div>
-          {{/each}}
-        </div>
-
-        {{!-- Action buttons --}}
-        {{#unless isLocked}}
-          <div class="effect-actions">
-            <button type="button" class="add-property">{{localize "CYBERPUNK.AddProperty"}}</button>
-            <button type="button" class="add-skill">{{localize "CYBERPUNK.AddSkill"}}</button>
-          </div>
-        {{/unless}}
+        {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=withdrawal propertyOptions=withdrawalPropertyOptions bonusSet="withdrawal" isLocked=isLocked}}
       {{/if}}
     </div>
   </div>

@@ -93,6 +93,9 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/item/parts/netware/tab-description.hbs",
         "systems/cyberpunk/templates/item/parts/netware/tab-details.hbs",
 
+        // Drug
+        "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs",
+
         // Role
         "systems/cyberpunk/templates/item/role-sheet.hbs",
         "systems/cyberpunk/templates/item/parts/role/summary.hbs",

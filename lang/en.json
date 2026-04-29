@@ -402,6 +402,9 @@
     "CYBERPUNK.DmgSpike": "Spike",
     "CYBERPUNK.DmgMonoblade": "Monoblade",
     "CYBERPUNK.Effect": "Effect",
+    "CYBERPUNK.Withdrawal": "Withdrawal",
+    "CYBERPUNK.Use": "Use",
+    "CYBERPUNK.WearOff": "Wear Off",
     "CYBERPUNK.EffConfusion": "Confusion",
     "CYBERPUNK.EffPoisoned": "Poisoned",
     "CYBERPUNK.EffTearing": "Tearing",
@@ -851,6 +854,8 @@
     "CYBERPUNK.PropStayAwakeBonus": "Stay Awake Bonus",
     "CYBERPUNK.PropFallAsleepBonus": "Fall Asleep Bonus",
     "CYBERPUNK.PropBonusActions": "Bonus Actions",
+    "CYBERPUNK.PropIgnoreStressFright": "Ignore Stress & Fright",
+    "CYBERPUNK.PropIgnoreFatigue": "Ignore Fatigue",
 
     "TYPES.Item.drug": "Drug",
     "CYBERPUNK.Drug": "DRUG",

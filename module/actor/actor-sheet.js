@@ -845,7 +845,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       let skillBonus = 0;
       if (!isChipped) {
         for (const item of equippedWithBonuses) {
-          const bonuses = item.system.bonuses || [];
+          // Drugs in withdrawal phase apply their Withdrawal bonus list instead of Effect.
+          const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
+            ? (item.system.withdrawal || [])
+            : (item.system.bonuses || []);
           for (const bonus of bonuses) {
             if (bonus.type === "skill" && bonus.value) {
               const matchByUuid = bonus.skillUuid && bonus.skillUuid === skill.uuid;
@@ -1248,8 +1251,15 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Prepare drug data
     sheetData.drugItems = drugs.map(d => {
       const sys = d.system;
-      const bonuses = sys.bonuses || [];
-      const effectLabels = bonuses.slice(0, 2).map(b => {
+      const equipped = sys.equipped ?? false;
+      const phase = sys.phase || "active";
+      const hasWithdrawal = (sys.withdrawal || []).length > 0;
+
+      // Summarize the bonus set that's currently in effect (or would be on Use, when inactive)
+      const sourceBonuses = (equipped && phase === "withdrawal")
+        ? (sys.withdrawal || [])
+        : (sys.bonuses || []);
+      const effectLabels = sourceBonuses.slice(0, 2).map(b => {
         if (b.type === "property") {
           const propKey = toolBonusProperties[b.property];
           const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
@@ -1261,6 +1271,22 @@ export class CyberpunkActorSheet extends ActorSheet {
       }).filter(l => l);
       const contextParts = ['Drug', ...effectLabels];
 
+      // Badge + next-action title following the Use → [Withdrawal] → Wear Off chain.
+      let badgeFile, nextActionLabel;
+      if (!equipped) {
+        badgeFile = "badge-wearoff.svg";
+        nextActionLabel = game.i18n.localize("CYBERPUNK.Use");
+      } else if (phase === "withdrawal") {
+        badgeFile = "badge-withdrawal.svg";
+        nextActionLabel = game.i18n.localize("CYBERPUNK.WearOff");
+      } else if (hasWithdrawal) {
+        badgeFile = "badge-used.svg";
+        nextActionLabel = game.i18n.localize("CYBERPUNK.Withdrawal");
+      } else {
+        badgeFile = "badge-used.svg";
+        nextActionLabel = game.i18n.localize("CYBERPUNK.WearOff");
+      }
+
       return {
         id: d.id,
         img: d.img,
@@ -1269,7 +1295,11 @@ export class CyberpunkActorSheet extends ActorSheet {
         price: sys.cost || 0,
         weight: sys.weight || 0,
         quantity: sys.quantity ?? 0,
-        equipped: sys.equipped ?? false
+        equipped,
+        phase,
+        hasWithdrawal,
+        badgeFile,
+        nextActionLabel
       };
     });
 
@@ -1770,7 +1800,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // consumes the rightmost available chip; refunding releases the leftmost used chip.
     // Out of combat: all chips render as "used" (cosmetic) since the pool isn't in play.
     const na = this.actor.system.netActions;
-    const inCombat = !!game.combat;
+    const inCombat = !!game.combat?.started;
     let chips = null;
     if (na) {
       chips = [];
@@ -2720,24 +2750,34 @@ export class CyberpunkActorSheet extends ActorSheet {
       await item.update({ "system.equipped": !currentEquipped });
     });
 
-    // Toggle drug use/wearoff (gear tab)
+    // Toggle drug use → [withdrawal] → wearoff (gear tab)
     html.find('.toggle-drug').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const item = this.actor.items.get(itemId);
       if (!item) return;
 
-      const isActive = item.system.equipped ?? false;
-      if (isActive) {
-        // Wearoff: deactivate and decrement quantity
+      const equipped = item.system.equipped ?? false;
+      const phase = item.system.phase || "active";
+      const hasWithdrawal = (item.system.withdrawal || []).length > 0;
+
+      if (!equipped) {
+        // Inactive → Active (Use)
+        await item.update({ "system.equipped": true, "system.phase": "active" });
+      } else if (phase === "active" && hasWithdrawal) {
+        // Active → Withdrawal
+        await item.update({ "system.phase": "withdrawal" });
+      } else {
+        // Active (no withdrawal) OR Withdrawal → Wear Off (decrement quantity, reset phase)
         const newQty = (item.system.quantity ?? 1) - 1;
         if (newQty <= 0) {
           await item.delete();
         } else {
-          await item.update({ "system.equipped": false, "system.quantity": newQty });
+          await item.update({
+            "system.equipped": false,
+            "system.quantity": newQty,
+            "system.phase": "active"
+          });
         }
-      } else {
-        // Use: activate the drug
-        await item.update({ "system.equipped": true });
       }
     });
 
@@ -3176,7 +3216,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Only interactive when in combat AND the actor is jacked-in.
     html.find('.netaction-chip').click(async ev => {
       const idx = Number(ev.currentTarget.dataset.index);
-      const inCombat = !!game.combat;
+      const inCombat = !!game.combat?.started;
       const jackedIn = this.actor.statuses.has("jacked-in");
       if (!(inCombat && jackedIn)) return;
 

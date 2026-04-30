@@ -1,0 +1,18 @@
+{{!-- Conditions block — toggle buttons. Expects: conditionToggleRows (array of arrays). --}}
+<div class="gear-block">
+  <header class="tab-header">
+    <span class="tab-title">CONDITIONS</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-conditions.svg" alt="">
+  </header>
+  {{#each conditionToggleRows}}
+  <div class="conditions-row">
+    {{#each this}}
+    <div class="condition-toggle cond-toggle {{#if this.active}}active{{/if}}" data-condition-id="{{this.id}}" data-tooltip-name="{{this.label}}" data-flavor="{{this.flavor}}" data-calc="{{this.calc}}">
+      <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/{{this.icon}}-{{#if this.active}}on{{else}}off{{/if}}.svg')">
+      </div>
+      <span class="condition-toggle-label">{{this.label}}</span>
+    </div>
+    {{/each}}
+  </div>
+  {{/each}}
+</div>

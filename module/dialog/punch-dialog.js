@@ -1,4 +1,4 @@
-import { localize } from "../utils.js";
+import { localize, getHiddenLocationsForTargets, resolveTargetActor } from "../utils.js";
 import { getSkillsForCategory, meleeDamageBonus, ramBaseDamage } from "../lookups.js";
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { rollLocation } from "../utils.js";
@@ -13,9 +13,10 @@ export class PunchDialog extends Application {
   /**
    * @param {Actor} actor  The attacking actor
    */
-  constructor(actor, { actionKey = "Punch" } = {}) {
+  constructor(actor, { actionKey = "Punch", targetTokens = null } = {}) {
     super();
     this.actor = actor;
+    this.targetTokens = targetTokens || (game.user?.targets ? Array.from(game.user.targets) : []);
     this._actionKey = actionKey;
     const martialKeys = { Kick: "kick", Disarm: "disarm", Sweep: "sweep", Grapple: "grapple", Hold: "hold", Break: "hold", Choke: "choke", Crush: "choke", Throw: "throw", Ram: "ram" };
     this._martialKey = martialKeys[actionKey] || "strike";
@@ -163,6 +164,7 @@ export class PunchDialog extends Application {
       showLocation,
       locationRequired,
       disabledLocations,
+      hiddenLocations: getHiddenLocationsForTargets(this.targetTokens),
       // Luck data
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
@@ -232,8 +234,8 @@ export class PunchDialog extends Application {
     html.find('.location-btn').click(ev => {
       const btn = ev.currentTarget;
 
-      // Ignore clicks on disabled buttons
-      if (btn.disabled || btn.classList.contains('disabled')) {
+      // Ignore clicks on disabled or hidden buttons
+      if (btn.disabled || btn.classList.contains('disabled') || btn.classList.contains('no-zone')) {
         return;
       }
 
@@ -413,7 +415,8 @@ export class PunchDialog extends Application {
       const displayFormula = displayParts.join(' + ');
 
       // Location roll
-      const locationRoll = await rollLocation(null, this._selectedLocation);
+      const targetActor = resolveTargetActor(this.targetTokens?.[0]);
+      const locationRoll = await rollLocation(targetActor, this._selectedLocation);
       hitLocation = locationRoll.areaHit;
 
       // Build areaDamages
@@ -425,7 +428,9 @@ export class PunchDialog extends Application {
           faces: term.faces,
           results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
         })),
-        ignoreArmor: this._actionKey === "Break" || this._actionKey === "Choke" || this._actionKey === "Crush" || this._actionKey === "Throw"
+        ignoreArmor: this._actionKey === "Break" || this._actionKey === "Choke" || this._actionKey === "Crush" || this._actionKey === "Throw",
+        rollD10: this._selectedLocation ? 0 : (locationRoll.roll?.total ?? 0),
+        pickedZone: this._selectedLocation ? hitLocation : null
       }];
     }
 
@@ -608,7 +613,8 @@ export class PunchDialog extends Application {
     const displayFormula = displayParts.join(' + ');
 
     // Random location roll
-    const locationRoll = await rollLocation(null, null);
+    const targetActor = this.targetTokens?.[0]?.actor || null;
+    const locationRoll = await rollLocation(targetActor, null);
     const hitLocation = locationRoll.areaHit;
 
     // Build areaDamages
@@ -620,7 +626,9 @@ export class PunchDialog extends Application {
         faces: term.faces,
         results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
       })),
-      ignoreArmor: false  // Ram does NOT ignore armor
+      ignoreArmor: false,  // Ram does NOT ignore armor
+      rollD10: locationRoll.roll?.total ?? 0,
+      pickedZone: null
     }];
 
     // === CHAT MESSAGE ===

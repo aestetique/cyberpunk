@@ -76,6 +76,11 @@ export const DEFAULT_SKILL_MAPPINGS = {
     labelKey: "SETTINGS.SkillMapInterface",
     singleSkill: true,
     skills: []
+  },
+  demolitionsSkills: {
+    labelKey: "SETTINGS.SkillMapDemolitions",
+    singleSkill: true,
+    skills: []
   }
 };
 

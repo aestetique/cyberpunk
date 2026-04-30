@@ -56,23 +56,23 @@
 
   {{!-- Location buttons - 2x3 grid --}}
   <div class="location-grid">
-    <button type="button" class="location-btn" data-location="LeftArm">
-      <img src="systems/cyberpunk/img/chat/LeftArm.svg" alt="">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'LeftArm')}} no-zone{{/if}}" data-location="LeftArm">
+      {{#unless (contains hiddenLocations 'LeftArm')}}<img src="systems/cyberpunk/img/chat/LeftArm.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn" data-location="Head">
-      <img src="systems/cyberpunk/img/chat/Head.svg" alt="">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'Head')}} no-zone{{/if}}" data-location="Head">
+      {{#unless (contains hiddenLocations 'Head')}}<img src="systems/cyberpunk/img/chat/Head.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn" data-location="RightArm">
-      <img src="systems/cyberpunk/img/chat/RightArm.svg" alt="">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'RightArm')}} no-zone{{/if}}" data-location="RightArm">
+      {{#unless (contains hiddenLocations 'RightArm')}}<img src="systems/cyberpunk/img/chat/RightArm.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn" data-location="LeftLeg">
-      <img src="systems/cyberpunk/img/chat/LeftLeg.svg" alt="">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'LeftLeg')}} no-zone{{/if}}" data-location="LeftLeg">
+      {{#unless (contains hiddenLocations 'LeftLeg')}}<img src="systems/cyberpunk/img/chat/LeftLeg.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn" data-location="Torso">
-      <img src="systems/cyberpunk/img/chat/Torso.svg" alt="">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'Torso')}} no-zone{{/if}}" data-location="Torso">
+      {{#unless (contains hiddenLocations 'Torso')}}<img src="systems/cyberpunk/img/chat/Torso.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn" data-location="RightLeg">
-      <img src="systems/cyberpunk/img/chat/RightLeg.svg" alt="">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'RightLeg')}} no-zone{{/if}}" data-location="RightLeg">
+      {{#unless (contains hiddenLocations 'RightLeg')}}<img src="systems/cyberpunk/img/chat/RightLeg.svg" alt="">{{/unless}}
     </button>
   </div>
   {{/if}}

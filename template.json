@@ -1,7 +1,8 @@
 {
 	"Actor": {
 		"types": [
-			"character"
+			"character",
+			"drone"
 		],
 		"templates": {
 			"stats": {
@@ -775,6 +776,31 @@
 			"stress": 0,
 			"fright": 0,
 			"sleep": 0,
+			"activeCover": null
+		},
+		"drone": {
+			"shape": "6zones",
+			"info": {
+				"weight": 50,
+				"price": 1000
+			},
+			"stats": {
+				"int":  { "base": 5, "tempMod": 0, "total": 5 },
+				"ref":  { "base": 5, "tempMod": 0, "total": 5 },
+				"tech": { "base": 5, "tempMod": 0, "total": 5 },
+				"ma":   { "base": 5, "tempMod": 0, "total": 5, "run": 15, "leap": 3 },
+				"luck": { "base": 5, "tempMod": 0, "total": 5, "spent": 0, "spentAt": null, "effective": 5 }
+			},
+			"zones": {
+				"head":  { "sp": { "max": 10, "ablation": 0 }, "sdp": { "current": 20, "max": 20, "disablesAt": 10 }, "manuallyDisabled": false },
+				"torso": { "sp": { "max": 10, "ablation": 0 }, "sdp": { "current": 20, "max": 20, "disablesAt": 10 }, "manuallyDisabled": false },
+				"lArm":  { "sp": { "max": 10, "ablation": 0 }, "sdp": { "current": 20, "max": 20, "disablesAt": 10 }, "manuallyDisabled": false },
+				"rArm":  { "sp": { "max": 10, "ablation": 0 }, "sdp": { "current": 20, "max": 20, "disablesAt": 10 }, "manuallyDisabled": false },
+				"lLeg":  { "sp": { "max": 10, "ablation": 0 }, "sdp": { "current": 20, "max": 20, "disablesAt": 10 }, "manuallyDisabled": false },
+				"rLeg":  { "sp": { "max": 10, "ablation": 0 }, "sdp": { "current": 20, "max": 20, "disablesAt": 10 }, "manuallyDisabled": false }
+			},
+			"icon": "",
+			"skillsSortedBy": "Name",
 			"activeCover": null
 		}
 	},

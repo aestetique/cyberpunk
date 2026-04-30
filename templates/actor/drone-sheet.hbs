@@ -1,0 +1,190 @@
+<form class="{{cssClass}}{{#unless isLocked}} unlocked{{/unless}}" autocomplete="off">
+  <div class="character-sheet drone-sheet">
+    <div class="sheet-frame">
+      {{!-- Header (38px) --}}
+      <header class="sheet-header">
+        <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+          <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
+        </button>
+        <span class="actor-name">{{actor.name}}</span>
+        <a class="header-control" data-action="copyUuid" title="Copy Document UUID">
+          <i class="fas fa-passport"></i>
+        </a>
+        <a class="header-control" data-action="configureSheet" title="Sheet">
+          <i class="fas fa-cog"></i>
+        </a>
+        <a class="header-control" data-action="configureToken" title="Token">
+          <i class="fas fa-user-circle"></i>
+        </a>
+        <a class="header-control close" data-action="closeSheet" title="Close">
+          <i class="fas fa-times"></i>
+        </a>
+      </header>
+
+      {{!-- Content --}}
+      <section class="sheet-content">
+        {{!-- Left Sidebar (200px) --}}
+        <aside class="left-sidebar">
+          <div class="portrait-section">
+            <div class="portrait-frame">
+              <img class="portrait-img" src="{{actor.img}}" title="{{actor.name}}">
+            </div>
+          </div>
+        </aside>
+
+        {{!-- Details --}}
+        <div class="sheet-details">
+          <div class="character-identity">
+            <div class="identity-left">
+              <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#if isLocked}}readonly{{/if}}>
+              <div class="shape-display" data-tooltip-name="Shape" data-flavor="Drone shape — determines hit location count.">
+                <span class="shape-prefix">Shape:</span>
+                {{#if isLocked}}
+                  <span class="shape-label">{{shapeLabel}}</span>
+                {{else}}
+                  <select class="shape-select" name="system.shape">
+                    {{#each shapeOptions}}
+                      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                    {{/each}}
+                  </select>
+                {{/if}}
+              </div>
+            </div>
+          </div>
+
+          {{!-- Attributes Row (5 stats) --}}
+          <div class="attributes-row">
+            {{#each statButtons as |stat|}}
+              {{#if ../isLocked}}
+              <button class="stat-btn stat-roll" type="button" data-stat-name="{{stat.key}}" data-tooltip-name="{{stat.tooltipName}}" data-flavor="{{stat.flavor}}" data-calc="{{stat.calc}}" data-token-path="{{stat.tokenPath}}">
+                <span class="stat-name">{{stat.label}}</span>
+                <span class="stat-value">{{stat.total}}</span>
+              </button>
+              {{else}}
+              <div class="stat-btn stat-edit" data-tooltip-name="{{stat.tooltipName}}" data-flavor="{{stat.flavor}}" data-calc="{{stat.calc}}" data-token-path="{{stat.tokenPath}}">
+                <span class="stat-name">{{stat.label}}</span>
+                <input type="number" class="stat-value stat-input" name="{{stat.path}}" value="{{stat.base}}" min="1" max="10">
+              </div>
+              {{/if}}
+            {{/each}}
+          </div>
+
+          {{!-- Info Row (5 fields) --}}
+          <div class="info-row">
+            {{#each infoBlocks as |info|}}
+            <div class="info-block" data-tooltip-name="{{info.label}}" data-flavor="{{info.flavor}}" {{#if info.calc}}data-calc="{{info.calc}}"{{/if}} data-token-path="{{info.tokenPath}}">
+              <span class="info-name">{{info.label}}</span>
+              {{#if info.editable}}
+                {{#if ../isLocked}}
+                  <span class="info-value">{{info.displayValue}}</span>
+                {{else}}
+                  <input type="number" class="info-value info-input" name="{{info.path}}" value="{{info.rawValue}}">
+                {{/if}}
+              {{else}}
+                <span class="info-value">{{info.displayValue}}</span>
+              {{/if}}
+            </div>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      {{!-- Full-width sections beneath the trivia row --}}
+      <div class="sheet-sections">
+        <div class="gear-container">
+        <div class="gear-block">
+          <header class="tab-header">
+            <span class="tab-title">STRUCTURE</span>
+            <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-armor.svg" alt="">
+          </header>
+          <div class="tab-content gear-content">
+            {{#each structureZones as |zone|}}
+              <div class="gear-row zone-row{{#if zone.isDisabled}} disabled{{/if}}" data-zone-key="{{zone.key}}">
+                <div class="gear-icon">
+                  <img src="systems/cyberpunk/img/svg/{{zone.icon}}" alt="{{zone.displayName}}">
+                </div>
+                <div class="gear-info">
+                  <span class="gear-name">{{zone.displayName}}</span>
+                  <span class="gear-context">{{zone.hitRangeText}}</span>
+                </div>
+
+                {{!-- SP: current / max --}}
+                <div class="gear-field zone-field">
+                  <span class="field-top zone-paired-row">
+                    <span class="zone-paired-readonly">{{zone.sp.current}}</span>
+                    <span class="zone-paired-sep">/</span>
+                    {{#if ../isLocked}}
+                      <span class="zone-paired-readonly">{{zone.sp.max}}</span>
+                    {{else}}
+                      <input type="number" class="zone-input" name="system.zones.{{zone.key}}.sp.max" value="{{zone.sp.max}}">
+                    {{/if}}
+                  </span>
+                  <span class="field-bottom">SP</span>
+                </div>
+
+                {{!-- SDP: current / max --}}
+                <div class="gear-field zone-field">
+                  <span class="field-top zone-paired-row">
+                    {{#if ../isLocked}}
+                      <span class="zone-paired-readonly">{{zone.sdp.current}}</span>
+                      <span class="zone-paired-sep">/</span>
+                      <span class="zone-paired-readonly">{{zone.sdp.max}}</span>
+                    {{else}}
+                      <input type="number" class="zone-input" name="system.zones.{{zone.key}}.sdp.current" value="{{zone.sdp.current}}">
+                      <span class="zone-paired-sep">/</span>
+                      <input type="number" class="zone-input" name="system.zones.{{zone.key}}.sdp.max" value="{{zone.sdp.max}}">
+                    {{/if}}
+                  </span>
+                  <span class="field-bottom">SDP</span>
+                </div>
+
+                {{!-- Disables at threshold --}}
+                <div class="gear-field zone-field">
+                  {{#if ../isLocked}}
+                    <span class="field-top">{{zone.sdp.disablesAt}}</span>
+                  {{else}}
+                    <input type="number" class="field-top zone-input" name="system.zones.{{zone.key}}.sdp.disablesAt" value="{{zone.sdp.disablesAt}}">
+                  {{/if}}
+                  <span class="field-bottom">Disables at</span>
+                </div>
+
+                {{!-- Disable toggle --}}
+                <div class="gear-action-btn zone-disable-btn" data-zone-key="{{zone.key}}" title="{{#if zone.isDisabled}}Re-enable zone{{else}}Disable zone{{/if}}">
+                  <img src="systems/cyberpunk/img/ui/{{zone.badgeFile}}" alt="">
+                </div>
+              </div>
+            {{/each}}
+          </div>
+        </div>
+
+        {{!-- Weapons, Ordnance & Ammo (shared with character sheet) --}}
+        {{#if weapons.length}}
+          {{> "systems/cyberpunk/templates/actor/parts/weapons-block.hbs" showUnarmed=false weapons=weapons}}
+        {{/if}}
+        {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems}}
+        {{> "systems/cyberpunk/templates/actor/parts/ammo-block.hbs" ammoItems=ammoItems isUnlocked=isUnlocked}}
+        {{> "systems/cyberpunk/templates/actor/parts/drone-skills-block.hbs" hasSkills=hasSkills skillsLeft=skillsLeft skillsRight=skillsRight isUnlocked=isUnlocked}}
+
+        <div class="gear-block">
+          <header class="tab-header">
+            <span class="tab-title">COVER</span>
+            <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-cover.svg" alt="">
+          </header>
+          {{> "systems/cyberpunk/templates/actor/parts/cover-row.hbs"}}
+        </div>
+
+        {{> "systems/cyberpunk/templates/actor/parts/conditions-block.hbs"}}
+        </div>
+      </div>
+
+      <button type="button" class="add-item-fab" title="{{loc "AddItem"}}">
+        <img src="systems/cyberpunk/img/ui/add-item.svg" alt="{{loc "AddItem"}}">
+      </button>
+
+      {{!-- Resize Handle --}}
+      <div class="sheet-resize">
+        <img src="systems/cyberpunk/img/ui/resize.svg" alt="">
+      </div>
+    </div>
+  </div>
+</form>

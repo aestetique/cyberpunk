@@ -229,6 +229,7 @@ export function canBeArmor(cyberwareType) {
 
 /** Exotic weapon effects (stored only, not yet implemented in combat) */
 export const exoticEffects = {
+    none: "EffNone",
     confusion: "EffConfusion",
     poisoned: "EffPoisoned",
     tearing: "EffTearing",
@@ -239,7 +240,8 @@ export const exoticEffects = {
     microwave: "EffMicrowave",
     acid: "EffAcid",
     blindness: "EffBlindness",
-    laser: "EffLaser"
+    laser: "EffLaser",
+    immobilized: "EffImmobilized"
 };
 
 /**
@@ -390,12 +392,14 @@ export function getAttackSkillsForWeapon(weaponType) {
 export function getAttackSkillsForOrdnance() {
     const skills = new Set();
 
-    // Add Throw category
+    // Add Throw and Demolitions categories
     try {
         const mappings = game.settings.get("cyberpunk", "skillMappings");
-        const throwCat = mappings["throw"];
-        if (throwCat?.skills?.length) {
-            for (const s of throwCat.skills) skills.add(s.name);
+        for (const catKey of ["throw", "demolitionsSkills"]) {
+            const cat = mappings[catKey];
+            if (cat?.skills?.length) {
+                for (const s of cat.skills) skills.add(s.name);
+            }
         }
         // Add all ranged weapon categories
         const rangedCategories = ["pistols", "rifles", "shotguns", "submachineGuns", "heavyWeapons", "bows", "crossbows"];

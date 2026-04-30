@@ -1,0 +1,91 @@
+{{!-- WEAPONS Block --}}
+{{!-- Expects: weapons (array), showUnarmed (bool), and (when showUnarmed) unarmedDamage / unarmedTooltipFlavor / unarmedTooltipCalc --}}
+<div class="gear-block">
+  <header class="tab-header">
+    <span class="tab-title">WEAPONS</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-weapons.svg" alt="">
+  </header>
+  <div class="tab-content gear-content">
+    {{#if showUnarmed}}
+    {{!-- Unarmed Attack (always first) --}}
+    <div class="gear-row" data-item-id="unarmed">
+      <div class="gear-icon gear-fire-weapon" data-item-id="unarmed">
+        <img src="systems/cyberpunk/img/ui/unarmed.svg" alt="{{loc "UnarmedAttack"}}">
+      </div>
+      <div class="gear-info gear-fire-weapon" data-item-id="unarmed">
+        <span class="gear-name">{{loc "UnarmedAttack"}}</span>
+        <span class="gear-context">Melee · 1 m</span>
+      </div>
+      <div class="gear-price invisible">
+        <span class="price-value">0</span>
+        <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+      </div>
+      <div class="gear-weight invisible">
+        <span class="price-value">0</span>
+        <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+      </div>
+      <div class="gear-field unarmed-damage-tooltip" style="width: 60px;" data-tooltip-name="Unarmed Damage" data-flavor="{{unarmedTooltipFlavor}}" data-calc="{{unarmedTooltipCalc}}">
+        <span class="field-top">{{unarmedDamage}}</span>
+        <span class="field-bottom">Damage</span>
+      </div>
+      <div class="gear-field" style="width: 60px;"></div>
+      <div class="gear-action-btn"></div>
+      <div class="gear-actions"></div>
+    </div>
+    {{/if}}
+    {{#each weapons as |weapon|}}
+      <div class="gear-row" data-item-id="{{weapon.id}}">
+        <div class="gear-icon gear-fire-weapon" data-item-id="{{weapon.id}}">
+          <img src="{{weapon.img}}" alt="{{weapon.name}}">
+        </div>
+        <div class="gear-info gear-fire-weapon" data-item-id="{{weapon.id}}">
+          <span class="gear-name">{{weapon.name}}</span>
+          <span class="gear-context">{{weapon.context}}</span>
+        </div>
+        <div class="gear-price">
+          <span class="price-value">{{weapon.price}}</span>
+          <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+        </div>
+        <div class="gear-weight">
+          <span class="price-value">{{weapon.weight}}</span>
+          <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+        </div>
+        <div class="gear-field" style="width: 60px;">
+          <span class="field-top">{{weapon.damage}}</span>
+          <span class="field-bottom">Damage</span>
+        </div>
+        {{#if weapon.isRanged}}
+          {{!-- Ranged: Magazine + Reload button --}}
+          <div class="gear-field" style="width: 60px;">
+            <span class="field-top">{{weapon.shotsLeft}} / {{weapon.shots}}</span>
+            <span class="field-bottom">Magazine</span>
+          </div>
+          <div class="gear-action-btn reload-weapon" data-item-id="{{weapon.id}}" data-can-reload="{{weapon.canReload}}" title="{{#if weapon.canReload}}Reload{{else}}Magazine full{{/if}}">
+            <img src="systems/cyberpunk/img/ui/badge-reload{{#unless weapon.canReload}}-disabled{{/unless}}.svg" alt="Reload">
+          </div>
+        {{else if weapon.isExotic}}
+          {{!-- Exotic: Charges + Charge button --}}
+          <div class="gear-field" style="width: 60px;">
+            <span class="field-top">{{weapon.chargesDisplay}}</span>
+            <span class="field-bottom">Charges</span>
+          </div>
+          <div class="gear-action-btn charge-weapon" data-item-id="{{weapon.id}}" data-can-charge="{{weapon.canCharge}}" title="{{#if weapon.canCharge}}Recharge{{else}}Fully charged{{/if}}">
+            <img src="systems/cyberpunk/img/ui/badge-charge{{#unless weapon.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
+          </div>
+        {{else}}
+          {{!-- Melee: empty field + empty action --}}
+          <div class="gear-field" style="width: 60px;"></div>
+          <div class="gear-action-btn"></div>
+        {{/if}}
+        <div class="gear-actions">
+          <button class="gear-view" type="button" data-item-id="{{weapon.id}}" title="View">
+            <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+          </button>
+          <button class="gear-delete" type="button" data-item-id="{{weapon.id}}" title="Delete">
+            <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+          </button>
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</div>

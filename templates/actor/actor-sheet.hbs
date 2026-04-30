@@ -313,35 +313,10 @@
                   <span class="tab-title">COVER</span>
                   <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-cover.svg" alt="">
                 </header>
-                <div class="cover-row">
-                  {{#each coverToggles}}
-                  <div class="condition-toggle cover-toggle {{#if this.active}}active{{/if}}" data-cover-key="{{this.key}}" data-tooltip-name="{{this.label}}" data-flavor="{{this.desc}}">
-                    <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/cover-{{#if this.active}}on{{else}}off{{/if}}.svg')">
-                      <span class="condition-toggle-number">{{this.sp}}</span>
-                    </div>
-                    <span class="condition-toggle-label">{{this.label}}</span>
-                  </div>
-                  {{/each}}
-                </div>
+                {{> "systems/cyberpunk/templates/actor/parts/cover-row.hbs"}}
               </div>
 
-              <div class="gear-block">
-                <header class="tab-header">
-                  <span class="tab-title">CONDITIONS</span>
-                  <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-conditions.svg" alt="">
-                </header>
-                {{#each conditionToggleRows}}
-                <div class="conditions-row">
-                  {{#each this}}
-                  <div class="condition-toggle cond-toggle {{#if this.active}}active{{/if}}" data-condition-id="{{this.id}}" data-tooltip-name="{{this.label}}" data-flavor="{{this.flavor}}" data-calc="{{this.calc}}">
-                    <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/{{this.icon}}-{{#if this.active}}on{{else}}off{{/if}}.svg')">
-                    </div>
-                    <span class="condition-toggle-label">{{this.label}}</span>
-                  </div>
-                  {{/each}}
-                </div>
-                {{/each}}
-              </div>
+              {{> "systems/cyberpunk/templates/actor/parts/conditions-block.hbs"}}
             </div>
           </div>
         </div>

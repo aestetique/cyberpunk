@@ -1,0 +1,12 @@
+{{!-- Cover row — mutually-exclusive toggle buttons.
+     Expects: coverToggles (array of {key, sp, label, desc, active}) --}}
+<div class="cover-row">
+  {{#each coverToggles}}
+  <div class="condition-toggle cover-toggle {{#if this.active}}active{{/if}}" data-cover-key="{{this.key}}" data-tooltip-name="{{this.label}}" data-flavor="{{this.desc}}">
+    <div class="condition-toggle-icon" style="background-image: url('systems/cyberpunk/img/conditions/cover-{{#if this.active}}on{{else}}off{{/if}}.svg')">
+      <span class="condition-toggle-number">{{this.sp}}</span>
+    </div>
+    <span class="condition-toggle-label">{{this.label}}</span>
+  </div>
+  {{/each}}
+</div>

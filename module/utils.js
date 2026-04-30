@@ -70,27 +70,122 @@ const locationKeyMap = {
     'Head': 'Head', 'Torso': 'Torso'
 };
 
+// Canonical "grid" casing used by the chat damage grid + downstream lookups.
+// Drone hitLocations use lowercase keys; characters use TitleCase Head/Torso
+// with camelCase limbs. Normalizing to one form here keeps both targets working.
+const GRID_KEY_FORM = {
+    head: "Head", torso: "Torso",
+    larm: "lArm", rarm: "rArm",
+    lleg: "lLeg", rleg: "rLeg"
+};
+function toGridKey(key) {
+    if (!key) return key;
+    return GRID_KEY_FORM[String(key).toLowerCase()] || key;
+}
+// Case-insensitive object key lookup. Returns the actor-side key as it actually
+// appears on the object (e.g., "head" for drones, "Head" for characters).
+function findActorKey(obj, key) {
+    if (!obj || !key) return null;
+    if (key in obj) return key;
+    const lower = String(key).toLowerCase();
+    for (const k of Object.keys(obj)) {
+        if (k.toLowerCase() === lower) return k;
+    }
+    return null;
+}
+
 export async function rollLocation(targetActor, targetArea) {
     if(targetArea) {
         // Normalize display names (LeftArm, RightArm, etc.) to data keys (lArm, rArm, etc.)
         const normalizedArea = locationKeyMap[targetArea] || targetArea;
-        // Area name to number lookup
-        const locations = (!!targetActor) ? targetActor.hitLocations : hitLocationDefaults();
-        const locationIndex = locations[normalizedArea].location[0];
+        const targetLocations = targetActor?.system?.hitLocations ?? targetActor?.hitLocations;
+        const locations = targetLocations || hitLocationDefaults();
+        // Picked area may not exist on this target's shape — fall back to torso (always present).
+        let actorKey = findActorKey(locations, normalizedArea)
+                    ?? findActorKey(locations, "torso")
+                    ?? "Torso";
+        const areaEntry = locations[actorKey];
+        const locationIndex = areaEntry.location[0];
         let roll = await new Roll(`${locationIndex}`).evaluate();
         return {
             roll: roll,
-            areaHit: normalizedArea
+            areaHit: toGridKey(actorKey)
         };
     }
     // Number to area name lookup
-    let areaLookup = (!!targetActor && !!targetActor.hitLocLookup) ? targetActor.hitLocLookup : areaLookupTable;
+    const targetLookup = targetActor?.system?.hitLocLookup ?? targetActor?.hitLocLookup;
+    let areaLookup = targetLookup || areaLookupTable;
 
     let roll = await new Roll("1d10").evaluate();
     return {
         roll: roll,
-        areaHit: areaLookup[roll.total]
+        areaHit: toGridKey(areaLookup[roll.total])
     };
+}
+
+/**
+ * Resolve which zone on a target actor a recorded hit should land on.
+ * Picked zones reroute to torso when missing on the target;
+ * random rolls re-resolve via the target's own d10→zone lookup.
+ * @param {Actor} actor - The target actor receiving damage
+ * @param {{rollD10?: number, pickedZone?: string|null}} hit
+ * @returns {string} The zone key on the target
+ */
+export function resolveZoneForTarget(actor, hit) {
+    const lookup = actor?.system?.hitLocLookup ?? actor?.hitLocLookup;
+    const hitLocations = actor?.system?.hitLocations ?? actor?.hitLocations ?? {};
+
+    if (hit?.pickedZone) {
+        const matched = findActorKey(hitLocations, hit.pickedZone);
+        if (matched) return matched;
+        const torso = findActorKey(hitLocations, "torso");
+        return torso || "torso";
+    }
+    if (lookup && hit?.rollD10 > 0 && lookup[hit.rollD10]) {
+        return lookup[hit.rollD10];
+    }
+    const torso = findActorKey(hitLocations, "torso");
+    return torso || "torso";
+}
+
+/**
+ * Resolve the underlying Actor from a target token entry.
+ * Accepts both Token objects (with `.actor`) and lightweight `{id, name}` entries
+ * built by some dialog callsites.
+ * @param {Object|Token|null|undefined} targetEntry
+ * @returns {Actor|null}
+ */
+export function resolveTargetActor(targetEntry) {
+    if (!targetEntry) return null;
+    return targetEntry.actor
+        ?? canvas?.tokens?.get?.(targetEntry.id)?.actor
+        ?? null;
+}
+
+/**
+ * For a single-target attack against a drone, return the display-name list
+ * of body locations that should be hidden in the dialog grid.
+ * Returns [] for zero, multiple, or non-drone targets.
+ * @param {Array<Token>} targetTokens
+ * @returns {string[]} e.g. ["LeftLeg", "RightLeg"]
+ */
+export function getHiddenLocationsForTargets(targetTokens) {
+    if (!targetTokens || targetTokens.length !== 1) return [];
+    const actor = resolveTargetActor(targetTokens[0]);
+    if (!actor || actor.type !== "drone") return [];
+    const zones = actor.system?.hitLocations || {};
+    const dataToDisplay = {
+        head: "Head",
+        torso: "Torso",
+        lArm: "LeftArm",
+        rArm: "RightArm",
+        lLeg: "LeftLeg",
+        rLeg: "RightLeg"
+    };
+    const present = new Set(Object.keys(zones));
+    return Object.entries(dataToDisplay)
+        .filter(([k]) => !present.has(k))
+        .map(([, v]) => v);
 }
 
 // --- Object path utilities ---
@@ -156,4 +251,57 @@ export function buildHitLocationIndex(hitLocations) {
         }
     }
     return lookup;
+}
+
+/**
+ * Bind cursor-following hover tooltips to elements matching `selector`.
+ * Reads data-flavor / data-tooltip-name / data-calc / data-token-path from the element
+ * (with text-content fallbacks for the name) and renders a floating .cyberpunk-tooltip div.
+ */
+export function bindHoverTooltips(html, selector) {
+    document.querySelectorAll('.cyberpunk-tooltip').forEach(t => t.remove());
+
+    html.find(selector).on('mouseenter', ev => {
+        const el = ev.currentTarget;
+        const flavor = el.dataset.flavor;
+        if (!flavor) return;
+        const name = el.dataset.tooltipName
+            || el.querySelector('.skill-name')?.textContent
+            || el.querySelector('.role-label')?.textContent
+            || el.querySelector('.stat-name')?.textContent
+            || el.querySelector('.action-btn-name')?.textContent
+            || el.querySelector('.info-name')?.textContent || "";
+        if (!name) return;
+
+        const calc = el.dataset.calc;
+        const tokenPath = el.dataset.tokenPath;
+        const tip = document.createElement('div');
+        tip.className = 'cyberpunk-tooltip';
+        tip.innerHTML = `<div class="tooltip-header"><div class="tooltip-name">${name}</div>${tokenPath ? `<span class="tooltip-label">${tokenPath}</span>` : ''}</div><div class="tooltip-desc">${flavor}</div>`
+            + (calc ? `<div class="tooltip-calc">${calc}</div>` : '');
+        document.body.appendChild(tip);
+        el._cpTooltip = tip;
+
+        let top = ev.clientY + 16;
+        let left = ev.clientX + 12;
+        if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
+        if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
+        tip.style.top = `${top}px`;
+        tip.style.left = `${left}px`;
+    }).on('mousemove', ev => {
+        const tip = ev.currentTarget._cpTooltip;
+        if (!tip) return;
+        let top = ev.clientY + 16;
+        let left = ev.clientX + 12;
+        if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
+        if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
+        tip.style.top = `${top}px`;
+        tip.style.left = `${left}px`;
+    }).on('mouseleave mousedown', ev => {
+        const tip = ev.currentTarget._cpTooltip;
+        if (tip) {
+            tip.remove();
+            ev.currentTarget._cpTooltip = null;
+        }
+    });
 }

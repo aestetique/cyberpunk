@@ -1,5 +1,5 @@
 import { RollBundle } from "./dice.js";
-import { localize } from "./utils.js";
+import { localize, resolveZoneForTarget } from "./utils.js";
 import { getSkillsForCategory } from "./lookups.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
@@ -836,6 +836,11 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @private
      */
     _calculateDamagePreview(actor, damageData, ammoType = "standard", damageType = "") {
+        // Drone branch: structure-only damage routed via per-zone re-resolution
+        if (actor?.type === "drone") {
+            return this._calculateDroneDamagePreview(actor, damageData, ammoType);
+        }
+
         let woundTotal = 0;      // Damage going to wounds
         let cyberlimbTotal = 0;  // Damage going to cyberlimb structure
         const hintParts = [];
@@ -1049,6 +1054,102 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /**
+     * Re-key damageData to a drone's actual zones using rollD10/pickedZone.
+     * Returns { zoneKey: [hits...] } where the hits are the same objects
+     * but bucketed by the resolved-on-target zone.
+     * @private
+     */
+    _rekeyDamageDataForDrone(actor, damageData) {
+        const out = {};
+        for (const [, hits] of Object.entries(damageData)) {
+            if (!Array.isArray(hits)) continue;
+            for (const hit of hits) {
+                const zone = resolveZoneForTarget(actor, hit);
+                if (!out[zone]) out[zone] = [];
+                out[zone].push(hit);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Damage preview for drones: per-zone SP/SDP only, no wounds/BTM/cyberlimbs.
+     * @private
+     */
+    _calculateDroneDamagePreview(actor, damageData, ammoType = "standard") {
+        const hintParts = [];
+        const byLocation = {};
+        let sdpTotal = 0;
+
+        const rekeyed = this._rekeyDamageDataForDrone(actor, damageData);
+
+        for (const [zoneKey, hits] of Object.entries(rekeyed)) {
+            const zone = actor.system?.zones?.[zoneKey];
+            if (!zone) continue;
+            const spCurrent = zone.sp?.current ?? 0;
+            let zoneSdpDamage = 0;
+
+            for (const hit of hits) {
+                const rawDamage = hit.damage || 0;
+                const ignoreArmor = hit.ignoreArmor || false;
+
+                let effectiveSP = ignoreArmor ? 0 : spCurrent;
+                if (!ignoreArmor) {
+                    if (ammoType === "armorPiercing") effectiveSP = Math.floor(effectiveSP / 2);
+                    else if (ammoType === "hollowPoint") effectiveSP = effectiveSP * 2;
+                }
+
+                const afterArmor = Math.max(0, rawDamage - effectiveSP);
+                let modifiedDamage = afterArmor;
+                if (!ignoreArmor) {
+                    if (ammoType === "armorPiercing" && afterArmor > 0) {
+                        modifiedDamage = Math.floor(afterArmor / 2);
+                    } else if (ammoType === "hollowPoint" && afterArmor > 0) {
+                        modifiedDamage = Math.floor(afterArmor * 1.5);
+                    } else if (ammoType === "rubberSlug") {
+                        modifiedDamage = afterArmor > 0 ? 1 : 0;
+                    }
+                }
+
+                const spLabel = ignoreArmor
+                    ? "0 SP(Armor Ignored)"
+                    : ammoType === "armorPiercing"
+                        ? `${effectiveSP} SP(AP)`
+                        : ammoType === "hollowPoint"
+                            ? `${effectiveSP} SP(HP)`
+                            : ammoType === "rubberSlug"
+                                ? `${effectiveSP} SP(rubber)`
+                                : `${effectiveSP} SP`;
+
+                if (modifiedDamage > 0) {
+                    zoneSdpDamage += modifiedDamage;
+                    if (effectiveSP > 0 || ignoreArmor) {
+                        hintParts.push(`${zoneKey}: ${rawDamage} - ${spLabel} = ${modifiedDamage} SDP`);
+                    } else {
+                        hintParts.push(`${zoneKey}: ${rawDamage} = ${modifiedDamage} SDP`);
+                    }
+                } else {
+                    hintParts.push(`${zoneKey}: ${rawDamage} - ${spLabel} = 0`);
+                }
+            }
+
+            byLocation[zoneKey] = {
+                finalDamage: zoneSdpDamage,
+                woundDamage: 0,
+                cyberlimbDamage: zoneSdpDamage
+            };
+            sdpTotal += zoneSdpDamage;
+        }
+
+        return {
+            total: 0,
+            cyberlimbTotal: sdpTotal,
+            hint: hintParts.length > 0 ? hintParts.join("\n") : "",
+            byLocation
+        };
+    }
+
+    /**
      * Handle clicking the Apply Damage button
      * @param {Event} event - The click event
      * @param {HTMLElement} html - The message HTML
@@ -1105,6 +1206,12 @@ export class CyberpunkChatMessage extends ChatMessage {
         for (const token of targets) {
             const actor = token.actor;
             if (!actor) continue;
+
+            // Drone targets: structure-only damage, no wounds/cyberlimbs/exotic effects
+            if (actor.type === "drone") {
+                await this._applyDroneDamage(actor, damageData, ammoType);
+                continue;
+            }
 
             // Calculate total damage for this actor (includes per-location breakdown)
             const preview = this._calculateDamagePreview(actor, damageData, ammoType, damageType);
@@ -1300,6 +1407,71 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /**
+     * Apply structure damage to a drone target. Drones have no wounds, BTM,
+     * cyberlimbs, or exotic-effect handling — just per-zone SP→SDP routing.
+     * Each penetrating hit ablates the zone's SP by 1 (capped at sp.max).
+     * @private
+     */
+    async _applyDroneDamage(actor, damageData, ammoType = "standard") {
+        const rekeyed = this._rekeyDamageDataForDrone(actor, damageData);
+        const updates = {};
+
+        for (const [zoneKey, hits] of Object.entries(rekeyed)) {
+            const zone = actor.system?.zones?.[zoneKey];
+            if (!zone) continue;
+            const spCurrent = zone.sp?.current ?? 0;
+            const spMax = zone.sp?.max ?? 0;
+            const spAblation = zone.sp?.ablation ?? 0;
+            const sdpCurrent = zone.sdp?.current ?? 0;
+
+            let zoneSdpDamage = 0;
+            let penetrations = 0;
+
+            for (const hit of hits) {
+                const rawDamage = hit.damage || 0;
+                const ignoreArmor = hit.ignoreArmor || false;
+
+                let effectiveSP = ignoreArmor ? 0 : spCurrent;
+                if (!ignoreArmor) {
+                    if (ammoType === "armorPiercing") effectiveSP = Math.floor(effectiveSP / 2);
+                    else if (ammoType === "hollowPoint") effectiveSP = effectiveSP * 2;
+                }
+
+                const afterArmor = Math.max(0, rawDamage - effectiveSP);
+                let modifiedDamage = afterArmor;
+                if (!ignoreArmor) {
+                    if (ammoType === "armorPiercing" && afterArmor > 0) {
+                        modifiedDamage = Math.floor(afterArmor / 2);
+                    } else if (ammoType === "hollowPoint" && afterArmor > 0) {
+                        modifiedDamage = Math.floor(afterArmor * 1.5);
+                    } else if (ammoType === "rubberSlug") {
+                        modifiedDamage = afterArmor > 0 ? 1 : 0;
+                    }
+                }
+
+                if (modifiedDamage > 0) {
+                    zoneSdpDamage += modifiedDamage;
+                    if (!ignoreArmor && ammoType !== "rubberSlug") penetrations++;
+                }
+            }
+
+            if (zoneSdpDamage > 0) {
+                updates[`system.zones.${zoneKey}.sdp.current`] = Math.max(0, sdpCurrent - zoneSdpDamage);
+            }
+            if (penetrations > 0 && spMax > 0) {
+                const newAblation = Math.min(spMax, spAblation + penetrations);
+                if (newAblation !== spAblation) {
+                    updates[`system.zones.${zoneKey}.sp.ablation`] = newAblation;
+                }
+            }
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await actor.update(updates);
+        }
+    }
+
+    /**
      * Apply an exotic weapon effect to a target
      * @param {Actor} actor - The target actor
      * @param {string} effect - The effect key (confusion, poisoned, etc.)
@@ -1355,6 +1527,10 @@ export class CyberpunkChatMessage extends ChatMessage {
             case "blindness":
                 await actor.toggleStatusEffect("blinded", { active: true });
                 await this._setConditionDuration(actor, "blinded", 3);
+                break;
+
+            case "immobilized":
+                await actor.toggleStatusEffect("immobilized", { active: true });
                 break;
 
             case "coupDeGrace":

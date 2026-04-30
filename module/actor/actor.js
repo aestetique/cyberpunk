@@ -6,6 +6,36 @@ import { HealDialog } from "../dialog/heal-dialog.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
 
 /**
+ * Hit-location ranges for drone shapes. Each shape maps zone-key → `{ location: [start, end?] }`,
+ * matching the existing `hitLocations` template shape so `buildHitLocationIndex` consumes it directly.
+ * Internal zone keys mirror character keys (head/torso/lArm/rArm/lLeg/rLeg) so a future damage
+ * pipeline can be unified across actor types.
+ */
+export const DRONE_SHAPE_HIT_LOCATIONS = {
+  "6zones": {
+    head:  { location: [1] },
+    torso: { location: [2, 4] },
+    rArm:  { location: [5] },
+    lArm:  { location: [6] },
+    rLeg:  { location: [7, 8] },
+    lLeg:  { location: [9, 10] }
+  },
+  "4zones": {
+    head:  { location: [1] },
+    torso: { location: [2, 6] },
+    lArm:  { location: [7, 8] },
+    rArm:  { location: [9, 10] }
+  },
+  "2zones": {
+    head:  { location: [1, 3] },
+    torso: { location: [4, 10] }
+  },
+  "1zone": {
+    torso: { location: [1, 10] }
+  }
+};
+
+/**
  * Actor document for Cyberpunk 2020 characters.
  * @extends {Actor}
  */
@@ -39,7 +69,58 @@ export class CyberpunkActor extends Actor {
       case "character":
         this._computeDerivedStats(this.system);
         break;
+      case "drone":
+        this._computeDroneStats(this.system);
+        break;
     }
+  }
+
+  /**
+   * Minimal derived-stat pass for drones. No wounds, no saves, no carry weight,
+   * no humanity/empathy logic — just stat totals, MA-derived movement, and Luck.effective.
+   * Notably, Luck does NOT auto-regen on the 8-hour timer for drones.
+   */
+  _computeDroneStats(system) {
+    const stats = system.stats;
+    for (const stat of Object.values(stats)) {
+      stat.total = (stat.base ?? 0) + (stat.tempMod ?? 0);
+    }
+    const ma = stats.ma;
+    if (ma) {
+      ma.run = ma.total * 3;
+      ma.leap = Math.floor(ma.run / 4);
+    }
+    const luck = stats.luck;
+    if (luck) {
+      luck.effective = Math.max(0, (luck.total ?? 0) - (luck.spent ?? 0));
+    }
+
+    // Zone derived state — sp.current from max+ablation, isDisabled from SDP threshold + manual override.
+    const zones = system.zones;
+    const activeCover = system.activeCover;
+    const coverSP = (activeCover && COVER_TYPES[activeCover]) ? COVER_TYPES[activeCover].sp : 0;
+    if (zones) {
+      for (const zone of Object.values(zones)) {
+        const spMax = zone.sp?.max ?? 0;
+        const spAblation = zone.sp?.ablation ?? 0;
+        zone.sp = zone.sp || {};
+        const armorCurrent = Math.max(0, spMax - spAblation);
+        // Cover stacks onto every zone via the same layered-armor rules as the character path.
+        zone.sp.current = coverSP > 0 ? stackArmorSP(armorCurrent, coverSP) : armorCurrent;
+
+        const sdpCurrent = zone.sdp?.current ?? 0;
+        const disablesAt = zone.sdp?.disablesAt ?? 0;
+        const sdpMax = zone.sdp?.max ?? 0;
+        // Configured-zone guard via maxSdp > 0 (avoids disabling un-configured zones).
+        // SDP at 0 is a hard floor — always disabled, even if disablesAt is negative.
+        zone.autoDisabled = sdpMax > 0 && sdpCurrent <= Math.max(disablesAt, 0);
+        zone.isDisabled = zone.autoDisabled || !!zone.manuallyDisabled;
+      }
+    }
+
+    // Shape → hitLocations map. Shared by hit-roll lookup and the sheet's row subtext.
+    system.hitLocations = DRONE_SHAPE_HIT_LOCATIONS[system.shape] || DRONE_SHAPE_HIT_LOCATIONS["6zones"];
+    system.hitLocLookup = buildHitLocationIndex(system.hitLocations);
   }
 
   /**
@@ -520,6 +601,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Wound state from 0 (uninjured) to 10 (Mortal 6)
    */
   getWoundLevel() {
+    if (this.type !== "character" && this.type !== "npc") return 0;
     const damage = this.system.damage;
     if (damage === 0) return 0;
     // Wound slots are 4 wide, so divide by 4, ceil the result, cap at 10
@@ -544,6 +626,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Fatigue level from 0 (fresh) to 5 (collapse)
    */
   getFatigueLevel() {
+    if (this.type !== "character" && this.type !== "npc") return 0;
     const fatigue = this.system.fatigue || 0;
     if (fatigue <= 0) return 0;
     const body = this.system.stats.bt.total;
@@ -574,6 +657,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Stress level from -1 (fresh) to 4 (cracked)
    */
   getStressLevel() {
+    if (this.type !== "character" && this.type !== "npc") return 0;
     const stress = (this.system.stress || 0) + (this.system.fright || 0);
     if (stress < 0) return 0;
     const cool = this.system.stats.cool.total;
@@ -592,6 +676,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Fright level from 0 to 5
    */
   getFrightLevel() {
+    if (this.type !== "character" && this.type !== "npc") return 0;
     const fright = this.system.fright || 0;
     if (fright === 0) return 0;
     if (fright <= 2) return 1;
@@ -606,6 +691,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Sleep deprivation level from 0 to 6
    */
   getSleepDeprivationLevel() {
+    if (this.type !== "character" && this.type !== "npc") return 0;
     const sleep = this.system.sleep || 0;
     if (sleep <= 0) return 0;
     return Math.min(sleep, 6);
@@ -856,6 +942,40 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Sync the drone's chassis condition (Disabled / Dead) from torso SDP.
+   *   chassis SDP <= 0           → Dead (and clears Disabled)
+   *   chassis SDP <= disablesAt  → Disabled
+   *   chassis SDP healthy        → neither
+   */
+  async updateChassisStatus() {
+    if (this.type !== "drone") return;
+    const torso = this.system.zones?.torso;
+    if (!torso) return;
+
+    const sdpCurrent = torso.sdp?.current ?? 0;
+    const disablesAt = torso.sdp?.disablesAt ?? 0;
+    const sdpMax = torso.sdp?.max ?? 0;
+
+    let target = null;
+    if (sdpMax > 0) {
+      if (sdpCurrent <= 0) target = "dead";
+      else if (sdpCurrent <= disablesAt) target = "disabled";
+    }
+
+    const isDead = this.statuses.has("dead");
+    const isDisabled = this.statuses.has("disabled");
+    const current = isDead ? "dead" : (isDisabled ? "disabled" : null);
+    if (current === target) return;
+
+    if (current && current !== target) {
+      await this.toggleStatusEffect(current, { active: false });
+    }
+    if (target) {
+      await this.toggleStatusEffect(target, { active: true });
+    }
+  }
+
+  /**
    * Apply / remove the Immobilized condition based on whether total carried gear weight
    * exceeds carry capacity (BT × 10). Uses a flag to track ownership, so we only auto-remove
    * Immobilized that we ourselves applied — leaving grapple-applied Immobilized alone.
@@ -901,6 +1021,20 @@ export class CyberpunkActor extends Actor {
     // when multiple clients try to toggle the same ActiveEffect
     if (userId !== game.user.id) return;
 
+    // Cover sync runs for any actor type — drones can hide behind cover too.
+    if (changed.system?.activeCover !== undefined) {
+      await this.updateCoverStatus();
+    }
+
+    // Drone chassis (torso) SDP drives Disabled / Dead conditions.
+    if (this.type === "drone" && changed.system?.zones?.torso !== undefined) {
+      await this.updateChassisStatus();
+    }
+
+    // Drones don't have wounds / fatigue / stress / fright / sleep state machines.
+    // Skip every organic-state sync below.
+    if (this.type !== "character" && this.type !== "npc") return;
+
     // Sync wound condition when damage changes
     if (changed.system?.damage !== undefined) {
       await this.updateWoundStatus();
@@ -933,11 +1067,6 @@ export class CyberpunkActor extends Actor {
     // Sync sleep deprivation condition when days awake changes
     if (changed.system?.sleep !== undefined) {
       await this.updateSleepDeprivationStatus();
-    }
-
-    // Sync cover condition when activeCover changes
-    if (changed.system?.activeCover !== undefined) {
-      await this.updateCoverStatus();
     }
   }
 

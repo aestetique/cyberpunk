@@ -9,10 +9,14 @@ export class CreateItemDialog extends Application {
 
   /**
    * @param {Actor|null} actor - If provided, items are created on this actor
+   * @param {object} [options]
+   * @param {string[]} [options.allowedTypes] - If set, only show buttons for these types
+   *                                            (in the given order, paired into rows of 2).
    */
-  constructor(actor = null) {
+  constructor(actor = null, { allowedTypes = null } = {}) {
     super();
     this.actor = actor;
+    this.allowedTypes = allowedTypes;
   }
 
   static get defaultOptions() {
@@ -29,6 +33,17 @@ export class CreateItemDialog extends Application {
   }
 
   getData() {
+    // Restricted mode — pair allowed types into rows of 2 in caller's order.
+    if (this.allowedTypes) {
+      const items = this.allowedTypes.map(type => ({
+        type,
+        label: game.i18n.localize(`TYPES.Item.${type}`)
+      }));
+      const rows = [];
+      for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+      return { rows, title: game.i18n.localize("CYBERPUNK.AddItem") };
+    }
+
     const rows = [
       [
         { type: "weapon",    label: game.i18n.localize("TYPES.Item.weapon") },

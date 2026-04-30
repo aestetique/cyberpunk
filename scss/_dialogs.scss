@@ -615,6 +615,15 @@
         filter: none;
       }
     }
+
+    // Drone shape lacks this location — disabled box, no icon, slot stays
+    &.no-zone {
+      background: #26282F;
+      cursor: default;
+      pointer-events: none;
+
+      &:hover { background: #26282F; }
+    }
   }
 
   // Single-button variant (Melee execute toggle)

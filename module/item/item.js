@@ -505,7 +505,8 @@ export class CyberpunkItem extends Item {
           for (let j = 0; j < roundsHit; j++) {
               let damageRoll = await new Roll(wd.damage).evaluate();
               allDamageRolls.push(damageRoll);
-              let location = (await rollLocation(attackMods.targetActor, attackMods.targetArea)).areaHit;
+              let locationRoll = await rollLocation(attackMods.targetActor, attackMods.targetArea);
+              let location = locationRoll.areaHit;
               if (!areaDamages[location]) {
                   areaDamages[location] = [];
               }
@@ -515,7 +516,9 @@ export class CyberpunkItem extends Item {
                   dice: damageRoll.terms.filter(t => t.results).map(term => ({
                       faces: term.faces,
                       results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
-                  }))
+                  })),
+                  rollD10: attackMods.targetArea ? 0 : (locationRoll.roll?.total ?? 0),
+                  pickedZone: attackMods.targetArea ? location : null
               });
           }
           // Show all damage dice at once
@@ -590,7 +593,8 @@ export class CyberpunkItem extends Item {
           for (let i = 0; i < roundsHit.total; i++) {
               let damageRoll = await new Roll(wd.damage).evaluate();
               allDamageRolls.push(damageRoll);
-              let location = (await rollLocation(attackMods.targetActor, attackMods.targetArea)).areaHit;
+              let locationRoll = await rollLocation(attackMods.targetActor, attackMods.targetArea);
+              let location = locationRoll.areaHit;
               if (!areaDamages[location]) {
                   areaDamages[location] = [];
               }
@@ -600,7 +604,9 @@ export class CyberpunkItem extends Item {
                   dice: damageRoll.terms.filter(t => t.results).map(term => ({
                       faces: term.faces,
                       results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
-                  }))
+                  })),
+                  rollD10: attackMods.targetArea ? 0 : (locationRoll.roll?.total ?? 0),
+                  pickedZone: attackMods.targetArea ? location : null
               });
           }
           // Show all damage dice at once
@@ -682,7 +688,7 @@ export class CyberpunkItem extends Item {
 
       // Determine if this is an exotic weapon with an effect
       const isExotic = wd.weaponType === "Exotic";
-      const weaponEffect = isExotic && wd.effect ? wd.effect : null;
+      const weaponEffect = isExotic && wd.effect && wd.effect !== "none" ? wd.effect : null;
       const hasDamage = wd.damage && wd.damage !== "0" && wd.damage !== "";
 
       // The range we're shooting at
@@ -738,7 +744,9 @@ export class CyberpunkItem extends Item {
                   dice: damageRoll.terms.filter(t => t.results).map(term => ({
                       faces: term.faces,
                       results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
-                  }))
+                  })),
+                  rollD10: attackMods.targetArea ? 0 : (locationRoll.roll?.total ?? 0),
+                  pickedZone: attackMods.targetArea ? hitLocation : null
               });
           }
       }
@@ -794,7 +802,7 @@ export class CyberpunkItem extends Item {
   async _fireOrdnance(attackMods, targetTokens = []) {
       let system = this.system;
 
-      const weaponEffect = system.effect || null;
+      const weaponEffect = (system.effect && system.effect !== "none") ? system.effect : null;
       const hasDamage = system.damage && system.damage !== "0" && system.damage !== "";
 
       // Check charges
@@ -946,6 +954,7 @@ export class CyberpunkItem extends Item {
    */
   _getEffectLabel(effect) {
       const labels = {
+          none: "None",
           confusion: "Confusion",
           poisoned: "Poisoned",
           tearing: "Tearing",
@@ -956,7 +965,8 @@ export class CyberpunkItem extends Item {
           acid: "Acid",
           microwave: "Microwave",
           blindness: "Blindness",
-          laser: "Laser"
+          laser: "Laser",
+          immobilized: "Immobilized"
       };
       return labels[effect] || effect;
   }
@@ -978,7 +988,8 @@ export class CyberpunkItem extends Item {
           acid: "acid",
           microwave: "microwave",
           blindness: "blinded",
-          laser: "burning"
+          laser: "burning",
+          immobilized: "immobilized"
       };
       return icons[effect] || effect;
   }
@@ -990,7 +1001,8 @@ export class CyberpunkItem extends Item {
   getWeaponLineType() {
       // Ordnance items use this.system directly (not a weapon sub-object)
       if (this.type === "ordnance") {
-          const effectLabel = this.system.effect ? this._getEffectLabel(this.system.effect) : "";
+          const eff = this.system.effect;
+          const effectLabel = (eff && eff !== "none") ? this._getEffectLabel(eff) : "";
           return effectLabel ? `${localize("OrdnanceAction")} · ${effectLabel}` : localize("OrdnanceAction");
       }
 
@@ -999,7 +1011,7 @@ export class CyberpunkItem extends Item {
 
       // Exotic weapons
       if (wType === "Exotic") {
-          const effectLabel = wd.effect ? this._getEffectLabel(wd.effect) : "";
+          const effectLabel = (wd.effect && wd.effect !== "none") ? this._getEffectLabel(wd.effect) : "";
           return effectLabel ? `Exotic · ${effectLabel}` : "Exotic";
       }
 
@@ -1097,7 +1109,9 @@ export class CyberpunkItem extends Item {
           dice: damageRoll.dice.map(term => ({
               faces: term.faces,
               results: term.results.map(r => ({ result: r.result, exploded: r.exploded }))
-          }))
+          })),
+          rollD10: attackMods.targetArea ? 0 : (locationRoll.roll?.total ?? 0),
+          pickedZone: attackMods.targetArea ? hitLocation : null
       }];
 
       let templateData = {

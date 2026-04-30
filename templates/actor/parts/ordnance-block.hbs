@@ -1,0 +1,58 @@
+{{!-- ORDNANCE Block (auto-hides when no ordnance items) --}}
+{{!-- Expects: ordnanceItems (array) --}}
+{{#if ordnanceItems.length}}
+<div class="gear-block">
+  <header class="tab-header">
+    <span class="tab-title">ORDNANCE</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-ordnance.svg" alt="">
+  </header>
+  <div class="tab-content gear-content">
+    {{#each ordnanceItems as |ordnance|}}
+      <div class="gear-row" data-item-id="{{ordnance.id}}">
+        <div class="gear-icon gear-fire-ordnance" data-item-id="{{ordnance.id}}">
+          <img src="{{ordnance.img}}" alt="{{ordnance.name}}">
+        </div>
+        <div class="gear-info gear-fire-ordnance" data-item-id="{{ordnance.id}}">
+          <span class="gear-name">{{ordnance.name}}</span>
+          <span class="gear-context">{{ordnance.context}}</span>
+        </div>
+        <div class="gear-price">
+          <span class="price-value">{{ordnance.price}}</span>
+          <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+        </div>
+        <div class="gear-weight">
+          <span class="price-value">{{ordnance.weight}}</span>
+          <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+        </div>
+        <div class="gear-field" style="width: 60px;">
+          <span class="field-top">{{ordnance.damage}}</span>
+          <span class="field-bottom">Damage</span>
+        </div>
+        <div class="gear-field" style="width: 60px;">
+          {{#if ordnance.removeOnZero}}
+            <span class="field-top">{{ordnance.charges}}</span>
+          {{else}}
+            <span class="field-top">{{ordnance.chargesDisplay}}</span>
+          {{/if}}
+          <span class="field-bottom">Charges</span>
+        </div>
+        {{#unless ordnance.removeOnZero}}
+          <div class="gear-action-btn charge-weapon" data-item-id="{{ordnance.id}}" data-can-charge="{{ordnance.canCharge}}" title="{{#if ordnance.canCharge}}Recharge{{else}}Fully charged{{/if}}">
+            <img src="systems/cyberpunk/img/ui/badge-charge{{#unless ordnance.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
+          </div>
+        {{else}}
+          <div class="gear-action-btn"></div>
+        {{/unless}}
+        <div class="gear-actions">
+          <button class="gear-view" type="button" data-item-id="{{ordnance.id}}" title="View">
+            <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+          </button>
+          <button class="gear-delete" type="button" data-item-id="{{ordnance.id}}" title="Delete">
+            <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+          </button>
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</div>
+{{/if}}

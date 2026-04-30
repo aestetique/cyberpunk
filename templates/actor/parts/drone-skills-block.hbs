@@ -1,0 +1,42 @@
+{{!-- Drone SKILLS Block — name + total only, two columns. Auto-hides when empty. --}}
+{{!-- Expects: hasSkills (bool), skillsLeft (array), skillsRight (array), isUnlocked (bool) --}}
+{{#if hasSkills}}
+<div class="gear-block drone-skills-block">
+  <header class="tab-header">
+    <span class="tab-title">SKILLS</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-skills.svg" alt="">
+  </header>
+  <div class="tab-content drone-skills-content">
+    <div class="drone-skills-column">
+      {{#each skillsLeft as |skill|}}
+        <div class="drone-skill-row" data-skill-id="{{skill.id}}" data-flavor="{{skill.flavor}}">
+          <span class="skill-name skill-roll" data-skill-id="{{skill.id}}">{{skill.name}}</span>
+          {{#if ../isUnlocked}}
+            <input type="number" class="zone-input skill-level-input" data-skill-id="{{skill.id}}" value="{{skill.total}}" min="0" max="10">
+            <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+            </button>
+          {{else}}
+            <span class="zone-paired-readonly">{{skill.total}}</span>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+    <div class="drone-skills-column">
+      {{#each skillsRight as |skill|}}
+        <div class="drone-skill-row" data-skill-id="{{skill.id}}" data-flavor="{{skill.flavor}}">
+          <span class="skill-name skill-roll" data-skill-id="{{skill.id}}">{{skill.name}}</span>
+          {{#if ../isUnlocked}}
+            <input type="number" class="zone-input skill-level-input" data-skill-id="{{skill.id}}" value="{{skill.total}}" min="0" max="10">
+            <button class="skill-delete" type="button" data-skill-id="{{skill.id}}" title="Delete Skill">
+              <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+            </button>
+          {{else}}
+            <span class="zone-paired-readonly">{{skill.total}}</span>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+</div>
+{{/if}}

@@ -1,4 +1,4 @@
-import { localize } from "../utils.js";
+import { localize, getHiddenLocationsForTargets, resolveTargetActor } from "../utils.js";
 
 /**
  * Melee Attack Dialog — streamlined dialog for melee weapon strikes.
@@ -63,6 +63,7 @@ export class MeleeAttackDialog extends Application {
       executeLabel,
       executeCondition,
       executeSelected: this._executeSelected,
+      hiddenLocations: getHiddenLocationsForTargets(this.targetTokens),
       // Luck data
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
@@ -138,6 +139,7 @@ export class MeleeAttackDialog extends Application {
     html.find('.location-btn').click(ev => {
       if (this._executeSelected) return;
       const btn = ev.currentTarget;
+      if (btn.classList.contains('no-zone')) return;
       const location = btn.dataset.location;
 
       // Toggle selection - clicking same location deselects it
@@ -250,7 +252,8 @@ export class MeleeAttackDialog extends Application {
                 + (this._selectedLocation ? -4 : 0)
                 + this._luckToSpend,
         cyberTerminus: "NoCyberlimb",
-        targetArea: this._selectedLocation || ""
+        targetArea: this._selectedLocation || "",
+        targetActor: resolveTargetActor(this.targetTokens?.[0])
       };
 
       this.close();

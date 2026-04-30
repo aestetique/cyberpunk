@@ -1,5 +1,6 @@
 import { CyberpunkActor } from "./actor/actor.js";
 import { CyberpunkActorSheet } from "./actor/actor-sheet.js";
+import { CyberpunkDroneSheet } from "./actor/drone-sheet.js";
 import { CyberpunkItem } from "./item/item.js";
 import { CyberpunkLegacyItemSheet } from "./item/item-sheet.js";
 import { CyberpunkRoleSheet } from "./item/role-sheet.js";
@@ -67,7 +68,8 @@ Hooks.once('init', async function () {
 
     // Register sheets, unregister original core sheets
     Actors.unregisterSheet("core", ActorSheet);
-    Actors.registerSheet("cyberpunk", CyberpunkActorSheet, { makeDefault: true });
+    Actors.registerSheet("cyberpunk", CyberpunkActorSheet, { types: ["character"], makeDefault: true });
+    Actors.registerSheet("cyberpunk", CyberpunkDroneSheet,  { types: ["drone"],     makeDefault: true });
     Items.unregisterSheet("core", ItemSheet);
     Items.registerSheet("cyberpunk", CyberpunkLegacyItemSheet, { makeDefault: true });
     Items.registerSheet("cyberpunk", CyberpunkRoleSheet, {

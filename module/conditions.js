@@ -133,6 +133,13 @@ export const CYBERPUNK_CONDITIONS = [
         statuses: ["shocked"]
     },
     {
+        // Drone-specific: drone is offline / cannot act. No automatic stat changes.
+        id: "disabled",
+        name: "CYBERPUNK.Conditions.Disabled",
+        img: "systems/cyberpunk/img/conditions/disabled.svg",
+        statuses: ["disabled"]
+    },
+    {
         id: "dead",
         name: "CYBERPUNK.Conditions.Dead",
         img: "systems/cyberpunk/img/conditions/dead.svg",
@@ -483,6 +490,10 @@ export const CONDITION_EFFECTS = {
         // Cannot act - no stat changes, handled via combat logic
         changes: []
     },
+    "disabled": {
+        // Drone cannot act - no automatic stat changes
+        changes: []
+    },
     "dead": {
         // Cannot act - no stat changes, handled via combat logic
         changes: []
@@ -831,4 +842,18 @@ export const CONDITION_TOGGLE_ROWS = [
         { id: "lost-left-leg",  label: "Left Leg",    icon: "lost-left-leg",  flavor: "Limb severed or rendered completely nonfunctional.", calc: "Left leg destroyed | MA = 0" },
         { id: "lost-right-leg", label: "Right Leg",   icon: "lost-right-leg", flavor: "Limb severed or rendered completely nonfunctional.", calc: "Right leg destroyed | MA = 0" }
     ]
+];
+
+/**
+ * Drone-specific condition toggles. Single row of 8.
+ */
+export const DRONE_CONDITION_TOGGLE_ROW = [
+    { id: "restrained",  label: "Restrained",  icon: "restrained",  flavor: "Bound or held in place by physical restraints.", calc: "−2 on all checks" },
+    { id: "immobilized", label: "Immobilized", icon: "immobilized", flavor: "Unable to move from current position.", calc: "MA = 0" },
+    { id: "prone",       label: "Prone",       icon: "prone",       flavor: "Knocked down or lying flat on the ground.", calc: "MA = 0" },
+    { id: "burning",     label: "Burning",     icon: "burning",     flavor: "Engulfed in flames, taking escalating damage each turn.", calc: "2d10 → 1d10 → 1d6 over 3 turns" },
+    { id: "acid",        label: "Acid",        icon: "acid",        flavor: "Corrosive substance eating through protective gear.", calc: "Armor −1d6 SP/round for 3 rounds" },
+    { id: "blinded",     label: "Blinded",     icon: "blinded",     flavor: "Sensors compromised — unable to see surroundings.", calc: "Cannot see | −4 Awareness" },
+    { id: "disabled",    label: "Disabled",    icon: "disabled",    flavor: "Drone is offline and cannot act.", calc: "Cannot act" },
+    { id: "dead",        label: "Dead",        icon: "dead",        flavor: "Wrecked beyond recovery.", calc: "Cannot act" }
 ];

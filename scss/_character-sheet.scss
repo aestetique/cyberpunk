@@ -3,7 +3,9 @@
 // ============================================
 
 // Borderless window styling - hide Foundry's default chrome
-.cyberpunk.character-sheet {
+// Applies to both the character sheet and the drone sheet (same outer-window treatment).
+.cyberpunk.character-sheet,
+.cyberpunk.drone-sheet {
   // Hide the outer Foundry window styling
   &.app {
     background: transparent;
@@ -491,14 +493,17 @@
   flex-direction: column;
   gap: 0;
   flex: 1;
-  padding-right: 16px;
 }
 
-// Right side: point tracker boxes (unlock mode only)
+// Right side: point tracker boxes (unlock mode only).
+// padding-left here (instead of padding-right on .identity-left) creates the gap
+// between name and points blocks, while letting sheets without a right block
+// (e.g. the drone sheet) use the full width of .identity-left.
 .identity-points {
   display: flex;
   gap: 10px;
   align-items: center;
+  padding-left: 16px;
 }
 
 .character-name {
@@ -991,7 +996,7 @@ input.info-value.info-input {
 
 .tab-header {
   position: sticky;
-  top: 0;   
+  top: 0;
   width: 100%;
   height: 36px;
   padding: 0 10px;
@@ -1001,7 +1006,9 @@ input.info-value.info-input {
   border-bottom: 1px solid var(--sheet-gilt);
   background-color: var(--chat-back);
   box-shadow: 0 7px 10px 0 var(--chat-back);
-  z-index: 1;  
+  // Dominate any incidental stacking from descendant rows so scrolled rows stay BEHIND
+  // the sticky header, not on top of it.
+  z-index: 10;
 }
 
 .tab-title {
@@ -1844,4 +1851,303 @@ input.skill-value.skill-level-input {
   .condition-toggle-label {
     color: #B9B29D;
   }
+}
+
+// Drone Shape selector — mirrors .role-display visually so it sits in the same slot
+// where the character sheet shows the role name.
+.shape-display {
+  height: 22px;
+  padding: 2px 4px 2px 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .shape-prefix,
+  .shape-label,
+  .shape-select {
+    font-family: var(--font-refinery);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 16px;
+    color: var(--chat-text);
+    letter-spacing: 0.05em;
+  }
+
+  .shape-prefix {
+    color: var(--sheet-gilt);
+  }
+
+  .shape-select {
+    // min-width sized to the longest option ("6 Hit Locations") so the value
+    // doesn't get truncated to "6 Hit Lo…" in unlocked mode.
+    min-width: 160px;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    height: 18px;
+    cursor: pointer;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    option {
+      background: var(--chat-back);
+      color: var(--chat-text);
+    }
+  }
+}
+
+// ============================================
+// Drone Sheet — width overrides
+// Reuses character-sheet visuals but slimmer:
+// 5 stats × 60 + 4 gaps × 10 = 340 px wide rows.
+// No tab selector, no wounds/humanity block, no tabs, no inventory area.
+// ============================================
+.character-sheet.drone-sheet {
+  width: 600px;
+  // Resize floor — user can't drag the drone shorter than this. Bypassed during
+  // minimize via inline `min-height: 0` (cleared on maximize), same as character.
+  min-height: 390px;
+
+  .sheet-frame {
+    width: 600px;
+    min-height: 390px;
+    position: relative;  // anchor for .add-item-fab
+  }
+
+  // Drones have no tabs — always show the FAB, parked just above the resize handle.
+  .add-item-fab {
+    display: block;
+    bottom: 24px;
+  }
+
+  .sheet-details {
+    width: 340px;
+  }
+
+  .attributes-row,
+  .info-row {
+    width: 340px;
+  }
+
+  // No portrait action buttons / armor block on drones — collapse the sidebar height
+  // so the sheet doesn't reserve empty space for them.
+  .portrait-section {
+    height: auto;
+  }
+
+  .left-sidebar {
+    gap: 0;
+  }
+
+  // The two-column .sheet-content row only takes its natural height; full-width
+  // sections live below in .sheet-sections and own the remaining space.
+  .sheet-content {
+    flex: 0 0 auto;
+  }
+
+  // Outer sections container — clip-only (mirrors the character sheet's
+  // .sheet-content > .tab > .gear-container nesting). The inner .gear-container
+  // does the actual scrolling and is the sticky-positioning anchor for tab-headers.
+  .sheet-sections {
+    flex: 1;
+    min-height: 0;
+    padding: 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  // Inner scroll container — owns the single scrollbar shared by every section.
+  // 10px right padding pulls the scrollbar inward 10px from the sheet edge;
+  // 20px left padding keeps row content aligned with the rest of the sheet.
+  .sheet-sections .gear-container {
+    flex: 1;
+    min-height: 0;
+    padding: 0 10px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  // Sections size to their content; the .gear-container handles scrolling.
+  .sheet-sections .gear-block {
+    flex: 0 0 auto;
+  }
+  .sheet-sections .gear-content {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  // Toggle-row blocks (Cover, Conditions) need extra breathing room between header and toggles,
+  // matching the character sheet's State tab spacing (.tab.state .gear-block { gap: 8px }).
+  .sheet-sections .gear-block:has(.cover-row),
+  .sheet-sections .gear-block:has(.conditions-row) {
+    gap: 8px;
+  }
+
+  // Keep zone rows at their full 48px height even when the sheet is shorter than content
+  // (the gear-content scrolls instead of squeezing rows). Tighter right-padding
+  // (0 instead of 11px) brings the disable button flush to the row's right edge.
+  .gear-row.zone-row {
+    flex-shrink: 0;
+    padding: 0 0 0 8px;
+  }
+
+  // Uniform zone-field column — same width / margins for SP, SDP, and Disables-at,
+  // so the three trios line up vertically across rows.
+  .zone-field {
+    width: 90px;
+    align-items: center;     // center the field-top horizontally inside the column
+
+    // Lock the field-top row to a fixed height matching the gear-name's baseline,
+    // regardless of whether it contains a span (locked) or an input (unlocked).
+    // Stops the field-bottom label (SP / SDP / Disables at) from jumping vertically
+    // when toggling lock state, and keeps the top row aligned with "Hit on X" subtext.
+    .field-top {
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+  }
+
+  // Disabled-state visual on a zone row — greyed icon + dimmed text.
+  .gear-row.zone-row.disabled {
+    .gear-icon img { filter: grayscale(1) brightness(0.6); }
+    .gear-name,
+    .gear-context,
+    .field-top,
+    .field-bottom { color: #444856; }
+  }
+
+  // Inline numeric input — same geometry & typography as the locked .field-top span
+  // so the digit stays put when toggling lock state. Explicit zero-padding (instead
+  // of `all: unset`) avoids inheriting `user-select: none` or other inertia that
+  // would make the input non-editable when its row is in the .disabled state.
+  input.zone-input {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 24px;
+    height: 16px;
+    background: transparent;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    padding: 0;
+    padding-block: 0;
+    padding-inline: 0;
+    margin: 0;
+    text-indent: 0;
+    font-family: var(--font-blender);
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 16px;
+    color: #FFFFFF;
+    text-align: center;
+    cursor: text;
+    user-select: text;
+    pointer-events: auto;
+    -moz-appearance: textfield;
+    &:focus { outline: none; box-shadow: none; }
+  }
+  input.zone-input::-webkit-outer-spin-button,
+  input.zone-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  // Force-clickable disable button regardless of the row's .disabled class
+  // (defends against any inherited pointer-events: none on the row).
+  .gear-action-btn.zone-disable-btn {
+    pointer-events: auto;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+
+    img { pointer-events: none; }
+  }
+
+  // Marker class on the .field-top when it wraps the "current / max" pair.
+  // Sizing/alignment already comes from the .field-top base rule above.
+  .zone-paired-row {
+    .zone-paired-sep {
+      width: 20px;
+      text-align: center;
+      font-family: var(--font-blender);
+      font-weight: 300;
+      font-size: 16px;
+      line-height: 16px;
+      color: #808090;
+    }
+  }
+
+  // Display-only cell (SP/SDP locked halves, derived SP-current in unlocked mode,
+  // skill-value in locked mode). Same geometry as input.zone-input so rows hold
+  // alignment when toggling lock state. Scoped to the drone sheet so character
+  // sheets with the same class name (none today) wouldn't be affected.
+  .zone-paired-readonly {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 24px;
+    height: 16px;
+    text-align: center;
+    font-family: var(--font-blender);
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 16px;
+    color: #FFFFFF;
+  }
+
+  // Drone Skills block — stripped two-column list (name + total only).
+  .drone-skills-block {
+    .drone-skills-content {
+      display: flex;
+      column-gap: 16px;
+      padding: 0 8px;
+    }
+    .drone-skills-column {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .drone-skill-row {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 4px;
+      border-bottom: 1px dashed #26282F;
+
+      .skill-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+// Editable-mode background highlight on zone-input — only applied when the sheet
+// is unlocked. Geometry (width / height / padding) stays identical between locked
+// and unlocked, so the digit holds its position; the background just visualizes
+// the editable slot.
+.unlocked .character-sheet.drone-sheet input.zone-input {
+  background: #26282F;
+  border-radius: 2px;
 }

@@ -1,5 +1,5 @@
 import { fireModes, ranges } from "../lookups.js";
-import { localize } from "../utils.js";
+import { localize, getHiddenLocationsForTargets, resolveTargetActor } from "../utils.js";
 
 /**
  * Range Selection Dialog — select range band before opening attack modifiers.
@@ -95,6 +95,7 @@ export class RangeSelectionDialog extends Application {
       hasAnyLuck: this._availableLuck > 0,
       // Location targeting (single shot only)
       isSingleShot: this.fireMode === fireModes.singleShot,
+      hiddenLocations: getHiddenLocationsForTargets(this.targetTokens),
       // Exotic weapon display
       isExotic,
       weaponName: this.weapon.name
@@ -240,6 +241,7 @@ export class RangeSelectionDialog extends Application {
     // Location button selection (single shot only)
     html.find('.location-btn').click(ev => {
       const btn = ev.currentTarget;
+      if (btn.classList.contains('no-zone')) return;
       const location = btn.dataset.location;
 
       // Toggle selection - clicking same location deselects it
@@ -302,7 +304,8 @@ export class RangeSelectionDialog extends Application {
       hipfire: false,
       running: false,
       turningToFace: false,
-      targetArea: this._selectedLocation || ""
+      targetArea: this._selectedLocation || "",
+      targetActor: resolveTargetActor(this.targetTokens?.[0])
     };
 
     // Spend luck if any was used

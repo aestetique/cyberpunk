@@ -1,5 +1,5 @@
 import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
-import { localize, tabBeautifying, toTitleCase } from "../utils.js"
+import { localize, tabBeautifying, toTitleCase, bindHoverTooltips } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { ReloadDialog } from "../dialog/reload-dialog.js"
@@ -18,6 +18,8 @@ import { CreateItemDialog } from "../dialog/create-item-dialog.js"
 import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
+import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles } from "./gear-data.js"
+import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 
 /**
  * Character sheet for Cyberpunk 2020 actors.
@@ -190,6 +192,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Lock state for template
     sheetData.isLocked = this._isLocked;
+    sheetData.isUnlocked = !this._isLocked;
 
     // Only proceed with character type
     if (actor.type === 'character') {
@@ -723,11 +726,8 @@ export class CyberpunkActorSheet extends ActorSheet {
       sheetData.stabilizeBtnCalc = `Damage ${damage} \u2014 Mortally Wounded, needs stabilization`;
     }
 
-    // Cover toggles for state tab
-    const activeCover = system.activeCover || null;
-    sheetData.coverToggles = Object.entries(COVER_TYPES).map(([key, { sp, label, desc }]) => ({
-      key, sp, label, desc, active: activeCover === key
-    }));
+    // Cover toggles for state tab (shared with drone sheet via buildCoverToggles)
+    sheetData.coverToggles = buildCoverToggles(this.actor);
 
     // Condition toggles for state tab
     sheetData.conditionToggleRows = CONDITION_TOGGLE_ROWS.map(row =>
@@ -1000,78 +1000,14 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Combine base cyberweapons and attached cyberweapon options
     const allCyberweapons = [...cyberweapons, ...cyberweaponOptions];
 
-    // Helper to get loaded ammo type abbreviation
+    // Helper to get loaded ammo type abbreviation (used by cyberweapons below)
     const getLoadedAmmoLabel = (loadedAmmoType) => {
       if (!loadedAmmoType) return '';
       return ammoAbbreviations[loadedAmmoType] || '';
     };
 
-    // Prepare weapons data with type-specific context
-    const weaponsList = weapons.map(w => {
-      const sys = w.system;
-      const wType = sys.weaponType || '';
-      const isRanged = !['Melee', 'Exotic'].includes(wType);
-      const isMelee = wType === 'Melee';
-      const isExotic = wType === 'Exotic';
-
-      // Common fields
-      const rel = sys.reliability && reliability[sys.reliability]
-        ? game.i18n.localize("CYBERPUNK." + reliability[sys.reliability])
-        : '';
-      const conc = sys.concealability && concealability[sys.concealability]
-        ? game.i18n.localize("CYBERPUNK." + concealability[sys.concealability])
-        : '';
-      const range = sys.range ? `${sys.range} m` : '';
-
-      let context = '';
-      if (isRanged) {
-        // Ranged: Caliber WeaponType · Reliability · Concealability · AmmoType · Range
-        const weaponTypeLabel = weaponTypes[wType] || wType || '';
-        const ammoKey = weaponToAmmoType[wType];
-        const calibers = ammoKey ? (ammoCalibersByWeaponType[ammoKey] || {}) : {};
-        const calLabelKey = calibers[sys.caliber];
-        const caliber = calLabelKey ? game.i18n.localize(`CYBERPUNK.${calLabelKey}`) : '';
-        const loadedAmmoLabel = getLoadedAmmoLabel(sys.loadedAmmoType);
-        // Combine caliber and weapon type as single element (no interpunct between them)
-        const caliberWeaponType = [caliber, weaponTypeLabel].filter(p => p).join(' ');
-        const contextParts = [caliberWeaponType, rel, conc, loadedAmmoLabel, range].filter(p => p);
-        context = contextParts.join(' · ');
-      } else if (isMelee) {
-        // Melee: Melee · DamageType · Reliability · Concealability · Range
-        const damageTypeKey = meleeDamageTypes[sys.damageType];
-        const damageType = damageTypeKey ? game.i18n.localize(`CYBERPUNK.${damageTypeKey}`) : '';
-        const contextParts = ['Melee', damageType, rel, conc, range].filter(p => p);
-        context = contextParts.join(' · ');
-      } else if (isExotic) {
-        // Exotic: Exotic · Effect · Reliability · Concealability · Range
-        const effectKey = exoticEffects[sys.effect];
-        const effect = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : '';
-        const contextParts = ['Exotic', effect, rel, conc, range].filter(p => p);
-        context = contextParts.join(' · ');
-      }
-
-      return {
-        id: w.id,
-        img: w.img,
-        name: w.name,
-        context: context,
-        price: sys.cost || 0,
-        weight: sys.weight || 0,
-        damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
-        shotsLeft: sys.shotsLeft ?? 0,
-        shots: sys.shots ?? 0,
-        charges: sys.charges ?? 0,
-        chargesMax: sys.chargesMax ?? 0,
-        chargesDisplay: (sys.charges || sys.chargesMax) ? `${sys.charges ?? 0} / ${sys.chargesMax ?? 0}` : '–',
-        rof: sys.rof ?? 0,
-        canReload: (sys.shotsLeft ?? 0) < (sys.shots ?? 0),
-        canCharge: (sys.charges ?? 0) < (sys.chargesMax ?? 0),
-        isCyberware: false,
-        isRanged: isRanged,
-        isMelee: isMelee,
-        isExotic: isExotic
-      };
-    });
+    // Regular weapons (shared with drone sheet)
+    const weaponsList = buildWeaponsList(this.actor);
 
     // Prepare cyberweapons data (cyberware with embedded weapon)
     const cyberweaponsList = allCyberweapons.map(c => {
@@ -1187,39 +1123,8 @@ export class CyberpunkActorSheet extends ActorSheet {
     sheetData.unarmedTooltipFlavor = 'Base damage for Punch, Break, Choke, and Throw attacks.';
     sheetData.unarmedTooltipCalc = `Kick: ${kickDamageStr}`;
 
-    // Prepare ordnance data
-    sheetData.ordnanceItems = ordnance.map(o => {
-      const sys = o.system;
-      const templateLabel = ordnanceTemplateTypes[sys.templateType]
-        ? game.i18n.localize(`CYBERPUNK.${ordnanceTemplateTypes[sys.templateType]}`)
-        : '';
-      const radiusStr = sys.radius ? `${sys.radius} m` : '';
-      const effectKey = exoticEffects[sys.effect];
-      const effectLabel = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : '';
-      const relLabel = reliability[sys.reliability]
-        ? game.i18n.localize(`CYBERPUNK.${reliability[sys.reliability]}`)
-        : '';
-      const concLabel = concealability[sys.concealability]
-        ? game.i18n.localize(`CYBERPUNK.${concealability[sys.concealability]}`)
-        : '';
-      const range = sys.range ? `${sys.range} m` : '';
-      const contextParts = [templateLabel, radiusStr, effectLabel, relLabel, concLabel, range].filter(p => p);
-
-      return {
-        id: o.id,
-        img: o.img,
-        name: o.name,
-        context: contextParts.join(' · '),
-        price: sys.cost || 0,
-        weight: sys.weight || 0,
-        damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
-        charges: sys.charges || 0,
-        chargesMax: sys.chargesMax || 0,
-        chargesDisplay: (sys.charges || sys.chargesMax) ? `${sys.charges ?? 0} / ${sys.chargesMax ?? 0}` : '–',
-        canCharge: (sys.charges ?? 0) < (sys.chargesMax ?? 0),
-        removeOnZero: sys.removeOnZero ?? false
-      };
-    });
+    // Ordnance (shared with drone sheet)
+    sheetData.ordnanceItems = buildOrdnanceList(this.actor);
 
     // Prepare tool data
     sheetData.toolItems = tools.map(t => {
@@ -1417,32 +1322,8 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Eurodollars (spare funds)
     sheetData.eurobucks = this.actor.system.gear?.eurobucks || 0;
 
-    // Prepare ammo data
-    const ammoItems = this.actor.itemTypes.ammo || [];
-    sheetData.ammoItems = ammoItems.map(a => {
-      const sys = a.system;
-      const wt = ammoWeaponTypes[sys.weaponType];
-      const wtLabel = wt ? game.i18n.localize(`CYBERPUNK.${wt}`) : '';
-      const calibers = ammoCalibersByWeaponType[sys.weaponType] || {};
-      const calLabel = calibers[sys.caliber] ? game.i18n.localize(`CYBERPUNK.${calibers[sys.caliber]}`) : '';
-      const atLabel = ammoTypes[sys.ammoType] ? game.i18n.localize(`CYBERPUNK.${ammoTypes[sys.ammoType]}`) : '';
-      const contextParts = [wtLabel, calLabel, atLabel].filter(p => p);
-
-      const packSize = Number(sys.packSize) || 1;
-      const quantity = Number(sys.quantity) || 0;
-      const costPerRound = (Number(sys.cost) || 0) / packSize;
-      const totalPrice = Math.round(costPerRound * quantity * 100) / 100;
-
-      return {
-        id: a.id,
-        img: a.img,
-        name: a.name,
-        context: contextParts.join(' · '),
-        totalPrice: totalPrice,
-        weight: sys.weight || 0,
-        quantity: quantity
-      };
-    });
+    // Ammo (shared with drone sheet)
+    sheetData.ammoItems = buildAmmoList(this.actor);
 
     // Flag to check if there's any gear at all
     sheetData.hasAnyGear =
@@ -2503,53 +2384,8 @@ export class CyberpunkActorSheet extends ActorSheet {
       }).render(true);
     });
 
-    // Clean up any orphaned tooltips from previous render
-    document.querySelectorAll('.cyberpunk-tooltip').forEach(t => t.remove());
-
-    // Skill, Role & Stat hover tooltips (follow cursor)
-    html.find('.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor], .stabilize-action-btn[data-flavor]').on('mouseenter', ev => {
-      const el = ev.currentTarget;
-      const flavor = el.dataset.flavor;
-      if (!flavor) return;
-      const name = el.dataset.tooltipName
-        || el.querySelector('.skill-name')?.textContent
-        || el.querySelector('.role-label')?.textContent
-        || el.querySelector('.stat-name')?.textContent
-        || el.querySelector('.action-btn-name')?.textContent
-        || el.querySelector('.info-name')?.textContent || "";
-      if (!name) return;
-
-      const calc = el.dataset.calc;
-      const tokenPath = el.dataset.tokenPath;
-      const tip = document.createElement('div');
-      tip.className = 'cyberpunk-tooltip';
-      tip.innerHTML = `<div class="tooltip-header"><div class="tooltip-name">${name}</div>${tokenPath ? `<span class="tooltip-label">${tokenPath}</span>` : ''}</div><div class="tooltip-desc">${flavor}</div>`
-        + (calc ? `<div class="tooltip-calc">${calc}</div>` : '');
-      document.body.appendChild(tip);
-      el._cpTooltip = tip;
-
-      let top = ev.clientY + 16;
-      let left = ev.clientX + 12;
-      if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
-      if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
-      tip.style.top = `${top}px`;
-      tip.style.left = `${left}px`;
-    }).on('mousemove', ev => {
-      const tip = ev.currentTarget._cpTooltip;
-      if (!tip) return;
-      let top = ev.clientY + 16;
-      let left = ev.clientX + 12;
-      if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
-      if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
-      tip.style.top = `${top}px`;
-      tip.style.left = `${left}px`;
-    }).on('mouseleave mousedown', ev => {
-      const tip = ev.currentTarget._cpTooltip;
-      if (tip) {
-        tip.remove();
-        ev.currentTarget._cpTooltip = null;
-      }
-    });
+    // Hover tooltips (follow cursor)
+    bindHoverTooltips(html, '.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor], .stabilize-action-btn[data-flavor]');
 
     // Generic condition toggle (Stabilized, Fast Draw, Action Surge, etc.)
     html.find(".toggle-condition").change(async (ev) => {
@@ -2624,94 +2460,12 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // ----- Gear Tab Event Listeners -----
 
-    // View item (gear tab)
-    html.find('.gear-view').click(ev => {
-      ev.stopPropagation();
-      const itemId = ev.currentTarget.dataset.itemId;
-      const item = this.actor.items.get(itemId);
-      if (item) item.sheet.render(true);
-    });
+    // Shared weapons/ordnance gear-row handlers
+    // (.gear-view, .gear-delete, .reload-weapon, .charge-weapon,
+    //  .gear-fire-weapon, .gear-fire-ordnance)
+    bindWeaponAndOrdnanceHandlers(html, this);
 
-    // Delete item (gear tab)
-    html.find('.gear-delete').click(ev => {
-      ev.stopPropagation();
-      const itemId = ev.currentTarget.dataset.itemId;
-      const item = this.actor.items.get(itemId);
-      if (!item) return;
-
-      new Dialog({
-        title: localize("ItemDeleteConfirmTitle"),
-        content: `<p>${localize("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
-        buttons: {
-          yes: {
-            label: localize("Yes"),
-            callback: () => item.delete()
-          },
-          no: { label: localize("No") }
-        },
-        default: "no"
-      }).render(true);
-    });
-
-    // Reload weapon (gear tab)
-    html.find('.reload-weapon').click(async ev => {
-      const itemId = ev.currentTarget.dataset.itemId;
-      const canReload = ev.currentTarget.dataset.canReload === 'true';
-      if (!canReload) return;
-
-      const item = this.actor.items.get(itemId);
-      if (!item) return;
-
-      // If the weapon uses ammo, open the reload dialog
-      const ammoWT = weaponToAmmoType[item.weaponData.weaponType];
-      if (ammoWT) {
-        new ReloadDialog(this.actor, item).render(true);
-        return;
-      }
-
-      // Legacy instant reload for weapons without ammo mapping
-      const maxShots = item.weaponData.shots ?? 0;
-      await this.actor.updateEmbeddedDocuments("Item", [{
-        _id: itemId,
-        [item._weaponUpdatePath("shotsLeft")]: maxShots
-      }]);
-    });
-
-    // Charge exotic weapon or rechargeable ordnance (gear tab)
-    html.find('.charge-weapon').click(async ev => {
-      const itemId = ev.currentTarget.dataset.itemId;
-      const canCharge = ev.currentTarget.dataset.canCharge === 'true';
-      if (!canCharge) return;
-
-      const item = this.actor.items.get(itemId);
-      if (!item) return;
-
-      // Fill charges to max - determine item type and update path
-      let chargesMax, updatePath;
-      if (item.type === 'ordnance') {
-        chargesMax = item.system.chargesMax ?? 0;
-        updatePath = "system.charges";
-      } else {
-        // weapon or cyberware
-        chargesMax = item.weaponData.chargesMax ?? 0;
-        updatePath = item._weaponUpdatePath("charges");
-      }
-      await item.update({ [updatePath]: chargesMax });
-
-      // Register charge as an action AFTER executing
-      const { registerAction } = await import("../action-tracker.js");
-      await registerAction(this.actor, `charge weapon (${item.name})`);
-    });
-
-    // Ammo quantity input (gear tab)
-    html.find('.ammo-quantity-input').change(async ev => {
-      const itemId = ev.currentTarget.dataset.itemId;
-      const newQty = Math.max(0, Number(ev.currentTarget.value) || 0);
-      await this.actor.updateEmbeddedDocuments("Item", [{
-        _id: itemId,
-        "system.quantity": newQty
-      }]);
-    });
+    // (.ammo-quantity-input is wired by bindWeaponAndOrdnanceHandlers above.)
 
     // Toggle armor equipped (gear tab)
     html.find('.toggle-equip').click(async ev => {
@@ -2781,121 +2535,8 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
     });
 
-    // Fire weapon (gear tab) - clicking on icon or name
-    html.find('.gear-fire-weapon').click(ev => {
-      ev.stopPropagation();
-      const itemId = ev.currentTarget.dataset.itemId;
-      if (itemId === "unarmed") {
-        new UnarmedAttackDialog(this.actor).render(true);
-        return;
-      }
-      const item = this.actor.items.get(itemId);
-      if (!item) return;
-
-      const isRanged = item.isRanged();
-      const targetTokens = Array.from(game.users.current.targets.values()).map(target => ({
-        name: target.document.name,
-        id: target.id
-      }));
-
-      // For ranged weapons, show fire mode selection first
-      if (isRanged) {
-        // Exotic weapons skip fire mode selection (always single shot)
-        if (item.weaponData.weaponType === "Exotic") {
-          // Check for charges before opening dialog
-          const charges = Number(item.weaponData.charges) || 0;
-          if (charges <= 0) {
-            // Show "Out of charges" dialog with proper styling
-            const dialog = new Dialog({
-              title: item.name,
-              content: `
-                <div class="ranged-attack-wrapper">
-                  <header class="reload-header">
-                    <span class="reload-title">${item.name}</span>
-                    <a class="header-control close"><i class="fas fa-times"></i></a>
-                  </header>
-                  <div class="reload-empty">${game.i18n.localize("CYBERPUNK.OutOfCharges")}</div>
-                </div>
-              `,
-              buttons: {},
-              render: html => {
-                // Add close button handler using stored dialog reference
-                html.find('.header-control.close').click(() => dialog.close());
-                // Make header draggable
-                const header = html.find('.reload-header')[0];
-                if (header) new foundry.applications.ux.Draggable.implementation(dialog, html, header, false);
-              }
-            }, {
-              width: 300,
-              classes: ["cyberpunk", "ranged-attack-dialog"]
-            });
-            dialog.render(true);
-            return;
-          }
-          new RangeSelectionDialog(this.actor, item, fireModes.singleShot, targetTokens).render(true);
-        } else {
-          new RangedAttackDialog(this.actor, item, targetTokens).render(true);
-        }
-        return;
-      }
-
-      // Melee weapons
-      if (item.weaponData.attackType === meleeAttackTypes.martial) {
-        const modifierGroups = buildMartialModifierGroups(this.actor);
-        const dialog = new ModifiersDialog(this.actor, {
-          weapon: item,
-          targetTokens: targetTokens,
-          modifierGroups: modifierGroups,
-          onConfirm: (fireOptions) => item._resolveAttack(fireOptions, targetTokens)
-        });
-        dialog.render(true);
-      } else {
-        new MeleeAttackDialog(this.actor, item, targetTokens).render(true);
-      }
-    });
-
-    // Fire ordnance (gear tab) - clicking on icon or name
-    html.find('.gear-fire-ordnance').click(ev => {
-      ev.stopPropagation();
-      const itemId = ev.currentTarget.dataset.itemId;
-      const item = this.actor.items.get(itemId);
-      if (!item) return;
-
-      const targetTokens = Array.from(game.users.current.targets.values()).map(target => ({
-        name: target.document.name,
-        id: target.id
-      }));
-
-      // Check for charges before opening dialog
-      const charges = Number(item.system.charges) || 0;
-      if (charges <= 0) {
-        const dialog = new Dialog({
-          title: item.name,
-          content: `
-            <div class="ranged-attack-wrapper">
-              <header class="reload-header">
-                <span class="reload-title">${item.name}</span>
-                <a class="header-control close"><i class="fas fa-times"></i></a>
-              </header>
-              <div class="reload-empty">${game.i18n.localize("CYBERPUNK.OutOfCharges")}</div>
-            </div>
-          `,
-          buttons: {},
-          render: html => {
-            html.find('.header-control.close').click(() => dialog.close());
-            const header = html.find('.reload-header')[0];
-            if (header) new foundry.applications.ux.Draggable.implementation(dialog, html, header, false);
-          }
-        }, {
-          width: 300,
-          classes: ["cyberpunk", "ranged-attack-dialog"]
-        });
-        dialog.render(true);
-        return;
-      }
-
-      new OrdnanceAttackDialog(this.actor, item, targetTokens).render(true);
-    });
+    // (.gear-fire-weapon and .gear-fire-ordnance are wired by
+    //  bindWeaponAndOrdnanceHandlers above.)
 
     // "Fire" button for weapons
     html.find('.fire-weapon').click(ev => {

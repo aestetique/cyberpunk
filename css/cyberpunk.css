@@ -1931,39 +1931,53 @@ div.statderive .value.rightborder {
   margin-top: -2px;
 }
 
-.cyberpunk.character-sheet.app {
+.cyberpunk.character-sheet.app,
+.cyberpunk.drone-sheet.app {
   background: transparent;
   box-shadow: none;
   border: none;
 }
-.cyberpunk.character-sheet > .window-header {
+.cyberpunk.character-sheet > .window-header,
+.cyberpunk.drone-sheet > .window-header {
   display: none;
 }
-.cyberpunk.character-sheet > .window-content {
+.cyberpunk.character-sheet > .window-content,
+.cyberpunk.drone-sheet > .window-content {
   padding: 0;
   overflow: visible;
   background: transparent;
   border-radius: 0;
   margin: 0;
 }
-.cyberpunk.character-sheet > .window-resizable-handle {
+.cyberpunk.character-sheet > .window-resizable-handle,
+.cyberpunk.drone-sheet > .window-resizable-handle {
   display: none;
 }
-.cyberpunk.character-sheet button, .cyberpunk.character-sheet .tab-btn, .cyberpunk.character-sheet a {
+.cyberpunk.character-sheet button, .cyberpunk.character-sheet .tab-btn, .cyberpunk.character-sheet a,
+.cyberpunk.drone-sheet button,
+.cyberpunk.drone-sheet .tab-btn,
+.cyberpunk.drone-sheet a {
   --button-focus-outline-color: transparent;
 }
-.cyberpunk.character-sheet button:focus, .cyberpunk.character-sheet .tab-btn:focus, .cyberpunk.character-sheet a:focus {
+.cyberpunk.character-sheet button:focus, .cyberpunk.character-sheet .tab-btn:focus, .cyberpunk.character-sheet a:focus,
+.cyberpunk.drone-sheet button:focus,
+.cyberpunk.drone-sheet .tab-btn:focus,
+.cyberpunk.drone-sheet a:focus {
   box-shadow: none;
   outline: none;
 }
-.cyberpunk.character-sheet img {
+.cyberpunk.character-sheet img,
+.cyberpunk.drone-sheet img {
   border: none;
 }
-.cyberpunk.character-sheet h1 {
+.cyberpunk.character-sheet h1,
+.cyberpunk.drone-sheet h1 {
   border: none;
   border-bottom: none;
 }
-.cyberpunk.character-sheet .window-content, .cyberpunk.character-sheet .editable {
+.cyberpunk.character-sheet .window-content, .cyberpunk.character-sheet .editable,
+.cyberpunk.drone-sheet .window-content,
+.cyberpunk.drone-sheet .editable {
   height: 100%;
 }
 
@@ -2370,13 +2384,13 @@ div.statderive .value.rightborder {
   flex-direction: column;
   gap: 0;
   flex: 1;
-  padding-right: 16px;
 }
 
 .identity-points {
   display: flex;
   gap: 10px;
   align-items: center;
+  padding-left: 16px;
 }
 
 .character-name {
@@ -2805,7 +2819,7 @@ input.info-value.info-input::-webkit-outer-spin-button, input.info-value.info-in
   border-bottom: 1px solid var(--sheet-gilt);
   background-color: var(--chat-back);
   box-shadow: 0 7px 10px 0 var(--chat-back);
-  z-index: 1;
+  z-index: 10;
 }
 
 .tab-title {
@@ -3560,6 +3574,228 @@ input.skill-value.skill-level-input:focus {
 }
 .condition-toggle.active .condition-toggle-label {
   color: #B9B29D;
+}
+
+.shape-display {
+  height: 22px;
+  padding: 2px 4px 2px 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shape-display .shape-prefix,
+.shape-display .shape-label,
+.shape-display .shape-select {
+  font-family: var(--font-refinery);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 16px;
+  color: var(--chat-text);
+  letter-spacing: 0.05em;
+}
+.shape-display .shape-prefix {
+  color: var(--sheet-gilt);
+}
+.shape-display .shape-select {
+  min-width: 160px;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  height: 18px;
+  cursor: pointer;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.shape-display .shape-select:focus {
+  outline: none;
+  box-shadow: none;
+}
+.shape-display .shape-select option {
+  background: var(--chat-back);
+  color: var(--chat-text);
+}
+
+.character-sheet.drone-sheet {
+  width: 600px;
+  min-height: 390px;
+}
+.character-sheet.drone-sheet .sheet-frame {
+  width: 600px;
+  min-height: 390px;
+  position: relative;
+}
+.character-sheet.drone-sheet .add-item-fab {
+  display: block;
+  bottom: 24px;
+}
+.character-sheet.drone-sheet .sheet-details {
+  width: 340px;
+}
+.character-sheet.drone-sheet .attributes-row,
+.character-sheet.drone-sheet .info-row {
+  width: 340px;
+}
+.character-sheet.drone-sheet .portrait-section {
+  height: auto;
+}
+.character-sheet.drone-sheet .left-sidebar {
+  gap: 0;
+}
+.character-sheet.drone-sheet .sheet-content {
+  flex: 0 0 auto;
+}
+.character-sheet.drone-sheet .sheet-sections {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.character-sheet.drone-sheet .sheet-sections .gear-container {
+  flex: 1;
+  min-height: 0;
+  padding: 0 10px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.character-sheet.drone-sheet .sheet-sections .gear-block {
+  flex: 0 0 auto;
+}
+.character-sheet.drone-sheet .sheet-sections .gear-content {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.character-sheet.drone-sheet .sheet-sections .gear-block:has(.cover-row),
+.character-sheet.drone-sheet .sheet-sections .gear-block:has(.conditions-row) {
+  gap: 8px;
+}
+.character-sheet.drone-sheet .gear-row.zone-row {
+  flex-shrink: 0;
+  padding: 0 0 0 8px;
+}
+.character-sheet.drone-sheet .zone-field {
+  width: 90px;
+  align-items: center;
+}
+.character-sheet.drone-sheet .zone-field .field-top {
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-icon img {
+  filter: grayscale(1) brightness(0.6);
+}
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-name,
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-context,
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .field-top,
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .field-bottom {
+  color: #444856;
+}
+.character-sheet.drone-sheet input.zone-input {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 16px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  padding-block: 0;
+  padding-inline: 0;
+  margin: 0;
+  text-indent: 0;
+  font-family: var(--font-blender);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 16px;
+  color: #FFFFFF;
+  text-align: center;
+  cursor: text;
+  user-select: text;
+  pointer-events: auto;
+  -moz-appearance: textfield;
+}
+.character-sheet.drone-sheet input.zone-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.character-sheet.drone-sheet input.zone-input::-webkit-outer-spin-button,
+.character-sheet.drone-sheet input.zone-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.character-sheet.drone-sheet .gear-action-btn.zone-disable-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+.character-sheet.drone-sheet .gear-action-btn.zone-disable-btn img {
+  pointer-events: none;
+}
+.character-sheet.drone-sheet .zone-paired-row .zone-paired-sep {
+  width: 20px;
+  text-align: center;
+  font-family: var(--font-blender);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 16px;
+  color: #808090;
+}
+.character-sheet.drone-sheet .zone-paired-readonly {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 16px;
+  text-align: center;
+  font-family: var(--font-blender);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 16px;
+  color: #FFFFFF;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skills-content {
+  display: flex;
+  column-gap: 16px;
+  padding: 0 8px;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skills-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skill-row {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  border-bottom: 1px dashed #26282F;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skill-row .skill-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.unlocked .character-sheet.drone-sheet input.zone-input {
+  background: #26282F;
+  border-radius: 2px;
 }
 
 .item-card {
@@ -6067,6 +6303,36 @@ input.skill-value.skill-level-input:focus {
 .game-time-wrapper .location-btn.disabled img {
   filter: none;
 }
+.reload-dialog-wrapper .location-btn.no-zone,
+.ranged-attack-wrapper .location-btn.no-zone,
+.range-selection-wrapper .location-btn.no-zone,
+.melee-attack-wrapper .location-btn.no-zone,
+.skill-roll-wrapper .location-btn.no-zone,
+.defence-roll-wrapper .location-btn.no-zone,
+.medical-help-wrapper .location-btn.no-zone,
+.heal-wrapper .location-btn.no-zone,
+.stress-roll-wrapper .location-btn.no-zone,
+.fright-roll-wrapper .location-btn.no-zone,
+.create-item-wrapper .location-btn.no-zone,
+.game-time-wrapper .location-btn.no-zone {
+  background: #26282F;
+  cursor: default;
+  pointer-events: none;
+}
+.reload-dialog-wrapper .location-btn.no-zone:hover,
+.ranged-attack-wrapper .location-btn.no-zone:hover,
+.range-selection-wrapper .location-btn.no-zone:hover,
+.melee-attack-wrapper .location-btn.no-zone:hover,
+.skill-roll-wrapper .location-btn.no-zone:hover,
+.defence-roll-wrapper .location-btn.no-zone:hover,
+.medical-help-wrapper .location-btn.no-zone:hover,
+.heal-wrapper .location-btn.no-zone:hover,
+.stress-roll-wrapper .location-btn.no-zone:hover,
+.fright-roll-wrapper .location-btn.no-zone:hover,
+.create-item-wrapper .location-btn.no-zone:hover,
+.game-time-wrapper .location-btn.no-zone:hover {
+  background: #26282F;
+}
 .reload-dialog-wrapper .conditions-grid--single,
 .ranged-attack-wrapper .conditions-grid--single,
 .range-selection-wrapper .conditions-grid--single,
@@ -7309,3 +7575,5 @@ input.skill-value.skill-level-input:focus {
 .cyberware-card .sp-input {
   -moz-appearance: textfield;
 }
+
+/*# sourceMappingURL=cyberpunk.css.map */

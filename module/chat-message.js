@@ -1,5 +1,5 @@
 import { RollBundle } from "./dice.js";
-import { localize, resolveZoneForTarget } from "./utils.js";
+import { localize, resolveZoneForTarget, rollLocation, findActorKey } from "./utils.js";
 import { getSkillsForCategory } from "./lookups.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
@@ -1207,9 +1207,14 @@ export class CyberpunkChatMessage extends ChatMessage {
             const actor = token.actor;
             if (!actor) continue;
 
-            // Drone targets: structure-only damage, no wounds/cyberlimbs/exotic effects
+            // Drone targets: structure-only damage. Exotic effect still applies on hit
+            // (drone-specific branches handle stun/microwave; conditions like burning,
+            // blinded, immobilized apply directly via toggleStatusEffect).
             if (actor.type === "drone") {
                 await this._applyDroneDamage(actor, damageData, ammoType);
+                if (weaponEffect) {
+                    await this._applyExoticEffect(actor, weaponEffect, hitLocation);
+                }
                 continue;
             }
 
@@ -1521,7 +1526,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 break;
 
             case "microwave":
-                await this._rollMicrowaveEffect(actor);
+                if (actor.type === "drone") {
+                    await this._rollDroneMicrowaveEffect(actor);
+                } else {
+                    await this._rollMicrowaveEffect(actor);
+                }
                 break;
 
             case "blindness":
@@ -1765,6 +1774,51 @@ export class CyberpunkChatMessage extends ChatMessage {
         </div>`;
 
         await ChatMessage.create({ speaker, content: html });
+    }
+
+    /**
+     * Microwave on a drone: roll a fresh hit location (shape-aware) and drop
+     * that zone's SDP to its `disablesAt` threshold. Chassis hits cascade to
+     * the Disabled status via the existing _onUpdate hook.
+     * @param {Actor} actor - The target drone actor
+     * @private
+     */
+    async _rollDroneMicrowaveEffect(actor) {
+        const { roll, areaHit } = await rollLocation(actor);
+        const zoneKey = findActorKey(actor.system.zones, areaHit);
+        if (!zoneKey) return;
+
+        const zone = actor.system.zones[zoneKey];
+        const disablesAt = zone?.sdp?.disablesAt ?? 0;
+        const currentSdp = zone?.sdp?.current ?? 0;
+
+        let effectMessage;
+        if (currentSdp > disablesAt) {
+            await actor.update({
+                [`system.zones.${zoneKey}.sdp.current`]: disablesAt
+            });
+            effectMessage = game.i18n.format("CYBERPUNK.MicrowaveDroneZone", {
+                zone: areaHit,
+                sdp: disablesAt
+            });
+        } else {
+            effectMessage = game.i18n.format("CYBERPUNK.MicrowaveDroneZoneAlreadyAtOrBelow", {
+                zone: areaHit
+            });
+        }
+
+        const speaker = ChatMessage.getSpeaker({ actor });
+        const html = `<div class="cyberpunk-card">
+            <div class="section-bar">
+                <span class="section-bar__icon"><img src="systems/cyberpunk/img/chat/microwave.svg" alt=""></span>
+                <span class="section-bar__label">${game.i18n.localize("CYBERPUNK.MicrowaveEffect")}</span>
+            </div>
+            <div class="microwave-result">
+                <span class="roll-value">${roll.total}</span>
+                <span class="effect-text">${effectMessage}</span>
+            </div>
+        </div>`;
+        await ChatMessage.create({ speaker, rolls: [roll], content: html });
     }
 
     /* -------------------------------------------- */

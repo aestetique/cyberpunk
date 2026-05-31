@@ -138,6 +138,8 @@ export class CyberpunkItem extends Item {
   _getMinBodyPenalty() {
     const minBody = this.weaponData.minimumBody || 0;
     if (!minBody || !this.actor) return { accuracyPenalty: 0, rofMultiplier: 1 };
+    // Drones have no BODY stat — they're mechanical weapon mounts with no recoil mismatch.
+    if (this.actor.type === "drone") return { accuracyPenalty: 0, rofMultiplier: 1 };
     const body = this.actor.system.stats?.bt?.total || 0;
     const deficit = minBody - body;
     if (deficit <= 0) return { accuracyPenalty: 0, rofMultiplier: 1 };

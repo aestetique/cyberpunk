@@ -84,7 +84,7 @@ function toGridKey(key) {
 }
 // Case-insensitive object key lookup. Returns the actor-side key as it actually
 // appears on the object (e.g., "head" for drones, "Head" for characters).
-function findActorKey(obj, key) {
+export function findActorKey(obj, key) {
     if (!obj || !key) return null;
     if (key in obj) return key;
     const lower = String(key).toLowerCase();

@@ -26,9 +26,9 @@
         </div>
         <div class="gear-field" style="width: 60px;">
           {{#if ../isUnlocked}}
-            <input type="number" class="field-top ammo-quantity-input" data-item-id="{{ammo.id}}" value="{{ammo.quantity}}" min="0">
+            <input type="number" class="zone-input gear-quantity-input" data-item-id="{{ammo.id}}" value="{{ammo.quantity}}" min="0">
           {{else}}
-            <span class="field-top">{{ammo.quantity}}</span>
+            <span class="zone-paired-readonly">{{ammo.quantity}}</span>
           {{/if}}
           <span class="field-bottom">Quantity</span>
         </div>

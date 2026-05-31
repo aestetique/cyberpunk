@@ -101,8 +101,8 @@ export function bindWeaponAndOrdnanceHandlers(html, sheet) {
         }]);
     });
 
-    // Ammo quantity input
-    html.find('.ammo-quantity-input').change(async ev => {
+    // Quantity input — shared by ammo and drug (any item with system.quantity).
+    html.find('.gear-quantity-input').click(ev => ev.target.select()).change(async ev => {
         const itemId = ev.currentTarget.dataset.itemId;
         const newQty = Math.max(0, Number(ev.currentTarget.value) || 0);
         await actor.updateEmbeddedDocuments("Item", [{

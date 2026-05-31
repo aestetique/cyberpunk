@@ -2032,41 +2032,10 @@ input.skill-value.skill-level-input {
     .field-bottom { color: #444856; }
   }
 
-  // Inline numeric input — same geometry & typography as the locked .field-top span
-  // so the digit stays put when toggling lock state. Explicit zero-padding (instead
-  // of `all: unset`) avoids inheriting `user-select: none` or other inertia that
-  // would make the input non-editable when its row is in the .disabled state.
-  input.zone-input {
-    display: inline-block;
-    box-sizing: border-box;
-    width: 24px;
-    height: 16px;
-    background: transparent;
-    border: 0;
-    outline: none;
-    box-shadow: none;
-    padding: 0;
-    padding-block: 0;
-    padding-inline: 0;
-    margin: 0;
-    text-indent: 0;
-    font-family: var(--font-blender);
-    font-weight: 300;
-    font-size: 16px;
-    line-height: 16px;
-    color: #FFFFFF;
-    text-align: center;
-    cursor: text;
-    user-select: text;
-    pointer-events: auto;
-    -moz-appearance: textfield;
-    &:focus { outline: none; box-shadow: none; }
-  }
-  input.zone-input::-webkit-outer-spin-button,
-  input.zone-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
+  // input.zone-input / .zone-paired-readonly are now defined at the .character-sheet
+  // scope below so they're available on both drone and character sheets (quantity
+  // editors, etc.). Drone-only is the `.zone-paired-row .zone-paired-sep` rule
+  // which lives further down.
 
   // Force-clickable disable button regardless of the row's .disabled class
   // (defends against any inherited pointer-events: none on the row).
@@ -2093,22 +2062,7 @@ input.skill-value.skill-level-input {
     }
   }
 
-  // Display-only cell (SP/SDP locked halves, derived SP-current in unlocked mode,
-  // skill-value in locked mode). Same geometry as input.zone-input so rows hold
-  // alignment when toggling lock state. Scoped to the drone sheet so character
-  // sheets with the same class name (none today) wouldn't be affected.
-  .zone-paired-readonly {
-    display: inline-block;
-    box-sizing: border-box;
-    width: 24px;
-    height: 16px;
-    text-align: center;
-    font-family: var(--font-blender);
-    font-weight: 300;
-    font-size: 16px;
-    line-height: 16px;
-    color: #FFFFFF;
-  }
+  // .zone-paired-readonly is defined at the .character-sheet scope below.
 
   // Drone Skills block — stripped two-column list (name + total only).
   .drone-skills-block {
@@ -2143,11 +2097,63 @@ input.skill-value.skill-level-input {
   }
 }
 
-// Editable-mode background highlight on zone-input — only applied when the sheet
-// is unlocked. Geometry (width / height / padding) stays identical between locked
-// and unlocked, so the digit holds its position; the background just visualizes
-// the editable slot.
-.unlocked .character-sheet.drone-sheet input.zone-input {
+// Shared inline numeric input + readonly span used wherever a value flips between
+// locked (span) and unlocked (input). Same geometry both ways so the digit holds
+// its position. Used by drone SP/SDP/skill cells and by editable item quantities.
+.character-sheet {
+  input.zone-input {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 24px;
+    height: 16px;
+    background: transparent;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    padding: 0;
+    padding-block: 0;
+    padding-inline: 0;
+    margin: 0;
+    text-indent: 0;
+    font-family: var(--font-blender);
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 16px;
+    color: #FFFFFF;
+    text-align: center;
+    cursor: text;
+    user-select: text;
+    pointer-events: auto;
+    -moz-appearance: textfield;
+    &:focus { outline: none; box-shadow: none; }
+  }
+  input.zone-input::-webkit-outer-spin-button,
+  input.zone-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .zone-paired-readonly {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 24px;
+    height: 16px;
+    text-align: center;
+    font-family: var(--font-blender);
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 16px;
+    color: #FFFFFF;
+  }
+  // When the cell sits inside a flex-column .gear-field, center horizontally
+  // (the column is 60px wide for label alignment; the input/span is 24px).
+  .gear-field > .zone-input,
+  .gear-field > .zone-paired-readonly {
+    align-self: center;
+  }
+}
+
+// Editable-mode background highlight — only applied when the sheet is unlocked.
+.unlocked .character-sheet input.zone-input {
   background: #26282F;
   border-radius: 2px;
 }

@@ -299,6 +299,18 @@ Hooks.on("controlToken", (token, controlled) => {
 });
 
 /**
+ * Block Item drops on the canvas. Foundry's default behavior places an
+ * unselectable Note-like placeable, which clutters the scene with no way
+ * to remove it from the normal Token layer.
+ */
+Hooks.on("dropCanvasData", (canvas, data) => {
+    if (data?.type === "Item") {
+        ui.notifications.info("Items can't be placed on the map. Drag onto an actor sheet instead.");
+        return false;
+    }
+});
+
+/**
  * Intercept basic /roll commands and restyle them with our formula-roll template.
  * Uses preCreateChatMessage to capture speaker from selected token before message is created.
  */
@@ -551,7 +563,8 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     }
 
     // Handle timed conditions from microwave (blinded, deafened, shocked)
-    for (const conditionId of ["blinded", "deafened", "shocked"]) {
+    // and drone stun-applied Disabled.
+    for (const conditionId of ["blinded", "deafened", "shocked", "disabled"]) {
         const flagKey = `${conditionId}Duration`;
         const duration = actor.getFlag("cyberpunk", flagKey);
         if (duration && duration > 0) {
@@ -559,6 +572,11 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             if (newDuration <= 0) {
                 await actor.toggleStatusEffect(conditionId, { active: false });
                 await actor.unsetFlag("cyberpunk", flagKey);
+                // Drone chassis may still warrant Disabled (SDP at/below disablesAt) —
+                // re-sync so the persistent chassis state isn't accidentally cleared.
+                if (conditionId === "disabled" && actor.type === "drone") {
+                    await actor.updateChassisStatus();
+                }
             } else {
                 await actor.setFlag("cyberpunk", flagKey, newDuration);
             }

@@ -805,6 +805,8 @@
     "CYBERPUNK.MicrowaveNoCyberlimb": "No cyberlimb affected",
     "CYBERPUNK.MicrowaveStunned": "Neural overload — Stunned for 3 turns",
     "CYBERPUNK.MicrowaveNoEffect": "No effect",
+    "CYBERPUNK.MicrowaveDroneZone": "{zone} shorted — SDP dropped to {sdp}",
+    "CYBERPUNK.MicrowaveDroneZoneAlreadyAtOrBelow": "{zone} already disabled — no further effect",
     "CYBERPUNK.BurningDamage": "Burning Damage",
     "CYBERPUNK.AcidDamage": "Acid Corrosion",
     "CYBERPUNK.AcidWounds": "Acid Wounds",

@@ -2465,7 +2465,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     //  .gear-fire-weapon, .gear-fire-ordnance)
     bindWeaponAndOrdnanceHandlers(html, this);
 
-    // (.ammo-quantity-input is wired by bindWeaponAndOrdnanceHandlers above.)
+    // (.gear-quantity-input is wired by bindWeaponAndOrdnanceHandlers above.)
 
     // Toggle armor equipped (gear tab)
     html.find('.toggle-equip').click(async ev => {

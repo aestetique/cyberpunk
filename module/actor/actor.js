@@ -1073,7 +1073,7 @@ export class CyberpunkActor extends Actor {
   getLearnedMartialArts() {
     return this.itemTypes.skill
       .filter(skill => skill.name.startsWith(localize("Martial")))
-      .filter(martial => martial.system.level > 0)
+      .filter(martial => CyberpunkActor.effectiveSkillLevel(martial) > 0)
       .map(martial => martial.name);
   }
 
@@ -1081,9 +1081,8 @@ export class CyberpunkActor extends Actor {
     // Sometimes we use this to sort raw item data before it becomes a full-fledged item. So we use either system or data, as needed
     if (!skill) return 0;
     const data = skill.system ?? skill;
-    let value = Number(data.level) || 0;
-    if (data.isChipped) value = Number(data.chipLevel) || 0;
-    return value;
+    if (data.isChipped) return Number(data.chipLevel) || 0;
+    return (Number(data.level) || 0) + (Number(data.ipLevel) || 0);
   }
 
   resolveSkillTotal(skillName) {
@@ -1832,6 +1831,12 @@ export class CyberpunkActor extends Actor {
    * @param {number} modifier - Optional modifier to the roll
    */
   async rollStunSave(modifier = 0) {
+    // Drones use a flat threshold of 10 − stun strength; no BODY math.
+    // Fail → Disabled for 1 round. Modifier is passed as a negative (-2 / -4),
+    // so stun strength = -modifier.
+    if (this.type === "drone") {
+      return this._rollDroneStunSave(-modifier);
+    }
     const threshold = this.getStunThreshold();
     const roll = await new Roll(modifier ? `1d10 + ${-modifier}` : "1d10").evaluate();
     const success = roll.total < threshold;
@@ -1857,6 +1862,34 @@ export class CyberpunkActor extends Actor {
     } else {
       // Apply Shocked condition on failure
       await this.toggleStatusEffect("shocked", { active: true });
+    }
+  }
+
+  /**
+   * Stun save for drones. Roll 1d10 against a flat threshold of (10 − stunStrength).
+   * Fail → Disabled status for 1 round (auto-clears at start of next turn).
+   * @param {number} stunStrength - Stun severity (2 or 4).
+   * @private
+   */
+  async _rollDroneStunSave(stunStrength) {
+    const threshold = 10 - stunStrength;
+    const roll = await new Roll("1d10").evaluate();
+    const success = roll.total < threshold;
+
+    const speaker = ChatMessage.getSpeaker({ actor: this });
+    new RollBundle(localize("ShockSave"))
+      .addRoll(roll, { name: localize("Save") })
+      .execute(speaker, "systems/cyberpunk/templates/chat/save-roll.hbs", {
+        saveType: "shock",
+        saveLabel: localize("ShockSave"),
+        threshold,
+        success,
+        hint: localize("UnderThresholdMessage")
+      });
+
+    if (!success) {
+      await this.toggleStatusEffect("disabled", { active: true });
+      await this.setFlag("cyberpunk", "disabledDuration", 1);
     }
   }
 

@@ -3701,40 +3701,6 @@ input.skill-value.skill-level-input:focus {
 .character-sheet.drone-sheet .gear-row.zone-row.disabled .field-bottom {
   color: #444856;
 }
-.character-sheet.drone-sheet input.zone-input {
-  display: inline-block;
-  box-sizing: border-box;
-  width: 24px;
-  height: 16px;
-  background: transparent;
-  border: 0;
-  outline: none;
-  box-shadow: none;
-  padding: 0;
-  padding-block: 0;
-  padding-inline: 0;
-  margin: 0;
-  text-indent: 0;
-  font-family: var(--font-blender);
-  font-weight: 300;
-  font-size: 16px;
-  line-height: 16px;
-  color: #FFFFFF;
-  text-align: center;
-  cursor: text;
-  user-select: text;
-  pointer-events: auto;
-  -moz-appearance: textfield;
-}
-.character-sheet.drone-sheet input.zone-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-.character-sheet.drone-sheet input.zone-input::-webkit-outer-spin-button,
-.character-sheet.drone-sheet input.zone-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
 .character-sheet.drone-sheet .gear-action-btn.zone-disable-btn {
   pointer-events: auto;
   cursor: pointer;
@@ -3752,18 +3718,6 @@ input.skill-value.skill-level-input:focus {
   font-size: 16px;
   line-height: 16px;
   color: #808090;
-}
-.character-sheet.drone-sheet .zone-paired-readonly {
-  display: inline-block;
-  box-sizing: border-box;
-  width: 24px;
-  height: 16px;
-  text-align: center;
-  font-family: var(--font-blender);
-  font-weight: 300;
-  font-size: 16px;
-  line-height: 16px;
-  color: #FFFFFF;
 }
 .character-sheet.drone-sheet .drone-skills-block .drone-skills-content {
   display: flex;
@@ -3793,7 +3747,58 @@ input.skill-value.skill-level-input:focus {
   cursor: pointer;
 }
 
-.unlocked .character-sheet.drone-sheet input.zone-input {
+.character-sheet input.zone-input {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 16px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  padding-block: 0;
+  padding-inline: 0;
+  margin: 0;
+  text-indent: 0;
+  font-family: var(--font-blender);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 16px;
+  color: #FFFFFF;
+  text-align: center;
+  cursor: text;
+  user-select: text;
+  pointer-events: auto;
+  -moz-appearance: textfield;
+}
+.character-sheet input.zone-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.character-sheet input.zone-input::-webkit-outer-spin-button,
+.character-sheet input.zone-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.character-sheet .zone-paired-readonly {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 16px;
+  text-align: center;
+  font-family: var(--font-blender);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 16px;
+  color: #FFFFFF;
+}
+.character-sheet .gear-field > .zone-input,
+.character-sheet .gear-field > .zone-paired-readonly {
+  align-self: center;
+}
+
+.unlocked .character-sheet input.zone-input {
   background: #26282F;
   border-radius: 2px;
 }

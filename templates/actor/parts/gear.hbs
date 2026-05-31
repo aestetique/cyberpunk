@@ -130,7 +130,11 @@
             <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;">
-            <span class="field-top">{{drug.quantity}}</span>
+            {{#if ../isUnlocked}}
+              <input type="number" class="zone-input gear-quantity-input" data-item-id="{{drug.id}}" value="{{drug.quantity}}" min="0">
+            {{else}}
+              <span class="zone-paired-readonly">{{drug.quantity}}</span>
+            {{/if}}
             <span class="field-bottom">Quantity</span>
           </div>
           <div class="gear-field" style="width: 60px;"></div>

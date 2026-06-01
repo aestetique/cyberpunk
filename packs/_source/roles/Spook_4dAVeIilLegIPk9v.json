@@ -1,0 +1,80 @@
+{
+  "name": "Spook",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Security and surveillance expert.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Dark Metropolis, p.56",
+    "specialAbility": {
+      "name": "Spy Craft",
+      "description": "Includes trashing, bugging, surveillance work and technical knowledge of spy gear."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.y4cH7WpNntrXWJzf",
+      "name": "Spy Craft"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lR8vyv0AbqZcOBlA",
+        "name": "Streetwise"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.HFzdWPCZffJg7wvj",
+        "name": "Electronic Security"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.0BeGztoQiQdr75n7",
+        "name": "Electronics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.z7vJZiUi97JBMulq",
+        "name": "Pick Lock"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.iZD272iqL9eHn3Dq",
+        "name": "Stealth"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8h27L4592ORdrI6m",
+        "name": "Photography & Film"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KXlzsL2EEvgHiRZa",
+        "name": "Shadow/Track"
+      }
+    ]
+  },
+  "_id": "4dAVeIilLegIPk9v",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!4dAVeIilLegIPk9v"
+}

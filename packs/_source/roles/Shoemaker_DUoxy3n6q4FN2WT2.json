@@ -1,0 +1,80 @@
+{
+  "name": "Shoemaker",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "NPC specialty. Forger of identities and financial records.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Wildside, p.22",
+    "specialAbility": {
+      "name": "Streetdeal",
+      "description": "The ability to deal with the underground information network."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.sm8ktX2I1OYONAMm",
+      "name": "Streetdeal"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8Wi9CP1o81fwfyja",
+        "name": "Forgery"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.HTjCmua9STRVMnIf",
+        "name": "System Knowledge"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.M5KR3PwTG0a6XRar",
+        "name": "Programming"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.iuvC67fZTlolXmhI",
+        "name": "Library Search"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.YKrpFGIOvE79WBVg",
+        "name": "Bureaucracy"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.93OA83SGN4rslk2O",
+        "name": "Accounting"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.EdsRz0oCPKLzD0La",
+        "name": "Stock Market"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zWypBZBLKTJW6NOA",
+        "name": "Education & General Knowledge"
+      }
+    ]
+  },
+  "_id": "DUoxy3n6q4FN2WT2",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!DUoxy3n6q4FN2WT2"
+}

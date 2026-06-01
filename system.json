@@ -54,6 +54,22 @@
     }
   ],
   "socket": false,
+  "packs": [
+    {
+      "name": "skills",
+      "label": "Skills",
+      "system": "cyberpunk",
+      "type": "Item",
+      "path": "packs/skills"
+    },
+    {
+      "name": "roles",
+      "label": "Roles",
+      "system": "cyberpunk",
+      "type": "Item",
+      "path": "packs/roles"
+    }
+  ],
   "initiative": "1d10 + @stats.ref.total + @CombatSenseMod + @initiativeMod + @fastDrawMod + @surprisedMod",
   "grid": {
     "distance": 5,

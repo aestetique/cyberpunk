@@ -1,0 +1,88 @@
+{
+  "name": "Pirate",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Seafaring nomad raider and trader.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Pacific Rim, p.153",
+    "specialAbility": {
+      "name": "Family",
+      "description": "Ability to call upon your pack for help."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.2PesdDHV0dDBtr1M",
+      "name": "Family"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.IOADIvwBSsESEPvU",
+        "name": "Swimming"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lc1fvRRbAUuUVwSV",
+        "name": "Expert: Navigation"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.7777fZn0MBrDOIHX",
+        "name": "Seamanship"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zIS6P8CbO9nkMiS3",
+        "name": "Athletics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.YEVYHcVPiLcr6BBj",
+        "name": "Rifle"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.P8GOhunb6Hnm1Rlp",
+        "name": "Sailpower"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OWT7RP3emRUcW8w1",
+        "name": "Pilot: Ship"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.VVqNTPXs1kTBhf56",
+        "name": "Water Vehicles"
+      }
+    ]
+  },
+  "_id": "c1lIawRtabp9G5ta",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!c1lIawRtabp9G5ta"
+}

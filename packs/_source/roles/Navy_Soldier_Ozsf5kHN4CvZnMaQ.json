@@ -1,0 +1,72 @@
+{
+  "name": "Navy Soldier",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Naval personnel. Normal sailors are Techs; the Navy also has Solos, Medtechs, Cops, Netrunners, and Fixers.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Home of the Brave, p.75",
+    "specialAbility": {
+      "name": "Combat Sense (Spec.)",
+      "description": "Specialized military combat training."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.uuzOBUHr85iAASkg",
+      "name": "Combat Sense (Spec.)"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.kjCjykpWDmzZLAoZ",
+        "name": "First Aid"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.IOADIvwBSsESEPvU",
+        "name": "Swimming"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.VVqNTPXs1kTBhf56",
+        "name": "Water Vehicles"
+      }
+    ]
+  },
+  "_id": "Ozsf5kHN4CvZnMaQ",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1780331604213,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!Ozsf5kHN4CvZnMaQ"
+}

@@ -1,0 +1,68 @@
+{
+  "name": "Japanese SDF Officer",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Japanese Self-Defense Force officer.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Pacific Rim, p.14",
+    "specialAbility": {
+      "name": "Combat Sense (Spec.)",
+      "description": "Specialized military combat training."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.uuzOBUHr85iAASkg",
+      "name": "Combat Sense (Spec.)"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.93OA83SGN4rslk2O",
+        "name": "Accounting"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.YKrpFGIOvE79WBVg",
+        "name": "Bureaucracy"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.RuI227QIzr5dSkms",
+        "name": "Expert: Tactics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.69RRJ8sJdxI6jEG0",
+        "name": "Expert: Law"
+      }
+    ]
+  },
+  "_id": "hw870hezju3cxpAT",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!hw870hezju3cxpAT"
+}

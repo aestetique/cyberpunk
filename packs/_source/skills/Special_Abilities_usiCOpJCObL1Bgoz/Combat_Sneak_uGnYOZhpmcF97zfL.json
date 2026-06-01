@@ -1,0 +1,54 @@
+{
+  "name": "Combat Sneak",
+  "type": "skill",
+  "folder": "usiCOpJCObL1Bgoz",
+  "system": {
+    "flavor": "Adds half level to Stealth, Hide/Evade, Awareness, and Initiative.",
+    "notes": "",
+    "source": "Stormfront, p.93",
+    "level": 0,
+    "ipLevel": 0,
+    "chipLevel": 0,
+    "ip": 0,
+    "diffMod": "1",
+    "isChipped": false,
+    "isRoleSkill": true,
+    "stat": "ref",
+    "askMods": false,
+    "isMartial": false,
+    "martial": {
+      "strike": 0,
+      "grapple": 0,
+      "kick": 0,
+      "hold": 0,
+      "parry": 0,
+      "choke": 0,
+      "dodge": 0,
+      "throw": 0,
+      "escape": 0,
+      "sweep": 0,
+      "disarm": 0,
+      "ram": 0
+    }
+  },
+  "_id": "uGnYOZhpmcF97zfL",
+  "img": "systems/cyberpunk/img/svg/placeholder-skill.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.5",
+    "createdTime": 1772494938557,
+    "modifiedTime": 1780319706971,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!uGnYOZhpmcF97zfL"
+}

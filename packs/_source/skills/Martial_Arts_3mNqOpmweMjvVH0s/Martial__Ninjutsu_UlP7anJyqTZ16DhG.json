@@ -1,0 +1,54 @@
+{
+  "name": "Martial: Ninjutsu",
+  "type": "skill",
+  "folder": "3mNqOpmweMjvVH0s",
+  "system": {
+    "flavor": "The art of the ninja, combining stealth, deception, and a wide variety of combat techniques.",
+    "notes": "",
+    "source": "Core Rulebook, p.41",
+    "level": 0,
+    "ipLevel": 0,
+    "chipLevel": 0,
+    "ip": 0,
+    "diffMod": 5,
+    "isChipped": false,
+    "isRoleSkill": false,
+    "stat": "ref",
+    "askMods": false,
+    "isMartial": true,
+    "martial": {
+      "strike": 3,
+      "grapple": 1,
+      "kick": 1,
+      "hold": 1,
+      "parry": 1,
+      "choke": 1,
+      "dodge": 2,
+      "throw": 1,
+      "escape": 1,
+      "sweep": 2,
+      "disarm": 2,
+      "ram": 0
+    }
+  },
+  "_id": "UlP7anJyqTZ16DhG",
+  "img": "systems/cyberpunk/img/svg/placeholder-skill.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494938557,
+    "modifiedTime": 1772494938557,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!UlP7anJyqTZ16DhG"
+}

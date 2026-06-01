@@ -1,0 +1,76 @@
+{
+  "name": "Reaper",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Repossessors. They repossess cars, merchandise, body parts, cybernetics, and sometimes whole people.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Dark Metropolis, p.58",
+    "specialAbility": {
+      "name": "Trace",
+      "description": "Ability to find people or merchandise using both human and computer information."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.jkiLjnmq0Mk0Ffph",
+      "name": "Trace"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lR8vyv0AbqZcOBlA",
+        "name": "Streetwise"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd",
+        "name": "Intimidate"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KXlzsL2EEvgHiRZa",
+        "name": "Shadow/Track"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.z7vJZiUi97JBMulq",
+        "name": "Pick Lock"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.HFzdWPCZffJg7wvj",
+        "name": "Electronic Security"
+      }
+    ]
+  },
+  "_id": "36kysp3lWDtIgfS3",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!36kysp3lWDtIgfS3"
+}

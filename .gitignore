@@ -17,3 +17,6 @@ scripts/
 
 # Deploy script
 deploy.sh
+
+# Raw pack imports — staging area, never committed
+packs-import/

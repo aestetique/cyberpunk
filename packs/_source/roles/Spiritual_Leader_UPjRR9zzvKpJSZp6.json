@@ -1,0 +1,92 @@
+{
+  "name": "Spiritual Leader",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Nomad shaman, priest, or spiritual guide.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Neo Tribes, p.42",
+    "specialAbility": {
+      "name": "Counsel",
+      "description": "Half strength outside nomad culture. Includes Kith if a nomad."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.mTZpyHK1oGNbE6TF",
+      "name": "Counsel"
+    },
+    "careerSkills": [
+      {
+        "name": "Awareness/Notice",
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ"
+      },
+      {
+        "name": "Rifle",
+        "uuid": "Compendium.cyberpunk.skills.Item.YEVYHcVPiLcr6BBj"
+      },
+      {
+        "name": "Dance",
+        "uuid": "Compendium.cyberpunk.skills.Item.14suL1ZyspDdJTis"
+      },
+      {
+        "name": "Oratory",
+        "uuid": "Compendium.cyberpunk.skills.Item.ppjGPsS8sreceOFw"
+      },
+      {
+        "name": "Composition",
+        "uuid": "Compendium.cyberpunk.skills.Item.C4S1UWvM4McF2pHI"
+      },
+      {
+        "name": "Trance",
+        "uuid": "Compendium.cyberpunk.skills.Item.pcW2lHBTzPDlOSHG"
+      },
+      {
+        "name": "Perform",
+        "uuid": "Compendium.cyberpunk.skills.Item.jyZ2uzPkI1XHRqPf"
+      },
+      {
+        "name": "Human Perception",
+        "uuid": "Compendium.cyberpunk.skills.Item.m45zKvPpjD13V0kf"
+      },
+      {
+        "name": "Persuasion & Fast Talk",
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv"
+      },
+      {
+        "name": "Wilderness Survival",
+        "uuid": "Compendium.cyberpunk.skills.Item.gr6XAkOyh1quNEyA"
+      },
+      {
+        "name": "Theology",
+        "uuid": "Compendium.cyberpunk.skills.Item.ab37LYLXi6ai8lfT"
+      },
+      {
+        "name": "History",
+        "uuid": "Compendium.cyberpunk.skills.Item.C4N6pYyrXBtnNtkg"
+      }
+    ]
+  },
+  "_id": "UPjRR9zzvKpJSZp6",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.5",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772727903789,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!UPjRR9zzvKpJSZp6"
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Runner",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Everyone needs packages securely delivered. You may be carrying for the biggest Corp or the smallest smuggler.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Neo Tribes, p.43",
+    "specialAbility": {
+      "name": "Vehicle Zen",
+      "description": "Adds to Awareness/Notice & Initiative, and half level to maneuvering rolls. Includes Kith if a nomad."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.xgtWQjjOXdUjKnXS",
+      "name": "Vehicle Zen"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lR8vyv0AbqZcOBlA",
+        "name": "Streetwise"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz",
+        "name": "Driving"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.47SavVgr5Qmmeszs",
+        "name": "Hide/Evade"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zIS6P8CbO9nkMiS3",
+        "name": "Athletics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.xN3CqCZG13UrjUcQ",
+        "name": "Pilot: Fixed Wing"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.CRpjCbWSf0vlXtlt",
+        "name": "Pilot: Gyro"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.UUpg8K4dENIqqvOI",
+        "name": "Pilot: Vectored Thrust"
+      }
+    ]
+  },
+  "_id": "DRASj7thOy1gZV8H",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.5",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1780334245184,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!DRASj7thOy1gZV8H"
+}

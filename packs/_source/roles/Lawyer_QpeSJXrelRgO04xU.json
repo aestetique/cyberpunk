@@ -1,0 +1,88 @@
+{
+  "name": "Lawyer",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Legal professional practicing law.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Interface Vol.2 No.2, p.9",
+    "specialAbility": {
+      "name": "Credibility",
+      "description": "The ability to be believed."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.eLV8jZTEFhwAwUMp",
+      "name": "Credibility"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zWypBZBLKTJW6NOA",
+        "name": "Education & General Knowledge"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.69RRJ8sJdxI6jEG0",
+        "name": "Expert: Law"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.m45zKvPpjD13V0kf",
+        "name": "Human Perception"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ru0kzxjKSshcf3Zp",
+        "name": "Interrogation"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.JucG8rxAZ8sdrMkM",
+        "name": "Interview"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.iuvC67fZTlolXmhI",
+        "name": "Library Search"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ppjGPsS8sreceOFw",
+        "name": "Oratory"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.M6WjsOuMbzzCJ2pO",
+        "name": "Personal Grooming"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.CXVY0NgWZPPVWFKF",
+        "name": "Wardrobe & Style"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      }
+    ]
+  },
+  "_id": "QpeSJXrelRgO04xU",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!QpeSJXrelRgO04xU"
+}

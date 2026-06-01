@@ -1,0 +1,92 @@
+{
+  "name": "Street Samurai",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Honor-bound street warrior blending combat skill with style.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Interface Vol.1 No.3, p.47",
+    "specialAbility": {
+      "name": "Combat Sense",
+      "description": "Adds to both Awareness and Initiative in combat situations."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.XqxaugXqEjrMOcLg",
+      "name": "Combat Sense"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lR8vyv0AbqZcOBlA",
+        "name": "Streetwise"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.CXVY0NgWZPPVWFKF",
+        "name": "Wardrobe & Style"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KXlzsL2EEvgHiRZa",
+        "name": "Shadow/Track"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz",
+        "name": "Driving"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd",
+        "name": "Intimidate"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.xN3CqCZG13UrjUcQ",
+        "name": "Pilot: Fixed Wing"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.CRpjCbWSf0vlXtlt",
+        "name": "Pilot: Gyro"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.UUpg8K4dENIqqvOI",
+        "name": "Pilot: Vectored Thrust"
+      }
+    ]
+  },
+  "_id": "Gr3vppCH3ENkDLrL",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.5",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1780331851656,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!Gr3vppCH3ENkDLrL"
+}

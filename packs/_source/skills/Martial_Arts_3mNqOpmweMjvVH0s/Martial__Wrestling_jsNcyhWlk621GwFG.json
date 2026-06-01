@@ -1,0 +1,54 @@
+{
+  "name": "Martial: Wrestling",
+  "type": "skill",
+  "folder": "3mNqOpmweMjvVH0s",
+  "system": {
+    "flavor": "Combines Olympic and professional wrestling, using a wide variety of throws and holds to incapacitate the opponent.",
+    "notes": "",
+    "source": "Core Rulebook, p.41",
+    "level": 0,
+    "ipLevel": 0,
+    "chipLevel": 0,
+    "ip": 0,
+    "diffMod": 1,
+    "isChipped": false,
+    "isRoleSkill": false,
+    "stat": "ref",
+    "askMods": false,
+    "isMartial": true,
+    "martial": {
+      "strike": 0,
+      "grapple": 4,
+      "kick": 0,
+      "hold": 4,
+      "parry": 0,
+      "choke": 2,
+      "dodge": 0,
+      "throw": 3,
+      "escape": 4,
+      "sweep": 2,
+      "disarm": 0,
+      "ram": 0
+    }
+  },
+  "_id": "jsNcyhWlk621GwFG",
+  "img": "systems/cyberpunk/img/svg/placeholder-skill.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494938557,
+    "modifiedTime": 1772494938557,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!jsNcyhWlk621GwFG"
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Aquatic Nomad",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Ocean-going nomad with deep ties to the sea.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "PUNK '21 Vol.1 Issue 2, p.43",
+    "specialAbility": {
+      "name": "Marine Instinct",
+      "description": "Added to Empathy in all marine situations and leadership. Includes Nomad family ability near water."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.EsbefJWzFtUOqwqN",
+      "name": "Marine Instinct"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.t2kmLoHuHU4tyPO4",
+        "name": "Astral Navigation"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KOL1AiarnKziTrFA",
+        "name": "Marine Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.0iXVIOKMraySRbho",
+        "name": "Expert: Ocean Lifeforms"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Mc2lsNo6uWjvNyky",
+        "name": "Pilot: Sub"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.dkeD1tLGeEKtBHog",
+        "name": "Heavy Weapons"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Ku34FICT5y313V6y",
+        "name": "Expert: Vessel ID"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OWT7RP3emRUcW8w1",
+        "name": "Pilot: Ship"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.VVqNTPXs1kTBhf56",
+        "name": "Water Vehicles"
+      }
+    ]
+  },
+  "_id": "qNUDL07bEKaSXg75",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!qNUDL07bEKaSXg75"
+}

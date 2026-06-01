@@ -1,0 +1,84 @@
+{
+  "name": "Tabloid-Monger",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Sensationalist journalist. The crazier the story, the better.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Live and Direct, p.53",
+    "specialAbility": {
+      "name": "Credibility",
+      "description": "A sort of anti-credibility — the crazier the better."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.eLV8jZTEFhwAwUMp",
+      "name": "Credibility"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.C4S1UWvM4McF2pHI",
+        "name": "Composition"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.jyZ2uzPkI1XHRqPf",
+        "name": "Perform"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zWypBZBLKTJW6NOA",
+        "name": "Education & General Knowledge"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz",
+        "name": "Driving"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.0BeGztoQiQdr75n7",
+        "name": "Electronics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.JucG8rxAZ8sdrMkM",
+        "name": "Interview"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lR8vyv0AbqZcOBlA",
+        "name": "Streetwise"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8h27L4592ORdrI6m",
+        "name": "Photography & Film"
+      }
+    ]
+  },
+  "_id": "FmSX2dJPqwl0S2ml",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!FmSX2dJPqwl0S2ml"
+}

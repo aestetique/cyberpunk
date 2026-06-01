@@ -1,0 +1,80 @@
+{
+  "name": "Nomad",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Agripacks, Native Americans, Gypsies, Carnies, Bikers. Seven Nations of road warriors.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Core Rulebook, p.14",
+    "specialAbility": {
+      "name": "Family",
+      "description": "Ability to call upon your pack for help."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.2PesdDHV0dDBtr1M",
+      "name": "Family"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8EsYuEZYIWAsMHXt",
+        "name": "Endurance"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.YEVYHcVPiLcr6BBj",
+        "name": "Rifle"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz",
+        "name": "Driving"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.gr6XAkOyh1quNEyA",
+        "name": "Wilderness Survival"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zIS6P8CbO9nkMiS3",
+        "name": "Athletics"
+      }
+    ]
+  },
+  "_id": "iYgxtQkUiK8B6f4I",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!iYgxtQkUiK8B6f4I"
+}

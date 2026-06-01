@@ -1,0 +1,88 @@
+{
+  "name": "War Correspondent",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Journalist covering armed conflicts and dangerous situations.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Live and Direct, p.51",
+    "specialAbility": {
+      "name": "Credibility",
+      "description": "The ability to be believed."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.eLV8jZTEFhwAwUMp",
+      "name": "Credibility"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.C4S1UWvM4McF2pHI",
+        "name": "Composition"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.m45zKvPpjD13V0kf",
+        "name": "Human Perception"
+      },
+      {
+        "name": "Endurance",
+        "uuid": "Compendium.cyberpunk.skills.Item.8EsYuEZYIWAsMHXt"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zWypBZBLKTJW6NOA",
+        "name": "Education & General Knowledge"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.0BeGztoQiQdr75n7",
+        "name": "Electronics"
+      },
+      {
+        "name": "Basic Tech",
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.JucG8rxAZ8sdrMkM",
+        "name": "Interview"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.olU9C6Hf2zWSWsyw",
+        "name": "Tactics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8h27L4592ORdrI6m",
+        "name": "Photography & Film"
+      }
+    ]
+  },
+  "_id": "sBy6RHZAzvnqPGnx",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772495666507,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!sBy6RHZAzvnqPGnx"
+}

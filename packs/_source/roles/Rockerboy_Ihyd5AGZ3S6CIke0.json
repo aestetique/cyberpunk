@@ -1,0 +1,80 @@
+{
+  "name": "Rockerboy",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Braindancer, underground revolutionary, rock musician.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Core Rulebook, p.6",
+    "specialAbility": {
+      "name": "Charismatic Leadership",
+      "description": "Can sway crowds equal to level squared times 200."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.7BjTuHuNZH6ShNYP",
+      "name": "Charismatic Leadership"
+    },
+    "careerSkills": [
+      {
+        "name": "Awareness/Notice",
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ"
+      },
+      {
+        "name": "Perform",
+        "uuid": "Compendium.cyberpunk.skills.Item.jyZ2uzPkI1XHRqPf"
+      },
+      {
+        "name": "Wardrobe & Style",
+        "uuid": "Compendium.cyberpunk.skills.Item.CXVY0NgWZPPVWFKF"
+      },
+      {
+        "name": "Composition",
+        "uuid": "Compendium.cyberpunk.skills.Item.C4S1UWvM4McF2pHI"
+      },
+      {
+        "name": "Brawling",
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk"
+      },
+      {
+        "name": "Play Instrument",
+        "uuid": "Compendium.cyberpunk.skills.Item.9XKs4Ir9NwQony5e"
+      },
+      {
+        "name": "Streetwise",
+        "uuid": "Compendium.cyberpunk.skills.Item.lR8vyv0AbqZcOBlA"
+      },
+      {
+        "name": "Persuasion & Fast Talk",
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv"
+      },
+      {
+        "name": "Seduction",
+        "uuid": "Compendium.cyberpunk.skills.Item.LUxt5ZiC8zDL9wax"
+      }
+    ]
+  },
+  "_id": "Ihyd5AGZ3S6CIke0",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772500616009,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!Ihyd5AGZ3S6CIke0"
+}

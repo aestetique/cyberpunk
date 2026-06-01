@@ -1,0 +1,80 @@
+{
+  "name": "Credshark",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Digital-age loan shark using electronic means to track and collect.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Wildside, p.26",
+    "specialAbility": {
+      "name": "Streetdeal",
+      "description": "The ability to deal with the underground information network."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.sm8ktX2I1OYONAMm",
+      "name": "Streetdeal"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd",
+        "name": "Intimidate"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.HTjCmua9STRVMnIf",
+        "name": "System Knowledge"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.93OA83SGN4rslk2O",
+        "name": "Accounting"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.M5KR3PwTG0a6XRar",
+        "name": "Programming"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.0BeGztoQiQdr75n7",
+        "name": "Electronics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.JucG8rxAZ8sdrMkM",
+        "name": "Interview"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      }
+    ]
+  },
+  "_id": "P4OTyXKsW0fxoqih",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!P4OTyXKsW0fxoqih"
+}

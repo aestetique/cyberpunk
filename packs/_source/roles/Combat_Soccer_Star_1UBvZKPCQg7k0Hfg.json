@@ -1,0 +1,76 @@
+{
+  "name": "Combat Soccer Star",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Professional combat soccer player, earning up to 80,000eb a game with superstar status.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "PUNK '21 Vol.1 Issue 1, p.41",
+    "specialAbility": {
+      "name": "Combat Sense",
+      "description": "Adds to both Awareness and Initiative in combat situations."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.XqxaugXqEjrMOcLg",
+      "name": "Combat Sense"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lQ1X0dcTeCY1q25S",
+        "name": "Combat Soccer"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.bLzSqItAymOE8LOu",
+        "name": "Strength Feat"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8EsYuEZYIWAsMHXt",
+        "name": "Endurance"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd",
+        "name": "Intimidate"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zIS6P8CbO9nkMiS3",
+        "name": "Athletics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lYN9dnOBkxTTvKbo",
+        "name": "Dodge & Escape"
+      }
+    ]
+  },
+  "_id": "1UBvZKPCQg7k0Hfg",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!1UBvZKPCQg7k0Hfg"
+}

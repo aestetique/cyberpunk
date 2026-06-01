@@ -1,7 +1,6 @@
 // This is where all the magic values go, because cyberpunk has SO many of those
 // Any given string value is the same as its key in the localization file, and will be used for translation
 import { getMartialKeyByName, localize } from './utils.js';
-import { WEAPON_TYPE_TO_CATEGORY } from './settings/skill-mapping-defaults.js';
 
 export let weaponTypes = {
     pistol: "Pistol",
@@ -15,18 +14,58 @@ export let weaponTypes = {
     exotic: "Exotic"
 }
 
-// Default attack skills (fallback when settings not initialized)
-export const DEFAULT_ATTACK_SKILLS = {
-    "Pistol": ["Handgun"],
-    "SMG": ["Submachinegun"],
-    "Shotgun": ["Rifle"],
-    "Rifle": ["Rifle"],
-    "Heavy": ["HeavyWeapons"],
-    "Bow": ["Archery"],
-    "Crossbow": ["Archery"],
-    "Melee": ["Fencing", "Melee", "Brawling"],
-    "Exotic": []
+// Skill-mapping single source of truth. Names match the shipped Skills compendium.
+// Was once configurable via a settings menu; now hardcoded since the compendium ships
+// with the system and skill names are canonical.
+export const SKILL_MAPPINGS = {
+    pistols:             ["Handgun"],
+    rifles:              ["Rifle"],
+    shotguns:            ["Rifle"],
+    submachineGuns:      ["Sub Machinegun"],
+    heavyWeapons:        ["Heavy Weapons"],
+    throw:               ["Athletics"],
+    bows:                ["Archery"],
+    crossbows:           ["Archery"],
+    meleeAttacks:        ["Fencing", "Melee", "Brawling"],
+    unarmedAttacks: [
+        "Brawling",
+        "Martial: Aikido", "Martial: Animal Kung Fu", "Martial: Arasaka-Te",
+        "Martial: Boxing", "Martial: Capoeira", "Martial: Choi Li Fut",
+        "Martial: Gun-Fu", "Martial: Jeet Kun Do", "Martial: Judo",
+        "Martial: Jujitsu", "Martial: Karate", "Martial: Koppo",
+        "Martial: Ninjutsu", "Martial: PanzerFaust", "Martial: Sambo",
+        "Martial: Savate", "Martial: Sumo", "Martial: Tae Kwon Do",
+        "Martial: Tai Chi Chuan", "Martial: Te", "Martial: Thai Kick Boxing",
+        "Martial: Thamoc", "Martial: Thrash Boxing", "Martial: Wing Chung",
+        "Martial: Wrestling"
+    ],
+    escapeSkills:        ["Dodge & Escape", "Athletics"],
+    stabilisationSkills: ["First Aid", "Medical Tech"],
+    awarenessSkills:     ["Awareness/Notice"],
+    interfaceSkills:     ["Interface"],
+    demolitionsSkills:   ["Demolitions"]
 };
+
+// Maps weapon type (Pistol/SMG/etc.) → skill-mapping category key.
+export const WEAPON_TYPE_TO_CATEGORY = {
+    "Pistol":   "pistols",
+    "SMG":      "submachineGuns",
+    "Shotgun":  "shotguns",
+    "Rifle":    "rifles",
+    "Heavy":    "heavyWeapons",
+    "Bow":      "bows",
+    "Crossbow": "crossbows",
+    "Melee":    "meleeAttacks",
+    "Exotic":   null
+};
+
+// Flat lookup by weapon type — what skill(s) does each weapon type use to attack?
+// Derived from SKILL_MAPPINGS via WEAPON_TYPE_TO_CATEGORY.
+export const attackSkills = Object.fromEntries(
+    Object.entries(WEAPON_TYPE_TO_CATEGORY).map(([wType, catKey]) =>
+        [wType, catKey ? SKILL_MAPPINGS[catKey] : []]
+    )
+);
 
 // --- Weapon card lookups ---
 
@@ -341,110 +380,55 @@ export const weaponToAmmoType = {
 };
 
 /**
- * Get attack skills for a weapon type from settings
- * @param {string} weaponType - The weapon type (Pistol, SMG, etc.)
- * @returns {string[]} Array of skill names
- */
-export function getAttackSkillsForWeapon(weaponType) {
-    // Exotic weapons get all ranged + melee attack skills (excluding unarmed)
-    if (weaponType === "Exotic") {
-        const UNARMED_SKILLS = ["Brawling"];
-        const allSkills = new Set();
-        for (const [wType, skills] of Object.entries(DEFAULT_ATTACK_SKILLS)) {
-            if (wType === "Exotic") continue;
-            for (const s of skills) {
-                if (!UNARMED_SKILLS.includes(s)) allSkills.add(s);
-            }
-        }
-        try {
-            const mappings = game.settings.get("cyberpunk", "skillMappings");
-            for (const category of Object.values(mappings)) {
-                if (category?.skills?.length) {
-                    for (const s of category.skills) allSkills.add(s.name);
-                }
-            }
-        } catch (e) { /* settings not yet initialized */ }
-        return [...allSkills].sort();
-    }
-
-    const categoryKey = WEAPON_TYPE_TO_CATEGORY[weaponType];
-    if (!categoryKey) return DEFAULT_ATTACK_SKILLS[weaponType] || [];
-
-    try {
-        const mappings = game.settings.get("cyberpunk", "skillMappings");
-        const category = mappings[categoryKey];
-        if (category?.skills?.length) {
-            return category.skills.map(s => s.name);
-        }
-    } catch (e) {
-        // Settings not yet initialized, use defaults
-        console.warn("Skill mappings not available, using defaults");
-    }
-
-    return DEFAULT_ATTACK_SKILLS[weaponType] || [];
-}
-
-/**
- * Get attack skills for ordnance items.
- * Aggregates Throw + all ranged weapon skills from settings.
- * @returns {string[]} Array of skill names
- */
-export function getAttackSkillsForOrdnance() {
-    const skills = new Set();
-
-    // Add Throw and Demolitions categories
-    try {
-        const mappings = game.settings.get("cyberpunk", "skillMappings");
-        for (const catKey of ["throw", "demolitionsSkills"]) {
-            const cat = mappings[catKey];
-            if (cat?.skills?.length) {
-                for (const s of cat.skills) skills.add(s.name);
-            }
-        }
-        // Add all ranged weapon categories
-        const rangedCategories = ["pistols", "rifles", "shotguns", "submachineGuns", "heavyWeapons", "bows", "crossbows"];
-        for (const catKey of rangedCategories) {
-            const cat = mappings[catKey];
-            if (cat?.skills?.length) {
-                for (const s of cat.skills) skills.add(s.name);
-            }
-        }
-    } catch (e) { /* settings not yet initialized */ }
-
-    // Fallback: if nothing from settings, use defaults
-    if (skills.size === 0) {
-        for (const [wType, wSkills] of Object.entries(DEFAULT_ATTACK_SKILLS)) {
-            if (wType !== "Melee" && wType !== "Exotic") {
-                for (const s of wSkills) skills.add(s);
-            }
-        }
-    }
-
-    return [...skills].sort();
-}
-
-/**
- * Get skills for a specific mapping category
- * @param {string} categoryKey - The category key (defenceSkills, escapeSkills, etc.)
- * @returns {string[]} Array of skill names
+ * Skills for a category from the hardcoded mapping.
+ * @param {string} categoryKey - e.g. "pistols", "escapeSkills"
+ * @returns {string[]} Array of skill names (canonical pack names).
  */
 export function getSkillsForCategory(categoryKey) {
-    try {
-        const mappings = game.settings.get("cyberpunk", "skillMappings");
-        const category = mappings[categoryKey];
-        if (category?.skills?.length) {
-            return category.skills.map(s => s.name);
-        }
-    } catch (e) {
-        console.warn(`Could not get skills for category ${categoryKey}`);
-    }
-    return [];
+    return SKILL_MAPPINGS[categoryKey] || [];
 }
 
 /**
- * Get the actor's Interface skill rank from the configured single-skill mapping.
+ * Attack-skill list for a weapon type.
+ * Exotic returns all weapon-type skills except unarmed (Brawling).
+ * @param {string} weaponType - "Pistol", "SMG", "Heavy", ...
+ * @returns {string[]} Array of skill names.
+ */
+export function getAttackSkillsForWeapon(weaponType) {
+    if (weaponType === "Exotic") {
+        const all = new Set();
+        for (const [wType, catKey] of Object.entries(WEAPON_TYPE_TO_CATEGORY)) {
+            if (!catKey || wType === "Exotic") continue;
+            for (const n of SKILL_MAPPINGS[catKey] || []) all.add(n);
+        }
+        all.delete("Brawling"); // unarmed, not an Exotic-weapon skill
+        return [...all].sort();
+    }
+    const catKey = WEAPON_TYPE_TO_CATEGORY[weaponType];
+    return catKey ? [...(SKILL_MAPPINGS[catKey] || [])] : [];
+}
+
+/**
+ * Aggregate of all ordnance-relevant skills: Throw + Demolitions + every ranged weapon category.
+ * @returns {string[]} Sorted, deduped list of skill names.
+ */
+export function getAttackSkillsForOrdnance() {
+    const result = new Set();
+    const ordnanceCategories = [
+        "throw", "demolitionsSkills",
+        "pistols", "rifles", "shotguns", "submachineGuns",
+        "heavyWeapons", "bows", "crossbows"
+    ];
+    for (const cat of ordnanceCategories) {
+        for (const n of SKILL_MAPPINGS[cat] || []) result.add(n);
+    }
+    return [...result].sort();
+}
+
+/**
+ * Get the actor's Interface skill rank from the mapping.
  * @param {Actor} actor
- * @returns {number} Skill rank, or 0 if no mapping or skill not found.
+ * @returns {number} Skill rank, or 0 if not found.
  */
 export function getInterfaceSkillRank(actor) {
     const names = getSkillsForCategory("interfaceSkills");
@@ -452,16 +436,6 @@ export function getInterfaceSkillRank(actor) {
     const skill = actor.itemTypes.skill?.find(s => names.includes(s.name));
     return Number(skill?.system?.level) || 0;
 }
-
-// For backward compatibility - dynamic proxy that reads from settings
-export let attackSkills = new Proxy(DEFAULT_ATTACK_SKILLS, {
-    get(target, prop) {
-        if (typeof prop === "string" && prop in target) {
-            return getAttackSkillsForWeapon(prop);
-        }
-        return target[prop];
-    }
-})
 
 export function getStatNames() {
   // v13+

@@ -1,0 +1,54 @@
+{
+  "name": "Pilot: Remote",
+  "type": "skill",
+  "folder": "ZthgEOpUwCJXvqRM",
+  "system": {
+    "flavor": "The skill of piloting remote-controlled vehicles and drones. Uses (INT+REF)/2.",
+    "notes": "",
+    "source": "Chromebook 2, p.30",
+    "level": 0,
+    "ipLevel": 0,
+    "chipLevel": 0,
+    "ip": 0,
+    "diffMod": 3,
+    "isChipped": false,
+    "isRoleSkill": false,
+    "stat": "ref",
+    "askMods": false,
+    "isMartial": false,
+    "martial": {
+      "strike": 0,
+      "grapple": 0,
+      "kick": 0,
+      "hold": 0,
+      "parry": 0,
+      "choke": 0,
+      "dodge": 0,
+      "throw": 0,
+      "escape": 0,
+      "sweep": 0,
+      "disarm": 0,
+      "ram": 0
+    }
+  },
+  "_id": "gzmOd1obRF5g0J2s",
+  "img": "systems/cyberpunk/img/svg/placeholder-skill.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494938557,
+    "modifiedTime": 1772494938557,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!gzmOd1obRF5g0J2s"
+}

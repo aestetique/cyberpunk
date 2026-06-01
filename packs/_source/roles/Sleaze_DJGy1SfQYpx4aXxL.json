@@ -1,0 +1,80 @@
+{
+  "name": "Sleaze",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Street-level thief and con artist.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Wildside, p.24",
+    "specialAbility": {
+      "name": "Streetdeal",
+      "description": "The ability to deal with the underground information network."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.sm8ktX2I1OYONAMm",
+      "name": "Streetdeal"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8Wi9CP1o81fwfyja",
+        "name": "Forgery"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.z7vJZiUi97JBMulq",
+        "name": "Pick Lock"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.bRR79TEemqIzVNQd",
+        "name": "Pick Pocket"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd",
+        "name": "Intimidate"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      }
+    ]
+  },
+  "_id": "DJGy1SfQYpx4aXxL",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!DJGy1SfQYpx4aXxL"
+}

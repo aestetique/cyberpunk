@@ -1,0 +1,68 @@
+{
+  "name": "Black Marketeer",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Underground dealer in contraband goods. Specialties: Braindance, Weapons, Cybernetics, Body Parts, Electronics, Cars, Slavery, Wetware, or Software.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Wildside, p.20",
+    "specialAbility": {
+      "name": "Streetdeal",
+      "description": "The ability to deal with the underground information network."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.sm8ktX2I1OYONAMm",
+      "name": "Streetdeal"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.KvRkjlCUxGtptLCv",
+        "name": "Persuasion & Fast Talk"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd",
+        "name": "Intimidate"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      }
+    ]
+  },
+  "_id": "JoStUB81eYuYVOPH",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!JoStUB81eYuYVOPH"
+}

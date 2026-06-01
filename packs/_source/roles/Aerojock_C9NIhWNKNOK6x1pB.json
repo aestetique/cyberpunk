@@ -1,0 +1,84 @@
+{
+  "name": "Aerojock",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "You took to the skies like a duck to water. There's nothing you can't fly.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Shockwave, p.28",
+    "specialAbility": {
+      "name": "Aircraft Sense",
+      "description": "Adds to Awareness/Notice & Initiative rolls, and half level to maneuvering rolls while in aircraft."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.pfMaDmSygajBEoWH",
+      "name": "Aircraft Sense"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.xN3CqCZG13UrjUcQ",
+        "name": "Pilot: Fixed Wing"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.CRpjCbWSf0vlXtlt",
+        "name": "Pilot: Gyro"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Twi6IfORqsxGYfYe",
+        "name": "Aero Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ZwDthKsrhrPan6lL",
+        "name": "AV Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zIS6P8CbO9nkMiS3",
+        "name": "Athletics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lc1fvRRbAUuUVwSV",
+        "name": "Expert: Navigation"
+      }
+    ]
+  },
+  "_id": "C9NIhWNKNOK6x1pB",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!C9NIhWNKNOK6x1pB"
+}

@@ -1,0 +1,54 @@
+{
+  "name": "Martial: Boxing",
+  "type": "skill",
+  "folder": "3mNqOpmweMjvVH0s",
+  "system": {
+    "flavor": "The manly art of fisticuffs, stressing powerful punches and a tight blocking defense.",
+    "notes": "",
+    "source": "Core Rulebook, p.41",
+    "level": 0,
+    "ipLevel": 0,
+    "chipLevel": 0,
+    "ip": 0,
+    "diffMod": 1,
+    "isChipped": false,
+    "isRoleSkill": false,
+    "stat": "ref",
+    "askMods": false,
+    "isMartial": true,
+    "martial": {
+      "strike": 3,
+      "grapple": 0,
+      "kick": 0,
+      "hold": 0,
+      "parry": 1,
+      "choke": 0,
+      "dodge": 0,
+      "throw": 0,
+      "escape": 0,
+      "sweep": 3,
+      "disarm": 0,
+      "ram": 0
+    }
+  },
+  "_id": "wcwAmEzeLGwCMxQ9",
+  "img": "systems/cyberpunk/img/svg/placeholder-skill.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494938557,
+    "modifiedTime": 1772494938557,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!wcwAmEzeLGwCMxQ9"
+}

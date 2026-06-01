@@ -1,0 +1,92 @@
+{
+  "name": "Panzerboy",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Your home is the wide-open spaces and open road, flying low with a cargo in back and an overpowered engine out front.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Shockwave, p.27",
+    "specialAbility": {
+      "name": "Vehicle Zen",
+      "description": "Adds to Awareness/Notice & Initiative, and half level to maneuvering rolls while in ground vehicles/hovercraft."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.xgtWQjjOXdUjKnXS",
+      "name": "Vehicle Zen"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NM4NOSSz6a6UMU5B",
+        "name": "Pilot: Hovercraft"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.N3GHCwiWkf3tQcMd",
+        "name": "Basic Tech"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Dye8VHlLnX2LJpDk",
+        "name": "Brawling"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lc1fvRRbAUuUVwSV",
+        "name": "Expert: Navigation"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.dkeD1tLGeEKtBHog",
+        "name": "Heavy Weapons"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.YEVYHcVPiLcr6BBj",
+        "name": "Rifle"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.kbfc6xFH8UC7dIRb",
+        "name": "Operate Heavy Machinery"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz",
+        "name": "Driving"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.gOvKlQtNeWuHZ340",
+        "name": "Motorcycle"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.IT2K5kY0c49CpsY1",
+        "name": "Sub Machinegun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      }
+    ]
+  },
+  "_id": "pDY7EI7EJQrJZE1a",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!pDY7EI7EJQrJZE1a"
+}

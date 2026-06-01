@@ -1,0 +1,80 @@
+{
+  "name": "Divemaster",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "You love the sea, or more specifically, being a part of the world under the water.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Stormfront, p.24",
+    "specialAbility": {
+      "name": "Aquatic Sense",
+      "description": "Adds full level to Awareness/Notice, and half level to Initiative while underwater."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.kkJE8fVoa2bjm6yY",
+      "name": "Aquatic Sense"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.IOADIvwBSsESEPvU",
+        "name": "Swimming"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8EsYuEZYIWAsMHXt",
+        "name": "Endurance"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.m45zKvPpjD13V0kf",
+        "name": "Human Perception"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.O9RPb95HUvwTBokJ",
+        "name": "Leadership"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.0IbVJdtW1N9eNdHQ",
+        "name": "Nuscuba"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.UQhNr7hI4UJ1FG6R",
+        "name": "Pilot: Deep Dive Suit"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.czMmwpK3y5oC7IlV",
+        "name": "Pilot: Hardshell"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.npdNJeTeRHnkPVfV",
+        "name": "Underwater Weapons"
+      }
+    ]
+  },
+  "_id": "BBDLbVFKhWadSr6m",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!BBDLbVFKhWadSr6m"
+}

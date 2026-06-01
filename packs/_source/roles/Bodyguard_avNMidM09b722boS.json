@@ -1,0 +1,100 @@
+{
+  "name": "Bodyguard",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Professional protector and personal security specialist.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Interface Vol.1 No.3, p.47",
+    "specialAbility": {
+      "name": "Combat Sense",
+      "description": "Adds to both Awareness and Initiative in combat situations."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.XqxaugXqEjrMOcLg",
+      "name": "Combat Sense"
+    },
+    "careerSkills": [
+      {
+        "name": "Handgun",
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1"
+      },
+      {
+        "name": "Sub Machinegun",
+        "uuid": "Compendium.cyberpunk.skills.Item.IT2K5kY0c49CpsY1"
+      },
+      {
+        "name": "Personal Grooming",
+        "uuid": "Compendium.cyberpunk.skills.Item.M6WjsOuMbzzCJ2pO"
+      },
+      {
+        "name": "Wardrobe & Style",
+        "uuid": "Compendium.cyberpunk.skills.Item.CXVY0NgWZPPVWFKF"
+      },
+      {
+        "name": "Social",
+        "uuid": "Compendium.cyberpunk.skills.Item.Pdn1uLnroMmUyjre"
+      },
+      {
+        "name": "Driving",
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz"
+      },
+      {
+        "name": "Intimidate",
+        "uuid": "Compendium.cyberpunk.skills.Item.GM73pblGcMAw0PCd"
+      },
+      {
+        "name": "Human Perception",
+        "uuid": "Compendium.cyberpunk.skills.Item.m45zKvPpjD13V0kf"
+      },
+      {
+        "name": "Melee",
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL"
+      },
+      {
+        "name": "Awareness/Notice",
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ"
+      },
+      {
+        "name": "Electronic Security",
+        "uuid": "Compendium.cyberpunk.skills.Item.HFzdWPCZffJg7wvj"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.xN3CqCZG13UrjUcQ",
+        "name": "Pilot: Fixed Wing"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.CRpjCbWSf0vlXtlt",
+        "name": "Pilot: Gyro"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.UUpg8K4dENIqqvOI",
+        "name": "Pilot: Vectored Thrust"
+      }
+    ]
+  },
+  "_id": "avNMidM09b722boS",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.5",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1780330870913,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!avNMidM09b722boS"
+}

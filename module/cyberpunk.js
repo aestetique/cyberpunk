@@ -28,7 +28,7 @@ import "./tah/init.js";
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
 import * as migrations from "./migrate.js";
-import { registerSystemSettings, migrateSkillMappings } from "./settings.js"
+import { registerSystemSettings } from "./settings.js"
 
 Hooks.once('init', async function () {
 
@@ -228,9 +228,6 @@ async function _migrateConditionNames() {
 Hooks.once("ready", async function() {
     // Determine whether a system migration is required and feasible
     if ( !game.user.isGM ) return;
-
-    // Reconcile skill mappings with current defaults (add new, remove obsolete)
-    migrateSkillMappings();
 
     // Fix any existing ActiveEffects with unlocalized condition names
     _migrateConditionNames();

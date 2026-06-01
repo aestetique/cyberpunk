@@ -107,9 +107,6 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/item/parts/role/summary.hbs",
         "systems/cyberpunk/templates/item/parts/role/settings.hbs",
 
-        // Settings
-        "systems/cyberpunk/templates/settings/skill-mapping-config.hbs",
-
     ]);
   };
   

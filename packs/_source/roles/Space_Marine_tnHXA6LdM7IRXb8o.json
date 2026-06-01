@@ -1,0 +1,92 @@
+{
+  "name": "Space Marine",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Elite squads of cybered warriors with armored worksuits and heavily-armed spaceplanes.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Deep Space, p.76",
+    "specialAbility": {
+      "name": "Space Combat",
+      "description": "Adds to Zero-G Combat and Zero-G Maneuver when involved in space-based combats."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.PEaUxzMULPVeAJft",
+      "name": "Space Combat"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.kPIfg06jo8MWBLKR",
+        "name": "Space Survival"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.Xe7hX8bMQPvLDa3h",
+        "name": "EVA"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.sBSXo0DXZrOTaJqb",
+        "name": "Zero-G Maneuver"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.dzboRBdOcuxNR0g8",
+        "name": "Zero-G Combat"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.SToDeLvwEAsjpNvu",
+        "name": "Pilot: OTV"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.NzOvKr5iqw11jrjz",
+        "name": "Driving"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.gOvKlQtNeWuHZ340",
+        "name": "Motorcycle"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.certlnd58KDZWWr1",
+        "name": "Handgun"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.YEVYHcVPiLcr6BBj",
+        "name": "Rifle"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.IT2K5kY0c49CpsY1",
+        "name": "Sub Machinegun"
+      }
+    ]
+  },
+  "_id": "tnHXA6LdM7IRXb8o",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!tnHXA6LdM7IRXb8o"
+}

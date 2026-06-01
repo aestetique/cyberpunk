@@ -1,0 +1,80 @@
+{
+  "name": "Inquisitor Predator",
+  "type": "role",
+  "folder": null,
+  "system": {
+    "flavor": "Predators seek out CyberVamps and humans who use cybernetics to mimic supernatural creatures.",
+    "notes": "",
+    "cost": 0,
+    "weight": 0,
+    "availability": "common",
+    "equipped": false,
+    "source": "Night's Edge, p.15",
+    "specialAbility": {
+      "name": "Ranking",
+      "description": "Works like Gang Rank. Represents standing within the Inquisitor organization."
+    },
+    "specialSkill": {
+      "uuid": "Compendium.cyberpunk.skills.Item.eyV0Q659tusj3k79",
+      "name": "Ranking"
+    },
+    "careerSkills": [
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.OnPqPYxHVsucA6hJ",
+        "name": "Awareness/Notice"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.K5TGwJRIdJAel7Qe",
+        "name": "Martial: Tae Kwon Do"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.zIS6P8CbO9nkMiS3",
+        "name": "Athletics"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.lYN9dnOBkxTTvKbo",
+        "name": "Dodge & Escape"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ECffcV0OmyLfwcuL",
+        "name": "Melee"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.iZD272iqL9eHn3Dq",
+        "name": "Stealth"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.ykXU0KYF56kLeQ1T",
+        "name": "Vampire Lore"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.bLzSqItAymOE8LOu",
+        "name": "Strength Feat"
+      },
+      {
+        "uuid": "Compendium.cyberpunk.skills.Item.8EsYuEZYIWAsMHXt",
+        "name": "Endurance"
+      }
+    ]
+  },
+  "_id": "K83rnROWH5wX2TyA",
+  "img": "systems/cyberpunk/img/svg/placeholder-role.svg",
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "coreVersion": "13.350",
+    "systemId": "cyberpunk",
+    "systemVersion": "1.0.4",
+    "createdTime": 1772494978905,
+    "modifiedTime": 1772494978905,
+    "lastModifiedBy": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!K83rnROWH5wX2TyA"
+}

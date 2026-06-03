@@ -1,8 +1,7 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoWeaponTypes, ammoCalibersByWeaponType, ammoTypes, ammoAbbreviations, weaponToAmmoType, ordnanceTemplateTypes, exoticEffects, toolBonusProperties, cyberwareSubtypes, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, exoticEffects, toolBonusProperties, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
 import { localize, tabBeautifying, toTitleCase, bindHoverTooltips } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
-import { ReloadDialog } from "../dialog/reload-dialog.js"
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
 import { RangeSelectionDialog } from "../dialog/range-selection-dialog.js"
 import { MeleeAttackDialog } from "../dialog/melee-attack-dialog.js"
@@ -18,7 +17,9 @@ import { CreateItemDialog } from "../dialog/create-item-dialog.js"
 import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
-import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles } from "./gear-data.js"
+import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext } from "./gear-data.js"
+import { calibers as CALIBERS } from "../calibers.js"
+import { rangedClasses, martialClasses } from "../lookups.js"
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 
 /**
@@ -1010,13 +1011,28 @@ export class CyberpunkActorSheet extends ActorSheet {
     const weaponsList = buildWeaponsList(this.actor);
 
     // Prepare cyberweapons data (cyberware with embedded weapon)
+    // Handles BOTH legacy weaponType ("Pistol"/"Melee"/"Exotic") and the new
+    // 5-category discriminator ("Ranged"/"Martial"/"Exotic"/...).
+    const LEGACY_DISCRIM = {
+      Pistol:"Ranged", SMG:"Ranged", Shotgun:"Ranged", Rifle:"Ranged", Heavy:"Ranged",
+      Bow:"Martial", Crossbow:"Martial", Melee:"Martial", Exotic:"Exotic"
+    };
     const cyberweaponsList = allCyberweapons.map(c => {
       const sys = c.system;
       const weapon = sys.weapon || {};
-      const wType = weapon.weaponType || '';
-      const isRanged = !['Melee', 'Exotic'].includes(wType);
-      const isMelee = wType === 'Melee';
-      const isExotic = wType === 'Exotic';
+      const rawType = weapon.weaponType || '';
+      const effectiveType = LEGACY_DISCRIM[rawType] || rawType;
+      const wClass = weapon.weaponClass || (LEGACY_DISCRIM[rawType] ? rawType : '');
+      const isRanged = effectiveType === "Ranged";
+      const isMelee = effectiveType === "Martial" && (rawType === "Melee" || weapon.weaponClass === "Melee");
+      const isExotic = effectiveType === "Exotic";
+
+      // Resolve the attached ammo (Ranged cyberweapons only)
+      let attachedAmmo = null;
+      if (isRanged && weapon.attachedAmmoId) {
+        attachedAmmo = this.actor.items.get(weapon.attachedAmmoId) || null;
+        if (attachedAmmo && attachedAmmo.system?.weaponType !== "Ammo") attachedAmmo = null;
+      }
 
       const rel = weapon.reliability && reliability[weapon.reliability]
         ? game.i18n.localize("CYBERPUNK." + reliability[weapon.reliability])
@@ -1028,31 +1044,45 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       let context = '';
       if (isRanged) {
-        const weaponTypeLabel = weaponTypes[wType] || wType || '';
-        const ammoKey = weaponToAmmoType[wType];
-        const calibers = ammoKey ? (ammoCalibersByWeaponType[ammoKey] || {}) : {};
-        const calLabelKey = calibers[weapon.caliber];
+        // Prefer attached ammo's caliber and ammoType; fall back to weapon's own.
+        const classKey = rangedClasses[wClass];
+        const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : (wClass || '');
+        const caliberSlug = attachedAmmo?.system?.caliber || weapon.caliber;
+        const calLabelKey = caliberSlug ? CALIBERS[caliberSlug] : null;
         const caliber = calLabelKey ? game.i18n.localize(`CYBERPUNK.${calLabelKey}`) : '';
-        const loadedAmmoLabel = getLoadedAmmoLabel(weapon.loadedAmmoType);
-        // Combine caliber and weapon type as single element (no interpunct between them)
-        const caliberWeaponType = [caliber, weaponTypeLabel].filter(p => p).join(' ');
-        const contextParts = [caliberWeaponType, rel, conc, loadedAmmoLabel, range].filter(p => p);
-        context = contextParts.join(' · ');
-      } else if (isMelee) {
+        const loadedAmmoLabel = getLoadedAmmoLabel(attachedAmmo?.system?.ammoType || weapon.loadedAmmoType);
+        const caliberClass = [caliber, classLabel].filter(p => p).join(' ');
+        const parts = [caliberClass, rel, conc, loadedAmmoLabel, range].filter(p => p);
+        context = parts.join(' · ');
+      } else if (isMelee || effectiveType === "Martial") {
         const damageTypeKey = meleeDamageTypes[weapon.damageType];
         const damageType = damageTypeKey ? game.i18n.localize(`CYBERPUNK.${damageTypeKey}`) : '';
-        const contextParts = ['Melee', damageType, rel, conc, range].filter(p => p);
-        context = contextParts.join(' · ');
+        const classKey = martialClasses[wClass];
+        const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : game.i18n.localize("CYBERPUNK.WeaponTypeMartial");
+        const parts = [classLabel, damageType, rel, conc, range].filter(p => p);
+        context = parts.join(' · ');
       } else if (isExotic) {
         const effectKey = exoticEffects[weapon.effect];
         const effect = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : '';
-        const contextParts = ['Exotic', effect, rel, conc, range].filter(p => p);
-        context = contextParts.join(' · ');
+        const parts = [game.i18n.localize("CYBERPUNK.WeaponTypeExotic"), effect, rel, conc, range].filter(p => p);
+        context = parts.join(' · ');
       } else {
-        // Fallback for unknown type
-        const contextParts = [rel, conc, range].filter(p => p);
-        context = contextParts.join(' · ');
+        const parts = [rel, conc, range].filter(p => p);
+        context = parts.join(' · ');
       }
+
+      // For Ranged, damage on the row comes from attached ammo if present
+      const effectiveDamage = isRanged
+        ? (attachedAmmo?.system?.damage || weapon.damage)
+        : weapon.damage;
+
+      // Attached-ammo addon price = cost/packSize * quantity (mirrors gear-data)
+      const attachedAmmoPrice = attachedAmmo ? (() => {
+        const aSys = attachedAmmo.system || {};
+        const pkg = Number(aSys.packSize) || 1;
+        const qty = Number(aSys.quantity) || 0;
+        return Math.round((Number(aSys.cost) || 0) / pkg * qty * 100) / 100;
+      })() : 0;
 
       return {
         id: c.id,
@@ -1061,19 +1091,28 @@ export class CyberpunkActorSheet extends ActorSheet {
         context: context,
         price: sys.cost || 0,
         weight: sys.weight || 0,
-        damage: weapon.damage && weapon.damage !== '0' && weapon.damage !== 0 ? weapon.damage : '–',
+        damage: effectiveDamage && effectiveDamage !== '0' && effectiveDamage !== 0 ? effectiveDamage : '–',
         shotsLeft: weapon.shotsLeft ?? 0,
         shots: weapon.shots ?? 0,
         charges: weapon.charges ?? 0,
         chargesMax: weapon.chargesMax ?? 0,
         chargesDisplay: (weapon.charges || weapon.chargesMax) ? `${weapon.charges ?? 0} / ${weapon.chargesMax ?? 0}` : '–',
         rof: weapon.rof ?? 1,
-        canReload: (weapon.shotsLeft ?? 0) < (weapon.shots ?? 0),
+        canReload: isRanged && !!weapon.attachedAmmoId && (weapon.shotsLeft ?? 0) < (weapon.shots ?? 0),
         canCharge: (weapon.charges ?? 0) < (weapon.chargesMax ?? 0),
         isCyberware: true,
         isRanged: isRanged,
         isMelee: isMelee,
-        isExotic: isExotic
+        isExotic: isExotic,
+        // Attached-ammo addon row data (mirrors buildWeaponsList)
+        hasAttachedAmmo: !!attachedAmmo,
+        attachedAmmoId: attachedAmmo?.id || '',
+        attachedAmmoName: attachedAmmo?.name || '',
+        attachedAmmoImg: attachedAmmo?.img || '',
+        attachedAmmoQuantity: attachedAmmo?.system?.quantity ?? 0,
+        attachedAmmoContext: attachedAmmo ? buildAmmoContext(attachedAmmo.system) : '',
+        attachedAmmoPrice,
+        attachedAmmoWeight: attachedAmmo?.system?.weight ?? 0
       };
     });
 
@@ -3303,15 +3342,52 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
     }
 
-    // Handle ammo drops — stack by source UUID
-    if (item.type === "ammo") {
-      const droppedUuid = item.uuid;
-      const packQty = Number(item.system.packSize) || 20;
+    // Handle ammo drops — drop on a weapon row attaches; otherwise stack by source UUID.
+    // Recognises both new (type=weapon, weaponType=Ammo) and legacy (type=ammo) shapes.
+    const isAmmo = item.type === "weapon" && item.system?.weaponType === "Ammo";
+    if (isAmmo) {
+      // Drop on a weapon row → attempt attachment to that Ranged weapon
+      const dropTarget = event?.target?.closest?.('.gear-row[data-item-id]');
+      const targetId = dropTarget?.dataset?.itemId;
+      if (targetId && targetId !== "unarmed") {
+        const targetWeapon = this.actor.items.get(targetId);
+        // Accept both standalone weapons AND cyberware-as-weapon. Use _getWeaponType
+        // to read the discriminator (handles both system.weaponType and
+        // system.weapon.weaponType via the weaponData getter).
+        const isStandaloneRanged = targetWeapon?.type === "weapon"
+            && targetWeapon.system?.weaponType === "Ranged";
+        const isCyberweapon = targetWeapon?.type === "cyberware"
+            && targetWeapon.system?.isWeapon
+            && (targetWeapon.system?.weapon?.weaponType === "Ranged"
+                || (typeof targetWeapon._getWeaponType === "function" && targetWeapon._getWeaponType() === "Ranged"));
+        if ((isStandaloneRanged || isCyberweapon)
+            && typeof targetWeapon._attachAmmo === "function") {
+          // Make sure the ammo lives on the actor first
+          let ammoOnActor = item;
+          if (item.parent?.id !== this.actor.id) {
+            const newData = item.toObject();
+            newData.type = "weapon";
+            newData.system = newData.system || {};
+            newData.system.weaponType = "Ammo";
+            newData.system.quantity = Number(item.system?.packSize) || 20;
+            newData.system.sourceUuid = item.uuid;
+            const [created] = await this.actor.createEmbeddedDocuments("Item", [newData]);
+            ammoOnActor = created;
+          }
+          await targetWeapon._attachAmmo(ammoOnActor);
+          return;
+        }
+      }
 
-      // Stack onto existing ammo from the same source
-      const existing = this.actor.items.find(i =>
-        i.type === "ammo" && i.system.sourceUuid === droppedUuid
-      );
+      // Fall through: stack by source UUID
+      const droppedUuid = item.uuid;
+      const packQty = Number(item.system?.packSize) || 20;
+
+      const existing = this.actor.items.find(i => {
+        if (i.type !== "weapon") return false;
+        if (i.system?.weaponType !== "Ammo") return false;
+        return i.system?.sourceUuid === droppedUuid;
+      });
       if (existing) {
         const newQty = (Number(existing.system.quantity) || 0) + packQty;
         return this.actor.updateEmbeddedDocuments("Item", [{
@@ -3320,8 +3396,11 @@ export class CyberpunkActorSheet extends ActorSheet {
         }]);
       }
 
-      // Create new ammo item, storing the source UUID
+      // Create new ammo item on actor (always as type=weapon, weaponType=Ammo)
       const newData = item.toObject();
+      newData.type = "weapon";
+      newData.system = newData.system || {};
+      newData.system.weaponType = "Ammo";
       newData.system.quantity = packQty;
       newData.system.sourceUuid = droppedUuid;
       return this.actor.createEmbeddedDocuments("Item", [newData]);
@@ -3356,24 +3435,6 @@ export class CyberpunkActorSheet extends ActorSheet {
       const newData = item.toObject();
       newData.system.quantity = 1;
       newData.system.equipped = false;
-      return this.actor.createEmbeddedDocuments("Item", [newData]);
-    }
-
-    // Handle ordnance drops — stack by name, increase charges
-    if (item.type === "ordnance") {
-      const existingOrdnance = this.actor.items.find(i =>
-        i.type === "ordnance" && i.name === item.name
-      );
-      if (existingOrdnance) {
-        const currentCharges = existingOrdnance.system.charges || 0;
-        return this.actor.updateEmbeddedDocuments("Item", [{
-          _id: existingOrdnance.id,
-          "system.charges": currentCharges + 1
-        }]);
-      }
-      // Create new with charges=1
-      const newData = item.toObject();
-      newData.system.charges = 1;
       return this.actor.createEmbeddedDocuments("Item", [newData]);
     }
 

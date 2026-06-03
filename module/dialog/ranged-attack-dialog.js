@@ -1,6 +1,5 @@
-import { fireModes, weaponToAmmoType } from "../lookups.js";
+import { fireModes } from "../lookups.js";
 import { RangeSelectionDialog } from "./range-selection-dialog.js";
-import { ReloadDialog } from "./reload-dialog.js";
 
 /**
  * Ranged Attack Dialog — select fire mode before opening attack modifiers.
@@ -36,35 +35,42 @@ export class RangedAttackDialog extends Application {
 
   /** @override */
   getData() {
-    const rof = Number(this.weapon.weaponData.rof) || 1;
-    const shotsLeft = Number(this.weapon.weaponData.shotsLeft) || 0;
-    const hasAmmo = this._hasCompatibleAmmo();
+    const wd = this.weapon.weaponData;
+    const rof = Number(wd.rof) || 1;
+    // Use the resource abstraction so Exotic weapons (charges) work too.
+    const ammoLeft = (typeof this.weapon._getAmmoLeft === "function")
+      ? this.weapon._getAmmoLeft()
+      : (Number(wd.shotsLeft) || 0);
+    const shots = Number(wd.shots) || 0;
+    // Reload makes sense only when there's an ammo pile AND the magazine
+    // isn't already full. Exotic has no pile concept → never reloadable.
+    const isRanged = (typeof this.weapon._getWeaponType === "function")
+      ? this.weapon._getWeaponType() === "Ranged"
+      : true;
+    const hasAmmoPile = this._hasCompatibleAmmo();
+    const canReload = isRanged && hasAmmoPile && ammoLeft < shots;
 
     return {
       weaponName: this.weapon.name,
-      showFullAuto: rof > 3 && shotsLeft > 3,
-      showBurst: rof >= 3 && shotsLeft >= 3,
-      showTwoRoundBurst: rof === 2 && shotsLeft >= 2,
-      showSingleShot: shotsLeft >= 1,
-      outOfAmmo: shotsLeft < 1,
-      showReload: hasAmmo
+      showFullAuto: rof > 3 && ammoLeft > 3,
+      showBurst: rof >= 3 && ammoLeft >= 3,
+      showTwoRoundBurst: rof === 2 && ammoLeft >= 2,
+      showSingleShot: ammoLeft >= 1,
+      outOfAmmo: ammoLeft < 1,
+      showReload: canReload
     };
   }
 
   /**
-   * Check if the actor has compatible ammo for this weapon
+   * Whether this weapon has an attached ammo pile with at least one round in it.
+   * Used to drive showReload (along with the "not full" check).
    */
   _hasCompatibleAmmo() {
-    const ammoWT = weaponToAmmoType[this.weapon.weaponData.weaponType];
-    const weaponCaliber = this.weapon.weaponData.caliber || "";
-
-    const ammoItems = (this.actor.itemTypes.ammo || []).filter(a => {
-      if (a.system.weaponType !== ammoWT) return false;
-      if (weaponCaliber && a.system.caliber !== weaponCaliber) return false;
-      return (Number(a.system.quantity) || 0) > 0;
-    });
-
-    return ammoItems.length > 0;
+    if (typeof this.weapon._getAttachedAmmo === "function") {
+      const ammo = this.weapon._getAttachedAmmo();
+      return !!ammo && (Number(ammo.system?.quantity) || 0) > 0;
+    }
+    return false;
   }
 
   /** @override */
@@ -86,9 +92,11 @@ export class RangedAttackDialog extends Application {
       this._openModifiersWithMode(mode);
     });
 
-    // Reload button
-    html.find('.reload-btn').click(() => {
-      new ReloadDialog(this.actor, this.weapon).render(true);
+    // Reload button — refill from attached ammo pile (no dialog).
+    html.find('.reload-btn').click(async () => {
+      if (typeof this.weapon._reloadFromAttached === "function") {
+        await this.weapon._reloadFromAttached();
+      }
       this.close();
     });
   }

@@ -7,9 +7,7 @@ import { CyberpunkRoleSheet } from "./item/role-sheet.js";
 import { CyberpunkSkillSheet } from "./item/skill-sheet.js";
 import { CyberpunkCommoditySheet } from "./item/commodity-sheet.js";
 import { CyberpunkOutfitSheet } from "./item/outfit-sheet.js";
-import { CyberpunkAmmoSheet } from "./item/ammo-sheet.js";
 import { CyberpunkWeaponSheet } from "./item/weapon-sheet.js";
-import { CyberpunkOrdnanceSheet } from "./item/ordnance-sheet.js";
 import { CyberpunkToolSheet } from "./item/tool-sheet.js";
 import { CyberpunkDrugSheet } from "./item/drug-sheet.js";
 import { CyberpunkNetwareSheet } from "./item/netware-sheet.js";
@@ -92,20 +90,10 @@ Hooks.once('init', async function () {
         makeDefault: true,
         label: "CYBERPUNK.OutfitSheet"
     });
-    Items.registerSheet("cyberpunk", CyberpunkAmmoSheet, {
-        types: ["ammo"],
-        makeDefault: true,
-        label: "CYBERPUNK.AmmoSheet"
-    });
     Items.registerSheet("cyberpunk", CyberpunkWeaponSheet, {
         types: ["weapon"],
         makeDefault: true,
         label: "CYBERPUNK.WeaponSheet"
-    });
-    Items.registerSheet("cyberpunk", CyberpunkOrdnanceSheet, {
-        types: ["ordnance"],
-        makeDefault: true,
-        label: "CYBERPUNK.OrdnanceSheet"
     });
     Items.registerSheet("cyberpunk", CyberpunkToolSheet, {
         types: ["tool"],
@@ -236,11 +224,14 @@ Hooks.once("ready", async function() {
     // We do need to try migrating if we haven't run before - as it stands, previous worlds didn't use this setting, or by default had it set to current version
 
     // The version migrations need to begin - if you make a change from 0.1 to 0.2, this should be 0.2
-    const NEEDS_MIGRATION_VERSION = "1.0.5";
+    // 2.0.3: weapon/ammo/ordnance unified into single weapon type with weaponType discriminator
+    // 2.0.4: cyberware embedded weapons get full migration parity (caliber map, dead-field drops, Martial reset)
+    // 2.0.5: caliber → damage table; Ranged + non-grenade Ammo damage locked to caliber; 30_30_C → 30_06_C remap
+    const NEEDS_MIGRATION_VERSION = "2.0.5";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;
-    migrations.migrateWorld();
+    migrations.migrateWorld(NEEDS_MIGRATION_VERSION);
 });
 
 /**

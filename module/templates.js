@@ -11,12 +11,10 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/actor/parts/gear.hbs",
         "systems/cyberpunk/templates/actor/parts/weapons-block.hbs",
         "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs",
-        "systems/cyberpunk/templates/actor/parts/ammo-block.hbs",
         "systems/cyberpunk/templates/actor/parts/drone-skills-block.hbs",
         "systems/cyberpunk/templates/actor/parts/cover-row.hbs",
         "systems/cyberpunk/templates/actor/parts/conditions-block.hbs",
         "systems/cyberpunk/templates/actor/parts/cyberware.hbs",
-        "systems/cyberpunk/templates/actor/parts/combat.hbs",
         "systems/cyberpunk/templates/actor/parts/armor-display.hbs",
         "systems/cyberpunk/templates/actor/parts/netrunning.hbs",
 

@@ -294,6 +294,7 @@ export class CyberpunkDroneSheet extends ActorSheet {
     sheetData.weapons = buildWeaponsList(actor);
     sheetData.ordnanceItems = buildOrdnanceList(actor);
     sheetData.ammoItems = buildAmmoList(actor);
+    sheetData.hasWeaponsOrAmmo = sheetData.weapons.length > 0 || sheetData.ammoItems.length > 0;
     sheetData.isUnlocked = !this._isLocked;
 
     // ----- Cover -----
@@ -328,7 +329,7 @@ export class CyberpunkDroneSheet extends ActorSheet {
     html.find('.add-item-fab').click(ev => {
       ev.preventDefault();
       new CreateItemDialog(this.actor, {
-        allowedTypes: ["weapon", "ordnance", "ammo", "skill"]
+        allowedTypes: ["weapon", "skill"]
       }).render(true);
     });
 

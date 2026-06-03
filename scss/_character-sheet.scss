@@ -1660,6 +1660,35 @@ input.skill-value.skill-level-input {
   box-shadow: inset 0 0 0 1px var(--sheet-gilt);
 }
 
+// ==========================================================================
+// Attached-ammo addon rows (under a Ranged weapon) + unattached ammo rows
+// at the bottom of the WEAPONS block. Mirror the cyberlimb option pattern
+// so the visual cohesion of weapon → attached ammo reads as a group.
+// ==========================================================================
+
+// Suppress the parent weapon's dashed bottom border when an attached ammo
+// addon immediately follows — the pair reads as one stacked unit.
+.gear-row.weapon-row:has(+ .gear-row.weapon-row.attached-ammo.attached) {
+  border-bottom: none;
+}
+
+// Detached (unattached) ammo rows at the bottom of the Weapons block are
+// draggable onto a weapon row to attach. Match the cyberware option pattern.
+.gear-row.weapon-row.attached-ammo.detached {
+  cursor: grab;
+
+  &.is-dragging {
+    opacity: 0.5;
+  }
+}
+
+// Drop target highlight when dragging ammo onto a weapon row (parallels the
+// .cyberware-row.drag-over rule above).
+.gear-row.weapon-row.drag-over {
+  background-color: rgba(185, 178, 157, 0.1);
+  box-shadow: inset 0 0 0 1px var(--sheet-gilt);
+}
+
 // Humanity roll button styling
 .humanity-field {
   .humanity-roll-btn {

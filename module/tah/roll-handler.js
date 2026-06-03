@@ -96,24 +96,56 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                 id: t.id
             }));
 
-            if (item.isRanged()) {
-                if (item.weaponData.weaponType === "Exotic") {
-                    // Check charges
-                    const charges = Number(item.weaponData.charges) || 0;
+            const LEGACY = {
+                Pistol:"Ranged",SMG:"Ranged",Shotgun:"Ranged",Rifle:"Ranged",Heavy:"Ranged",
+                Bow:"Martial",Crossbow:"Martial",Melee:"Martial",Exotic:"Exotic"
+            };
+            const wd = item.weaponData || {};
+            const rawType = wd.weaponType;
+            const t = LEGACY[rawType] || rawType;
+
+            // Any AoE weapon — Ordnance, Exotic w/ template, Ranged w/ grenade ammo
+            if (typeof item._isAreaWeapon === "function" && item._isAreaWeapon()) {
+                if (t === "Exotic") {
+                    const charges = Number(wd.charges) || 0;
                     if (charges <= 0) {
                         ui.notifications.warn(game.i18n.localize("CYBERPUNK.OutOfCharges"));
                         return;
                     }
+                }
+                const { OrdnanceAttackDialog } = await import("../dialog/ordnance-attack-dialog.js");
+                new OrdnanceAttackDialog(actor, item, targetTokens).render(true);
+                return;
+            }
+
+            // Exotic without template — charges check, then mode picker
+            if (t === "Exotic") {
+                const charges = Number(wd.charges) || 0;
+                if (charges <= 0) {
+                    ui.notifications.warn(game.i18n.localize("CYBERPUNK.OutOfCharges"));
+                    return;
+                }
+                const rof = Number(wd.rof) || 1;
+                if (rof > 1) {
+                    const { RangedAttackDialog } = await import("../dialog/ranged-attack-dialog.js");
+                    new RangedAttackDialog(actor, item, targetTokens).render(true);
+                } else {
                     const { fireModes } = await import("../lookups.js");
                     const { RangeSelectionDialog } = await import("../dialog/range-selection-dialog.js");
                     new RangeSelectionDialog(actor, item, fireModes.singleShot, targetTokens).render(true);
-                } else {
-                    const { RangedAttackDialog } = await import("../dialog/ranged-attack-dialog.js");
-                    new RangedAttackDialog(actor, item, targetTokens).render(true);
                 }
-            } else {
-                // Melee weapons
-                const wd = item.weaponData;
+                return;
+            }
+
+            // Ranged (non-grenade ammo)
+            if (t === "Ranged") {
+                const { RangedAttackDialog } = await import("../dialog/ranged-attack-dialog.js");
+                new RangedAttackDialog(actor, item, targetTokens).render(true);
+                return;
+            }
+
+            // Martial
+            if (t === "Martial") {
                 if (wd.attackType === "Martial") {
                     const { ModifiersDialog } = await import("../dialog/modifiers.js");
                     const { buildMartialModifierGroups } = await import("../lookups.js");
@@ -128,6 +160,7 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                     const { MeleeAttackDialog } = await import("../dialog/melee-attack-dialog.js");
                     new MeleeAttackDialog(actor, item, targetTokens).render(true);
                 }
+                return;
             }
         }
 
@@ -143,22 +176,8 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
          * Ordnance attack — opens OrdnanceAttackDialog.
          */
         async _handleOrdnance(actor, itemId) {
-            const item = actor.items.get(itemId);
-            if (!item) return;
-
-            const charges = Number(item.system.charges) || 0;
-            if (charges <= 0) {
-                ui.notifications.warn(game.i18n.localize("CYBERPUNK.OutOfCharges"));
-                return;
-            }
-
-            const targetTokens = Array.from(game.users.current.targets.values()).map(t => ({
-                name: t.document.name,
-                id: t.id
-            }));
-
-            const { OrdnanceAttackDialog } = await import("../dialog/ordnance-attack-dialog.js");
-            new OrdnanceAttackDialog(actor, item, targetTokens).render(true);
+            // Back-compat: forward to _handleWeapon (which routes Ordnance to the AoE dialog).
+            return this._handleWeapon(actor, itemId);
         }
 
         /**

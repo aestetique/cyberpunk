@@ -157,12 +157,11 @@
           </div>
         </div>
 
-        {{!-- Weapons, Ordnance & Ammo (shared with character sheet) --}}
-        {{#if weapons.length}}
-          {{> "systems/cyberpunk/templates/actor/parts/weapons-block.hbs" showUnarmed=false weapons=weapons}}
+        {{!-- Weapons (with ammo addon rows) and Ordnance (shared with character sheet) --}}
+        {{#if hasWeaponsOrAmmo}}
+          {{> "systems/cyberpunk/templates/actor/parts/weapons-block.hbs" showUnarmed=false weapons=weapons unattachedAmmo=ammoItems isUnlocked=isUnlocked}}
         {{/if}}
         {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems}}
-        {{> "systems/cyberpunk/templates/actor/parts/ammo-block.hbs" ammoItems=ammoItems isUnlocked=isUnlocked}}
         {{> "systems/cyberpunk/templates/actor/parts/drone-skills-block.hbs" hasSkills=hasSkills skillsLeft=skillsLeft skillsRight=skillsRight isUnlocked=isUnlocked}}
 
         <div class="gear-block">

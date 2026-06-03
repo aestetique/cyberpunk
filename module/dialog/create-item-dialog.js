@@ -1,8 +1,11 @@
 /**
  * Custom "Create Item" dialog with themed buttons for each item type.
- * Used in two modes:
- * - Sidebar mode (no actor): replaces Foundry's default Create Item dialog, 12 types
- * - Actor mode (with actor): creates embedded items on the character, 10 types
+ *
+ * After the weapon overhaul, weapon/ammo/ordnance are unified under one
+ * `weapon` Item type with a `system.weaponType` discriminator. Each "weapon
+ * category" button now creates a weapon document with the right discriminator
+ * pre-set so the item sheet renders the matching field group.
+ *
  * @extends {Application}
  */
 export class CreateItemDialog extends Application {
@@ -10,8 +13,9 @@ export class CreateItemDialog extends Application {
   /**
    * @param {Actor|null} actor - If provided, items are created on this actor
    * @param {object} [options]
-   * @param {string[]} [options.allowedTypes] - If set, only show buttons for these types
-   *                                            (in the given order, paired into rows of 2).
+   * @param {Array<string|{type:string,weaponType?:string}>} [options.allowedTypes]
+   *  Restrict the buttons shown. Each entry is either a bare type string (e.g. "skill")
+   *  or an object {type, weaponType} for weapon-discriminator buttons.
    */
   constructor(actor = null, { allowedTypes = null } = {}) {
     super();
@@ -32,54 +36,46 @@ export class CreateItemDialog extends Application {
     });
   }
 
+  /**
+   * Resolve a button entry to a {type, weaponType, label} object.
+   */
+  _resolveEntry(entry) {
+    if (typeof entry === "string") {
+      return { type: entry, weaponType: "", label: game.i18n.localize(`TYPES.Item.${entry}`) };
+    }
+    const t = entry.type;
+    const wt = entry.weaponType || "";
+    let label;
+    if (t === "weapon" && wt) {
+      label = game.i18n.localize(`CYBERPUNK.WeaponType${wt}`);
+    } else {
+      label = game.i18n.localize(`TYPES.Item.${t}`);
+    }
+    return { type: t, weaponType: wt, label };
+  }
+
   getData() {
-    // Restricted mode — pair allowed types into rows of 2 in caller's order.
     if (this.allowedTypes) {
-      const items = this.allowedTypes.map(type => ({
-        type,
-        label: game.i18n.localize(`TYPES.Item.${type}`)
-      }));
+      const items = this.allowedTypes.map(e => this._resolveEntry(e));
       const rows = [];
       for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
       return { rows, title: game.i18n.localize("CYBERPUNK.AddItem") };
     }
 
+    // Default layout — single Weapon button covers all 5 weaponType variants
+    // (the user picks Martial/Ranged/Exotic/Ordnance/Ammo on the item sheet).
     const rows = [
-      [
-        { type: "weapon",    label: game.i18n.localize("TYPES.Item.weapon") },
-        { type: "ammo",      label: game.i18n.localize("TYPES.Item.ammo") }
-      ],
-      [
-        { type: "ordnance",  label: game.i18n.localize("TYPES.Item.ordnance") },
-        { type: "armor",     label: game.i18n.localize("TYPES.Item.armor") }
-      ],
-      [
-        { type: "cyberware", label: game.i18n.localize("TYPES.Item.cyberware") },
-        { type: "netware",   label: game.i18n.localize("TYPES.Item.netware") }
-      ],
-      [
-        { type: "tool",      label: game.i18n.localize("TYPES.Item.tool") },
-        { type: "drug",      label: game.i18n.localize("TYPES.Item.drug") }
-      ]
+      ["weapon",      "armor"].map(e => this._resolveEntry(e)),
+      ["cyberware",   "netware"].map(e => this._resolveEntry(e)),
+      ["tool",        "drug"].map(e => this._resolveEntry(e))
     ];
 
     if (this.actor) {
-      // Actor mode: 10 types — add Commodity + Skill
-      rows.push([
-        { type: "misc",  label: game.i18n.localize("TYPES.Item.misc") },
-        { type: "skill", label: game.i18n.localize("TYPES.Item.skill") }
-      ]);
+      rows.push(["misc", "skill"].map(e => this._resolveEntry(e)));
     } else {
-      // Sidebar mode: 12 types — add Commodity + Vehicle, Skill + Role
       rows.push(
-        [
-          { type: "misc",    label: game.i18n.localize("TYPES.Item.misc") },
-          { type: "vehicle", label: game.i18n.localize("TYPES.Item.vehicle") }
-        ],
-        [
-          { type: "skill",   label: game.i18n.localize("TYPES.Item.skill") },
-          { type: "role",    label: game.i18n.localize("TYPES.Item.role") }
-        ]
+        ["misc",  "vehicle"].map(e => this._resolveEntry(e)),
+        ["skill", "role"].map(e => this._resolveEntry(e))
       );
     }
 
@@ -94,28 +90,48 @@ export class CreateItemDialog extends Application {
   activateListeners(html) {
     super.activateListeners(html);
 
-    // Draggable header
     const header = html.find('.reload-header')[0];
     if (header) {
       new foundry.applications.ux.Draggable.implementation(this, html, header, false);
     }
 
-    // Close button
     html.find('.header-control.close').click(() => this.close());
 
-    // Item type buttons — create item, open its sheet unlocked, and close dialog
     html.find('.create-item-btn').click(async ev => {
       const type = ev.currentTarget.dataset.type;
-      const name = game.i18n.format("DOCUMENT.New", {
-        type: game.i18n.localize(CONFIG.Item.typeLabels[type])
-      });
+      const weaponType = ev.currentTarget.dataset.weaponType || "";
+
+      // Compose document name and creation payload
+      let nameTemplate;
+      if (type === "weapon" && weaponType) {
+        nameTemplate = game.i18n.localize(`CYBERPUNK.WeaponType${weaponType}`);
+      } else {
+        nameTemplate = game.i18n.localize(CONFIG.Item.typeLabels[type]);
+      }
+      const name = game.i18n.format("DOCUMENT.New", { type: nameTemplate });
+
+      const createData = { name, type };
+      if (type === "weapon" && weaponType) {
+        // Pre-set the discriminator so the new sheet renders the right field group.
+        createData.system = { weaponType };
+        // Sensible per-class default
+        const defaultClassByType = {
+          Martial:  "Melee",
+          Ranged:   "Pistol",
+          Exotic:   "Exotic",
+          Ordnance: "Grenade",
+          Ammo:     "Pistol"
+        };
+        const defClass = defaultClassByType[weaponType];
+        if (defClass) createData.system.weaponClass = defClass;
+      }
 
       let item;
       if (this.actor) {
-        const [created] = await this.actor.createEmbeddedDocuments("Item", [{ name, type }]);
+        const [created] = await this.actor.createEmbeddedDocuments("Item", [createData]);
         item = created;
       } else {
-        item = await Item.create({ name, type });
+        item = await Item.create(createData);
       }
 
       this.close();

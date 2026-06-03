@@ -1,25 +1,49 @@
 import {
-    weaponTypes,
     reliability,
     concealability,
     meleeDamageTypes,
     exoticEffects,
-    weaponToAmmoType,
-    ammoWeaponTypes,
     ammoTypes,
-    ammoCalibersByWeaponType,
     ammoAbbreviations,
-    ordnanceTemplateTypes
+    ammoClasses,
+    martialClasses,
+    rangedClasses,
+    exoticClasses,
+    ordnanceClasses,
+    ordnanceTemplateTypes,
+    getWeaponClasses
 } from "../lookups.js";
+import { calibers as CALIBERS } from "../calibers.js";
 import { COVER_TYPES } from "../conditions.js";
 
+// Legacy fallback: old top-level weaponType strings → new discriminator.
+const LEGACY_TYPE_TO_NEW = {
+    "Pistol": "Ranged",   "SMG": "Ranged", "Shotgun": "Ranged",
+    "Rifle":  "Ranged",   "Heavy": "Ranged",
+    "Bow":    "Martial",  "Crossbow": "Martial", "Melee": "Martial",
+    "Exotic": "Exotic"
+};
+const LEGACY_TYPE_TO_CLASS = {
+    "Pistol": "Pistol", "SMG": "SMG", "Shotgun": "Shotgun",
+    "Rifle":  "Rifle",  "Heavy": "Heavy",
+    "Bow":    "Bow",    "Crossbow": "Crossbow",
+    "Melee":  "Melee",  "Exotic":   "Exotic"
+};
+
+/** Normalise to new (weaponType, weaponClass) discriminator from possibly-legacy data. */
+function discrim(sys) {
+    const raw = sys?.weaponType || "";
+    if (LEGACY_TYPE_TO_NEW[raw]) {
+        return {
+            weaponType: LEGACY_TYPE_TO_NEW[raw],
+            weaponClass: sys.weaponClass || LEGACY_TYPE_TO_CLASS[raw]
+        };
+    }
+    return { weaponType: raw, weaponClass: sys.weaponClass || "" };
+}
+
 /**
- * Build the cover-row toggle data for a sheet. Each entry has the shape the
- * cover-row.hbs partial expects: { key, sp, label, desc, active }.
- *
- * @param {Actor} actor
- * @param {{exclude?: string[]}} options - cover keys to omit (e.g., ["drywall"] for drones)
- * @returns {Array<Object>}
+ * Build the cover-row toggle data for a sheet.
  */
 export function buildCoverToggles(actor, { exclude = [] } = {}) {
     const activeCover = actor?.system?.activeCover || null;
@@ -34,134 +58,230 @@ export function buildCoverToggles(actor, { exclude = [] } = {}) {
         }));
 }
 
-/**
- * Get loaded ammo type abbreviation, or '' if none.
- */
-function getLoadedAmmoLabel(loadedAmmoType) {
-    if (!loadedAmmoType) return '';
-    return ammoAbbreviations[loadedAmmoType] || '';
+function getLoadedAmmoLabel(ammoType) {
+    if (!ammoType) return '';
+    return ammoAbbreviations[ammoType] || '';
+}
+
+function localizeKey(key) {
+    if (!key) return '';
+    return game.i18n.localize(`CYBERPUNK.${key}`);
 }
 
 /**
- * Build the per-row data shape for an actor's weapon items.
- * Returns an array consumable by templates/actor/parts/weapons-block.hbs.
- * Cyberweapons are NOT included — those live in actor-sheet.js because they
- * depend on cyberlimb structure that drones don't have.
+ * Ammo context line. Non-grenade: caliber · ammoType. Grenade:
+ * caliber · ammoType · effect · template · radius/width.
+ * Same shape used on standalone ammo rows and the attached-ammo addon row.
+ */
+export function buildAmmoContext(ammoSys) {
+    if (!ammoSys) return '';
+    const calLabel = ammoSys.caliber && CALIBERS[ammoSys.caliber] ? localizeKey(CALIBERS[ammoSys.caliber]) : '';
+    const atLabel = ammoTypes[ammoSys.ammoType] ? localizeKey(ammoTypes[ammoSys.ammoType]) : '';
+    if (ammoSys.ammoType !== "grenade") {
+        return [calLabel, atLabel].filter(Boolean).join(' · ');
+    }
+    const effectLabel = (ammoSys.effect && ammoSys.effect !== "none" && exoticEffects[ammoSys.effect])
+        ? localizeKey(exoticEffects[ammoSys.effect])
+        : '';
+    const templateLabel = ammoSys.templateType && ordnanceTemplateTypes[ammoSys.templateType]
+        ? localizeKey(ordnanceTemplateTypes[ammoSys.templateType])
+        : '';
+    const radiusStr = ammoSys.radius ? `${ammoSys.radius} m` : '';
+    return [calLabel, atLabel, effectLabel, templateLabel, radiusStr].filter(Boolean).join(' · ');
+}
+
+/**
+ * Build the per-row data for an actor's WEAPON items (Martial / Ranged / Exotic).
+ * Excludes Ordnance and Ammo — those have their own builders.
+ * Cyberweapons are NOT included.
  *
  * @param {Actor} actor
  * @returns {Array<Object>}
  */
 export function buildWeaponsList(actor) {
-    const weapons = actor.itemTypes.weapon || [];
-    return weapons.map(w => {
-        const sys = w.system;
-        const wType = sys.weaponType || '';
-        const isRanged = !['Melee', 'Exotic'].includes(wType);
-        const isMelee = wType === 'Melee';
-        const isExotic = wType === 'Exotic';
+    const items = actor.itemTypes.weapon || [];
+    return items
+        .filter(w => {
+            const d = discrim(w.system);
+            return d.weaponType === "Martial" || d.weaponType === "Ranged" || d.weaponType === "Exotic";
+        })
+        .map(w => {
+            const sys = w.system;
+            const d = discrim(sys);
+            const wType = d.weaponType;
+            const wClass = d.weaponClass;
 
-        const rel = sys.reliability && reliability[sys.reliability]
-            ? game.i18n.localize("CYBERPUNK." + reliability[sys.reliability])
-            : '';
-        const conc = sys.concealability && concealability[sys.concealability]
-            ? game.i18n.localize("CYBERPUNK." + concealability[sys.concealability])
-            : '';
-        const range = sys.range ? `${sys.range} m` : '';
+            const isRanged = wType === "Ranged";
+            const isMelee  = wType === "Martial" && wClass === "Melee";
+            const isExotic = wType === "Exotic";
 
-        let context = '';
-        if (isRanged) {
-            const weaponTypeLabel = weaponTypes[wType] || wType || '';
-            const ammoKey = weaponToAmmoType[wType];
-            const calibers = ammoKey ? (ammoCalibersByWeaponType[ammoKey] || {}) : {};
-            const calLabelKey = calibers[sys.caliber];
-            const caliber = calLabelKey ? game.i18n.localize(`CYBERPUNK.${calLabelKey}`) : '';
-            const loadedAmmoLabel = getLoadedAmmoLabel(sys.loadedAmmoType);
-            const caliberWeaponType = [caliber, weaponTypeLabel].filter(p => p).join(' ');
-            const contextParts = [caliberWeaponType, rel, conc, loadedAmmoLabel, range].filter(p => p);
-            context = contextParts.join(' · ');
-        } else if (isMelee) {
-            const damageTypeKey = meleeDamageTypes[sys.damageType];
-            const damageType = damageTypeKey ? game.i18n.localize(`CYBERPUNK.${damageTypeKey}`) : '';
-            const contextParts = ['Melee', damageType, rel, conc, range].filter(p => p);
-            context = contextParts.join(' · ');
-        } else if (isExotic) {
-            const effectKey = (sys.effect && sys.effect !== "none") ? exoticEffects[sys.effect] : null;
-            const effect = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : '';
-            const contextParts = ['Exotic', effect, rel, conc, range].filter(p => p);
-            context = contextParts.join(' · ');
-        }
+            const rel  = sys.reliability && reliability[sys.reliability] ? localizeKey(reliability[sys.reliability]) : '';
+            const conc = sys.concealability && concealability[sys.concealability] ? localizeKey(concealability[sys.concealability]) : '';
+            const range = sys.range ? `${sys.range} m` : '';
 
-        return {
-            id: w.id,
-            img: w.img,
-            name: w.name,
-            context: context,
-            price: sys.cost || 0,
-            weight: sys.weight || 0,
-            damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
-            shotsLeft: sys.shotsLeft ?? 0,
-            shots: sys.shots ?? 0,
-            charges: sys.charges ?? 0,
-            chargesMax: sys.chargesMax ?? 0,
-            chargesDisplay: (sys.charges || sys.chargesMax) ? `${sys.charges ?? 0} / ${sys.chargesMax ?? 0}` : '–',
-            rof: sys.rof ?? 0,
-            canReload: (sys.shotsLeft ?? 0) < (sys.shots ?? 0),
-            canCharge: (sys.charges ?? 0) < (sys.chargesMax ?? 0),
-            isCyberware: false,
-            isRanged: isRanged,
-            isMelee: isMelee,
-            isExotic: isExotic
-        };
-    });
+            // Resolve attached ammo (Ranged only)
+            let attachedAmmo = null;
+            if (isRanged && sys.attachedAmmoId) {
+                attachedAmmo = actor.items.get(sys.attachedAmmoId) || null;
+                if (attachedAmmo && attachedAmmo.system?.weaponType !== "Ammo") attachedAmmo = null;
+            }
+
+            // Build the context string per category
+            let context = '';
+            if (isRanged) {
+                const classKey = rangedClasses[wClass];
+                const classLabel = classKey ? localizeKey(classKey) : (wClass || '');
+                const caliberSlug = attachedAmmo?.system?.caliber || sys.caliber;
+                const calLabelKey = caliberSlug ? CALIBERS[caliberSlug] : null;
+                const caliber = calLabelKey ? localizeKey(calLabelKey) : '';
+                const loadedAmmoLabel = getLoadedAmmoLabel(attachedAmmo?.system?.ammoType || sys.loadedAmmoType);
+                const caliberClass = [caliber, classLabel].filter(Boolean).join(' ');
+                const parts = [caliberClass, rel, conc, loadedAmmoLabel, range].filter(Boolean);
+                context = parts.join(' · ');
+            } else if (wType === "Martial") {
+                const classKey = martialClasses[wClass] || martialClasses[LEGACY_TYPE_TO_CLASS[sys.weaponType]];
+                const classLabel = classKey ? localizeKey(classKey) : localizeKey("WeaponTypeMartial");
+                let bits = [classLabel];
+                if (isMelee) {
+                    const dmgKey = meleeDamageTypes[sys.damageType];
+                    if (dmgKey) bits.push(localizeKey(dmgKey));
+                }
+                bits = bits.concat([rel, conc, range]).filter(Boolean);
+                context = bits.join(' · ');
+            } else if (isExotic) {
+                const effectKey = (sys.effect && sys.effect !== "none") ? exoticEffects[sys.effect] : null;
+                const effect = effectKey ? localizeKey(effectKey) : '';
+                const parts = [localizeKey("WeaponTypeExotic"), effect, rel, conc, range].filter(Boolean);
+                context = parts.join(' · ');
+            }
+
+            return {
+                id: w.id,
+                img: w.img,
+                name: w.name,
+                context,
+                price: sys.cost || 0,
+                weight: sys.weight || 0,
+                damage: (() => {
+                    // For Ranged, the damage on the line is the ammo's damage
+                    const dmg = isRanged ? (attachedAmmo?.system?.damage || sys.damage) : sys.damage;
+                    return dmg && dmg !== '0' && dmg !== 0 ? dmg : '–';
+                })(),
+                shotsLeft: sys.shotsLeft ?? 0,
+                shots: sys.shots ?? 0,
+                charges: sys.charges ?? 0,
+                chargesMax: sys.chargesMax ?? 0,
+                chargesDisplay: (sys.charges || sys.chargesMax) ? `${sys.charges ?? 0} / ${sys.chargesMax ?? 0}` : '–',
+                rof: sys.rof ?? 0,
+                canReload: isRanged && !!sys.attachedAmmoId && (sys.shotsLeft ?? 0) < (sys.shots ?? 0),
+                canCharge: (sys.charges ?? 0) < (sys.chargesMax ?? 0),
+                isCyberware: false,
+                isRanged,
+                isMelee,
+                isExotic,
+                weaponType: wType,
+                weaponClass: wClass,
+                // Attached ammo addon data (Ranged only)
+                hasAttachedAmmo: !!attachedAmmo,
+                attachedAmmoId: attachedAmmo?.id || '',
+                attachedAmmoName: attachedAmmo?.name || '',
+                attachedAmmoImg: attachedAmmo?.img || '',
+                attachedAmmoQuantity: attachedAmmo?.system?.quantity ?? 0,
+                attachedAmmoContext: attachedAmmo ? buildAmmoContext(attachedAmmo.system) : '',
+                attachedAmmoPrice: attachedAmmo ? (() => {
+                    const aSys = attachedAmmo.system || {};
+                    const pkg = Number(aSys.packSize) || 1;
+                    const qty = Number(aSys.quantity) || 0;
+                    return Math.round((Number(aSys.cost) || 0) / pkg * qty * 100) / 100;
+                })() : 0,
+                attachedAmmoWeight: attachedAmmo?.system?.weight ?? 0
+            };
+        });
 }
 
 /**
- * Build the per-row data shape for an actor's ordnance items.
- * Returns an array consumable by templates/actor/parts/ordnance-block.hbs.
- *
- * @param {Actor} actor
- * @returns {Array<Object>}
- */
-/**
- * Build the per-row data shape for an actor's ammo items.
- * Returns an array consumable by templates/actor/parts/ammo-block.hbs.
+ * Build the per-row data shape for an actor's AMMO items.
  *
  * @param {Actor} actor
  * @returns {Array<Object>}
  */
 export function buildAmmoList(actor) {
-    const ammoItems = actor.itemTypes.ammo || [];
-    return ammoItems.map(a => {
-        const sys = a.system;
-        const wt = ammoWeaponTypes[sys.weaponType];
-        const wtLabel = wt ? game.i18n.localize(`CYBERPUNK.${wt}`) : '';
-        const calibers = ammoCalibersByWeaponType[sys.weaponType] || {};
-        const calLabel = calibers[sys.caliber] ? game.i18n.localize(`CYBERPUNK.${calibers[sys.caliber]}`) : '';
-        const atLabel = ammoTypes[sys.ammoType] ? game.i18n.localize(`CYBERPUNK.${ammoTypes[sys.ammoType]}`) : '';
-        const contextParts = [wtLabel, calLabel, atLabel].filter(p => p);
+    const items = actor.itemTypes.weapon || [];
+    return items
+        .filter(w => discrim(w.system).weaponType === "Ammo")
+        .filter(w => !w.getFlag?.("cyberpunk", "attachedTo"))
+        .map(a => {
+            const sys = a.system;
+            const d = discrim(sys);
+            const wClass = d.weaponClass;
+            const context = buildAmmoContext(sys);
 
-        const packSize = Number(sys.packSize) || 1;
-        const quantity = Number(sys.quantity) || 0;
-        const costPerRound = (Number(sys.cost) || 0) / packSize;
-        const totalPrice = Math.round(costPerRound * quantity * 100) / 100;
+            const packSize = Number(sys.packSize) || 1;
+            const quantity = Number(sys.quantity) || 0;
+            const costPerRound = (Number(sys.cost) || 0) / packSize;
+            const totalPrice = Math.round(costPerRound * quantity * 100) / 100;
 
-        return {
-            id: a.id,
-            img: a.img,
-            name: a.name,
-            context: contextParts.join(' · '),
-            totalPrice: totalPrice,
-            weight: sys.weight || 0,
-            quantity: quantity
-        };
-    });
+            return {
+                id: a.id,
+                img: a.img,
+                name: a.name,
+                context,
+                totalPrice,
+                weight: sys.weight || 0,
+                quantity,
+                ammoType: sys.ammoType || 'standard',
+                weaponClass: wClass,
+                caliber: sys.caliber || '',
+                isAttached: !!a.getFlag?.("cyberpunk", "attachedTo")
+            };
+        });
 }
 
 /**
- * Build a stripped-down skill-row data shape for drones: just the bits the
- * drone-skills-block partial renders (id, name, statLabel, total) plus
- * flavor for the row tooltip. No career/special/chipped/IP machinery —
- * drones don't have those mechanics.
+ * Build the per-row data shape for an actor's ORDNANCE items.
+ *
+ * @param {Actor} actor
+ * @returns {Array<Object>}
+ */
+export function buildOrdnanceList(actor) {
+    const items = actor.itemTypes.weapon || [];
+    return items
+        .filter(w => discrim(w.system).weaponType === "Ordnance")
+        .map(o => {
+            const sys = o.system;
+            const templateLabel = ordnanceTemplateTypes[sys.templateType]
+                ? localizeKey(ordnanceTemplateTypes[sys.templateType])
+                : '';
+            const radiusStr = sys.radius ? `${sys.radius} m` : '';
+            const effectKey = (sys.effect && sys.effect !== "none") ? exoticEffects[sys.effect] : null;
+            const effectLabel = effectKey ? localizeKey(effectKey) : '';
+            const relLabel = reliability[sys.reliability] ? localizeKey(reliability[sys.reliability]) : '';
+            const concLabel = concealability[sys.concealability] ? localizeKey(concealability[sys.concealability]) : '';
+            const range = sys.range ? `${sys.range} m` : '';
+            const classKey = ordnanceClasses[discrim(sys).weaponClass];
+            const classLabel = classKey ? localizeKey(classKey) : '';
+            const contextParts = [classLabel, templateLabel, radiusStr, effectLabel, relLabel, concLabel, range].filter(Boolean);
+
+            return {
+                id: o.id,
+                img: o.img,
+                name: o.name,
+                context: contextParts.join(' · '),
+                price: sys.cost || 0,
+                weight: sys.weight || 0,
+                damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
+                // Ordnance is 1-shot; expose simple "1" for templates that still render charges
+                charges: 1,
+                chargesMax: 1,
+                chargesDisplay: '1',
+                canCharge: false,
+                removeOnZero: true
+            };
+        });
+}
+
+/**
+ * Build a stripped-down skill-row data shape for drones.
  *
  * @param {Actor} actor
  * @returns {Array<Object>}
@@ -182,40 +302,4 @@ export function buildDroneSkillsList(actor) {
             };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-export function buildOrdnanceList(actor) {
-    const ordnance = actor.itemTypes.ordnance || [];
-    return ordnance.map(o => {
-        const sys = o.system;
-        const templateLabel = ordnanceTemplateTypes[sys.templateType]
-            ? game.i18n.localize(`CYBERPUNK.${ordnanceTemplateTypes[sys.templateType]}`)
-            : '';
-        const radiusStr = sys.radius ? `${sys.radius} m` : '';
-        const effectKey = (sys.effect && sys.effect !== "none") ? exoticEffects[sys.effect] : null;
-        const effectLabel = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : '';
-        const relLabel = reliability[sys.reliability]
-            ? game.i18n.localize(`CYBERPUNK.${reliability[sys.reliability]}`)
-            : '';
-        const concLabel = concealability[sys.concealability]
-            ? game.i18n.localize(`CYBERPUNK.${concealability[sys.concealability]}`)
-            : '';
-        const range = sys.range ? `${sys.range} m` : '';
-        const contextParts = [templateLabel, radiusStr, effectLabel, relLabel, concLabel, range].filter(p => p);
-
-        return {
-            id: o.id,
-            img: o.img,
-            name: o.name,
-            context: contextParts.join(' · '),
-            price: sys.cost || 0,
-            weight: sys.weight || 0,
-            damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
-            charges: sys.charges || 0,
-            chargesMax: sys.chargesMax || 0,
-            chargesDisplay: (sys.charges || sys.chargesMax) ? `${sys.charges ?? 0} / ${sys.chargesMax ?? 0}` : '–',
-            canCharge: (sys.charges ?? 0) < (sys.chargesMax ?? 0),
-            removeOnZero: sys.removeOnZero ?? false
-        };
-    });
 }

@@ -1,7 +1,7 @@
 {{!-- Gear Tab --}}
 <div class="gear-container">
   {{!-- 1. WEAPONS Block (always visible — unarmed row is permanent) --}}
-  {{> "systems/cyberpunk/templates/actor/parts/weapons-block.hbs" showUnarmed=true weapons=weapons unarmedDamage=unarmedDamage unarmedTooltipFlavor=unarmedTooltipFlavor unarmedTooltipCalc=unarmedTooltipCalc}}
+  {{> "systems/cyberpunk/templates/actor/parts/weapons-block.hbs" showUnarmed=true weapons=weapons unattachedAmmo=ammoItems isUnlocked=isUnlocked unarmedDamage=unarmedDamage unarmedTooltipFlavor=unarmedTooltipFlavor unarmedTooltipCalc=unarmedTooltipCalc}}
 
   {{!-- 2. ORDNANCE Block --}}
   {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems}}
@@ -216,9 +216,6 @@
       {{/each}}
     </div>
   </div>
-
-  {{!-- 7. AMMO Block --}}
-  {{> "systems/cyberpunk/templates/actor/parts/ammo-block.hbs" ammoItems=ammoItems isUnlocked=isUnlocked}}
 
   {{!-- Empty inventory message --}}
   {{#unless hasAnyGear}}

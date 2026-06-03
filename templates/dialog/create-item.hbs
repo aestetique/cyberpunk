@@ -7,7 +7,7 @@
     {{#each rows}}
     <div class="create-item-row">
       {{#each this}}
-      <button type="button" class="fire-mode-btn create-item-btn" data-type="{{this.type}}">
+      <button type="button" class="fire-mode-btn create-item-btn" data-type="{{this.type}}" data-weapon-type="{{this.weaponType}}">
         {{this.label}}
       </button>
       {{/each}}

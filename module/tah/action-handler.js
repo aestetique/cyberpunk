@@ -175,17 +175,32 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
 
             const allWeapons = [...weapons, ...cyberWeapons];
 
+            // Legacy → new discriminator
+            const LEGACY = {
+                Pistol:"Ranged",SMG:"Ranged",Shotgun:"Ranged",Rifle:"Ranged",Heavy:"Ranged",
+                Bow:"Martial",Crossbow:"Martial",Melee:"Martial",Exotic:"Exotic"
+            };
+
             const rangedActions = [];
             const meleeActions = [];
             const exoticActions = [];
+            const ordnanceActions = [];
 
             for (const weapon of allWeapons) {
                 const wd = weapon.type === "cyberware" ? weapon.system.weapon : weapon.system;
-                const wType = wd?.weaponType;
-                if (!wType) continue;
+                const rawType = wd?.weaponType;
+                if (!rawType) continue;
+                const effectiveType = LEGACY[rawType] || rawType;
+                // Skip Ammo — not actionable
+                if (effectiveType === "Ammo") continue;
 
-                const dmg = wd.damage || "";
-                const weaponCalc = [wType, dmg ? `Damage ${dmg}` : ""].filter(Boolean).join(" | ");
+                // Damage for tooltip: for Ranged with attached ammo, pull from ammo
+                let dmg = wd.damage || "";
+                if (effectiveType === "Ranged" && wd.attachedAmmoId) {
+                    const ammo = actor.items.get(wd.attachedAmmoId);
+                    if (ammo?.system?.damage) dmg = ammo.system.damage;
+                }
+                const weaponCalc = [rawType, dmg ? `Damage ${dmg}` : ""].filter(Boolean).join(" | ");
                 const ev = [ACTION_TYPE.weapon, weapon.id].join("|");
                 setTooltip(ev, weapon.name, weapon.system.flavor || "", weaponCalc);
                 const action = {
@@ -195,9 +210,13 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                     img: weapon.img
                 };
 
-                if (wType === "Exotic") {
+                if (effectiveType === "Ordnance") {
+                    // Ordnance is 1-shot; surface in the ordnance bucket
+                    action.info1 = { text: "1" };
+                    ordnanceActions.push(action);
+                } else if (effectiveType === "Exotic") {
                     exoticActions.push(action);
-                } else if (wType === "Melee") {
+                } else if (effectiveType === "Martial") {
                     meleeActions.push(action);
                 } else {
                     rangedActions.push(action);
@@ -212,6 +231,9 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
             }
             if (exoticActions.length) {
                 this.addActions(exoticActions, { id: "exotic", type: "system" });
+            }
+            if (ordnanceActions.length) {
+                this.addActions(ordnanceActions, { id: "ordnance", type: "system" });
             }
         }
 
@@ -234,27 +256,11 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
         }
 
         /**
-         * Ordnance items (grenades, explosives, etc.)
+         * Ordnance is now part of _buildWeaponActions (filtered by weaponType=Ordnance).
+         * This stub is kept so any caller that explicitly invokes it is a no-op.
          */
         _buildOrdnanceActions(actor) {
-            const ordnance = actor.itemTypes.ordnance || [];
-            if (!ordnance.length) return;
-
-            const actions = ordnance.map(item => {
-                const charges = item.system.charges || 0;
-                const dmg = item.system.damage || "";
-                const ordCalc = [dmg ? `Damage ${dmg}` : "", `Charges ${charges}`].filter(Boolean).join(" | ");
-                const ev = [ACTION_TYPE.ordnance, item.id].join("|");
-                setTooltip(ev, item.name, item.system.flavor || "", ordCalc);
-                return {
-                    id: item.id,
-                    name: item.name,
-                    encodedValue: ev,
-                    img: item.img,
-                    info1: { text: String(charges) }
-                };
-            });
-            this.addActions(actions, { id: "ordnance", type: "system" });
+            // Intentionally empty — ordnance actions are emitted by _buildWeaponActions.
         }
 
         /**

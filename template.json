@@ -805,7 +805,7 @@
 		}
 	},
 	"Item": {
-		"types": ["skill", "weapon", "armor", "cyberware", "vehicle", "misc", "netware", "program", "role", "ammo", "ordnance", "tool", "drug"],
+		"types": ["skill", "weapon", "armor", "cyberware", "vehicle", "misc", "netware", "program", "role", "tool", "drug"],
 		"templates": {
 			"common": {
 				"flavor": "",
@@ -869,29 +869,31 @@
 		},
 		"weapon": {
 			"templates": ["common"],
-			"weaponType": "Pistol",
+			"weaponType": "Martial",
+			"weaponClass": "Melee",
+			"attackSkill": "",
+			"attackType": "",
+			"damage": "1d6",
+			"damageType": "blunt",
+			"range": 1,
 			"accuracy": 0,
 			"concealability": "pocket",
-			"availability": "common",
-			"damage": "2d6+1",
-			"shotsLeft": 12,
-			"shots": 12,
-			"rof": 2,
 			"reliability": "standard",
-			"range": 50,
-			"attackSkill": "",
-			"caliber": "medium",
-			"loadedAmmoType": "standard",
-			"loadedAmmoSources": [],
 			"minimumBody": 0,
-			"damageType": "blunt",
-			"effect": "",
+			"shotsLeft": 0,
+			"shots": 0,
+			"rof": 1,
+			"attachedAmmoId": "",
 			"charges": 0,
 			"chargesMax": 0,
-			"ammoType": "",
-			"rangeDamages": {},
-			"ap": false,
-			"attackType": ""
+			"effect": "",
+			"templateType": "",
+			"radius": 0,
+			"caliber": "medium",
+			"ammoType": "standard",
+			"packSize": 20,
+			"quantity": 0,
+			"sourceUuid": ""
 		},
 		"armor": {
 			"templates": ["common"],
@@ -951,24 +953,27 @@
 			"chipValue": 1,
 			"bonuses": [],
 			"weapon": {
-				"weaponType": "Melee",
+				"weaponType": "Martial",
+				"weaponClass": "Melee",
+				"attackSkill": "Brawling",
+				"attackType": "",
+				"damage": "1d6",
+				"damageType": "edged",
+				"range": 1,
 				"accuracy": 0,
 				"concealability": "hidden",
-				"damage": "1d6",
+				"reliability": "standard",
+				"minimumBody": 0,
 				"shotsLeft": 0,
 				"shots": 0,
 				"rof": 1,
-				"reliability": "standard",
-				"range": 1,
-				"attackSkill": "Brawling",
-				"caliber": "",
-				"loadedAmmoType": "",
-				"loadedAmmoSources": [],
-				"minimumBody": 0,
-				"damageType": "edged",
-				"effect": "",
+				"attachedAmmoId": "",
 				"charges": 0,
-				"chargesMax": 0
+				"chargesMax": 0,
+				"effect": "",
+				"templateType": "",
+				"radius": 0,
+				"caliber": "medium"
 			},
 			"armor": {
 				"armorType": "hard",
@@ -1011,15 +1016,6 @@
 		"misc": {
 			"templates": ["common"]
 		},
-		"ammo": {
-			"templates": ["common"],
-			"weaponType": "pistol",
-			"caliber": "medium",
-			"ammoType": "standard",
-			"packSize": 20,
-			"quantity": 20,
-			"sourceUuid": ""
-		},
 		"role": {
 			"templates": ["common"],
 			"specialAbility": {
@@ -1031,21 +1027,6 @@
 				"name": ""
 			},
 			"careerSkills": []
-		},
-		"ordnance": {
-			"templates": ["common"],
-			"attackSkill": "",
-			"damage": "0",
-			"concealability": "pocket",
-			"range": 0,
-			"accuracy": 0,
-			"reliability": "standard",
-			"effect": "",
-			"charges": 0,
-			"chargesMax": 0,
-			"templateType": "circle",
-			"removeOnZero": false,
-			"radius": 0
 		},
 		"tool": {
 			"templates": ["common"],

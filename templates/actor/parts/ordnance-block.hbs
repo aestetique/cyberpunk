@@ -28,21 +28,8 @@
           <span class="field-top">{{ordnance.damage}}</span>
           <span class="field-bottom">Damage</span>
         </div>
-        <div class="gear-field" style="width: 60px;">
-          {{#if ordnance.removeOnZero}}
-            <span class="field-top">{{ordnance.charges}}</span>
-          {{else}}
-            <span class="field-top">{{ordnance.chargesDisplay}}</span>
-          {{/if}}
-          <span class="field-bottom">Charges</span>
-        </div>
-        {{#unless ordnance.removeOnZero}}
-          <div class="gear-action-btn charge-weapon" data-item-id="{{ordnance.id}}" data-can-charge="{{ordnance.canCharge}}" title="{{#if ordnance.canCharge}}Recharge{{else}}Fully charged{{/if}}">
-            <img src="systems/cyberpunk/img/ui/badge-charge{{#unless ordnance.canCharge}}-disabled{{/unless}}.svg" alt="Charge">
-          </div>
-        {{else}}
-          <div class="gear-action-btn"></div>
-        {{/unless}}
+        <div class="gear-field" style="width: 60px;"></div>
+        <div class="gear-action-btn"></div>
         <div class="gear-actions">
           <button class="gear-view" type="button" data-item-id="{{ordnance.id}}" title="View">
             <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">

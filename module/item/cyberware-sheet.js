@@ -4,6 +4,7 @@ import {
     meleeDamageTypes, exoticEffects, ammoTypes,
     ordnanceTemplateTypes,
     getAttackSkillsForWeapon,
+    getRangedClassesForSkill,
     toolBonusProperties,
     cyberwareTypes, cyberwareSubtypes, surgeryCodes,
     getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor
@@ -261,11 +262,18 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         }));
         data.selectedWeaponTypeLabel = game.i18n.localize(`CYBERPUNK.${weaponTypes[wt] || "WeaponTypeMartial"}`);
 
-        // ----- WeaponClass (Subtype) — varies per weaponType -----
+        // ----- WeaponClass (Subtype) -----
+        // For Ranged cyberweapons: narrow the dropdown to classes allowed by the
+        // selected attack skill. Other types fall back to the full enum.
         const classEnum = getWeaponClasses(wt) || {};
-        data.weaponClassOptions = Object.entries(classEnum).map(([value, labelKey]) => ({
+        let classKeys = Object.keys(classEnum);
+        if (wt === "Ranged") {
+            const allowed = getRangedClassesForSkill(weapon.attackSkill);
+            if (allowed.length) classKeys = allowed;
+        }
+        data.weaponClassOptions = classKeys.map(value => ({
             value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+            label: classEnum[value] ? game.i18n.localize(`CYBERPUNK.${classEnum[value]}`) : value,
             selected: wc === value
         }));
         data.selectedWeaponClassLabel = classEnum[wc]
@@ -507,27 +515,39 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         // --- Embedded Weapon Type (discriminator) change ---
         html.find('select[name="system.weapon.weaponType"]').change(async ev => {
             const newType = ev.currentTarget.value;
+            const defaultSkill = getAttackSkillsForWeapon(newType)[0] || "";
             const updates = {
                 "system.weapon.weaponType":  newType,
-                "system.weapon.weaponClass": DEFAULT_CLASS_BY_TYPE[newType] || "",
-                // Reset attackSkill so the next render picks the new canonical default
-                "system.weapon.attackSkill": ""
+                "system.weapon.attackSkill": defaultSkill
             };
-            // Switching INTO Ranged stamps the caliber's damage (if any).
             if (newType === "Ranged") {
+                const allowed = getRangedClassesForSkill(defaultSkill);
+                updates["system.weapon.weaponClass"] = allowed[0] || "Pistol";
                 const dmg = getDamageForCaliber(this.item.system.weapon?.caliber);
                 if (dmg) updates["system.weapon.damage"] = dmg;
+            } else {
+                updates["system.weapon.weaponClass"] = DEFAULT_CLASS_BY_TYPE[newType] || "";
             }
             await this.item.update(updates);
         });
 
         // --- Embedded WeaponClass (Subtype) change ---
         html.find('select[name="system.weapon.weaponClass"]').change(async ev => {
-            const newClass = ev.currentTarget.value;
-            await this.item.update({
-                "system.weapon.weaponClass": newClass,
-                "system.weapon.attackSkill": ""
-            });
+            await this.item.update({ "system.weapon.weaponClass": ev.currentTarget.value });
+        });
+
+        // --- Embedded Attack Skill change — narrows Ranged weaponClass ---
+        html.find('select[name="system.weapon.attackSkill"]').change(async ev => {
+            const newSkill = ev.currentTarget.value;
+            const updates = { "system.weapon.attackSkill": newSkill };
+            const w = this.item.system.weapon || {};
+            if (w.weaponType === "Ranged") {
+                const allowed = getRangedClassesForSkill(newSkill);
+                if (allowed.length && !allowed.includes(w.weaponClass)) {
+                    updates["system.weapon.weaponClass"] = allowed[0];
+                }
+            }
+            await this.item.update(updates);
         });
 
         // --- Embedded Caliber change → re-stamp damage for the new caliber ---

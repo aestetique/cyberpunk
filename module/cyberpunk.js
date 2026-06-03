@@ -227,7 +227,8 @@ Hooks.once("ready", async function() {
     // 2.0.3: weapon/ammo/ordnance unified into single weapon type with weaponType discriminator
     // 2.0.4: cyberware embedded weapons get full migration parity (caliber map, dead-field drops, Martial reset)
     // 2.0.5: caliber → damage table; Ranged + non-grenade Ammo damage locked to caliber; 30_30_C → 30_06_C remap
-    const NEEDS_MIGRATION_VERSION = "2.0.5";
+    // 2.0.6: skill drives Ranged subtype; legacy SMG/Rifle/Heavy class keys remapped; attackSkill backfilled
+    const NEEDS_MIGRATION_VERSION = "2.0.6";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;

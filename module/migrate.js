@@ -36,6 +36,10 @@ export async function migrateWorld(targetVersion) {
     // Normalize Ranged + Ammo damage to the caliber table; rewrite stale calibers (e.g. 30_30_C → 30_06_C)
     await _normalizeCaliberAndDamage();
 
+    // Remap legacy Ranged weaponClass (SMG/Rifle/Heavy) onto the new fine-grained
+    // values, and stamp a sensible attackSkill on any weapon that lacks one.
+    await _normalizeWeaponSkillAndClass();
+
     for(let actor of game.actors.contents) {
         processDocument(actor);
         actor.items.forEach(item => processDocument(item));
@@ -803,6 +807,144 @@ async function _normalizeCaliberAndDamage() {
             await _processCyberweapons(actor, items);
         } catch (err) {
             console.error(`CYBERPUNK | Skipping actor "${actor?.name}" during normalization:`, err);
+            migrationSuccess = false;
+        }
+    }
+}
+
+// ============================================================================
+// Weapon attack-skill + weaponClass normalization (2.0.6).
+// Skill became the primary driver: it narrows the Ranged Subtype dropdown and
+// supplies the gear-tab label for Martial / Ordnance. To keep legacy data
+// working with the new sheets:
+//   - Ranged: map legacy weaponClass keys (SMG/Rifle/Heavy) onto the new
+//     fine-grained enum (SubMachinegun, AssaultRifle, Machinegun).
+//   - Any weapon missing an attackSkill gets a sensible default from its
+//     (weaponType, weaponClass) — so the new sheet renders a populated dropdown.
+// Touches standalone weapons + cyberware-embedded weapons.
+// ============================================================================
+
+// Legacy Ranged class → new class slug.
+const RANGED_CLASS_REMAP = {
+    SMG:    "SubMachinegun",
+    Rifle:  "AssaultRifle",
+    Heavy:  "Machinegun"
+};
+
+// Best-effort: (weaponType, weaponClass) → canonical attack skill name.
+// Used only when system.attackSkill is empty.
+const DEFAULT_SKILL_BY_CLASS = {
+    // Ranged — new keys
+    "Ranged/Pistol":           "Handgun",
+    "Ranged/SubMachinegun":    "Sub Machinegun",
+    "Ranged/AssaultRifle":     "Rifle",
+    "Ranged/SniperRifle":      "Rifle",
+    "Ranged/Shotgun":          "Rifle",
+    "Ranged/AntiMateriel":     "Heavy Weapons",
+    "Ranged/Autocannon":       "Heavy Weapons",
+    "Ranged/GrenadeLauncher":  "Heavy Weapons",
+    "Ranged/Machinegun":       "Heavy Weapons",
+    "Ranged/Minigun":          "Heavy Weapons",
+    // Ranged — legacy keys (in case remap hasn't run yet)
+    "Ranged/SMG":              "Sub Machinegun",
+    "Ranged/Rifle":            "Rifle",
+    "Ranged/Heavy":            "Heavy Weapons",
+    // Martial
+    "Martial/Unarmed":         "Brawling",
+    "Martial/Melee":           "Melee",
+    "Martial/Bow":             "Archery",
+    "Martial/Crossbow":        "Archery",
+    "Martial/Sling":           "Athletics",
+    // Ordnance
+    "Ordnance/Grenade":        "Athletics",
+    "Ordnance/Mine":           "Demolitions",
+    "Ordnance/Charge":         "Demolitions",
+    "Ordnance/Missile":        "Heavy Weapons",
+    "Ordnance/RPG":            "Heavy Weapons"
+};
+
+function _calcSkillClassUpdates(sys, { fieldPrefix }) {
+    const updates = {};
+    const wt = sys.weaponType;
+    if (!wt || wt === "Ammo") return updates;
+
+    // 1) Remap legacy Ranged weaponClass keys.
+    let wc = sys.weaponClass;
+    if (wt === "Ranged" && wc && RANGED_CLASS_REMAP[wc]) {
+        wc = RANGED_CLASS_REMAP[wc];
+        updates[`${fieldPrefix}weaponClass`] = wc;
+    }
+
+    // 2) Stamp attackSkill if missing.
+    if (!sys.attackSkill) {
+        const skill = DEFAULT_SKILL_BY_CLASS[`${wt}/${wc}`];
+        if (skill) updates[`${fieldPrefix}attackSkill`] = skill;
+    }
+    return updates;
+}
+
+async function _normalizeWeaponSkillAndClass() {
+    const scopeName = (p) => p === "world" ? "world" : `actor "${p.name}"`;
+
+    async function _processWeaponItems(parent, items) {
+        const candidates = items.filter(i => i.type === "weapon");
+        let touched = 0;
+        let aborted = false;
+        for (const item of candidates) {
+            if (aborted) break;
+            try {
+                const u = _calcSkillClassUpdates(item.system || {}, { fieldPrefix: "system." });
+                if (foundry.utils.isEmpty(u)) continue;
+                if (parent === "world") await item.update(u);
+                else await parent.updateEmbeddedDocuments("Item", [{ _id: item.id, ...u }]);
+                touched++;
+            } catch (err) {
+                console.error(`CYBERPUNK | Failed to normalize skill/class on "${item.name}" (${scopeName(parent)}):`, err);
+                migrationSuccess = false;
+                if (parent !== "world" && /is not a valid type/i.test(err?.message || "")) {
+                    aborted = true;
+                }
+            }
+        }
+        if (touched) console.log(`CYBERPUNK | Normalized skill/class on ${touched} weapon item(s) on ${scopeName(parent)}`);
+    }
+
+    async function _processCyberweapons(parent, items) {
+        const candidates = items.filter(i => i.type === "cyberware" && i.system?.weapon);
+        let touched = 0;
+        let aborted = false;
+        for (const item of candidates) {
+            if (aborted) break;
+            try {
+                const u = _calcSkillClassUpdates(item.system.weapon, { fieldPrefix: "system.weapon." });
+                if (foundry.utils.isEmpty(u)) continue;
+                if (parent === "world") await item.update(u);
+                else await parent.updateEmbeddedDocuments("Item", [{ _id: item.id, ...u }]);
+                touched++;
+            } catch (err) {
+                console.error(`CYBERPUNK | Failed to normalize skill/class on cyberweapon "${item.name}" (${scopeName(parent)}):`, err);
+                migrationSuccess = false;
+                if (parent !== "world" && /is not a valid type/i.test(err?.message || "")) {
+                    aborted = true;
+                }
+            }
+        }
+        if (touched) console.log(`CYBERPUNK | Normalized skill/class on ${touched} cyberweapon(s) on ${scopeName(parent)}`);
+    }
+
+    // ----- World scope -----
+    const worldItems = Array.from(game.items.contents);
+    await _processWeaponItems("world", worldItems);
+    await _processCyberweapons("world", worldItems);
+
+    // ----- Actor scope -----
+    for (const actor of game.actors.contents) {
+        try {
+            const items = Array.from(actor.items);
+            await _processWeaponItems(actor, items);
+            await _processCyberweapons(actor, items);
+        } catch (err) {
+            console.error(`CYBERPUNK | Skipping actor "${actor?.name}" during skill/class normalization:`, err);
             migrationSuccess = false;
         }
     }

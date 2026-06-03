@@ -19,7 +19,7 @@ import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext } from "./gear-data.js"
 import { calibers as CALIBERS } from "../calibers.js"
-import { rangedClasses, martialClasses } from "../lookups.js"
+import { rangedClasses, martialClasses, getMartialSubtypeLabelKey } from "../lookups.js"
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 
 /**
@@ -1057,8 +1057,11 @@ export class CyberpunkActorSheet extends ActorSheet {
       } else if (isMelee || effectiveType === "Martial") {
         const damageTypeKey = meleeDamageTypes[weapon.damageType];
         const damageType = damageTypeKey ? game.i18n.localize(`CYBERPUNK.${damageTypeKey}`) : '';
-        const classKey = martialClasses[wClass];
-        const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : game.i18n.localize("CYBERPUNK.WeaponTypeMartial");
+        // Skill-driven subtype label (Archery / Melee / Martial / Thrown).
+        const subKey = getMartialSubtypeLabelKey(weapon.attackSkill);
+        const classLabel = subKey
+          ? game.i18n.localize(`CYBERPUNK.${subKey}`)
+          : game.i18n.localize("CYBERPUNK.WeaponTypeMartial");
         const parts = [classLabel, damageType, rel, conc, range].filter(p => p);
         context = parts.join(' · ');
       } else if (isExotic) {

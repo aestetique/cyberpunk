@@ -4,7 +4,8 @@ import {
     rangedClasses, martialClasses, ordnanceClasses, exoticClasses, ammoClasses,
     meleeDamageTypes, exoticEffects, ammoTypes,
     ordnanceTemplateTypes,
-    getAttackSkillsForWeapon
+    getAttackSkillsForWeapon,
+    getRangedClassesForSkill
 } from "../lookups.js";
 import { calibers as CALIBERS, getValidAmmoTypesForCaliber, getDamageForCaliber } from "../calibers.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
@@ -87,11 +88,20 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
         }));
         data.selectedWeaponTypeLabel = game.i18n.localize(`CYBERPUNK.${weaponTypes[wt] || "WeaponTypeMartial"}`);
 
-        // ----- WeaponClass (Subtype) dropdown — Ranged only in the spec -----
+        // ----- WeaponClass (Subtype) dropdown -----
+        // For Ranged: the available options are narrowed by the selected attack
+        // skill (Handgun → Pistol; Rifle → AssaultRifle/SniperRifle/Shotgun; etc).
+        // For other types: full class enum is still offered (sheets that hide the
+        // dropdown — Martial/Exotic/Ordnance — simply ignore this).
         const classEnum = getWeaponClasses(wt) || {};
-        data.weaponClassOptions = Object.entries(classEnum).map(([value, labelKey]) => ({
+        let classKeys = Object.keys(classEnum);
+        if (wt === "Ranged") {
+            const allowed = getRangedClassesForSkill(data.system.attackSkill);
+            if (allowed.length) classKeys = allowed;
+        }
+        data.weaponClassOptions = classKeys.map(value => ({
             value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+            label: classEnum[value] ? game.i18n.localize(`CYBERPUNK.${classEnum[value]}`) : value,
             selected: wc === value
         }));
         data.selectedWeaponClassLabel = classEnum[wc]
@@ -266,13 +276,23 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
 
         if (this._isLocked) return;
 
-        // WeaponType change → reset weaponClass + clear incompatible fields
+        // WeaponType change → reset weaponClass + clear attackSkill (so the
+        // sheet picks the new type's first canonical skill on next render).
         html.find('select[name="system.weaponType"]').change(async ev => {
             const newType = ev.currentTarget.value;
             const updates = { "system.weaponType": newType };
-            updates["system.weaponClass"] = DEFAULT_CLASS_BY_TYPE[newType] || "";
-            // Reset attackSkill so the next render picks the new canonical default
-            updates["system.attackSkill"] = "";
+            // Pick a sensible default skill so the Ranged class dropdown isn't empty.
+            const defaultSkill = getAttackSkillsForWeapon(newType)[0] || "";
+            updates["system.attackSkill"] = defaultSkill;
+            // For Ranged: default class is the first allowed by the default skill.
+            // For other types: keep the type's default class (ignored by sheets
+            // that don't render the dropdown).
+            if (newType === "Ranged") {
+                const allowed = getRangedClassesForSkill(defaultSkill);
+                updates["system.weaponClass"] = allowed[0] || "Pistol";
+            } else {
+                updates["system.weaponClass"] = DEFAULT_CLASS_BY_TYPE[newType] || "";
+            }
             // Switching INTO Ranged stamps the caliber's damage (if any).
             if (newType === "Ranged") {
                 const dmg = getDamageForCaliber(this.item.system.caliber);
@@ -281,12 +301,23 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
             await this.item.update(updates);
         });
 
-        // weaponClass (Subtype) change — Ranged only in spec; restate to also handle Ammo class
+        // weaponClass (Subtype) change — just write the new class; skill stays.
         html.find('select[name="system.weaponClass"]').change(async ev => {
-            const newClass = ev.currentTarget.value;
-            const updates = { "system.weaponClass": newClass };
-            // Reset attackSkill so the next render picks the new canonical default
-            updates["system.attackSkill"] = "";
+            await this.item.update({ "system.weaponClass": ev.currentTarget.value });
+        });
+
+        // attackSkill change — for Ranged, narrow the weaponClass to the new
+        // skill's allowed set. If the current class is no longer valid, reset to
+        // the first allowed.
+        html.find('select[name="system.attackSkill"]').change(async ev => {
+            const newSkill = ev.currentTarget.value;
+            const updates = { "system.attackSkill": newSkill };
+            if (this.item.system.weaponType === "Ranged") {
+                const allowed = getRangedClassesForSkill(newSkill);
+                if (allowed.length && !allowed.includes(this.item.system.weaponClass)) {
+                    updates["system.weaponClass"] = allowed[0];
+                }
+            }
             await this.item.update(updates);
         });
 

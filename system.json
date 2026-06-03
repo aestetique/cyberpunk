@@ -3,7 +3,7 @@
   "title": "Cyberpunk",
   "description": "An unofficial fan-made interpretation of the Cyberpunk game systems by R. Talsorian Games for Foundry Virtual Tabletop.",
   "background": "systems/cyberpunk/img/ui/system-background.webp",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "compatibility": {
     "minimum": "13",
     "verified": "13",

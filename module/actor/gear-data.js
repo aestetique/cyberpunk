@@ -11,7 +11,9 @@ import {
     exoticClasses,
     ordnanceClasses,
     ordnanceTemplateTypes,
-    getWeaponClasses
+    getWeaponClasses,
+    getMartialSubtypeLabelKey,
+    getOrdnanceSubtypeLabelKey
 } from "../lookups.js";
 import { calibers as CALIBERS } from "../calibers.js";
 import { COVER_TYPES } from "../conditions.js";
@@ -129,6 +131,7 @@ export function buildWeaponsList(actor) {
             // Build the context string per category
             let context = '';
             if (isRanged) {
+                // "Caliber + Subtype" (subtype is now skill-narrowed weaponClass label).
                 const classKey = rangedClasses[wClass];
                 const classLabel = classKey ? localizeKey(classKey) : (wClass || '');
                 const caliberSlug = attachedAmmo?.system?.caliber || sys.caliber;
@@ -139,10 +142,13 @@ export function buildWeaponsList(actor) {
                 const parts = [caliberClass, rel, conc, loadedAmmoLabel, range].filter(Boolean);
                 context = parts.join(' · ');
             } else if (wType === "Martial") {
-                const classKey = martialClasses[wClass] || martialClasses[LEGACY_TYPE_TO_CLASS[sys.weaponType]];
-                const classLabel = classKey ? localizeKey(classKey) : localizeKey("WeaponTypeMartial");
-                let bits = [classLabel];
-                if (isMelee) {
+                // Subtype is now derived from the attack skill (Archery / Melee /
+                // Martial / Thrown). Fall back to the WeaponTypeMartial label if
+                // the skill isn't recognized (e.g. legacy data without skill).
+                const subKey = getMartialSubtypeLabelKey(sys.attackSkill);
+                const subLabel = subKey ? localizeKey(subKey) : localizeKey("WeaponTypeMartial");
+                let bits = [subLabel];
+                if (sys.damageType) {
                     const dmgKey = meleeDamageTypes[sys.damageType];
                     if (dmgKey) bits.push(localizeKey(dmgKey));
                 }
@@ -258,7 +264,10 @@ export function buildOrdnanceList(actor) {
             const relLabel = reliability[sys.reliability] ? localizeKey(reliability[sys.reliability]) : '';
             const concLabel = concealability[sys.concealability] ? localizeKey(concealability[sys.concealability]) : '';
             const range = sys.range ? `${sys.range} m` : '';
-            const classKey = ordnanceClasses[discrim(sys).weaponClass];
+            // Ordnance subtype label is skill-driven (Grenade / Explosive / Missile).
+            // Fall back to the legacy weaponClass label if the skill isn't recognized.
+            const subKey = getOrdnanceSubtypeLabelKey(sys.attackSkill);
+            const classKey = subKey || ordnanceClasses[discrim(sys).weaponClass];
             const classLabel = classKey ? localizeKey(classKey) : '';
             const contextParts = [classLabel, templateLabel, radiusStr, effectLabel, relLabel, concLabel, range].filter(Boolean);
 

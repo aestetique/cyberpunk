@@ -409,14 +409,12 @@ export class CyberpunkItem extends Item {
 
   /**
    * Resolve the canonical attack skill name for this weapon. Falls back to the
-   * first mapped skill for (weaponType, weaponClass) when system.attackSkill is empty.
+   * first mapped skill for the weaponType when system.attackSkill is empty.
    */
   _resolveAttackSkill() {
     const wd = this.weaponData;
     if (wd?.attackSkill) return wd.attackSkill;
-    const t = this._getWeaponType();
-    const c = this._getWeaponClass();
-    const skills = getAttackSkillsForWeapon(t, c);
+    const skills = getAttackSkillsForWeapon(this._getWeaponType());
     return skills[0] || "";
   }
 

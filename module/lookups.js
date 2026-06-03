@@ -33,14 +33,38 @@ export const martialClasses = {
     Sling:    "MartialSling"
 };
 
-/** Ranged subclasses */
+/**
+ * Ranged subclasses. Skill drives which subclasses are available — see
+ * RANGED_CLASSES_BY_SKILL. The gear-tab subtext is "Caliber + class label".
+ */
 export const rangedClasses = {
-    Pistol:  "RangedPistol",
-    SMG:     "RangedSMG",
-    Shotgun: "RangedShotgun",
-    Rifle:   "RangedRifle",
-    Heavy:   "RangedHeavy"
+    Pistol:           "RangedPistol",
+    SubMachinegun:    "RangedSubMachinegun",
+    AssaultRifle:     "RangedAssaultRifle",
+    SniperRifle:      "RangedSniperRifle",
+    Shotgun:          "RangedShotgun",
+    AntiMateriel:     "RangedAntiMateriel",
+    Autocannon:       "RangedAutocannon",
+    GrenadeLauncher:  "RangedGrenadeLauncher",
+    Machinegun:       "RangedMachinegun",
+    Minigun:          "RangedMinigun"
 };
+
+/**
+ * For Ranged weapons the available weaponClass values depend on the chosen
+ * attack skill. Pick the skill, narrow the subtype dropdown.
+ */
+export const RANGED_CLASSES_BY_SKILL = {
+    "Handgun":        ["Pistol"],
+    "Sub Machinegun": ["SubMachinegun"],
+    "Rifle":          ["AssaultRifle", "SniperRifle", "Shotgun"],
+    "Heavy Weapons":  ["AntiMateriel", "Autocannon", "GrenadeLauncher", "Machinegun", "Minigun"]
+};
+
+/** Return the allowed Ranged weaponClass keys for an attack skill. */
+export function getRangedClassesForSkill(skill) {
+    return RANGED_CLASSES_BY_SKILL[skill] || [];
+}
 
 /** Exotic subclasses (currently flat — user may subdivide later) */
 export const exoticClasses = {
@@ -134,11 +158,16 @@ export const WEAPON_CLASS_TO_SKILL_CATEGORY = {
     "Martial/Sling":     "slings",
 
     // Ranged
-    "Ranged/Pistol":     "pistols",
-    "Ranged/SMG":        "submachineGuns",
-    "Ranged/Shotgun":    "shotguns",
-    "Ranged/Rifle":      "rifles",
-    "Ranged/Heavy":      "heavyWeapons",
+    "Ranged/Pistol":          "pistols",
+    "Ranged/SubMachinegun":   "submachineGuns",
+    "Ranged/AssaultRifle":    "rifles",
+    "Ranged/SniperRifle":     "rifles",
+    "Ranged/Shotgun":         "rifles",
+    "Ranged/AntiMateriel":    "heavyWeapons",
+    "Ranged/Autocannon":      "heavyWeapons",
+    "Ranged/GrenadeLauncher": "heavyWeapons",
+    "Ranged/Machinegun":      "heavyWeapons",
+    "Ranged/Minigun":         "heavyWeapons",
 
     // Exotic — dynamic
     "Exotic/Exotic":     null,
@@ -223,16 +252,22 @@ export const ammoAbbreviations = {
 
 /**
  * Maps a Ranged weapon's weaponClass → the ammoClass that chambers in it.
- * Pistol and SMG share ammo (Pistol class).
+ * Compatibility is caliber-based so this is now informational; kept so callers
+ * that infer "ammo family" from class still work after the class enum expanded.
  */
 export const WEAPON_TO_AMMO_CLASS = {
-    Pistol:   "Pistol",
-    SMG:      "Pistol",
-    Shotgun:  "Shotgun",
-    Rifle:    "Rifle",
-    Heavy:    "Heavy",
-    Bow:      "Bow",
-    Crossbow: "Crossbow"
+    Pistol:           "Pistol",
+    SubMachinegun:    "Pistol",
+    AssaultRifle:     "Rifle",
+    SniperRifle:      "Rifle",
+    Shotgun:          "Shotgun",
+    AntiMateriel:     "Heavy",
+    Autocannon:       "Heavy",
+    GrenadeLauncher:  "Heavy",
+    Machinegun:       "Heavy",
+    Minigun:          "Heavy",
+    Bow:              "Bow",
+    Crossbow:         "Crossbow"
 };
 
 /**
@@ -285,14 +320,20 @@ export function getSkillsForCategory(categoryKey) {
 }
 
 /**
- * Attack-skill list for a (weaponType, weaponClass) pair.
+ * Attack-skill list for a weaponType. The list is FLAT (per-type) — the user
+ * picks any of the type's eligible skills, and that drives the subtype label
+ * (Martial / Ordnance) or the available subtype dropdown (Ranged).
+ *
  * - Exotic dispatches to all weapon-skill categories minus Brawling.
  * - Ammo returns [] (ammo doesn't attack).
+ *
+ * `weaponClass` is accepted but ignored — preserved for back-compat with
+ * legacy call sites that still pass it.
+ *
  * @param {string} weaponType
- * @param {string} weaponClass
  * @returns {string[]}
  */
-export function getAttackSkillsForWeapon(weaponType, weaponClass) {
+export function getAttackSkillsForWeapon(weaponType /*, weaponClass — ignored */) {
     if (weaponType === "Exotic") {
         const all = new Set();
         for (const [key, catKey] of Object.entries(WEAPON_CLASS_TO_SKILL_CATEGORY)) {
@@ -303,8 +344,56 @@ export function getAttackSkillsForWeapon(weaponType, weaponClass) {
         all.delete("Brawling");
         return [...all].sort();
     }
-    const catKey = WEAPON_CLASS_TO_SKILL_CATEGORY[`${weaponType}/${weaponClass}`];
-    return catKey ? [...(SKILL_MAPPINGS[catKey] || [])] : [];
+    if (weaponType === "Martial") {
+        const skills = new Set([
+            ...(SKILL_MAPPINGS.bows         || []),  // Archery
+            ...(SKILL_MAPPINGS.meleeAttacks || []),  // Fencing, Melee, Brawling
+            ...(SKILL_MAPPINGS.unarmedAttacks || []),// Brawling + Martial:* variants
+            ...(SKILL_MAPPINGS.slings       || [])   // Athletics (thrown)
+        ]);
+        return [...skills];
+    }
+    if (weaponType === "Ranged") {
+        const skills = new Set([
+            ...(SKILL_MAPPINGS.pistols        || []),
+            ...(SKILL_MAPPINGS.submachineGuns || []),
+            ...(SKILL_MAPPINGS.rifles         || []),
+            ...(SKILL_MAPPINGS.heavyWeapons   || [])
+        ]);
+        return [...skills];
+    }
+    if (weaponType === "Ordnance") {
+        const skills = new Set([
+            ...(SKILL_MAPPINGS.throw              || []),
+            ...(SKILL_MAPPINGS.demolitionsSkills  || []),
+            ...(SKILL_MAPPINGS.heavyWeapons       || [])
+        ]);
+        return [...skills];
+    }
+    return [];
+}
+
+/**
+ * Skill → Martial subtype label key. Used for the gear-tab subtext on Martial
+ * weapons (and martial cyberweapons). Returns a CYBERPUNK.* lang key suffix.
+ */
+export function getMartialSubtypeLabelKey(skill) {
+    if (!skill) return "";
+    if (skill === "Archery")  return "MartialSubtypeArchery";
+    if (skill === "Athletics") return "MartialSubtypeThrown";
+    if (skill === "Melee" || skill === "Brawling" || skill === "Fencing") return "MartialSubtypeMelee";
+    if (typeof skill === "string" && skill.startsWith("Martial:")) return "MartialSubtypeMartial";
+    return "";
+}
+
+/**
+ * Skill → Ordnance subtype label key. Used for the gear-tab subtext on Ordnance.
+ */
+export function getOrdnanceSubtypeLabelKey(skill) {
+    if (skill === "Athletics")     return "OrdnanceSubtypeGrenade";
+    if (skill === "Demolitions")   return "OrdnanceSubtypeExplosive";
+    if (skill === "Heavy Weapons") return "OrdnanceSubtypeMissile";
+    return "";
 }
 
 /**

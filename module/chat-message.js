@@ -1501,14 +1501,35 @@ export class CyberpunkChatMessage extends ChatMessage {
                 await this._rollEffectSave(actor, "poison", "unconscious");
                 break;
 
+            case "stunAt0":
+                await actor.rollStunSave(0);
+                break;
+
+            case "stunAt1":
+                await actor.rollStunSave(-1);
+                break;
+
             case "stunAt2":
-                // Roll shock save at -2 difficulty
                 await actor.rollStunSave(-2);
                 break;
 
+            case "stunAt3":
+                await actor.rollStunSave(-3);
+                break;
+
             case "stunAt4":
-                // Roll shock save at -4 difficulty
                 await actor.rollStunSave(-4);
+                break;
+
+            case "deathAt0":
+                // Forces a clean Death Save (no penalty / no bonus).
+                await actor.rollDeathSave(0);
+                break;
+
+            case "smoke":
+                // No per-target effect. The darkness AmbientLight is spawned
+                // once-per-AoE in CyberpunkItem#_fireAreaWeapon when the
+                // measured template is dropped.
                 break;
 
             case "burning":

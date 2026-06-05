@@ -1,23 +1,7 @@
-import { weaponTypes, rangedAttackTypes, meleeAttackTypes, fireModes, ranges, rangeDCs, rangeResolve, getAttackSkillsForWeapon, getWeaponClasses, martialActions, meleeDamageBonus, exoticEffects } from "../lookups.js"
+import { weaponTypes, rangedAttackTypes, meleeAttackTypes, fireModes, ranges, rangeDCs, rangeResolve, getAttackSkillsForWeapon, getWeaponClasses, martialActions, meleeDamageBonus, weaponEffects, resolveWeaponDiscriminator } from "../lookups.js"
 import { RollBundle, buildD10Roll }  from "../dice.js"
 import { clamp, getByPath, localize, rollLocation } from "../utils.js"
 import { CyberpunkActor } from "../actor/actor.js";
-
-// Old (pre-unification) → new weaponType discriminator. Used to keep
-// un-migrated weapon documents readable until the migration runs.
-const LEGACY_TYPE_TO_NEW = {
-    "Pistol": "Ranged",   "SMG": "Ranged", "Shotgun": "Ranged",
-    "Rifle":  "Ranged",   "Heavy": "Ranged",
-    "Bow":    "Martial",  "Crossbow": "Martial", "Melee": "Martial",
-    "Exotic": "Exotic"
-};
-// Old top-level weaponType → its new weaponClass slot
-const LEGACY_TYPE_TO_CLASS = {
-    "Pistol": "Pistol", "SMG": "SMG", "Shotgun": "Shotgun",
-    "Rifle":  "Rifle",  "Heavy": "Heavy",
-    "Bow":    "Bow",    "Crossbow": "Crossbow",
-    "Melee":  "Melee",  "Exotic":   "Exotic"
-};
 
 /**
  * Item document for the Cyberpunk 2020 system.
@@ -103,7 +87,6 @@ export class CyberpunkItem extends Item {
         // Reset humanity tracking (not installed yet)
         updates["system.humanityLoss"] = 0;
         updates["system.humanityRolled"] = false;
-        updates["system.repaired"] = false;
         // Restore embedded weapon ammo/charges and detach any owner-linked ammo
         if (s.weapon?.shots != null) updates["system.weapon.shotsLeft"] = s.weapon.shots;
         if (s.weapon?.chargesMax) updates["system.weapon.charges"] = s.weapon.chargesMax;
@@ -121,9 +104,6 @@ export class CyberpunkItem extends Item {
     super.prepareData();
 
     switch(this.type) {
-      case "weapon":
-        this._prepareWeaponData(this.system);
-        break;
       case "armor":
         this._prepareArmorData(this.system);
         break;
@@ -148,24 +128,14 @@ export class CyberpunkItem extends Item {
   }
 
   /**
-   * Resolve effective weaponType (new 5-category discriminator).
-   * Falls through to legacy mapping for un-migrated documents.
+   * Resolve effective (weaponType, weaponClass) for this weapon, falling
+   * through legacy values for un-migrated documents.
    */
-  _getWeaponType() {
-    const t = this.weaponData?.weaponType;
-    if (!t) return "Martial";
-    if (LEGACY_TYPE_TO_NEW[t]) return LEGACY_TYPE_TO_NEW[t];
-    return t;
+  _getDiscriminator() {
+    return resolveWeaponDiscriminator(this.weaponData || {});
   }
-
-  /**
-   * Resolve effective weaponClass. Falls through to legacy mapping.
-   */
-  _getWeaponClass() {
-    const wd = this.weaponData;
-    if (wd?.weaponClass) return wd.weaponClass;
-    return LEGACY_TYPE_TO_CLASS[wd?.weaponType] || wd?.weaponType || "";
-  }
+  _getWeaponType()  { return this._getDiscriminator().weaponType || "Martial"; }
+  _getWeaponClass() { return this._getDiscriminator().weaponClass || ""; }
 
   /**
    * The Ammo item currently attached to this Ranged weapon, or null.
@@ -279,7 +249,8 @@ export class CyberpunkItem extends Item {
     await this._detachAmmo();
     // Set new attachment
     await this.update({ [this._weaponUpdatePath("attachedAmmoId")]: ammoItem.id });
-    try { await ammoItem.setFlag("cyberpunk", "attachedTo", this.id); } catch (e) {}
+    try { await ammoItem.setFlag("cyberpunk", "attachedTo", this.id); }
+    catch (e) { console.warn(`CYBERPUNK | Could not flag ammo "${ammoItem.name}" as attached:`, e); }
     // Refill from new pile
     await this._reloadFromAttached();
   }
@@ -305,7 +276,8 @@ export class CyberpunkItem extends Item {
     if (loaded > 0) {
       await ammo.update({ "system.quantity": (Number(ammo.system.quantity) || 0) + loaded });
     }
-    try { await ammo.unsetFlag("cyberpunk", "attachedTo"); } catch (e) {}
+    try { await ammo.unsetFlag("cyberpunk", "attachedTo"); }
+    catch (e) { console.warn(`CYBERPUNK | Could not unflag ammo "${ammo.name}":`, e); }
     await this.update({
       [this._weaponUpdatePath("attachedAmmoId")]: "",
       [this._weaponUpdatePath("shotsLeft")]: 0
@@ -350,10 +322,6 @@ export class CyberpunkItem extends Item {
   /** Current value of the per-shot resource (charges or shotsLeft). */
   _getAmmoLeft() {
     return Number(this.weaponData?.[this._getAmmoField()]) || 0;
-  }
-
-  _prepareWeaponData(data) {
-
   }
 
   /**
@@ -814,7 +782,7 @@ export class CyberpunkItem extends Item {
       };
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(maxRounds === 2 ? fireModes.twoRoundBurst : fireModes.threeRoundBurst));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
-      this.update({[this._weaponUpdatePath(ammoField)]: ammoLeft - roundsFired});
+      await this.update({[this._weaponUpdatePath(ammoField)]: ammoLeft - roundsFired});
       return roll;
   }
 
@@ -959,9 +927,9 @@ export class CyberpunkItem extends Item {
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
 
       if (isExotic) {
-          this.update({[this._weaponUpdatePath("charges")]: (wd.charges || 0) - roundsFired});
+          await this.update({[this._weaponUpdatePath("charges")]: (wd.charges || 0) - roundsFired});
       } else {
-          this.update({[this._weaponUpdatePath("shotsLeft")]: wd.shotsLeft - roundsFired});
+          await this.update({[this._weaponUpdatePath("shotsLeft")]: wd.shotsLeft - roundsFired});
       }
 
       return roll;
@@ -1107,6 +1075,13 @@ export class CyberpunkItem extends Item {
       let roll = new RollBundle(localize("OrdnanceAction"));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/ordnance-hit.hbs", templateData);
 
+      // Smoke effect: drop a darkness AmbientLight on top of the placed template,
+      // sized to the template's footprint. Done once-per-AoE rather than per-target.
+      if (weaponEffect === "smoke" && attackMods.templateId) {
+          try { await this._spawnSmokeDarkness(attackMods.templateId); }
+          catch (err) { console.error("CYBERPUNK | Failed to spawn smoke darkness:", err); }
+      }
+
       // Resource cost: Ordnance destroys; Exotic deducts charges; Ranged consumes shotsLeft.
       if (t === "Ordnance") {
           await this.delete();
@@ -1121,6 +1096,39 @@ export class CyberpunkItem extends Item {
       return roll;
   }
 
+  /**
+   * Spawn a negative ambient light (darkness source) at the placed AoE template's
+   * position, so the affected area becomes a smoke cloud / darkness zone the
+   * scene's vision system has to reckon with. Sized to the template footprint.
+   * Best-effort: silently no-ops if the canvas isn't ready or the template
+   * cannot be located.
+   */
+  async _spawnSmokeDarkness(templateId) {
+      if (!canvas?.scene || !templateId) return;
+      const tmpl = canvas.scene.templates.get(templateId);
+      if (!tmpl) return;
+      // Only circle templates have a single "radius" that translates cleanly
+      // into an ambient-light radius. Cone/beam smoke is a future enhancement.
+      if (tmpl.t !== "circle") return;
+      const radius = Number(tmpl.distance) || 0;
+      if (radius <= 0) return;
+      const lightData = {
+          x: tmpl.x,
+          y: tmpl.y,
+          rotation: 0,
+          walls: false,
+          config: {
+              negative: true,    // marks this as a darkness source ("Is Darkness Source")
+              dim: radius,
+              bright: radius,
+              color: "#000000",
+              alpha: 0.5,
+              animation: { type: "none", speed: 5, intensity: 5 }
+          }
+      };
+      await canvas.scene.createEmbeddedDocuments("AmbientLight", [lightData]);
+  }
+
   // Back-compat alias — TAH and dialogs may still call _fireOrdnance directly.
   async _fireOrdnance(attackMods, targetTokens = []) {
       return this._fireAreaWeapon(attackMods, targetTokens);
@@ -1128,10 +1136,10 @@ export class CyberpunkItem extends Item {
 
   /**
    * Get localized label for an exotic effect.
-   * Uses the exoticEffects map (loc keys) — falls back to the raw key.
+   * Uses the weaponEffects map (loc keys) — falls back to the raw key.
    */
   _getEffectLabel(effect) {
-      const key = exoticEffects[effect];
+      const key = weaponEffects[effect];
       if (key) return localize(key);
       return effect;
   }
@@ -1146,14 +1154,19 @@ export class CyberpunkItem extends Item {
           poisoned: "poisoned",
           tearing: "tearing",
           unconscious: "unconscious",
+          stunAt0: "shocked",
+          stunAt1: "shocked",
           stunAt2: "shocked",
+          stunAt3: "shocked",
           stunAt4: "shocked",
+          deathAt0: "dead",
           burning: "burning",
           acid: "acid",
           microwave: "microwave",
           blindness: "blinded",
           laser: "burning",
-          immobilized: "immobilized"
+          immobilized: "immobilized",
+          smoke: "blinded"
       };
       return icons[effect] || effect;
   }
@@ -1270,8 +1283,11 @@ export class CyberpunkItem extends Item {
                   break;
           }
       }
+      // Drones have no BT stat (template.json drone.stats only defines int/ref/tech/ma/luck),
+      // so guard the BODY-derived bonus or the access throws and the chat card never posts.
+      const btTotal = this.actor.system.stats?.bt?.total;
       let damageRoll = await new Roll(damageFormula, {
-          strengthBonus: meleeDamageBonus(this.actor.system.stats.bt.total),
+          strengthBonus: btTotal !== undefined ? meleeDamageBonus(btTotal) : 0,
           martialDamageBonus
       }).evaluate();
 
@@ -1371,8 +1387,9 @@ export class CyberpunkItem extends Item {
     if(damageFormula !== "") {
       let loc = await rollLocation(attackMods.targetActor, attackMods.targetArea);
       results.addRoll(loc.roll, {name: localize("Location"), flavor: loc.areaHit});
+      const btTotal = system.stats?.bt?.total;
       results.addRoll(new Roll(damageFormula, {
-        strengthBonus: meleeDamageBonus(system.stats.bt.total),
+        strengthBonus: btTotal !== undefined ? meleeDamageBonus(btTotal) : 0,
         martialDamageBonus: isMartial ? martialSkillLevel : 0
       }), {name: localize("Damage")});
     }

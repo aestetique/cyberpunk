@@ -1,32 +1,19 @@
 import {
     availability, concealability, reliability,
     weaponTypes, getWeaponClasses,
-    meleeDamageTypes, exoticEffects, ammoTypes,
+    meleeDamageTypes, weaponEffects, ammoTypes,
     ordnanceTemplateTypes,
     getAttackSkillsForWeapon,
     getRangedClassesForSkill,
+    resolveWeaponDiscriminator,
     toolBonusProperties,
     cyberwareTypes, cyberwareSubtypes, surgeryCodes,
     getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor
 } from "../lookups.js";
 import { calibers as CALIBERS, getDamageForCaliber } from "../calibers.js";
 
-// Legacy weaponType strings (pre-overhaul) → new discriminator + class.
-// Matches the same table used in weapon-sheet.js so cyberware embedded weapons
-// fall through legacy values until the migration writes them through.
-const LEGACY_TYPE = {
-    Pistol:   { weaponType: "Ranged",   weaponClass: "Pistol" },
-    SMG:      { weaponType: "Ranged",   weaponClass: "SMG" },
-    Shotgun:  { weaponType: "Ranged",   weaponClass: "Shotgun" },
-    Rifle:    { weaponType: "Ranged",   weaponClass: "Rifle" },
-    Heavy:    { weaponType: "Ranged",   weaponClass: "Heavy" },
-    Bow:      { weaponType: "Martial",  weaponClass: "Bow" },
-    Crossbow: { weaponType: "Martial",  weaponClass: "Crossbow" },
-    Melee:    { weaponType: "Martial",  weaponClass: "Melee" },
-    Exotic:   { weaponType: "Exotic",   weaponClass: "Exotic" }
-};
-
-// Default weaponClass when the user switches the discriminator dropdown.
+// Default weaponClass when the user switches the cyberware embedded-weapon
+// discriminator. Cyberware can only embed Martial/Ranged/Exotic.
 const DEFAULT_CLASS_BY_TYPE = {
     Martial: "Melee",
     Ranged:  "Pistol",
@@ -221,19 +208,9 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             }));
     }
 
-    /**
-     * Resolve effective weaponType + weaponClass for the embedded weapon,
-     * mirroring weapon-sheet.js: falls through legacy values for un-migrated data.
-     */
+    /** Normalise the embedded weapon's discriminator, falling through legacy values. */
     _resolveWeaponDiscriminator(weapon) {
-        const raw = weapon.weaponType || "Martial";
-        if (LEGACY_TYPE[raw]) {
-            return {
-                weaponType: LEGACY_TYPE[raw].weaponType,
-                weaponClass: weapon.weaponClass || LEGACY_TYPE[raw].weaponClass
-            };
-        }
-        return { weaponType: raw, weaponClass: weapon.weaponClass || DEFAULT_CLASS_BY_TYPE[raw] || "" };
+        return resolveWeaponDiscriminator(weapon, DEFAULT_CLASS_BY_TYPE);
     }
 
     /**
@@ -324,14 +301,14 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
 
         // ----- Effect (Martial / Exotic) -----
         if (data.weaponIsMartial || data.weaponIsExotic) {
-            const effectKeys = Object.keys(exoticEffects);
+            const effectKeys = Object.keys(weaponEffects);
             const currentEffect = weapon.effect || effectKeys[0];
-            data.weaponEffectOptions = Object.entries(exoticEffects).map(([value, labelKey]) => ({
+            data.weaponEffectOptions = Object.entries(weaponEffects).map(([value, labelKey]) => ({
                 value,
                 label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
                 selected: currentEffect === value
             }));
-            data.selectedWeaponEffectLabel = game.i18n.localize(`CYBERPUNK.${exoticEffects[currentEffect] || exoticEffects[effectKeys[0]]}`);
+            data.selectedWeaponEffectLabel = game.i18n.localize(`CYBERPUNK.${weaponEffects[currentEffect] || weaponEffects[effectKeys[0]]}`);
         }
 
         // ----- Template (Exotic) — supports "None" to opt out of AoE -----

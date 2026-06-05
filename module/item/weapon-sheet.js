@@ -2,29 +2,19 @@ import {
     availability, concealability, reliability,
     weaponTypes, getWeaponClasses,
     rangedClasses, martialClasses, ordnanceClasses, exoticClasses, ammoClasses,
-    meleeDamageTypes, exoticEffects, ammoTypes,
+    meleeDamageTypes, weaponEffects, ammoTypes,
     ordnanceTemplateTypes,
     getAttackSkillsForWeapon,
-    getRangedClassesForSkill
+    getRangedClassesForSkill,
+    resolveWeaponDiscriminator
 } from "../lookups.js";
 import { calibers as CALIBERS, getValidAmmoTypesForCaliber, getDamageForCaliber } from "../calibers.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
 
-// Legacy weaponType strings (pre-overhaul) → new discriminator + class.
-const LEGACY_TYPE = {
-    Pistol:   { weaponType: "Ranged",   weaponClass: "Pistol" },
-    SMG:      { weaponType: "Ranged",   weaponClass: "SMG" },
-    Shotgun:  { weaponType: "Ranged",   weaponClass: "Shotgun" },
-    Rifle:    { weaponType: "Ranged",   weaponClass: "Rifle" },
-    Heavy:    { weaponType: "Ranged",   weaponClass: "Heavy" },
-    Bow:      { weaponType: "Martial",  weaponClass: "Bow" },
-    Crossbow: { weaponType: "Martial",  weaponClass: "Crossbow" },
-    Melee:    { weaponType: "Martial",  weaponClass: "Melee" },
-    Exotic:   { weaponType: "Exotic",   weaponClass: "Exotic" }
-};
-
 /**
  * Sensible defaults for the dynamic fields when the user switches weaponType.
+ * Ordnance/Ammo extend the lookups.js default set (which only covers Martial/
+ * Ranged/Exotic — the three types cyberware can also embed).
  */
 const DEFAULT_CLASS_BY_TYPE = {
     Martial:  "Melee",
@@ -53,14 +43,7 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
 
     /** Normalise weaponType + weaponClass, falling through legacy values. */
     _resolveDiscriminator(sys) {
-        const raw = sys.weaponType || "Martial";
-        if (LEGACY_TYPE[raw]) {
-            return {
-                weaponType: LEGACY_TYPE[raw].weaponType,
-                weaponClass: sys.weaponClass || LEGACY_TYPE[raw].weaponClass
-            };
-        }
-        return { weaponType: raw, weaponClass: sys.weaponClass || DEFAULT_CLASS_BY_TYPE[raw] || "" };
+        return resolveWeaponDiscriminator(sys, DEFAULT_CLASS_BY_TYPE);
     }
 
     /** @override */
@@ -117,23 +100,26 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
         const selectedAvail = availability[data.system.availability] || "Common";
         data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
 
-        // ----- Concealability (non-Ammo) -----
-        data.concealabilityOptions = Object.entries(concealability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: data.system.concealability === value
-        }));
-        const selectedConceal = concealability[data.system.concealability] || "ConcealPocket";
-        data.selectedConcealabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedConceal}`);
+        // ----- Concealability + Reliability (non-Ammo only) -----
+        // Ammo doesn't render either dropdown; skip the option-array build to
+        // save a hundred-odd localize() calls per render.
+        if (!data.isAmmo) {
+            data.concealabilityOptions = Object.entries(concealability).map(([value, labelKey]) => ({
+                value,
+                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+                selected: data.system.concealability === value
+            }));
+            const selectedConceal = concealability[data.system.concealability] || "ConcealPocket";
+            data.selectedConcealabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedConceal}`);
 
-        // ----- Reliability (non-Ammo) -----
-        data.reliabilityOptions = Object.entries(reliability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: data.system.reliability === value
-        }));
-        const selectedRel = reliability[data.system.reliability] || "Standard";
-        data.selectedReliabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedRel}`);
+            data.reliabilityOptions = Object.entries(reliability).map(([value, labelKey]) => ({
+                value,
+                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+                selected: data.system.reliability === value
+            }));
+            const selectedRel = reliability[data.system.reliability] || "Standard";
+            data.selectedReliabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedRel}`);
+        }
 
         // ----- Attack Skill (non-Ammo) -----
         if (!data.isAmmo) {
@@ -166,14 +152,14 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
 
         // ----- Effect (Martial / Exotic / Ordnance / Ammo) -----
         if (data.isMartial || data.isExotic || data.isOrdnance || data.isAmmo) {
-            const effectKeys = Object.keys(exoticEffects);
+            const effectKeys = Object.keys(weaponEffects);
             const currentEffect = data.system.effect || effectKeys[0];
-            data.effectOptions = Object.entries(exoticEffects).map(([value, labelKey]) => ({
+            data.effectOptions = Object.entries(weaponEffects).map(([value, labelKey]) => ({
                 value,
                 label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
                 selected: currentEffect === value
             }));
-            const selectedEff = exoticEffects[currentEffect] || exoticEffects[effectKeys[0]];
+            const selectedEff = weaponEffects[currentEffect] || weaponEffects[effectKeys[0]];
             data.selectedEffectLabel = game.i18n.localize(`CYBERPUNK.${selectedEff}`);
         }
 

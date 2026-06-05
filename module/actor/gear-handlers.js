@@ -1,5 +1,5 @@
 import { localize } from "../utils.js";
-import { fireModes, meleeAttackTypes, buildMartialModifierGroups } from "../lookups.js";
+import { fireModes, meleeAttackTypes, buildMartialModifierGroups, resolveWeaponDiscriminator } from "../lookups.js";
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js";
 import { RangeSelectionDialog } from "../dialog/range-selection-dialog.js";
 import { MeleeAttackDialog } from "../dialog/melee-attack-dialog.js";
@@ -7,17 +7,9 @@ import { OrdnanceAttackDialog } from "../dialog/ordnance-attack-dialog.js";
 import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js";
 import { ModifiersDialog } from "../dialog/modifiers.js";
 
-// Legacy → new weaponType discriminator. Mirrors LEGACY_TYPE_TO_NEW in item.js.
-const LEGACY_TYPE_TO_NEW = {
-    "Pistol": "Ranged",   "SMG": "Ranged", "Shotgun": "Ranged",
-    "Rifle":  "Ranged",   "Heavy": "Ranged",
-    "Bow":    "Martial",  "Crossbow": "Martial", "Melee": "Martial",
-    "Exotic": "Exotic"
-};
 function weaponTypeOf(item) {
-    const t = item?.weaponData?.weaponType || item?.system?.weaponType;
-    if (!t) return "";
-    return LEGACY_TYPE_TO_NEW[t] || t;
+    const sys = item?.weaponData || item?.system || {};
+    return resolveWeaponDiscriminator(sys).weaponType || "";
 }
 
 /**

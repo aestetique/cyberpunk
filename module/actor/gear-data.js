@@ -2,7 +2,7 @@ import {
     reliability,
     concealability,
     meleeDamageTypes,
-    exoticEffects,
+    weaponEffects,
     ammoTypes,
     ammoAbbreviations,
     ammoClasses,
@@ -13,36 +13,13 @@ import {
     ordnanceTemplateTypes,
     getWeaponClasses,
     getMartialSubtypeLabelKey,
-    getOrdnanceSubtypeLabelKey
+    getOrdnanceSubtypeLabelKey,
+    resolveWeaponDiscriminator
 } from "../lookups.js";
 import { calibers as CALIBERS } from "../calibers.js";
 import { COVER_TYPES } from "../conditions.js";
 
-// Legacy fallback: old top-level weaponType strings → new discriminator.
-const LEGACY_TYPE_TO_NEW = {
-    "Pistol": "Ranged",   "SMG": "Ranged", "Shotgun": "Ranged",
-    "Rifle":  "Ranged",   "Heavy": "Ranged",
-    "Bow":    "Martial",  "Crossbow": "Martial", "Melee": "Martial",
-    "Exotic": "Exotic"
-};
-const LEGACY_TYPE_TO_CLASS = {
-    "Pistol": "Pistol", "SMG": "SMG", "Shotgun": "Shotgun",
-    "Rifle":  "Rifle",  "Heavy": "Heavy",
-    "Bow":    "Bow",    "Crossbow": "Crossbow",
-    "Melee":  "Melee",  "Exotic":   "Exotic"
-};
-
-/** Normalise to new (weaponType, weaponClass) discriminator from possibly-legacy data. */
-function discrim(sys) {
-    const raw = sys?.weaponType || "";
-    if (LEGACY_TYPE_TO_NEW[raw]) {
-        return {
-            weaponType: LEGACY_TYPE_TO_NEW[raw],
-            weaponClass: sys.weaponClass || LEGACY_TYPE_TO_CLASS[raw]
-        };
-    }
-    return { weaponType: raw, weaponClass: sys.weaponClass || "" };
-}
+const discrim = (sys) => resolveWeaponDiscriminator(sys);
 
 /**
  * Build the cover-row toggle data for a sheet.
@@ -71,6 +48,52 @@ function localizeKey(key) {
 }
 
 /**
+ * Build the context-line subtext for a weapon row (gear tab). Shared between
+ * regular weapons (gear-data.js#buildWeaponsList) and cyberware embedded
+ * weapons (actor-sheet.js cyberweaponsList builder). The two callers used to
+ * each carry their own near-identical version of this assembly.
+ *
+ * Inputs:
+ *   sys           — the weapon's system block (already discriminator-resolved)
+ *   wType, wClass — outputs of resolveWeaponDiscriminator(sys)
+ *   attachedAmmo  — the live Ammo Item (or null)
+ *
+ * Returns a `·`-joined string. Output is identical to the prior inline code.
+ */
+export function buildWeaponContextString({ sys, wType, wClass, attachedAmmo }) {
+    const rel  = sys.reliability && reliability[sys.reliability] ? localizeKey(reliability[sys.reliability]) : '';
+    const conc = sys.concealability && concealability[sys.concealability] ? localizeKey(concealability[sys.concealability]) : '';
+    const range = sys.range ? `${sys.range} m` : '';
+
+    if (wType === "Ranged") {
+        const classKey = rangedClasses[wClass];
+        const classLabel = classKey ? localizeKey(classKey) : (wClass || '');
+        const caliberSlug = attachedAmmo?.system?.caliber || sys.caliber;
+        const calLabelKey = caliberSlug ? CALIBERS[caliberSlug] : null;
+        const caliber = calLabelKey ? localizeKey(calLabelKey) : '';
+        const loadedAmmoLabel = getLoadedAmmoLabel(attachedAmmo?.system?.ammoType);
+        const caliberClass = [caliber, classLabel].filter(Boolean).join(' ');
+        return [caliberClass, rel, conc, loadedAmmoLabel, range].filter(Boolean).join(' · ');
+    }
+    if (wType === "Martial") {
+        const subKey = getMartialSubtypeLabelKey(sys.attackSkill);
+        const subLabel = subKey ? localizeKey(subKey) : localizeKey("WeaponTypeMartial");
+        const bits = [subLabel];
+        if (sys.damageType) {
+            const dmgKey = meleeDamageTypes[sys.damageType];
+            if (dmgKey) bits.push(localizeKey(dmgKey));
+        }
+        return bits.concat([rel, conc, range]).filter(Boolean).join(' · ');
+    }
+    if (wType === "Exotic") {
+        const effectKey = (sys.effect && sys.effect !== "none") ? weaponEffects[sys.effect] : null;
+        const effect = effectKey ? localizeKey(effectKey) : '';
+        return [localizeKey("WeaponTypeExotic"), effect, rel, conc, range].filter(Boolean).join(' · ');
+    }
+    return '';
+}
+
+/**
  * Ammo context line. Non-grenade: caliber · ammoType. Grenade:
  * caliber · ammoType · effect · template · radius/width.
  * Same shape used on standalone ammo rows and the attached-ammo addon row.
@@ -82,8 +105,8 @@ export function buildAmmoContext(ammoSys) {
     if (ammoSys.ammoType !== "grenade") {
         return [calLabel, atLabel].filter(Boolean).join(' · ');
     }
-    const effectLabel = (ammoSys.effect && ammoSys.effect !== "none" && exoticEffects[ammoSys.effect])
-        ? localizeKey(exoticEffects[ammoSys.effect])
+    const effectLabel = (ammoSys.effect && ammoSys.effect !== "none" && weaponEffects[ammoSys.effect])
+        ? localizeKey(weaponEffects[ammoSys.effect])
         : '';
     const templateLabel = ammoSys.templateType && ordnanceTemplateTypes[ammoSys.templateType]
         ? localizeKey(ordnanceTemplateTypes[ammoSys.templateType])
@@ -117,10 +140,6 @@ export function buildWeaponsList(actor) {
             const isMelee  = wType === "Martial" && wClass === "Melee";
             const isExotic = wType === "Exotic";
 
-            const rel  = sys.reliability && reliability[sys.reliability] ? localizeKey(reliability[sys.reliability]) : '';
-            const conc = sys.concealability && concealability[sys.concealability] ? localizeKey(concealability[sys.concealability]) : '';
-            const range = sys.range ? `${sys.range} m` : '';
-
             // Resolve attached ammo (Ranged only)
             let attachedAmmo = null;
             if (isRanged && sys.attachedAmmoId) {
@@ -128,38 +147,7 @@ export function buildWeaponsList(actor) {
                 if (attachedAmmo && attachedAmmo.system?.weaponType !== "Ammo") attachedAmmo = null;
             }
 
-            // Build the context string per category
-            let context = '';
-            if (isRanged) {
-                // "Caliber + Subtype" (subtype is now skill-narrowed weaponClass label).
-                const classKey = rangedClasses[wClass];
-                const classLabel = classKey ? localizeKey(classKey) : (wClass || '');
-                const caliberSlug = attachedAmmo?.system?.caliber || sys.caliber;
-                const calLabelKey = caliberSlug ? CALIBERS[caliberSlug] : null;
-                const caliber = calLabelKey ? localizeKey(calLabelKey) : '';
-                const loadedAmmoLabel = getLoadedAmmoLabel(attachedAmmo?.system?.ammoType || sys.loadedAmmoType);
-                const caliberClass = [caliber, classLabel].filter(Boolean).join(' ');
-                const parts = [caliberClass, rel, conc, loadedAmmoLabel, range].filter(Boolean);
-                context = parts.join(' · ');
-            } else if (wType === "Martial") {
-                // Subtype is now derived from the attack skill (Archery / Melee /
-                // Martial / Thrown). Fall back to the WeaponTypeMartial label if
-                // the skill isn't recognized (e.g. legacy data without skill).
-                const subKey = getMartialSubtypeLabelKey(sys.attackSkill);
-                const subLabel = subKey ? localizeKey(subKey) : localizeKey("WeaponTypeMartial");
-                let bits = [subLabel];
-                if (sys.damageType) {
-                    const dmgKey = meleeDamageTypes[sys.damageType];
-                    if (dmgKey) bits.push(localizeKey(dmgKey));
-                }
-                bits = bits.concat([rel, conc, range]).filter(Boolean);
-                context = bits.join(' · ');
-            } else if (isExotic) {
-                const effectKey = (sys.effect && sys.effect !== "none") ? exoticEffects[sys.effect] : null;
-                const effect = effectKey ? localizeKey(effectKey) : '';
-                const parts = [localizeKey("WeaponTypeExotic"), effect, rel, conc, range].filter(Boolean);
-                context = parts.join(' · ');
-            }
+            const context = buildWeaponContextString({ sys, wType, wClass, attachedAmmo });
 
             return {
                 id: w.id,
@@ -259,7 +247,7 @@ export function buildOrdnanceList(actor) {
                 ? localizeKey(ordnanceTemplateTypes[sys.templateType])
                 : '';
             const radiusStr = sys.radius ? `${sys.radius} m` : '';
-            const effectKey = (sys.effect && sys.effect !== "none") ? exoticEffects[sys.effect] : null;
+            const effectKey = (sys.effect && sys.effect !== "none") ? weaponEffects[sys.effect] : null;
             const effectLabel = effectKey ? localizeKey(effectKey) : '';
             const relLabel = reliability[sys.reliability] ? localizeKey(reliability[sys.reliability]) : '';
             const concLabel = concealability[sys.concealability] ? localizeKey(concealability[sys.concealability]) : '';

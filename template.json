@@ -740,15 +740,13 @@
 				"eurobucks": 0
 			},
 			"netrun": {
-				"icon": { "type": "String", "default": "" },
+				"icon": "",
 				"deckModel": "",
 				"interface": 0,
 				"cpu": 0,
 				"speed": 0,
 				"strength": 0,
 				"dataWall": 0,
-				"ramMax": 0,
-				"ramUsed": 0,
 				"deckType": "",
 				"hasElectrodes": false,
 				"hasKeyboard": false,
@@ -757,8 +755,7 @@
 				"hasChipReader": false,
 				"hasVoxBox": false,
 				"hasScanner": false,
-				"hasExtraChip": false,
-				"activePrograms": []
+				"hasExtraChip": false
 			}
 		},
 		"character": {
@@ -776,7 +773,10 @@
 			"stress": 0,
 			"fright": 0,
 			"sleep": 0,
-			"activeCover": null
+			"activeCover": null,
+			"skillsSortedBy": "Name",
+			"CombatSenseMod": 0,
+			"initiativeMod": 0
 		},
 		"drone": {
 			"shape": "6zones",
@@ -805,7 +805,7 @@
 		}
 	},
 	"Item": {
-		"types": ["skill", "weapon", "armor", "cyberware", "vehicle", "misc", "netware", "program", "role", "tool", "drug"],
+		"types": ["skill", "weapon", "armor", "cyberware", "vehicle", "misc", "netware", "role", "tool", "drug"],
 		"templates": {
 			"common": {
 				"flavor": "",
@@ -862,10 +862,6 @@
 			"attackerDamage": "2d6",
 			"attackerEffect": "none",
 			"programState": "inactive"
-		},
-		"program": {
-			"templates": ["common"],
-			"class": ""
 		},
 		"weapon": {
 			"templates": ["common"],
@@ -924,7 +920,8 @@
 					"ablation": 0
 				}
 			},
-			"encumbrance": 0
+			"encumbrance": 0,
+			"lastOwnerId": ""
 		},
 		"cyberware": {
 			"templates": ["common"],
@@ -942,7 +939,6 @@
 				"max": 0
 			},
 			"disablesAt": 0,
-			"repaired": false,
 			"sdpBonus": 0,
 			"isWeapon": false,
 			"isArmor": false,
@@ -973,7 +969,8 @@
 				"effect": "",
 				"templateType": "",
 				"radius": 0,
-				"caliber": "medium"
+				"caliber": "medium",
+				"ammoType": "standard"
 			},
 			"armor": {
 				"armorType": "hard",

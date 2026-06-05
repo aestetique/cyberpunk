@@ -1,4 +1,4 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, exoticEffects, toolBonusProperties, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, weaponEffects, toolBonusProperties, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
 import { localize, tabBeautifying, toTitleCase, bindHoverTooltips } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
@@ -17,9 +17,9 @@ import { CreateItemDialog } from "../dialog/create-item-dialog.js"
 import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
-import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext } from "./gear-data.js"
+import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext, buildWeaponContextString } from "./gear-data.js"
 import { calibers as CALIBERS } from "../calibers.js"
-import { rangedClasses, martialClasses, getMartialSubtypeLabelKey } from "../lookups.js"
+import { rangedClasses, martialClasses, getMartialSubtypeLabelKey, resolveWeaponDiscriminator } from "../lookups.js"
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 
 /**
@@ -1010,21 +1010,14 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Regular weapons (shared with drone sheet)
     const weaponsList = buildWeaponsList(this.actor);
 
-    // Prepare cyberweapons data (cyberware with embedded weapon)
-    // Handles BOTH legacy weaponType ("Pistol"/"Melee"/"Exotic") and the new
-    // 5-category discriminator ("Ranged"/"Martial"/"Exotic"/...).
-    const LEGACY_DISCRIM = {
-      Pistol:"Ranged", SMG:"Ranged", Shotgun:"Ranged", Rifle:"Ranged", Heavy:"Ranged",
-      Bow:"Martial", Crossbow:"Martial", Melee:"Martial", Exotic:"Exotic"
-    };
+    // Prepare cyberweapons data (cyberware with embedded weapon).
+    // resolveWeaponDiscriminator() normalises both new and legacy data.
     const cyberweaponsList = allCyberweapons.map(c => {
       const sys = c.system;
       const weapon = sys.weapon || {};
-      const rawType = weapon.weaponType || '';
-      const effectiveType = LEGACY_DISCRIM[rawType] || rawType;
-      const wClass = weapon.weaponClass || (LEGACY_DISCRIM[rawType] ? rawType : '');
+      const { weaponType: effectiveType, weaponClass: wClass } = resolveWeaponDiscriminator(weapon);
       const isRanged = effectiveType === "Ranged";
-      const isMelee = effectiveType === "Martial" && (rawType === "Melee" || weapon.weaponClass === "Melee");
+      const isMelee  = effectiveType === "Martial" && wClass === "Melee";
       const isExotic = effectiveType === "Exotic";
 
       // Resolve the attached ammo (Ranged cyberweapons only)
@@ -1034,45 +1027,9 @@ export class CyberpunkActorSheet extends ActorSheet {
         if (attachedAmmo && attachedAmmo.system?.weaponType !== "Ammo") attachedAmmo = null;
       }
 
-      const rel = weapon.reliability && reliability[weapon.reliability]
-        ? game.i18n.localize("CYBERPUNK." + reliability[weapon.reliability])
-        : '';
-      const conc = weapon.concealability && concealability[weapon.concealability]
-        ? game.i18n.localize("CYBERPUNK." + concealability[weapon.concealability])
-        : '';
-      const range = weapon.range ? `${weapon.range} m` : '';
-
-      let context = '';
-      if (isRanged) {
-        // Prefer attached ammo's caliber and ammoType; fall back to weapon's own.
-        const classKey = rangedClasses[wClass];
-        const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : (wClass || '');
-        const caliberSlug = attachedAmmo?.system?.caliber || weapon.caliber;
-        const calLabelKey = caliberSlug ? CALIBERS[caliberSlug] : null;
-        const caliber = calLabelKey ? game.i18n.localize(`CYBERPUNK.${calLabelKey}`) : '';
-        const loadedAmmoLabel = getLoadedAmmoLabel(attachedAmmo?.system?.ammoType || weapon.loadedAmmoType);
-        const caliberClass = [caliber, classLabel].filter(p => p).join(' ');
-        const parts = [caliberClass, rel, conc, loadedAmmoLabel, range].filter(p => p);
-        context = parts.join(' · ');
-      } else if (isMelee || effectiveType === "Martial") {
-        const damageTypeKey = meleeDamageTypes[weapon.damageType];
-        const damageType = damageTypeKey ? game.i18n.localize(`CYBERPUNK.${damageTypeKey}`) : '';
-        // Skill-driven subtype label (Archery / Melee / Martial / Thrown).
-        const subKey = getMartialSubtypeLabelKey(weapon.attackSkill);
-        const classLabel = subKey
-          ? game.i18n.localize(`CYBERPUNK.${subKey}`)
-          : game.i18n.localize("CYBERPUNK.WeaponTypeMartial");
-        const parts = [classLabel, damageType, rel, conc, range].filter(p => p);
-        context = parts.join(' · ');
-      } else if (isExotic) {
-        const effectKey = exoticEffects[weapon.effect];
-        const effect = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : '';
-        const parts = [game.i18n.localize("CYBERPUNK.WeaponTypeExotic"), effect, rel, conc, range].filter(p => p);
-        context = parts.join(' · ');
-      } else {
-        const parts = [rel, conc, range].filter(p => p);
-        context = parts.join(' · ');
-      }
+      const context = buildWeaponContextString({
+        sys: weapon, wType: effectiveType, wClass, attachedAmmo
+      });
 
       // For Ranged, damage on the row comes from attached ammo if present
       const effectiveDamage = isRanged
@@ -3133,33 +3090,6 @@ export class CyberpunkActorSheet extends ActorSheet {
         return;
       }
       this.actor.performSkillRoll(skillId);
-    });
-
-    // Active program context menu removal
-    html.find('.netrun-active-icon').on('contextmenu', async ev => {
-      ev.preventDefault();
-      const div = ev.currentTarget;
-      const itemId = div.dataset.itemId;
-      if (!itemId) return;
-      const currentActive = [...(this.actor.system.activePrograms || [])];
-      const idx = currentActive.indexOf(itemId);
-      if (idx < 0) return;
-
-      currentActive.splice(idx, 1);
-
-      let sumMU = 0;
-      for (let progId of currentActive) {
-        let progItem = this.actor.items.get(progId);
-        if (!progItem) continue;
-        sumMU += Number(progItem.system.mu) || 0;
-      }
-
-      await this.actor.update({
-        "system.activePrograms": currentActive,
-        "system.ramUsed": sumMU
-      });
-
-      ui.notifications.info(localize("ProgramDeactivated"));
     });
 
     // File picker for netrun icon

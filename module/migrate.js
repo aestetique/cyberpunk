@@ -40,12 +40,16 @@ export async function migrateWorld(targetVersion) {
     // values, and stamp a sensible attackSkill on any weapon that lacks one.
     await _normalizeWeaponSkillAndClass();
 
-    for(let actor of game.actors.contents) {
-        processDocument(actor);
-        actor.items.forEach(item => processDocument(item));
+    // Rename the "Sub Machinegun" skill (item names + weapon.attackSkill refs)
+    // to the canonical "Submachine Gun" spelling adopted in 2.0.7.
+    await _renameSubmachineGunSkill();
+
+    for (const actor of game.actors.contents) {
+        await processDocument(actor);
+        for (const item of actor.items) await processDocument(item);
     }
-    for(let item of game.items.contents) {
-        processDocument(item);
+    for (const item of game.items.contents) {
+        await processDocument(item);
     }
     // Stamp at least the target version so the same migration doesn't keep firing
     // every reload even if the package version hasn't been bumped yet.
@@ -68,12 +72,13 @@ const defaultDataUse = async (document, updateData) => {
 }
 async function processDocument(document, applyUpdate = defaultDataUse) {
     try {
-        let migrateDataFunc = updateFuncs[document.documentName];
-        if(migrateDataFunc === undefined) {
+        const migrateDataFunc = updateFuncs[document.documentName];
+        if (migrateDataFunc === undefined) {
             console.warn(`No migrate function for document with documentName field "${document.documentName}"`);
+            return;
         }
         const updateData = await migrateDataFunc(document);
-        applyUpdate(document, updateData);
+        await applyUpdate(document, updateData);
     } catch(err) {
         migrationSuccess = false;
         err.message = `Failed cyberpunk system migration for ${document.type} ${document.name}: ${err.message}`;
@@ -153,7 +158,7 @@ export async function migrateActor(actor) {
         actorUpdates["system.skillsSortedBy"] = "Name";
 
         const currentItems = Array.from(actor.items).map(item => item.toObject());
-        actorUpdates.items = currentItems.concat(currentItems, skillsToAdd);
+        actorUpdates.items = currentItems.concat(skillsToAdd);
     }
 
     return actorUpdates;
@@ -171,6 +176,14 @@ export function migrateItem(item) {
   if (item.type === "skill" && system.martial && ("block" in system.martial)) {
     itemUpdates["system.martial.parry"] = system.martial.block;
     itemUpdates["system.martial.-=block"] = null;
+  }
+
+  // Skills shipped in the 2.1.0 compendium had stat="body" for Endurance,
+  // Swimming, Controlled Hyperventilation and Strength Feat. The actor schema
+  // uses "bt", so @stats.body.total resolved to nothing (no BODY bonus on the
+  // roll) and the chat icon img/chat/body.svg 404'd. Repoint to "bt".
+  if (item.type === "skill" && system.stat === "body") {
+    itemUpdates["system.stat"] = "bt";
   }
 
   return itemUpdates;
@@ -836,7 +849,7 @@ const RANGED_CLASS_REMAP = {
 const DEFAULT_SKILL_BY_CLASS = {
     // Ranged — new keys
     "Ranged/Pistol":           "Handgun",
-    "Ranged/SubMachinegun":    "Sub Machinegun",
+    "Ranged/SubMachinegun":    "Submachine Gun",
     "Ranged/AssaultRifle":     "Rifle",
     "Ranged/SniperRifle":      "Rifle",
     "Ranged/Shotgun":          "Rifle",
@@ -846,7 +859,7 @@ const DEFAULT_SKILL_BY_CLASS = {
     "Ranged/Machinegun":       "Heavy Weapons",
     "Ranged/Minigun":          "Heavy Weapons",
     // Ranged — legacy keys (in case remap hasn't run yet)
-    "Ranged/SMG":              "Sub Machinegun",
+    "Ranged/SMG":              "Submachine Gun",
     "Ranged/Rifle":            "Rifle",
     "Ranged/Heavy":            "Heavy Weapons",
     // Martial
@@ -945,6 +958,53 @@ async function _normalizeWeaponSkillAndClass() {
             await _processCyberweapons(actor, items);
         } catch (err) {
             console.error(`CYBERPUNK | Skipping actor "${actor?.name}" during skill/class normalization:`, err);
+            migrationSuccess = false;
+        }
+    }
+}
+
+// ============================================================================
+// 2.0.7: rename "Sub Machinegun" → "Submachine Gun" across the data layer.
+// Touches skill-type items (rename) and weapon-type items' attackSkill string,
+// at world scope and on every actor (standalone + cyberware-embedded).
+// ============================================================================
+const SUBMACHINEGUN_OLD = "Sub Machinegun";
+const SUBMACHINEGUN_NEW = "Submachine Gun";
+
+async function _renameSubmachineGunSkill() {
+    const scopeName = (p) => p === "world" ? "world" : `actor "${p.name}"`;
+
+    async function _renameOnItems(parent, items) {
+        let touched = 0;
+        for (const item of items) {
+            try {
+                const updates = {};
+                if (item.type === "skill" && item.name === SUBMACHINEGUN_OLD) {
+                    updates.name = SUBMACHINEGUN_NEW;
+                }
+                if (item.type === "weapon" && item.system?.attackSkill === SUBMACHINEGUN_OLD) {
+                    updates["system.attackSkill"] = SUBMACHINEGUN_NEW;
+                }
+                if (item.type === "cyberware" && item.system?.weapon?.attackSkill === SUBMACHINEGUN_OLD) {
+                    updates["system.weapon.attackSkill"] = SUBMACHINEGUN_NEW;
+                }
+                if (foundry.utils.isEmpty(updates)) continue;
+                if (parent === "world") await item.update(updates);
+                else await parent.updateEmbeddedDocuments("Item", [{ _id: item.id, ...updates }]);
+                touched++;
+            } catch (err) {
+                console.error(`CYBERPUNK | Failed to rename Sub Machinegun → Submachine Gun on "${item.name}" (${scopeName(parent)}):`, err);
+                migrationSuccess = false;
+            }
+        }
+        if (touched) console.log(`CYBERPUNK | Renamed "Sub Machinegun" → "Submachine Gun" on ${touched} item(s) on ${scopeName(parent)}`);
+    }
+
+    await _renameOnItems("world", Array.from(game.items.contents));
+    for (const actor of game.actors.contents) {
+        try { await _renameOnItems(actor, Array.from(actor.items)); }
+        catch (err) {
+            console.error(`CYBERPUNK | Skipping actor "${actor?.name}" during Submachine Gun rename:`, err);
             migrationSuccess = false;
         }
     }

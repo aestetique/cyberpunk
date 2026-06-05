@@ -1,5 +1,5 @@
 import { buildD10Roll, RollBundle } from "../dice.js";
-import { SortModes, sortSkills } from "./skill-sort.js";
+import { SortModes } from "./skill-sort.js";
 import { bodyTypeModifier, getInterfaceSkillRank } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
@@ -64,8 +64,6 @@ export class CyberpunkActor extends Actor {
   prepareData() {
     super.prepareData();
     switch ( this.type ) {
-      // Both types share the same preparation logic
-      case "npc":
       case "character":
         this._computeDerivedStats(this.system);
         break;
@@ -552,6 +550,10 @@ export class CyberpunkActor extends Actor {
     data.fastDrawMod = this.statuses.has("fast-draw") ? 3 : 0;
     // Surprised: -5 to initiative
     data.surprisedMod = this.statuses.has("surprised") ? -5 : 0;
+    // Combat Sense mod: stored on the character; surfaced into roll data so the
+    // initiative formula (system.json) can reference it the same way as the
+    // others without resorting to system.* deep lookups.
+    data.CombatSenseMod = Number(this.system?.CombatSenseMod) || 0;
     return data;
   }
 
@@ -560,14 +562,9 @@ export class CyberpunkActor extends Actor {
    * @param {string} sortOrder The order to sort skills by. Options are in skill-sort.js's SortModes. "Name" or "Stat". Default "Name".
    */
   reorderSkills(sortOrder = "Name") {
-    let allSkills = this.itemTypes.skill;
-    sortOrder = sortOrder || Object.keys(SortModes)[0];
-    let sortedView = sortSkills(allSkills, SortModes[sortOrder]).map(skill => skill.id);
-
-    this.update({
-      "system.sortedSkillIDs": sortedView,
-      "system.skillsSortedBy": sortOrder
-    });
+    // We only need to persist the user's preferred sort mode; the actual sort
+    // is performed at render time by sortSkills() against the live item list.
+    return this.update({ "system.skillsSortedBy": sortOrder || Object.keys(SortModes)[0] });
   }
 
   /**
@@ -601,7 +598,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Wound state from 0 (uninjured) to 10 (Mortal 6)
    */
   getWoundLevel() {
-    if (this.type !== "character" && this.type !== "npc") return 0;
+    if (this.type !== "character") return 0;
     const damage = this.system.damage;
     if (damage === 0) return 0;
     // Wound slots are 4 wide, so divide by 4, ceil the result, cap at 10
@@ -626,7 +623,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Fatigue level from 0 (fresh) to 5 (collapse)
    */
   getFatigueLevel() {
-    if (this.type !== "character" && this.type !== "npc") return 0;
+    if (this.type !== "character") return 0;
     const fatigue = this.system.fatigue || 0;
     if (fatigue <= 0) return 0;
     const body = this.system.stats.bt.total;
@@ -657,7 +654,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Stress level from -1 (fresh) to 4 (cracked)
    */
   getStressLevel() {
-    if (this.type !== "character" && this.type !== "npc") return 0;
+    if (this.type !== "character") return 0;
     const stress = (this.system.stress || 0) + (this.system.fright || 0);
     if (stress < 0) return 0;
     const cool = this.system.stats.cool.total;
@@ -676,7 +673,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Fright level from 0 to 5
    */
   getFrightLevel() {
-    if (this.type !== "character" && this.type !== "npc") return 0;
+    if (this.type !== "character") return 0;
     const fright = this.system.fright || 0;
     if (fright === 0) return 0;
     if (fright <= 2) return 1;
@@ -691,7 +688,7 @@ export class CyberpunkActor extends Actor {
    * @returns {number} Sleep deprivation level from 0 to 6
    */
   getSleepDeprivationLevel() {
-    if (this.type !== "character" && this.type !== "npc") return 0;
+    if (this.type !== "character") return 0;
     const sleep = this.system.sleep || 0;
     if (sleep <= 0) return 0;
     return Math.min(sleep, 6);
@@ -728,30 +725,32 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Generic helper: ensure exactly one (or zero) condition from `allIds` is
+   * active on this actor, matching `targetId`. If `targetId` is null/empty,
+   * the actor ends with none of the listed conditions active. Idempotent —
+   * returns early when no change is needed.
+   */
+  async _syncSingleCondition(allIds, targetId) {
+    let current = null;
+    for (const id of allIds) {
+      if (this.statuses.has(id)) { current = id; break; }
+    }
+    if (current === targetId) return;
+    if (current) {
+      await this.toggleStatusEffect(current, { active: false });
+    }
+    if (targetId) {
+      await this.toggleStatusEffect(targetId, { active: true });
+    }
+  }
+
+  /**
    * Synchronize the stress condition on this actor's token(s) based on current stress points.
-   * Removes any existing stress condition and applies the appropriate one.
    * Called automatically when stress or COOL changes.
    */
   async updateStressStatus() {
     const level = this.getStressLevel();
-    const newConditionId = STRESS_LEVEL_TO_CONDITION[level] || null;
-
-    let currentStressCondition = null;
-    for (const id of STRESS_CONDITION_IDS) {
-      if (this.statuses.has(id)) {
-        currentStressCondition = id;
-        break;
-      }
-    }
-
-    if (currentStressCondition === newConditionId) return;
-
-    if (currentStressCondition) {
-      await this.toggleStatusEffect(currentStressCondition, { active: false });
-    }
-    if (newConditionId) {
-      await this.toggleStatusEffect(newConditionId, { active: true });
-    }
+    await this._syncSingleCondition(STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION[level] || null);
   }
 
   /**
@@ -835,24 +834,7 @@ export class CyberpunkActor extends Actor {
    */
   async updateFatigueStatus() {
     const level = this.getFatigueLevel();
-    const newConditionId = FATIGUE_LEVEL_TO_CONDITION[level] || null;
-
-    let currentFatigueCondition = null;
-    for (const id of FATIGUE_CONDITION_IDS) {
-      if (this.statuses.has(id)) {
-        currentFatigueCondition = id;
-        break;
-      }
-    }
-
-    if (currentFatigueCondition === newConditionId) return;
-
-    if (currentFatigueCondition) {
-      await this.toggleStatusEffect(currentFatigueCondition, { active: false });
-    }
-    if (newConditionId) {
-      await this.toggleStatusEffect(newConditionId, { active: true });
-    }
+    await this._syncSingleCondition(FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION[level] || null);
   }
 
   /**
@@ -889,29 +871,7 @@ export class CyberpunkActor extends Actor {
    */
   async updateWoundStatus() {
     const state = this.getWoundLevel();
-    const newConditionId = WOUND_STATE_TO_CONDITION[state] || null;
-
-    // Get current wound condition (if any)
-    let currentWoundCondition = null;
-    for (const id of WOUND_CONDITION_IDS) {
-      if (this.statuses.has(id)) {
-        currentWoundCondition = id;
-        break;
-      }
-    }
-
-    // If wound state hasn't changed, do nothing
-    if (currentWoundCondition === newConditionId) return;
-
-    // Remove current wound condition if present
-    if (currentWoundCondition) {
-      await this.toggleStatusEffect(currentWoundCondition, { active: false });
-    }
-
-    // Apply new wound condition if wounded
-    if (newConditionId) {
-      await this.toggleStatusEffect(newConditionId, { active: true });
-    }
+    await this._syncSingleCondition(WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION[state] || null);
   }
 
   /**
@@ -922,23 +882,7 @@ export class CyberpunkActor extends Actor {
   async updateCoverStatus() {
     const coverKey = this.system.activeCover;
     const newConditionId = coverKey ? (COVER_KEY_TO_CONDITION[coverKey] || null) : null;
-
-    let currentCoverCondition = null;
-    for (const id of COVER_CONDITION_IDS) {
-      if (this.statuses.has(id)) {
-        currentCoverCondition = id;
-        break;
-      }
-    }
-
-    if (currentCoverCondition === newConditionId) return;
-
-    if (currentCoverCondition) {
-      await this.toggleStatusEffect(currentCoverCondition, { active: false });
-    }
-    if (newConditionId) {
-      await this.toggleStatusEffect(newConditionId, { active: true });
-    }
+    await this._syncSingleCondition(COVER_CONDITION_IDS, newConditionId);
   }
 
   /**
@@ -1033,7 +977,7 @@ export class CyberpunkActor extends Actor {
 
     // Drones don't have wounds / fatigue / stress / fright / sleep state machines.
     // Skip every organic-state sync below.
-    if (this.type !== "character" && this.type !== "npc") return;
+    if (this.type !== "character") return;
 
     // Sync wound condition when damage changes
     if (changed.system?.damage !== undefined) {

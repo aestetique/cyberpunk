@@ -24,6 +24,49 @@ export const weaponTypes = {
     Ammo:     "WeaponTypeAmmo"
 };
 
+/**
+ * Single source of truth for the legacy 2.0.2-and-earlier weaponType strings
+ * → new (weaponType, weaponClass) discriminator. Used by every sheet/handler
+ * that has to read possibly-un-migrated data and decide how to render it.
+ *
+ * `resolveWeaponDiscriminator(sys)` is the canonical reader.
+ */
+export const LEGACY_WEAPON_TYPE_TO_NEW = {
+    Pistol:   { weaponType: "Ranged",  weaponClass: "Pistol" },
+    SMG:      { weaponType: "Ranged",  weaponClass: "SubMachinegun" },
+    Shotgun:  { weaponType: "Ranged",  weaponClass: "Shotgun" },
+    Rifle:    { weaponType: "Ranged",  weaponClass: "AssaultRifle" },
+    Heavy:    { weaponType: "Ranged",  weaponClass: "Machinegun" },
+    Bow:      { weaponType: "Martial", weaponClass: "Bow" },
+    Crossbow: { weaponType: "Martial", weaponClass: "Crossbow" },
+    Melee:    { weaponType: "Martial", weaponClass: "Melee" },
+    Exotic:   { weaponType: "Exotic",  weaponClass: "Exotic" }
+};
+
+/**
+ * Normalize a weapon `system` block to its new (weaponType, weaponClass)
+ * shape, falling through legacy values. Pass `sys` (either Item#system or
+ * actorData) and a `defaultClassByType` map for the post-legacy default.
+ *
+ * Replaces the five hand-rolled discrim()/LEGACY_TYPE_TO_CLASS variants that
+ * used to live in gear-data.js, weapon-sheet.js, cyberware-sheet.js, item.js,
+ * and gear-handlers.js.
+ */
+export function resolveWeaponDiscriminator(sys, defaultClassByType = {}) {
+    const raw = sys?.weaponType || "";
+    const map = LEGACY_WEAPON_TYPE_TO_NEW[raw];
+    if (map) {
+        return {
+            weaponType: map.weaponType,
+            weaponClass: sys.weaponClass || map.weaponClass
+        };
+    }
+    return {
+        weaponType: raw,
+        weaponClass: sys.weaponClass || defaultClassByType[raw] || ""
+    };
+}
+
 /** Martial subclasses */
 export const martialClasses = {
     Unarmed:  "MartialUnarmed",
@@ -56,7 +99,7 @@ export const rangedClasses = {
  */
 export const RANGED_CLASSES_BY_SKILL = {
     "Handgun":        ["Pistol"],
-    "Sub Machinegun": ["SubMachinegun"],
+    "Submachine Gun": ["SubMachinegun"],
     "Rifle":          ["AssaultRifle", "SniperRifle", "Shotgun"],
     "Heavy Weapons":  ["AntiMateriel", "Autocannon", "GrenadeLauncher", "Machinegun", "Minigun"]
 };
@@ -118,7 +161,7 @@ export const SKILL_MAPPINGS = {
     pistols:             ["Handgun"],
     rifles:              ["Rifle"],
     shotguns:            ["Rifle"],
-    submachineGuns:      ["Sub Machinegun"],
+    submachineGuns:      ["Submachine Gun"],
     heavyWeapons:        ["Heavy Weapons"],
     throw:               ["Athletics"],
     bows:                ["Archery"],
@@ -180,49 +223,6 @@ export const WEAPON_CLASS_TO_SKILL_CATEGORY = {
     "Ordnance/RPG":      "heavyWeapons"
 };
 
-/**
- * Legacy compat: attackSkills keyed by the OLD weaponType strings
- * ("Pistol", "SMG", "Heavy", etc.) — old item.js / dialogs still use this
- * shape until they migrate to getAttackSkillsForWeapon(type, class).
- * @deprecated Use getAttackSkillsForWeapon(weaponType, weaponClass).
- */
-export const attackSkills = (() => {
-    const out = {};
-    const legacy = {
-        "Pistol":   "pistols",
-        "SMG":      "submachineGuns",
-        "Shotgun":  "shotguns",
-        "Rifle":    "rifles",
-        "Heavy":    "heavyWeapons",
-        "Bow":      "bows",
-        "Crossbow": "crossbows",
-        "Melee":    "meleeAttacks",
-        "Exotic":   null
-    };
-    for (const [wType, catKey] of Object.entries(legacy)) {
-        if (wType === "Exotic") {
-            const all = new Set();
-            for (const [, ck] of Object.entries(legacy)) {
-                if (!ck) continue;
-                for (const n of SKILL_MAPPINGS[ck] || []) all.add(n);
-            }
-            all.delete("Brawling");
-            out[wType] = [...all].sort();
-        } else {
-            out[wType] = catKey ? [...(SKILL_MAPPINGS[catKey] || [])] : [];
-        }
-    }
-    // Bridge new discriminator keys → unions of underlying skill categories.
-    // Lets legacy spreads like `attackSkills[wType]` work for new "Ranged"/"Martial"/etc. data.
-    out.Ranged   = [...new Set([out.Pistol, out.SMG, out.Shotgun, out.Rifle, out.Heavy].flat())].sort();
-    out.Martial  = [...new Set([out.Melee, out.Bow, out.Crossbow, ...(SKILL_MAPPINGS.unarmedAttacks || []), ...(SKILL_MAPPINGS.slings || [])].flat())].sort();
-    out.Ordnance = [...new Set([
-        ...(SKILL_MAPPINGS.throw || []), ...(SKILL_MAPPINGS.demolitionsSkills || []),
-        ...(SKILL_MAPPINGS.heavyWeapons || [])
-    ])].sort();
-    out.Ammo     = [];
-    return out;
-})();
 
 // ============================================================================
 // Ammo system
@@ -249,62 +249,6 @@ export const ammoAbbreviations = {
     rubberSlug:    "RS",
     grenade:       "GR"
 };
-
-/**
- * Maps a Ranged weapon's weaponClass → the ammoClass that chambers in it.
- * Compatibility is caliber-based so this is now informational; kept so callers
- * that infer "ammo family" from class still work after the class enum expanded.
- */
-export const WEAPON_TO_AMMO_CLASS = {
-    Pistol:           "Pistol",
-    SubMachinegun:    "Pistol",
-    AssaultRifle:     "Rifle",
-    SniperRifle:      "Rifle",
-    Shotgun:          "Shotgun",
-    AntiMateriel:     "Heavy",
-    Autocannon:       "Heavy",
-    GrenadeLauncher:  "Heavy",
-    Machinegun:       "Heavy",
-    Minigun:          "Heavy",
-    Bow:              "Bow",
-    Crossbow:         "Crossbow"
-};
-
-/**
- * Can this weapon chamber this ammo?
- * Compatibility is caliber-based — both must share the same caliber slug.
- * @param {Item} weapon
- * @param {Item} ammo
- * @returns {boolean}
- */
-export function isAmmoCompatibleWith(weapon, ammo) {
-    if (!weapon || !ammo) return false;
-    const wd = weapon.system;
-    const ad = ammo.system;
-    if (ad?.weaponType !== "Ammo") return false;
-    if (!wd?.caliber || !ad?.caliber) return false;
-    return wd.caliber === ad.caliber;
-}
-
-/**
- * Validity matrix: which ammo types are valid for an ammo (weaponClass, caliber).
- */
-export function isAmmoTypeValid(weaponClass, caliber, ammoType) {
-    if (ammoType === "standard") return true;
-    if (ammoType === "grenade") return false; // Grenade is its own class — only valid on grenade-style ammo with a template
-    if (weaponClass === "Bow" || weaponClass === "Crossbow") {
-        return ammoType === "armorPiercing" || ammoType === "rubberSlug";
-    }
-    if (weaponClass === "Shotgun") {
-        return ammoType === "rubberSlug";
-    }
-    if (weaponClass === "Heavy" && ammoType === "hollowPoint") return false;
-    if (weaponClass === "Rifle" && ammoType === "hollowPoint" && ["sniper", "antiMateriel"].includes(caliber)) return false;
-    if (ammoType === "rubberSlug") {
-        return weaponClass === "Pistol" && ["light", "medium", "heavy"].includes(caliber);
-    }
-    return true;
-}
 
 // ============================================================================
 // Skill resolution
@@ -524,7 +468,11 @@ export const cyberwareSubtypes = {
         leftLeg: "CyberSubLeftLeg",
         rightLeg: "CyberSubRightLeg",
         extraArm: "CyberSubExtraArm",
-        meatLimbs: "CyberSubMeatLimbs"
+        meatLimbs: "CyberSubMeatLimbs",
+        builtIn: "CyberSubBuiltIn",
+        finger: "CyberSubFinger",
+        hand: "CyberSubHand",
+        feet: "CyberSubFeet"
     },
     implant: {
         fashionware: "CyberSubFashionware",
@@ -584,21 +532,30 @@ export function canBeArmor(cyberwareType) {
     return cyberwareType === "implant";
 }
 
-/** Exotic weapon effects */
-export const exoticEffects = {
+/**
+ * Weapon effects. Despite the legacy name "weaponEffects" this is now the
+ * key. Used by every Effect dropdown across Martial / Ranged / Exotic /
+ * Ordnance / Ammo sheets.
+ */
+export const weaponEffects = {
     none: "EffNone",
     confusion: "EffConfusion",
     poisoned: "EffPoisoned",
     tearing: "EffTearing",
     unconscious: "EffUnconscious",
+    stunAt0: "EffStunAt0",
+    stunAt1: "EffStunAt1",
     stunAt2: "EffStunAt2",
+    stunAt3: "EffStunAt3",
     stunAt4: "EffStunAt4",
+    deathAt0: "EffDeathAt0",
     burning: "EffBurning",
     microwave: "EffMicrowave",
     acid: "EffAcid",
     blindness: "EffBlindness",
     laser: "EffLaser",
-    immobilized: "EffImmobilized"
+    immobilized: "EffImmobilized",
+    smoke: "EffSmoke"
 };
 
 export function getStatNames() {
@@ -875,11 +832,8 @@ export function buildMeleeModifierGroups() {
  * BTM lookup — non-linear thresholds require explicit mapping.
  */
 export function bodyTypeModifier(body) {
-    if(body <= 2) {
-        return 0;
-    }
-    switch(body) {
-        case 2: return 0;
+    if (body <= 2) return 0;
+    switch (body) {
         case 3:
         case 4: return 1;
         case 5:
@@ -892,17 +846,17 @@ export function bodyTypeModifier(body) {
     }
 }
 
+/**
+ * CP2020 melee damage bonus, indexed off raw BODY for consistency. Up through
+ * body 10 the bonus tracks BTM (BTM − 2). Beyond that the BTM cap stops moving
+ * but the melee bonus continues to scale in pairs of body values, so we
+ * dispatch on bt itself rather than BTM. Returns -2…+8.
+ */
 export function meleeDamageBonus(bt) {
-    let btm = bodyTypeModifier(bt);
-    if(btm < 5)
-        return btm - 2;
-    switch(bt) {
-        case 11:
-        case 12: return 4;
-        case 13:
-        case 14: return 6;
-        default: return 8;
-    }
+    if (bt <= 10) return bodyTypeModifier(bt) - 2;
+    if (bt <= 12) return 4;
+    if (bt <= 14) return 6;
+    return 8;
 }
 
 // ============================================================================

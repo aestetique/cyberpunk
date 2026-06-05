@@ -4,23 +4,7 @@
  */
 
 /**
- * All condition IDs that represent wound states (for easy iteration)
- */
-export const WOUND_CONDITION_IDS = [
-    "lightly-wounded",
-    "seriously-wounded",
-    "critically-wounded",
-    "mortally-wounded-0",
-    "mortally-wounded-1",
-    "mortally-wounded-2",
-    "mortally-wounded-3",
-    "mortally-wounded-4",
-    "mortally-wounded-5",
-    "mortally-wounded-6"
-];
-
-/**
- * Map wound state (1-10) to condition ID
+ * Map wound state (1-10) to condition ID. WOUND_CONDITION_IDS is derived below.
  */
 export const WOUND_STATE_TO_CONDITION = {
     1: "lightly-wounded",
@@ -34,6 +18,8 @@ export const WOUND_STATE_TO_CONDITION = {
     9: "mortally-wounded-5",
     10: "mortally-wounded-6"
 };
+
+export const WOUND_CONDITION_IDS = Object.values(WOUND_STATE_TO_CONDITION);
 
 /**
  * Cover type definitions: key -> { sp, label, desc }
@@ -699,14 +685,7 @@ export function isWoundCondition(conditionId) {
 }
 
 /**
- * All condition IDs that represent fatigue states (for easy iteration)
- */
-export const FATIGUE_CONDITION_IDS = [
-    "tired", "fatigued", "exhausted", "debilitated", "collapse"
-];
-
-/**
- * Map fatigue level (1-5) to condition ID
+ * Map fatigue level (1-5) to condition ID. FATIGUE_CONDITION_IDS is derived below.
  */
 export const FATIGUE_LEVEL_TO_CONDITION = {
     1: "tired",
@@ -715,6 +694,8 @@ export const FATIGUE_LEVEL_TO_CONDITION = {
     4: "debilitated",
     5: "collapse"
 };
+
+export const FATIGUE_CONDITION_IDS = Object.values(FATIGUE_LEVEL_TO_CONDITION);
 
 /**
  * Penalty on all rolls for each fatigue condition
@@ -728,15 +709,8 @@ export const FATIGUE_PENALTIES = {
 };
 
 /**
- * All condition IDs that represent stress states (for easy iteration)
- */
-export const STRESS_CONDITION_IDS = [
-    "fresh", "anxious", "tense", "stressed", "cracked"
-];
-
-/**
- * Map stress level to condition ID
- * Level -1 = Fresh (bonus), 0 = none, 1-4 = negative conditions
+ * Map stress level to condition ID. STRESS_CONDITION_IDS is derived below.
+ * Level -1 = Fresh (bonus), 0 = none, 1-4 = negative conditions.
  */
 export const STRESS_LEVEL_TO_CONDITION = {
     "-1": "fresh",
@@ -745,6 +719,8 @@ export const STRESS_LEVEL_TO_CONDITION = {
     3: "stressed",
     4: "cracked"
 };
+
+export const STRESS_CONDITION_IDS = Object.values(STRESS_LEVEL_TO_CONDITION);
 
 /**
  * Penalty on COOL rolls for each stress condition
@@ -769,20 +745,15 @@ export const STRESS_GENERAL_PENALTIES = {
 };
 
 /**
- * All condition IDs that represent sleep deprivation states (for easy iteration)
- */
-export const SLEEP_CONDITION_IDS = [
-    "sleep-dep-1", "sleep-dep-2", "sleep-dep-3",
-    "sleep-dep-4", "sleep-dep-5", "sleep-dep-6"
-];
-
-/**
- * Map sleep deprivation level (1–6) to condition ID
+ * Map sleep deprivation level (1–6) to condition ID. SLEEP_CONDITION_IDS is
+ * derived below.
  */
 export const SLEEP_LEVEL_TO_CONDITION = {
     1: "sleep-dep-1", 2: "sleep-dep-2", 3: "sleep-dep-3",
     4: "sleep-dep-4", 5: "sleep-dep-5", 6: "sleep-dep-6"
 };
+
+export const SLEEP_CONDITION_IDS = Object.values(SLEEP_LEVEL_TO_CONDITION);
 
 /**
  * Skill roll penalties for each sleep deprivation level.

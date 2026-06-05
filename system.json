@@ -3,7 +3,7 @@
   "title": "Cyberpunk",
   "description": "An unofficial fan-made interpretation of the Cyberpunk game systems by R. Talsorian Games for Foundry Virtual Tabletop.",
   "background": "systems/cyberpunk/img/ui/system-background.webp",
-  "version": "2.0.6",
+  "version": "2.1.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13",
@@ -68,6 +68,20 @@
       "system": "cyberpunk",
       "type": "Item",
       "path": "packs/roles"
+    },
+    {
+      "name": "weapons",
+      "label": "Weapons",
+      "system": "cyberpunk",
+      "type": "Item",
+      "path": "packs/weapons"
+    },
+    {
+      "name": "cyberware",
+      "label": "Cyberware",
+      "system": "cyberpunk",
+      "type": "Item",
+      "path": "packs/cyberware"
     }
   ],
   "initiative": "1d10 + @stats.ref.total + @CombatSenseMod + @initiativeMod + @fastDrawMod + @surprisedMod",

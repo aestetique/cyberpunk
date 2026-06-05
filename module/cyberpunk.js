@@ -200,8 +200,18 @@ async function _migrateConditionNames() {
         await migrateActorEffects(actor);
     }
 
-    // Migrate unlinked tokens in all scenes
-    for (const scene of game.scenes) {
+    // Migrate unlinked tokens in all scenes (world + compendium-imported scenes)
+    const scenes = [...game.scenes];
+    for (const pack of game.packs) {
+        if (pack.documentName !== "Scene") continue;
+        try {
+            const packScenes = await pack.getDocuments();
+            scenes.push(...packScenes);
+        } catch (err) {
+            console.warn(`CYBERPUNK: Could not load compendium pack "${pack.metadata?.label}":`, err);
+        }
+    }
+    for (const scene of scenes) {
         for (const token of scene.tokens) {
             if (!token.actorLink && token.actor) {
                 await migrateActorEffects(token.actor);
@@ -228,22 +238,19 @@ Hooks.once("ready", async function() {
     // 2.0.4: cyberware embedded weapons get full migration parity (caliber map, dead-field drops, Martial reset)
     // 2.0.5: caliber → damage table; Ranged + non-grenade Ammo damage locked to caliber; 30_30_C → 30_06_C remap
     // 2.0.6: skill drives Ranged subtype; legacy SMG/Rifle/Heavy class keys remapped; attackSkill backfilled
-    const NEEDS_MIGRATION_VERSION = "2.0.6";
+    // 2.0.7: post-audit cleanup batch — concat-dup fix, await chain, schema drift, dead lookups, DRY,
+    //        legacy MU/RAM removal, exoticEffects→weaponEffects, Sub Machinegun→Submachine Gun
+    // 2.1.0: Weapons + Cyberware compendiums shipped; new cyberlimb subtypes
+    //        (builtIn/finger/hand/feet); skill stat "body" → "bt" self-heal for the
+    //        four pack skills that shipped with the wrong stat key (Endurance,
+    //        Swimming, Controlled Hyperventilation, Strength Feat).
+    const NEEDS_MIGRATION_VERSION = "2.1.0";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;
     migrations.migrateWorld(NEEDS_MIGRATION_VERSION);
 });
 
-/**
- * Stamp every new chat message with the current in-game timestamp.
- */
-Hooks.on("preCreateChatMessage", (message, data, options, userId) => {
-    try {
-        const { getCurrentGameTime } = game.cyberpunk._gameTime;
-        message.updateSource({ "flags.cyberpunk.gameTimestamp": getCurrentGameTime() });
-    } catch (e) { /* settings not ready yet */ }
-});
 
 /**
  * Add Game Time button to Token Controls toolbar (Foundry V13 object-based API).
@@ -300,35 +307,32 @@ Hooks.on("dropCanvasData", (canvas, data) => {
 });
 
 /**
- * Intercept basic /roll commands and restyle them with our formula-roll template.
- * Uses preCreateChatMessage to capture speaker from selected token before message is created.
+ * Single preCreateChatMessage hook that does two things on every new message:
+ *   1) Stamp the in-game timestamp into the message's cyberpunk flags.
+ *   2) For basic /roll commands, restyle the content with our formula-roll
+ *      template and override speaker to the currently-selected token.
  */
 Hooks.on("preCreateChatMessage", async (message, data, options, userId) => {
-    // Only process messages with rolls that don't already have our styling
-    if (!message.rolls?.length) return;
-    if (message.content?.includes("cyberpunk-card")) return;
+    const source = {};
 
-    // Process the first roll (basic /roll commands only have one)
-    const roll = message.rolls[0];
-    if (!roll) return;
+    // (1) Game timestamp stamp.
+    try {
+        const { getCurrentGameTime } = game.cyberpunk._gameTime;
+        source["flags.cyberpunk.gameTimestamp"] = getCurrentGameTime();
+    } catch (e) { /* settings not ready yet */ }
 
-    // Build template data using our helper
-    const templateData = processFormulaRoll(roll);
+    // (2) /roll restyling. Skip if no rolls, or content already carries our card.
+    const roll = message.rolls?.[0];
+    if (roll && !message.content?.includes("cyberpunk-card")) {
+        const templateData = processFormulaRoll(roll);
+        source.content = await foundry.applications.handlebars.renderTemplate(
+            "systems/cyberpunk/templates/chat/formula-roll.hbs",
+            templateData
+        );
+        source.speaker = ChatMessage.getSpeaker();
+    }
 
-    // Render the new content
-    const newContent = await foundry.applications.handlebars.renderTemplate(
-        "systems/cyberpunk/templates/chat/formula-roll.hbs",
-        templateData
-    );
-
-    // Get speaker from selected token - this captures selection at roll time
-    const speaker = ChatMessage.getSpeaker();
-
-    // Update the message data before it's created
-    message.updateSource({
-        content: newContent,
-        speaker: speaker
-    });
+    if (Object.keys(source).length) message.updateSource(source);
 });
 
 /**
@@ -580,11 +584,15 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
  * tracker switches to its out-of-combat visual (chips depend on global
  * combat state, not on actor data — so updateActor wouldn't fire on its own).
  */
+// Render every combatant sheet in parallel; queueing them sequentially has no
+// dependency between actors and adds noticeable lag for big encounters.
+function _refreshCombatantSheets(combat) {
+    return Promise.all(combat.combatants.map(c => c?.actor?.sheet?.render(false)));
+}
+
 Hooks.on("deleteCombat", async (combat) => {
     // All clients: refresh open sheets to reflect the now-ended combat.
-    for (const combatant of combat.combatants) {
-        combatant?.actor?.sheet?.render(false);
-    }
+    await _refreshCombatantSheets(combat);
 
     if (!game.user.isGM) return;
     for (const combatant of combat.combatants) {
@@ -604,11 +612,7 @@ Hooks.on("deleteCombat", async (combat) => {
  * When "Begin Encounter" is clicked, refresh open combatant sheets so the
  * NET Actions tracker flips into in-combat visual mode.
  */
-Hooks.on("combatStart", (combat) => {
-    for (const combatant of combat.combatants) {
-        combatant?.actor?.sheet?.render(false);
-    }
-});
+Hooks.on("combatStart", (combat) => _refreshCombatantSheets(combat));
 
 /**
  * Re-evaluate encumbrance whenever an item on an actor is added/removed/changed.

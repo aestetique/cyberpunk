@@ -1,4 +1,4 @@
-import { weaponTypes, sortedAttackTypes, concealability, availability, reliability, attackSkills, meleeAttackTypes, getStatNames, ammoCalibersByWeaponType, weaponToAmmoType } from "../lookups.js";
+import { weaponTypes, sortedAttackTypes, concealability, availability, reliability, getAttackSkillsForWeapon, meleeAttackTypes, getStatNames, ammoCalibersByWeaponType, weaponToAmmoType } from "../lookups.js";
 import { containsDice } from "../dice.js";
 import { localize } from "../utils.js";
 import { getMartialKeyByName } from '../utils.js'
@@ -68,10 +68,10 @@ export class CyberpunkLegacyItemSheet extends ItemSheet {
     sheet.reliabilities = Object.values(reliability);
 
     sheet.attackSkills = [
-      ...attackSkills[this.item.system.weaponType]
-      .map(x => localize("Skill"+x)), 
-      ...(this.actor?.getLearnedMartialArts().
-      map(name => localize('Skill'+getMartialKeyByName(name))) || [])
+      ...getAttackSkillsForWeapon(this.item.system.weaponType)
+        .map(x => localize("Skill"+x)),
+      ...(this.actor?.getLearnedMartialArts()
+        .map(name => localize('Skill'+getMartialKeyByName(name))) || [])
     ];
 
 

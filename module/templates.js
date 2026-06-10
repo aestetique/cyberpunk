@@ -30,7 +30,6 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/multi-hit.hbs",
         "systems/cyberpunk/templates/chat/initiative.hbs",
         "systems/cyberpunk/templates/chat/save-roll.hbs",
-        "systems/cyberpunk/templates/chat/suppressive.hbs",
         "systems/cyberpunk/templates/chat/formula-roll.hbs",
         "systems/cyberpunk/templates/chat/humanity-roll.hbs",
         "systems/cyberpunk/templates/chat/stress-roll.hbs",
@@ -65,9 +64,10 @@ export const preloadHandlebarsTemplates = async function() {
         // Cyberware card partials
         "systems/cyberpunk/templates/item/parts/cyberware/tab-description.hbs",
         "systems/cyberpunk/templates/item/parts/cyberware/tab-details.hbs",
-        "systems/cyberpunk/templates/item/parts/cyberware/tab-effect.hbs",
-        "systems/cyberpunk/templates/item/parts/cyberware/tab-weapon.hbs",
         "systems/cyberpunk/templates/item/parts/cyberware/tab-armor.hbs",
+        // Shared item partials (used by cyberware and armor/outfit)
+        "systems/cyberpunk/templates/item/parts/shared/tab-effect.hbs",
+        "systems/cyberpunk/templates/item/parts/shared/tab-weapon.hbs",
         // Vehicle
         "systems/cyberpunk/templates/item/parts/vehicle/summary.hbs",
         "systems/cyberpunk/templates/item/parts/vehicle/settings.hbs",

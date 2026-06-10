@@ -40,17 +40,24 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
         );
 
         data.bonuses = rawBonuses.map(bonus => {
+            const op = bonus.op || "+";
+            const opOptions = [
+                { value: "+", label: "+", selected: op === "+" },
+                { value: "×", label: "×", selected: op === "×" },
+                { value: "=", label: "=", selected: op === "=" }
+            ];
             if (bonus.type === "property") {
                 const labelKey = toolBonusProperties[bonus.property];
                 return {
                     ...bonus,
+                    op, opOptions,
                     isProperty: true,
                     label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
                 };
             }
-            // skill
             return {
                 ...bonus,
+                op, opOptions,
                 isSkill: true,
                 hasFilled: !!(bonus.skillUuid),
                 label: bonus.skillName || ""
@@ -108,7 +115,7 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
                 ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
                 return;
             }
-            bonuses.push({ type: "property", property: firstAvailable, value: 0 });
+            bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
             await this.item.update({ "system.bonuses": bonuses });
         });
 
@@ -116,7 +123,7 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
         html.find('.add-skill').click(async ev => {
             ev.preventDefault();
             const bonuses = [...(this.item.system.bonuses || [])];
-            bonuses.push({ type: "skill", skillUuid: "", skillName: "", value: 0 });
+            bonuses.push({ type: "skill", skillUuid: "", skillName: "", op: "+", value: 0 });
             await this.item.update({ "system.bonuses": bonuses });
         });
 
@@ -152,6 +159,17 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
             const bonuses = [...(this.item.system.bonuses || [])];
             if (bonuses[index] && bonuses[index].value !== value) {
                 bonuses[index] = { ...bonuses[index], value };
+                await this.item.update({ "system.bonuses": bonuses });
+            }
+        });
+
+        // Bonus op change (+ / × / =)
+        html.find('.bonus-op-select').change(async ev => {
+            const index = parseInt(ev.currentTarget.dataset.index);
+            const op = ev.currentTarget.value;
+            const bonuses = [...(this.item.system.bonuses || [])];
+            if (bonuses[index] && bonuses[index].op !== op) {
+                bonuses[index] = { ...bonuses[index], op };
                 await this.item.update({ "system.bonuses": bonuses });
             }
         });
@@ -206,7 +224,7 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
             };
         } else {
             // Append new filled skill bonus
-            bonuses.push({ type: "skill", skillUuid: item.uuid, skillName: item.name, value: 0 });
+            bonuses.push({ type: "skill", skillUuid: item.uuid, skillName: item.name, op: "+", value: 0 });
         }
 
         await this.item.update({ "system.bonuses": bonuses });

@@ -158,7 +158,7 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                         name: skill.name,
                         encodedValue: ev,
                         info1: { text: String(total) },
-                        cssClass: skill.system.isChipped ? "active" : ""
+                        cssClass: actor._resolveSkillValue(skill).overridden ? "active" : ""
                     };
                 });
             this.addActions(actions, { id: "skills", type: "system" });

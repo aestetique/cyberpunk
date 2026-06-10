@@ -1,6 +1,12 @@
 // ============================================
 // Outfit (Armor) Item Card - Specific Styles
 // Extends _item-card-base.scss
+//
+// Most of the card chrome — tabs, dropdowns, variables-row, sp-frame, SP
+// grid, effect/bonuses, embedded weapon tab — is shared with the cyberware
+// sheet and lives under `_cyberware-sheet.scss` where the top-level wrapper
+// is `.cyberware-card, .outfit-card`. Only outfit-only overrides belong
+// here.
 // ============================================
 
 .cyberpunk.outfit-sheet {
@@ -15,134 +21,32 @@
 }
 
 // ============================================
-// Stopping Power Frame (same border as Role's Career Skills frame)
+// Armor tab dual-field (Has Weapon checkbox + EV input)
+// Tightens the EV input and pads the gap between the checkbox and the EV
+// label so the two halves of the cell read as visually distinct controls.
 // ============================================
-.outfit-card .sp-frame {
-  position: relative;
-  display: flex;
-  margin-top: 8px;
-  padding: 24px 0 16px 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  align-self: stretch;
-  border-radius: 10px;
-  border: 1px solid var(--Chat-Gray, #444856);
-}
-
-// Label breaking the border
-.outfit-card .sp-frame-label {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--Chat-Back, #1A1A1A);
-  padding: 0 8px;
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-// SP Row - 3 columns
-.outfit-card .sp-row {
-  display: flex;
-  gap: 40px;
-  width: 100%;
+// ============================================
+// Shield SP frame — single centred block.
+// Pin the frame height to the 2-row × 3-zone height (52px block + 10px gap
+// + 16px label = 52, ×2 rows + 16px row-gap = 120, +40px frame padding =
+// 160) so the layout matches non-shield armors exactly. Vertically centre
+// the lone shield row inside the now-taller frame.
+// ============================================
+.outfit-card .sp-frame.sp-frame--shield {
+  min-height: 160px;
   justify-content: center;
 }
 
-// Individual SP Block
-.outfit-card .sp-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-// SP values row: current "of" max
-.outfit-card .sp-values {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.outfit-card .sp-current,
-.outfit-card .sp-max {
-  display: flex;
-  width: 40px;
-  height: 26px;
-  padding: 5px 4px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-  text-align: center;
-}
-
-// Damaged state - current SP is red
-.outfit-card .sp-damaged {
-  color: #B60F3C;
-}
-
-// "of" label
-.outfit-card .sp-of {
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-// Location label
-.outfit-card .sp-location {
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
-  text-align: center;
-}
-
-// SP Input (unlocked mode)
-.outfit-card .sp-input {
-  display: flex;
-  width: 40px;
-  height: 26px;
-  padding: 5px 4px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-  text-align: center;
-  outline: none;
-
-  &:focus {
-    outline: none;
-    box-shadow: none;
+.outfit-card .variables-row .dual-field {
+  // 16px more breathing room between the Has Weapon checkbox and the EV
+  // separator label (on top of the dual-field's default 10px flex gap).
+  .checkbox-img + .dual-separator {
+    margin-left: 16px;
   }
 
-  // Remove spinner
-  &::-webkit-inner-spin-button,
-  &::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+  // EV input is ~1.5× narrower than the standard narrow dual input (40px).
+  .dual-input-narrow,
+  .dual-value-narrow {
+    width: 27px;
   }
-
-  -moz-appearance: textfield;
 }

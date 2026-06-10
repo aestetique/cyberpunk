@@ -41,16 +41,24 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
         );
 
         const shaped = rawBonuses.map(bonus => {
+            const op = bonus.op || "+";
+            const opOptions = [
+                { value: "+", label: "+", selected: op === "+" },
+                { value: "×", label: "×", selected: op === "×" },
+                { value: "=", label: "=", selected: op === "=" }
+            ];
             if (bonus.type === "property") {
                 const labelKey = toolBonusProperties[bonus.property];
                 return {
                     ...bonus,
+                    op, opOptions,
                     isProperty: true,
                     label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
                 };
             }
             return {
                 ...bonus,
+                op, opOptions,
                 isSkill: true,
                 hasFilled: !!(bonus.skillUuid),
                 label: bonus.skillName || ""
@@ -134,7 +142,7 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
                 ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
                 return;
             }
-            bonuses.push({ type: "property", property: firstAvailable, value: 0 });
+            bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
             await this.item.update({ [`system.${set}`]: bonuses });
         });
 
@@ -143,7 +151,7 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
             ev.preventDefault();
             const set = this._bonusSetFor(ev.currentTarget);
             const bonuses = [...(this.item.system[set] || [])];
-            bonuses.push({ type: "skill", skillUuid: "", skillName: "", value: 0 });
+            bonuses.push({ type: "skill", skillUuid: "", skillName: "", op: "+", value: 0 });
             await this.item.update({ [`system.${set}`]: bonuses });
         });
 
@@ -181,6 +189,18 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
             const bonuses = [...(this.item.system[set] || [])];
             if (bonuses[index] && bonuses[index].value !== value) {
                 bonuses[index] = { ...bonuses[index], value };
+                await this.item.update({ [`system.${set}`]: bonuses });
+            }
+        });
+
+        // Bonus op change (+ / × / =)
+        html.find('.bonus-op-select').change(async ev => {
+            const set = this._bonusSetFor(ev.currentTarget);
+            const index = parseInt(ev.currentTarget.dataset.index);
+            const op = ev.currentTarget.value;
+            const bonuses = [...(this.item.system[set] || [])];
+            if (bonuses[index] && bonuses[index].op !== op) {
+                bonuses[index] = { ...bonuses[index], op };
                 await this.item.update({ [`system.${set}`]: bonuses });
             }
         });
@@ -232,7 +252,7 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
                 skillName: item.name
             };
         } else {
-            bonuses.push({ type: "skill", skillUuid: item.uuid, skillName: item.name, value: 0 });
+            bonuses.push({ type: "skill", skillUuid: item.uuid, skillName: item.name, op: "+", value: 0 });
         }
 
         await this.item.update({ [`system.${set}`]: bonuses });

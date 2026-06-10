@@ -683,6 +683,7 @@ export class CyberpunkChatMessage extends ChatMessage {
 
         // Get exotic weapon effect data
         const weaponEffect = targetSelector.dataset.weaponEffect || null;
+        const effectSaveCount = Math.max(1, Number(targetSelector.dataset.effectSaveCount) || 1);
         const hasDamage = Object.keys(damageData).length > 0;
         const hasEffect = !!weaponEffect;
 
@@ -1179,6 +1180,9 @@ export class CyberpunkChatMessage extends ChatMessage {
         // Get exotic weapon effect data
         const weaponEffect = targetSelector.dataset.weaponEffect || null;
         const hitLocation = targetSelector.dataset.hitLocation || null;
+        // Exotic weapons with RoF > 1 make the target save multiple times on a
+        // single hit — keep rolling until they fail, then the condition lands.
+        const effectSaveCount = Math.max(1, Number(targetSelector.dataset.effectSaveCount) || 1);
 
         // Get active tab mode
         const activeTab = html.querySelector(".target-selector__tab--active");
@@ -1213,7 +1217,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             if (actor.type === "drone") {
                 await this._applyDroneDamage(actor, damageData, ammoType);
                 if (weaponEffect) {
-                    await this._applyExoticEffect(actor, weaponEffect, hitLocation);
+                    await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
                 }
                 continue;
             }
@@ -1271,7 +1275,7 @@ export class CyberpunkChatMessage extends ChatMessage {
 
             // Apply exotic weapon effect FIRST (always applies on hit, regardless of damage)
             if (weaponEffect) {
-                await this._applyExoticEffect(actor, weaponEffect, hitLocation);
+                await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
             }
 
             // Skip damage processing if no damage to apply
@@ -1477,53 +1481,74 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /**
-     * Apply an exotic weapon effect to a target
+     * Apply an exotic weapon effect to a target.
+     *
+     * Save-based effects (confusion / poisoned / tearing / unconscious / stunAt0..4 / deathAt0)
+     * loop the corresponding save up to `saveCount` times and stop as soon as
+     * one fails (the condition lands and there's no point burning more saves).
+     * For Exotic weapons with RoF > 1 this is wired to fire's RoF; everything
+     * else passes saveCount=1 and the loop is a single iteration.
+     *
+     * Non-save effects (burning, acid, blindness, immobilized, microwave,
+     * smoke, coupDeGrace, knockout, prone) ignore saveCount — they apply at
+     * most once per hit regardless.
+     *
      * @param {Actor} actor - The target actor
      * @param {string} effect - The effect key (confusion, poisoned, etc.)
      * @param {string} hitLocation - The hit location (for acid)
+     * @param {number} [saveCount=1] - Max save attempts before the effect lands
      * @private
      */
-    async _applyExoticEffect(actor, effect, hitLocation) {
+    async _applyExoticEffect(actor, effect, hitLocation, saveCount = 1) {
+        // Roll a save up to saveCount times; stop on the first failure (the
+        // condition is applied inside the save function).
+        const rollUntilFail = async (rollFn) => {
+            for (let i = 0; i < Math.max(1, saveCount); i++) {
+                const success = await rollFn();
+                if (!success) return;
+            }
+        };
+
         switch (effect) {
             case "confusion":
-                await this._rollEffectSave(actor, "poison", "confused");
+                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "confused"));
                 break;
 
             case "poisoned":
-                await this._rollEffectSave(actor, "poison", "poisoned");
+                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "poisoned"));
                 break;
 
             case "tearing":
-                await this._rollEffectSave(actor, "poison", "tearing");
+                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "tearing"));
                 break;
 
             case "unconscious":
-                await this._rollEffectSave(actor, "poison", "unconscious");
+                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "unconscious"));
                 break;
 
             case "stunAt0":
-                await actor.rollStunSave(0);
+                await rollUntilFail(() => actor.rollStunSave(0));
                 break;
 
             case "stunAt1":
-                await actor.rollStunSave(-1);
+                await rollUntilFail(() => actor.rollStunSave(-1));
                 break;
 
             case "stunAt2":
-                await actor.rollStunSave(-2);
+                await rollUntilFail(() => actor.rollStunSave(-2));
                 break;
 
             case "stunAt3":
-                await actor.rollStunSave(-3);
+                await rollUntilFail(() => actor.rollStunSave(-3));
                 break;
 
             case "stunAt4":
-                await actor.rollStunSave(-4);
+                await rollUntilFail(() => actor.rollStunSave(-4));
                 break;
 
             case "deathAt0":
                 // Forces a clean Death Save (no penalty / no bonus).
-                await actor.rollDeathSave(0);
+                await rollUntilFail(() => actor.rollDeathSave(0));
                 break;
 
             case "smoke":
@@ -1667,6 +1692,7 @@ export class CyberpunkChatMessage extends ChatMessage {
         if (!success) {
             await actor.toggleStatusEffect(conditionId, { active: true });
         }
+        return success;
     }
 
     /**

@@ -1,26 +1,17 @@
 import {
-    availability, concealability, reliability,
-    weaponTypes, getWeaponClasses,
-    meleeDamageTypes, weaponEffects, ammoTypes,
-    ordnanceTemplateTypes,
-    getAttackSkillsForWeapon,
-    getRangedClassesForSkill,
-    resolveWeaponDiscriminator,
-    toolBonusProperties,
-    cyberwareTypes, cyberwareSubtypes, surgeryCodes,
+    availability,
+    cyberwareTypes, surgeryCodes,
     getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor
 } from "../lookups.js";
-import { calibers as CALIBERS, getDamageForCaliber } from "../calibers.js";
-
-// Default weaponClass when the user switches the cyberware embedded-weapon
-// discriminator. Cyberware can only embed Martial/Ranged/Exotic.
-const DEFAULT_CLASS_BY_TYPE = {
-    Martial: "Melee",
-    Ranged:  "Pistol",
-    Exotic:  "Exotic"
-};
 import { localize } from "../utils.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import {
+    prepareEffectTabContext,
+    prepareWeaponTabContext,
+    bindEffectTabListeners,
+    bindWeaponTabListeners,
+    handleSkillDropForBonus
+} from "./embedded-helpers.js";
 
 /**
  * Cyberware Item Sheet with custom card design and conditional tabs
@@ -154,13 +145,12 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         const selectedAvail = availability[sys.availability] || "Common";
         data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
 
-        // --- Bonuses (Effect Tab) ---
-        data.bonuses = this._prepareBonuses(sys.bonuses || []);
-        data.propertyOptions = this._getAvailablePropertyOptions(sys.bonuses || []);
+        // --- Bonuses (Effect Tab) — shared with armor sheet ---
+        prepareEffectTabContext(data, sys.bonuses);
 
-        // --- Weapon Tab Data ---
+        // --- Embedded Weapon Tab — shared with armor sheet ---
         if (data.showWeaponTab) {
-            this._prepareWeaponData(data);
+            prepareWeaponTabContext(data, sys.weapon);
         }
 
         // --- Armor Tab Data ---
@@ -171,183 +161,6 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         return data;
     }
 
-    /**
-     * Prepare bonuses array for display
-     */
-    _prepareBonuses(rawBonuses) {
-        return rawBonuses.map(bonus => {
-            if (bonus.type === "property") {
-                const labelKey = toolBonusProperties[bonus.property];
-                return {
-                    ...bonus,
-                    isProperty: true,
-                    label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
-                };
-            }
-            return {
-                ...bonus,
-                isSkill: true,
-                hasFilled: !!(bonus.skillUuid),
-                label: bonus.skillName || ""
-            };
-        });
-    }
-
-    /**
-     * Get available property options (excluding already used ones)
-     */
-    _getAvailablePropertyOptions(bonuses) {
-        const usedProperties = new Set(
-            bonuses.filter(b => b.type === "property").map(b => b.property)
-        );
-        return Object.entries(toolBonusProperties)
-            .filter(([key]) => !usedProperties.has(key))
-            .map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`)
-            }));
-    }
-
-    /** Normalise the embedded weapon's discriminator, falling through legacy values. */
-    _resolveWeaponDiscriminator(weapon) {
-        return resolveWeaponDiscriminator(weapon, DEFAULT_CLASS_BY_TYPE);
-    }
-
-    /**
-     * Prepare weapon tab data. Cyberware can only embed Martial / Ranged / Exotic
-     * weapons (never Ordnance or Ammo). Field-name conventions match the unified
-     * weapon-sheet so the row markup in tab-weapon.hbs can mirror weapon-sheet.hbs.
-     */
-    _prepareWeaponData(data) {
-        const weapon = data.system.weapon || {};
-        const d = this._resolveWeaponDiscriminator(weapon);
-        const wt = d.weaponType;
-        const wc = d.weaponClass;
-
-        data.weaponType  = wt;
-        data.weaponClass = wc;
-        data.weaponIsMartial = wt === "Martial";
-        data.weaponIsRanged  = wt === "Ranged";
-        data.weaponIsExotic  = wt === "Exotic";
-
-        // ----- WeaponType (discriminator) — only Martial/Ranged/Exotic on cyberware -----
-        const allowedTypes = ["Martial", "Ranged", "Exotic"];
-        data.weaponTypeOptions = allowedTypes.map(value => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${weaponTypes[value]}`),
-            selected: wt === value
-        }));
-        data.selectedWeaponTypeLabel = game.i18n.localize(`CYBERPUNK.${weaponTypes[wt] || "WeaponTypeMartial"}`);
-
-        // ----- WeaponClass (Subtype) -----
-        // For Ranged cyberweapons: narrow the dropdown to classes allowed by the
-        // selected attack skill. Other types fall back to the full enum.
-        const classEnum = getWeaponClasses(wt) || {};
-        let classKeys = Object.keys(classEnum);
-        if (wt === "Ranged") {
-            const allowed = getRangedClassesForSkill(weapon.attackSkill);
-            if (allowed.length) classKeys = allowed;
-        }
-        data.weaponClassOptions = classKeys.map(value => ({
-            value,
-            label: classEnum[value] ? game.i18n.localize(`CYBERPUNK.${classEnum[value]}`) : value,
-            selected: wc === value
-        }));
-        data.selectedWeaponClassLabel = classEnum[wc]
-            ? game.i18n.localize(`CYBERPUNK.${classEnum[wc]}`)
-            : wc;
-
-        // ----- Concealability -----
-        data.weaponConcealabilityOptions = Object.entries(concealability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: weapon.concealability === value
-        }));
-        data.selectedWeaponConcealabilityLabel = game.i18n.localize(`CYBERPUNK.${concealability[weapon.concealability] || "ConcealHidden"}`);
-
-        // ----- Reliability -----
-        data.weaponReliabilityOptions = Object.entries(reliability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: weapon.reliability === value
-        }));
-        data.selectedWeaponReliabilityLabel = game.i18n.localize(`CYBERPUNK.${reliability[weapon.reliability] || "Standard"}`);
-
-        // ----- Attack Skill -----
-        const skillsList = getAttackSkillsForWeapon(wt, wc);
-        const currentSkill = weapon.attackSkill || skillsList[0] || "";
-        data.weaponAttackSkillOptions = skillsList.map(name => ({
-            value: name,
-            label: game.i18n.has(`CYBERPUNK.Skill${name}`)
-                ? game.i18n.localize(`CYBERPUNK.Skill${name}`)
-                : name,
-            selected: currentSkill === name
-        }));
-        data.selectedWeaponAttackSkillLabel = currentSkill
-            ? (game.i18n.has(`CYBERPUNK.Skill${currentSkill}`)
-                ? game.i18n.localize(`CYBERPUNK.Skill${currentSkill}`)
-                : currentSkill)
-            : "";
-
-        // ----- Damage Type (Martial only) -----
-        if (data.weaponIsMartial) {
-            data.weaponDamageTypeOptions = Object.entries(meleeDamageTypes).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: weapon.damageType === value
-            }));
-            data.selectedWeaponDamageTypeLabel = game.i18n.localize(`CYBERPUNK.${meleeDamageTypes[weapon.damageType] || "DmgEdged"}`);
-        }
-
-        // ----- Effect (Martial / Exotic) -----
-        if (data.weaponIsMartial || data.weaponIsExotic) {
-            const effectKeys = Object.keys(weaponEffects);
-            const currentEffect = weapon.effect || effectKeys[0];
-            data.weaponEffectOptions = Object.entries(weaponEffects).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: currentEffect === value
-            }));
-            data.selectedWeaponEffectLabel = game.i18n.localize(`CYBERPUNK.${weaponEffects[currentEffect] || weaponEffects[effectKeys[0]]}`);
-        }
-
-        // ----- Template (Exotic) — supports "None" to opt out of AoE -----
-        if (data.weaponIsExotic) {
-            const fallbackToCircle = false; // Exotic supports None — never auto-fallback
-            const baseOptions = Object.entries(ordnanceTemplateTypes).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: weapon.templateType === value
-            }));
-            data.weaponTemplateOptions = [
-                {
-                    value: "",
-                    label: game.i18n.localize("CYBERPUNK.TemplateNone"),
-                    selected: !weapon.templateType
-                },
-                ...baseOptions
-            ];
-            const selKey = ordnanceTemplateTypes[weapon.templateType];
-            data.selectedWeaponTemplateLabel = selKey
-                ? game.i18n.localize(`CYBERPUNK.${selKey}`)
-                : game.i18n.localize("CYBERPUNK.TemplateNone");
-            const tplKind = weapon.templateType || "circle";
-            data.weaponRadiusLabel = (tplKind === "circle")
-                ? game.i18n.localize("CYBERPUNK.RadiusM")
-                : game.i18n.localize("CYBERPUNK.WidthM");
-        }
-
-        // ----- Caliber (Ranged) -----
-        if (data.weaponIsRanged) {
-            data.weaponCaliberOptions = Object.entries(CALIBERS).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: weapon.caliber === value
-            }));
-            const selCal = CALIBERS[weapon.caliber];
-            data.selectedWeaponCaliberLabel = selCal ? game.i18n.localize(`CYBERPUNK.${selCal}`) : "";
-        }
-    }
 
     /**
      * Prepare armor tab data
@@ -489,53 +302,6 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             });
         });
 
-        // --- Embedded Weapon Type (discriminator) change ---
-        html.find('select[name="system.weapon.weaponType"]').change(async ev => {
-            const newType = ev.currentTarget.value;
-            const defaultSkill = getAttackSkillsForWeapon(newType)[0] || "";
-            const updates = {
-                "system.weapon.weaponType":  newType,
-                "system.weapon.attackSkill": defaultSkill
-            };
-            if (newType === "Ranged") {
-                const allowed = getRangedClassesForSkill(defaultSkill);
-                updates["system.weapon.weaponClass"] = allowed[0] || "Pistol";
-                const dmg = getDamageForCaliber(this.item.system.weapon?.caliber);
-                if (dmg) updates["system.weapon.damage"] = dmg;
-            } else {
-                updates["system.weapon.weaponClass"] = DEFAULT_CLASS_BY_TYPE[newType] || "";
-            }
-            await this.item.update(updates);
-        });
-
-        // --- Embedded WeaponClass (Subtype) change ---
-        html.find('select[name="system.weapon.weaponClass"]').change(async ev => {
-            await this.item.update({ "system.weapon.weaponClass": ev.currentTarget.value });
-        });
-
-        // --- Embedded Attack Skill change — narrows Ranged weaponClass ---
-        html.find('select[name="system.weapon.attackSkill"]').change(async ev => {
-            const newSkill = ev.currentTarget.value;
-            const updates = { "system.weapon.attackSkill": newSkill };
-            const w = this.item.system.weapon || {};
-            if (w.weaponType === "Ranged") {
-                const allowed = getRangedClassesForSkill(newSkill);
-                if (allowed.length && !allowed.includes(w.weaponClass)) {
-                    updates["system.weapon.weaponClass"] = allowed[0];
-                }
-            }
-            await this.item.update(updates);
-        });
-
-        // --- Embedded Caliber change → re-stamp damage for the new caliber ---
-        html.find('select[name="system.weapon.caliber"]').change(async ev => {
-            const newCal = ev.currentTarget.value;
-            const updates = { "system.weapon.caliber": newCal };
-            const dmg = getDamageForCaliber(newCal);
-            if (dmg) updates["system.weapon.damage"] = dmg;
-            await this.item.update(updates);
-        });
-
         // --- Armor current SP input ---
         html.find('.sp-current-input').change(async ev => {
             const input = ev.currentTarget;
@@ -546,60 +312,11 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             await this.item.update({ [`system.armor.coverage.${key}.ablation`]: ablation });
         });
 
-        // --- Bonuses management (same as tool-sheet) ---
-        html.find('.add-property').click(async ev => {
-            ev.preventDefault();
-            const bonuses = [...(this.item.system.bonuses || [])];
-            const usedProperties = new Set(
-                bonuses.filter(b => b.type === "property").map(b => b.property)
-            );
-            const firstAvailable = Object.keys(toolBonusProperties).find(k => !usedProperties.has(k));
-            if (!firstAvailable) {
-                ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
-                return;
-            }
-            bonuses.push({ type: "property", property: firstAvailable, value: 0 });
-            await this.item.update({ "system.bonuses": bonuses });
-        });
+        // Shared Effect-tab listeners (add property/skill, remove, value/property edits)
+        bindEffectTabListeners(html, this.item, { isLocked: this._isLocked });
 
-        html.find('.add-skill').click(async ev => {
-            ev.preventDefault();
-            const bonuses = [...(this.item.system.bonuses || [])];
-            bonuses.push({ type: "skill", skillUuid: "", skillName: "", value: 0 });
-            await this.item.update({ "system.bonuses": bonuses });
-        });
-
-        html.find('.remove-bonus').click(async ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const bonuses = [...(this.item.system.bonuses || [])];
-            bonuses.splice(index, 1);
-            await this.item.update({ "system.bonuses": bonuses });
-        });
-
-        html.find('.bonus-property-select').change(async ev => {
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const newProperty = ev.currentTarget.value;
-            const bonuses = [...(this.item.system.bonuses || [])];
-            if (bonuses.some((b, i) => i !== index && b.type === "property" && b.property === newProperty)) {
-                ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
-                this.render(false);
-                return;
-            }
-            bonuses[index] = { ...bonuses[index], property: newProperty };
-            await this.item.update({ "system.bonuses": bonuses });
-        });
-
-        html.find('.bonus-value-input').on('change blur', async ev => {
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const value = parseInt(ev.currentTarget.value) || 0;
-            const bonuses = [...(this.item.system.bonuses || [])];
-            if (bonuses[index] && bonuses[index].value !== value) {
-                bonuses[index] = { ...bonuses[index], value };
-                await this.item.update({ "system.bonuses": bonuses });
-            }
-        });
+        // Shared embedded-Weapon-tab listeners (type/class/skill/caliber changes)
+        bindWeaponTabListeners(html, this.item, { isLocked: this._isLocked });
     }
 
     /** @override */
@@ -615,7 +332,6 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         }
 
         if (data.type !== "Item") return;
-
         const item = await Item.implementation.fromDropData(data);
         if (!item) return;
 
@@ -623,41 +339,6 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             ui.notifications.warn(game.i18n.localize("CYBERPUNK.OnlySkillsCanBeAdded"));
             return;
         }
-
-        // Effect bonus skill - store UUID, name, stat, and default value
-        const bonuses = [...(this.item.system.bonuses || [])];
-        const isDuplicate = bonuses.some(b =>
-            b.type === "skill" && b.skillUuid && (
-                b.skillUuid === item.uuid ||
-                b.skillName.toLowerCase() === item.name.toLowerCase()
-            )
-        );
-        if (isDuplicate) {
-            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
-            return;
-        }
-
-        // Store the skill's stat for virtual skill rolls
-        const skillStat = item.system?.stat || "ref";
-
-        const emptyIndex = bonuses.findIndex(b => b.type === "skill" && !b.skillUuid);
-        if (emptyIndex >= 0) {
-            bonuses[emptyIndex] = {
-                ...bonuses[emptyIndex],
-                skillUuid: item.uuid,
-                skillName: item.name,
-                skillStat: skillStat
-            };
-        } else {
-            bonuses.push({
-                type: "skill",
-                skillUuid: item.uuid,
-                skillName: item.name,
-                skillStat: skillStat,
-                value: 0
-            });
-        }
-
-        await this.item.update({ "system.bonuses": bonuses });
+        await handleSkillDropForBonus(this.item, item);
     }
 }

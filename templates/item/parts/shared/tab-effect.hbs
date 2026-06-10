@@ -40,6 +40,22 @@
         {{/if}}
       {{/if}}
 
+      {{!-- Operation: + / × / = (same width as the value input) --}}
+      {{#if ../isLocked}}
+        <span class="bonus-op">{{this.op}}</span>
+      {{else}}
+        <div class="dropdown-wrapper op-wrapper">
+          <select class="dropdown-select bonus-op-select" data-index="{{@index}}">
+            {{#each this.opOptions}}
+              <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+            {{/each}}
+          </select>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{/if}}
+
       {{!-- Bonus value --}}
       {{#if ../isLocked}}
         <span class="bonus-value">{{this.value}}</span>

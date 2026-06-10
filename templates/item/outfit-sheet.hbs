@@ -31,7 +31,7 @@
           <div class="category-icon">
             <img src="systems/cyberpunk/img/ui/badge-outfit.svg" alt="">
           </div>
-          <span class="category-label">Outfit</span>
+          <span class="category-label">{{localize "CYBERPUNK.Armor"}}</span>
         </div>
       </div>
 
@@ -87,11 +87,19 @@
     {{!-- Tabs Line --}}
     <div class="tabs-line">
       <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-tab="description">
-        <span class="tab-text">Description</span>
+        <span class="tab-text">{{localize "CYBERPUNK.Description"}}</span>
       </a>
       <a class="tab-header {{#if (eq activeTab 'armor')}}active{{/if}}" data-tab="armor">
-        <span class="tab-text">Armor</span>
+        <span class="tab-text">{{localize "CYBERPUNK.Armor"}}</span>
       </a>
+      <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-tab="effect">
+        <span class="tab-text">{{localize "CYBERPUNK.Effect"}}</span>
+      </a>
+      {{#if showWeaponTab}}
+        <a class="tab-header {{#if (eq activeTab 'weapon')}}active{{/if}}" data-tab="weapon">
+          <span class="tab-text">{{localize "CYBERPUNK.Weapon"}}</span>
+        </a>
+      {{/if}}
     </div>
 
     {{!-- Horizontal Divider --}}
@@ -115,16 +123,17 @@
 
         {{!-- Source Field --}}
         <div class="source-field">
-          <label class="variable-label">Source</label>
+          <label class="variable-label">{{localize "CYBERPUNK.Source"}}</label>
           <input type="text" class="source-input" name="system.source" value="{{system.source}}" placeholder="Core Rulebook, p.XX" {{#if isLocked}}readonly{{/if}}>
         </div>
-      {{else}}
+
+      {{else if (eq activeTab 'armor')}}
         {{!-- Armor Tab --}}
-        {{!-- Variables Row --}}
+        {{!-- ROW: Armor Type [dropdown] | Has Weapon [checkbox] EV [input] --}}
         <div class="variables-row">
           {{!-- Armor Type --}}
           <div class="variable-field">
-            <label class="variable-label">Armor Type</label>
+            <label class="variable-label">{{localize "CYBERPUNK.ArmorType"}}</label>
             {{#if isLocked}}
               <div class="dropdown">
                 <span class="dropdown-text">{{selectedArmorTypeLabel}}</span>
@@ -146,45 +155,80 @@
             {{/if}}
           </div>
 
-          {{!-- Encumbrance --}}
-          <div class="variable-field">
-            <label class="variable-label">Encumbrance</label>
+          {{!-- Has Weapon + EV — checkbox and EV input share one dual field --}}
+          <div class="variable-field dual-field">
+            <label class="variable-label">{{localize "CYBERPUNK.HasWeapon"}}</label>
             {{#if isLocked}}
-              <div class="dropdown">
-                <span class="dropdown-text">{{system.encumbrance}}</span>
-              </div>
+              <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
             {{else}}
-              <input type="number" class="variable-input" name="system.encumbrance" value="{{system.encumbrance}}" step="1">
+              <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+                   src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
+            {{/if}}
+            <label class="dual-separator">{{localize "CYBERPUNK.EV"}}</label>
+            {{#if isLocked}}
+              <span class="dual-value dual-value-narrow">{{system.encumbrance}}</span>
+            {{else}}
+              <input type="number" class="dual-input dual-input-narrow" name="system.encumbrance" value="{{system.encumbrance}}" step="1">
             {{/if}}
           </div>
         </div>
 
         {{!-- Stopping Power Frame --}}
-        <div class="sp-frame">
-          <span class="sp-frame-label">Stopping Power</span>
-          {{#each coverageRows}}
+        <div class="sp-frame {{#if isShield}}sp-frame--shield{{/if}}">
+          <span class="sp-frame-label">{{localize "CYBERPUNK.StoppingPower"}}</span>
+
+          {{#if isShield}}
+            {{!-- Shield: a single centred block. SP is layered onto every hit
+                 location (after body/cyberarmor, before active cover). --}}
             <div class="sp-row">
-              {{#each this}}
-                <div class="sp-block">
-                  <div class="sp-values">
-                    {{#if ../../isLocked}}
-                      <span class="sp-current {{#if isDamaged}}sp-damaged{{/if}}">{{currentSP}}</span>
-                    {{else}}
-                      <input type="number" class="sp-input sp-current-input" value="{{currentSP}}" data-key="{{key}}" data-max="{{maxSP}}" min="0">
-                    {{/if}}
-                    <span class="sp-of">of</span>
-                    {{#if ../../isLocked}}
-                      <span class="sp-max">{{maxSP}}</span>
-                    {{else}}
-                      <input type="number" class="sp-input" name="system.coverage.{{key}}.stoppingPower" value="{{maxSP}}" min="0">
-                    {{/if}}
-                  </div>
-                  <span class="sp-location">{{label}}</span>
+              <div class="sp-block">
+                <div class="sp-values">
+                  {{#if isLocked}}
+                    <span class="sp-current {{#if shieldBlock.isDamaged}}sp-damaged{{/if}}">{{shieldBlock.currentSP}}</span>
+                  {{else}}
+                    <input type="number" class="sp-input sp-current-input" value="{{shieldBlock.currentSP}}" data-key="shield" data-max="{{shieldBlock.maxSP}}" min="0">
+                  {{/if}}
+                  <span class="sp-of">of</span>
+                  {{#if isLocked}}
+                    <span class="sp-max">{{shieldBlock.maxSP}}</span>
+                  {{else}}
+                    <input type="number" class="sp-input" name="system.shield.stoppingPower" value="{{shieldBlock.maxSP}}" min="0">
+                  {{/if}}
                 </div>
-              {{/each}}
+                <span class="sp-location">{{shieldBlock.label}}</span>
+              </div>
             </div>
-          {{/each}}
+          {{else}}
+            {{#each coverageRows}}
+              <div class="sp-row">
+                {{#each this}}
+                  <div class="sp-block">
+                    <div class="sp-values">
+                      {{#if ../../isLocked}}
+                        <span class="sp-current {{#if isDamaged}}sp-damaged{{/if}}">{{currentSP}}</span>
+                      {{else}}
+                        <input type="number" class="sp-input sp-current-input" value="{{currentSP}}" data-key="{{key}}" data-max="{{maxSP}}" min="0">
+                      {{/if}}
+                      <span class="sp-of">of</span>
+                      {{#if ../../isLocked}}
+                        <span class="sp-max">{{maxSP}}</span>
+                      {{else}}
+                        <input type="number" class="sp-input" name="system.coverage.{{key}}.stoppingPower" value="{{maxSP}}" min="0">
+                      {{/if}}
+                    </div>
+                    <span class="sp-location">{{label}}</span>
+                  </div>
+                {{/each}}
+              </div>
+            {{/each}}
+          {{/if}}
         </div>
+
+      {{else if (eq activeTab 'effect')}}
+        {{> "systems/cyberpunk/templates/item/parts/shared/tab-effect.hbs"}}
+
+      {{else if (eq activeTab 'weapon')}}
+        {{> "systems/cyberpunk/templates/item/parts/shared/tab-weapon.hbs"}}
       {{/if}}
     </div>
   </div>

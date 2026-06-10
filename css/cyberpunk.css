@@ -4680,123 +4680,17 @@ input.skill-value.skill-level-input:focus {
   min-height: 400px;
 }
 
-.outfit-card .sp-frame {
-  position: relative;
-  display: flex;
-  margin-top: 8px;
-  padding: 24px 0 16px 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  align-self: stretch;
-  border-radius: 10px;
-  border: 1px solid var(--Chat-Gray, #444856);
-}
-
-.outfit-card .sp-frame-label {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--Chat-Back, #1A1A1A);
-  padding: 0 8px;
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-.outfit-card .sp-row {
-  display: flex;
-  gap: 40px;
-  width: 100%;
+.outfit-card .sp-frame.sp-frame--shield {
+  min-height: 160px;
   justify-content: center;
 }
 
-.outfit-card .sp-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+.outfit-card .variables-row .dual-field .checkbox-img + .dual-separator {
+  margin-left: 16px;
 }
-
-.outfit-card .sp-values {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.outfit-card .sp-current,
-.outfit-card .sp-max {
-  display: flex;
-  width: 40px;
-  height: 26px;
-  padding: 5px 4px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-  text-align: center;
-}
-
-.outfit-card .sp-damaged {
-  color: #B60F3C;
-}
-
-.outfit-card .sp-of {
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-.outfit-card .sp-location {
-  color: var(--Sheet-Key, #B9B29D);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
-  text-align: center;
-}
-
-.outfit-card .sp-input {
-  display: flex;
-  width: 40px;
-  height: 26px;
-  padding: 5px 4px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-  text-align: center;
-  outline: none;
-}
-.outfit-card .sp-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-.outfit-card .sp-input::-webkit-inner-spin-button, .outfit-card .sp-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.outfit-card .sp-input {
-  -moz-appearance: textfield;
+.outfit-card .variables-row .dual-field .dual-input-narrow,
+.outfit-card .variables-row .dual-field .dual-value-narrow {
+  width: 27px;
 }
 
 .app.window-app.reload-dialog,
@@ -6595,6 +6489,36 @@ input.skill-value.skill-level-input:focus {
   width: auto;
 }
 
+.tool-card .bonus-row .op-wrapper,
+.drug-card .bonus-row .op-wrapper {
+  flex: 0 0 50px;
+  width: 50px;
+}
+
+.tool-card .bonus-row .op-wrapper .bonus-op-select,
+.drug-card .bonus-row .op-wrapper .bonus-op-select {
+  width: 100%;
+  text-align: center;
+}
+
+.tool-card .bonus-row .bonus-op,
+.drug-card .bonus-row .bonus-op {
+  display: flex;
+  width: 50px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
 .tool-card .bonus-value,
 .drug-card .bonus-value {
   display: flex;
@@ -6866,19 +6790,23 @@ input.skill-value.skill-level-input:focus {
   border-bottom: none;
 }
 
-.cyberware-card .humanity-field {
+.cyberware-card .humanity-field,
+.outfit-card .humanity-field {
   flex: 1 0 0;
   gap: 7px;
 }
-.cyberware-card .humanity-field .variable-label {
+.cyberware-card .humanity-field .variable-label,
+.outfit-card .humanity-field .variable-label {
   width: 83px;
 }
-.cyberware-card .humanity-input-group {
+.cyberware-card .humanity-input-group,
+.outfit-card .humanity-input-group {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.cyberware-card .humanity-formula {
+.cyberware-card .humanity-formula,
+.outfit-card .humanity-formula {
   display: flex;
   width: 58px;
   height: 26px;
@@ -6892,7 +6820,8 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   line-height: 16px;
 }
-.cyberware-card .humanity-formula-input {
+.cyberware-card .humanity-formula-input,
+.outfit-card .humanity-formula-input {
   width: 58px;
   height: 26px;
   padding: 5px 8px;
@@ -6905,11 +6834,13 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   outline: none;
 }
-.cyberware-card .humanity-formula-input:focus {
+.cyberware-card .humanity-formula-input:focus,
+.outfit-card .humanity-formula-input:focus {
   outline: none;
   box-shadow: none;
 }
-.cyberware-card .humanity-roll-btn {
+.cyberware-card .humanity-roll-btn,
+.outfit-card .humanity-roll-btn {
   width: 26px;
   height: 26px;
   padding: 4px;
@@ -6918,18 +6849,22 @@ input.skill-value.skill-level-input:focus {
   cursor: pointer;
   flex-shrink: 0;
 }
-.cyberware-card .humanity-roll-btn img {
+.cyberware-card .humanity-roll-btn img,
+.outfit-card .humanity-roll-btn img {
   width: 100%;
   height: 100%;
 }
-.cyberware-card .humanity-roll-btn:hover:not([disabled]) {
+.cyberware-card .humanity-roll-btn:hover:not([disabled]),
+.outfit-card .humanity-roll-btn:hover:not([disabled]) {
   transform: scale(1.1);
 }
-.cyberware-card .humanity-roll-btn[disabled] {
+.cyberware-card .humanity-roll-btn[disabled],
+.outfit-card .humanity-roll-btn[disabled] {
   cursor: not-allowed;
   opacity: 0.7;
 }
-.cyberware-card .humanity-reset-btn {
+.cyberware-card .humanity-reset-btn,
+.outfit-card .humanity-reset-btn {
   width: 26px;
   height: 26px;
   padding: 3px;
@@ -6939,14 +6874,17 @@ input.skill-value.skill-level-input:focus {
   cursor: pointer;
   flex-shrink: 0;
 }
-.cyberware-card .humanity-reset-btn img {
+.cyberware-card .humanity-reset-btn img,
+.outfit-card .humanity-reset-btn img {
   width: 100%;
   height: 100%;
 }
-.cyberware-card .humanity-reset-btn:hover {
+.cyberware-card .humanity-reset-btn:hover,
+.outfit-card .humanity-reset-btn:hover {
   transform: scale(1.1);
 }
-.cyberware-card .humanity-result {
+.cyberware-card .humanity-result,
+.outfit-card .humanity-result {
   display: flex;
   width: 32px;
   height: 26px;
@@ -6961,22 +6899,26 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   line-height: 16px;
 }
-.cyberware-card .humanity-result.rolled {
+.cyberware-card .humanity-result.rolled,
+.outfit-card .humanity-result.rolled {
   color: var(--Chat-Text, #FFF);
 }
-.cyberware-card .cyber-divider {
+.cyberware-card .cyber-divider,
+.outfit-card .cyber-divider {
   width: 100%;
   height: 1px;
   flex-shrink: 0;
   margin: 8px 0;
   background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
 }
-.cyberware-card .checkbox-field {
+.cyberware-card .checkbox-field,
+.outfit-card .checkbox-field {
   display: flex;
   align-items: center;
   flex: 1 0 0;
 }
-.cyberware-card .checkbox-label {
+.cyberware-card .checkbox-label,
+.outfit-card .checkbox-label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -6987,18 +6929,21 @@ input.skill-value.skill-level-input:focus {
   font-weight: 500;
   line-height: 16px;
 }
-.cyberware-card .checkbox-label input[type=checkbox] {
+.cyberware-card .checkbox-label input[type=checkbox],
+.outfit-card .checkbox-label input[type=checkbox] {
   width: 16px;
   height: 16px;
   margin: 0;
   cursor: pointer;
   accent-color: var(--Sheet-Key, #B9B29D);
 }
-.cyberware-card .checkbox-label input[type=checkbox]:disabled {
+.cyberware-card .checkbox-label input[type=checkbox]:disabled,
+.outfit-card .checkbox-label input[type=checkbox]:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
-.cyberware-card .variable-value {
+.cyberware-card .variable-value,
+.outfit-card .variable-value {
   display: flex;
   flex: 1 0 0;
   height: 26px;
@@ -7012,14 +6957,16 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   line-height: 16px;
 }
-.cyberware-card .dual-field {
+.cyberware-card .dual-field,
+.outfit-card .dual-field {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 10px;
   flex: 1 0 0;
 }
-.cyberware-card .dual-value {
+.cyberware-card .dual-value,
+.outfit-card .dual-value {
   display: flex;
   width: 47px;
   height: 26px;
@@ -7034,10 +6981,12 @@ input.skill-value.skill-level-input:focus {
   line-height: 16px;
   text-align: left;
 }
-.cyberware-card .dual-value-narrow {
+.cyberware-card .dual-value-narrow,
+.outfit-card .dual-value-narrow {
   width: 40px;
 }
-.cyberware-card .dual-input {
+.cyberware-card .dual-input,
+.outfit-card .dual-input {
   display: flex;
   width: 47px;
   height: 26px;
@@ -7055,21 +7004,27 @@ input.skill-value.skill-level-input:focus {
   text-align: left;
   outline: none;
 }
-.cyberware-card .dual-input:focus {
+.cyberware-card .dual-input:focus,
+.outfit-card .dual-input:focus {
   outline: none;
   box-shadow: none;
 }
-.cyberware-card .dual-input::-webkit-inner-spin-button, .cyberware-card .dual-input::-webkit-outer-spin-button {
+.cyberware-card .dual-input::-webkit-inner-spin-button, .cyberware-card .dual-input::-webkit-outer-spin-button,
+.outfit-card .dual-input::-webkit-inner-spin-button,
+.outfit-card .dual-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.cyberware-card .dual-input {
+.cyberware-card .dual-input,
+.outfit-card .dual-input {
   -moz-appearance: textfield;
 }
-.cyberware-card .dual-input-narrow {
+.cyberware-card .dual-input-narrow,
+.outfit-card .dual-input-narrow {
   width: 40px;
 }
-.cyberware-card .dual-separator {
+.cyberware-card .dual-separator,
+.outfit-card .dual-separator {
   color: var(--Sheet-Key, #B9B29D);
   font-family: var(--font-blender);
   font-size: 14px;
@@ -7078,7 +7033,8 @@ input.skill-value.skill-level-input:focus {
   line-height: 16px;
   flex-shrink: 0;
 }
-.cyberware-card .bonus-indicator {
+.cyberware-card .bonus-indicator,
+.outfit-card .bonus-indicator {
   color: #1A804D;
   font-family: var(--font-blender);
   font-size: 12px;
@@ -7088,26 +7044,60 @@ input.skill-value.skill-level-input:focus {
   flex-shrink: 0;
 }
 .cyberware-card .dual-value.with-bonus,
-.cyberware-card .variable-value.with-bonus {
+.cyberware-card .variable-value.with-bonus,
+.outfit-card .dual-value.with-bonus,
+.outfit-card .variable-value.with-bonus {
   color: #1A804D;
 }
-.cyberware-card .bonus-row {
+.cyberware-card .bonus-row,
+.outfit-card .bonus-row {
   display: flex;
   align-items: center;
   gap: 10px;
   align-self: stretch;
 }
-.cyberware-card .bonus-row .dropdown-wrapper {
+.cyberware-card .bonus-row .dropdown-wrapper,
+.outfit-card .bonus-row .dropdown-wrapper {
   flex: 1 0 0;
 }
-.cyberware-card .bonus-row .dropdown-wrapper .dropdown-select {
+.cyberware-card .bonus-row .dropdown-wrapper .dropdown-select,
+.outfit-card .bonus-row .dropdown-wrapper .dropdown-select {
   width: 100%;
 }
-.cyberware-card .bonus-row .dropdown {
+.cyberware-card .bonus-row .dropdown,
+.outfit-card .bonus-row .dropdown {
   flex: 1 0 0;
   width: auto;
 }
-.cyberware-card .bonus-value {
+.cyberware-card .bonus-row .op-wrapper,
+.outfit-card .bonus-row .op-wrapper {
+  flex: 0 0 50px;
+  width: 50px;
+}
+.cyberware-card .bonus-row .op-wrapper .bonus-op-select,
+.outfit-card .bonus-row .op-wrapper .bonus-op-select {
+  width: 100%;
+  text-align: center;
+}
+.cyberware-card .bonus-row .bonus-op,
+.outfit-card .bonus-row .bonus-op {
+  display: flex;
+  width: 50px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+}
+.cyberware-card .bonus-value,
+.outfit-card .bonus-value {
   display: flex;
   width: 50px;
   height: 26px;
@@ -7122,7 +7112,8 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   line-height: 16px;
 }
-.cyberware-card .bonus-value-input {
+.cyberware-card .bonus-value-input,
+.outfit-card .bonus-value-input {
   width: 50px;
   height: 26px;
   padding: 5px 8px;
@@ -7136,18 +7127,23 @@ input.skill-value.skill-level-input:focus {
   font-weight: 400;
   outline: none;
 }
-.cyberware-card .bonus-value-input::-webkit-inner-spin-button, .cyberware-card .bonus-value-input::-webkit-outer-spin-button {
+.cyberware-card .bonus-value-input::-webkit-inner-spin-button, .cyberware-card .bonus-value-input::-webkit-outer-spin-button,
+.outfit-card .bonus-value-input::-webkit-inner-spin-button,
+.outfit-card .bonus-value-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.cyberware-card .bonus-value-input {
+.cyberware-card .bonus-value-input,
+.outfit-card .bonus-value-input {
   -moz-appearance: textfield;
 }
-.cyberware-card .bonus-value-input:focus {
+.cyberware-card .bonus-value-input:focus,
+.outfit-card .bonus-value-input:focus {
   outline: none;
   box-shadow: none;
 }
-.cyberware-card .remove-bonus {
+.cyberware-card .remove-bonus,
+.outfit-card .remove-bonus {
   width: 16px;
   height: 16px;
   padding: 0;
@@ -7157,25 +7153,30 @@ input.skill-value.skill-level-input:focus {
   opacity: 0.6;
   flex-shrink: 0;
 }
-.cyberware-card .remove-bonus img {
+.cyberware-card .remove-bonus img,
+.outfit-card .remove-bonus img {
   width: 100%;
   height: 100%;
 }
-.cyberware-card .remove-bonus:hover {
+.cyberware-card .remove-bonus:hover,
+.outfit-card .remove-bonus:hover {
   opacity: 1;
 }
-.cyberware-card .effect-bonuses {
+.cyberware-card .effect-bonuses,
+.outfit-card .effect-bonuses {
   display: flex;
   flex-direction: column;
   gap: 8px;
   align-self: stretch;
 }
-.cyberware-card .effect-actions {
+.cyberware-card .effect-actions,
+.outfit-card .effect-actions {
   display: flex;
   gap: 12px;
   align-self: stretch;
 }
-.cyberware-card .effect-actions button {
+.cyberware-card .effect-actions button,
+.outfit-card .effect-actions button {
   flex: 1;
   height: 26px;
   border-radius: 4px;
@@ -7189,12 +7190,14 @@ input.skill-value.skill-level-input:focus {
   line-height: 16px;
   cursor: pointer;
 }
-.cyberware-card .effect-actions button:hover {
+.cyberware-card .effect-actions button:hover,
+.outfit-card .effect-actions button:hover {
   border-color: var(--Sheet-Key, #B9B29D);
   color: var(--Sheet-Key, #B9B29D);
   box-shadow: none;
 }
-.cyberware-card .skill-drop.filled {
+.cyberware-card .skill-drop.filled,
+.outfit-card .skill-drop.filled {
   display: block;
   padding: 0 8px;
   gap: 10px;
@@ -7204,7 +7207,8 @@ input.skill-value.skill-level-input:focus {
   background: var(--Chat-Front, #26282F);
   border: none;
 }
-.cyberware-card .skill-drop.filled .skill-name {
+.cyberware-card .skill-drop.filled .skill-name,
+.outfit-card .skill-drop.filled .skill-name {
   flex: 1;
   color: var(--Chat-Text, #FFF);
   font-family: var(--font-blender);
@@ -7214,13 +7218,16 @@ input.skill-value.skill-level-input:focus {
   line-height: 14px;
   cursor: pointer;
 }
-.cyberware-card .skill-drop.filled .skill-name:hover {
+.cyberware-card .skill-drop.filled .skill-name:hover,
+.outfit-card .skill-drop.filled .skill-name:hover {
   text-decoration: underline;
 }
-.cyberware-card:not(.unlocked) .skill-drop.filled .skill-name {
+.cyberware-card:not(.unlocked) .skill-drop.filled .skill-name,
+.outfit-card:not(.unlocked) .skill-drop.filled .skill-name {
   color: #808090;
 }
-.cyberware-card .skill-drop.empty {
+.cyberware-card .skill-drop.empty,
+.outfit-card .skill-drop.empty {
   display: block;
   padding: 0 8px;
   align-items: center;
@@ -7229,20 +7236,23 @@ input.skill-value.skill-level-input:focus {
   border-radius: 4px;
   border: 1px dashed var(--Chat-Gray, #444856);
 }
-.cyberware-card .skill-drop.empty .placeholder {
+.cyberware-card .skill-drop.empty .placeholder,
+.outfit-card .skill-drop.empty .placeholder {
   color: var(--Chat-Gray, #444856);
   font-family: var(--font-blender);
   font-size: 14px;
   font-weight: 400;
   line-height: 24px;
 }
-.cyberware-card .weapon-divider {
+.cyberware-card .weapon-divider,
+.outfit-card .weapon-divider {
   width: 100%;
   height: 1px;
   flex-shrink: 0;
   background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
 }
-.cyberware-card .sp-frame {
+.cyberware-card .sp-frame,
+.outfit-card .sp-frame {
   position: relative;
   display: flex;
   margin-top: 8px;
@@ -7254,7 +7264,8 @@ input.skill-value.skill-level-input:focus {
   border-radius: 10px;
   border: 1px solid var(--Chat-Gray, #444856);
 }
-.cyberware-card .sp-frame-label {
+.cyberware-card .sp-frame-label,
+.outfit-card .sp-frame-label {
   position: absolute;
   top: -10px;
   left: 50%;
@@ -7268,25 +7279,30 @@ input.skill-value.skill-level-input:focus {
   font-weight: 500;
   line-height: 16px;
 }
-.cyberware-card .sp-row {
+.cyberware-card .sp-row,
+.outfit-card .sp-row {
   display: flex;
   gap: 40px;
   width: 100%;
   justify-content: center;
 }
-.cyberware-card .sp-block {
+.cyberware-card .sp-block,
+.outfit-card .sp-block {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
 }
-.cyberware-card .sp-values {
+.cyberware-card .sp-values,
+.outfit-card .sp-values {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 .cyberware-card .sp-current,
-.cyberware-card .sp-max {
+.cyberware-card .sp-max,
+.outfit-card .sp-current,
+.outfit-card .sp-max {
   display: flex;
   width: 40px;
   height: 26px;
@@ -7302,10 +7318,12 @@ input.skill-value.skill-level-input:focus {
   line-height: 16px;
   text-align: center;
 }
-.cyberware-card .sp-damaged {
+.cyberware-card .sp-damaged,
+.outfit-card .sp-damaged {
   color: #B60F3C;
 }
-.cyberware-card .sp-of {
+.cyberware-card .sp-of,
+.outfit-card .sp-of {
   color: var(--Sheet-Key, #B9B29D);
   font-family: var(--font-blender);
   font-size: 14px;
@@ -7313,7 +7331,8 @@ input.skill-value.skill-level-input:focus {
   font-weight: 500;
   line-height: 16px;
 }
-.cyberware-card .sp-location {
+.cyberware-card .sp-location,
+.outfit-card .sp-location {
   color: var(--Sheet-Key, #B9B29D);
   font-family: var(--font-blender);
   font-size: 14px;
@@ -7322,7 +7341,8 @@ input.skill-value.skill-level-input:focus {
   line-height: 16px;
   text-align: center;
 }
-.cyberware-card .sp-input {
+.cyberware-card .sp-input,
+.outfit-card .sp-input {
   display: flex;
   width: 40px;
   height: 26px;
@@ -7340,14 +7360,20 @@ input.skill-value.skill-level-input:focus {
   text-align: center;
   outline: none;
 }
-.cyberware-card .sp-input:focus {
+.cyberware-card .sp-input:focus,
+.outfit-card .sp-input:focus {
   outline: none;
   box-shadow: none;
 }
-.cyberware-card .sp-input::-webkit-inner-spin-button, .cyberware-card .sp-input::-webkit-outer-spin-button {
+.cyberware-card .sp-input::-webkit-inner-spin-button, .cyberware-card .sp-input::-webkit-outer-spin-button,
+.outfit-card .sp-input::-webkit-inner-spin-button,
+.outfit-card .sp-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.cyberware-card .sp-input {
+.cyberware-card .sp-input,
+.outfit-card .sp-input {
   -moz-appearance: textfield;
 }
+
+/*# sourceMappingURL=cyberpunk.css.map */

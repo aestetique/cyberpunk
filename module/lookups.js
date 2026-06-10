@@ -371,17 +371,19 @@ export const ordnanceTemplateTypes = {
     beam: "TemplateBeam"
 };
 
-/** Tool bonus properties — actor property paths a tool can modify */
+/** Tool bonus properties — actor property paths a tool can modify.
+ *  Stat targets are the stat key itself (e.g. "stats.int"); the unified
+ *  op pipeline applies + / × / = to stat.total.  */
 export const toolBonusProperties = {
-    "stats.int.tempMod": "PropINT",
-    "stats.ref.tempMod": "PropREF",
-    "stats.tech.tempMod": "PropTECH",
-    "stats.cool.tempMod": "PropCOOL",
-    "stats.attr.tempMod": "PropATTR",
-    "stats.luck.tempMod": "PropLUCK",
-    "stats.ma.tempMod": "PropMA",
-    "stats.bt.tempMod": "PropBT",
-    "stats.emp.tempMod": "PropEMP",
+    "stats.int": "PropINT",
+    "stats.ref": "PropREF",
+    "stats.tech": "PropTECH",
+    "stats.cool": "PropCOOL",
+    "stats.attr": "PropATTR",
+    "stats.luck": "PropLUCK",
+    "stats.ma": "PropMA",
+    "stats.bt": "PropBT",
+    "stats.emp": "PropEMP",
     "initiativeMod": "PropInitiative",
     "stunSaveMod": "PropStunSave",
     "deathSaveMod": "PropDeathSave",
@@ -635,7 +637,6 @@ export let fireModes = {
     fullAuto: "FullAuto",
     threeRoundBurst: "ThreeRoundBurst",
     twoRoundBurst: "TwoRoundBurst",
-    suppressive: "Suppressive",
     singleShot: "SingleShot"
 };
 
@@ -749,8 +750,6 @@ export function buildRangedModifierGroups(weapon, targetTokens=[]) {
         {localKey:"Ricochet", dataPath:"ricochet",defaultValue: false},
         {localKey:"Running", dataPath:"running",defaultValue: false},
         {localKey:"TurnFace", dataPath:"turningToFace",defaultValue: false},
-        {localKey:"FireZoneWidth",  dataPath:"zoneWidth",  dtype:"Number", defaultValue: 2},
-        {localKey:"RoundsFiredLbl", dataPath:"roundsFired", dtype:"Number", defaultValue: weapon.system.rof},
         {
             localKey: "TargetsCount",
             dataPath:"targetsCount",

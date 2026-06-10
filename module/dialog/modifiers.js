@@ -1,5 +1,5 @@
 import { setByPath, localize } from "../utils.js"
-import { defaultTargetLocations, fireModes } from "../lookups.js"
+import { defaultTargetLocations } from "../lookups.js"
 
 /**
  * A specialized form used to select the modifiers for shooting with a weapon
@@ -108,32 +108,6 @@ import { defaultTargetLocations, fireModes } from "../lookups.js"
         if ($el.hasClass("dis") && $el.prop("checked")) html.find("input.adv").prop("checked", false);
       });
 
-      // Suppressive Fire fields
-      // fire mode select
-      const $fireMode = html.find(
-        'select[name="fields.fireMode"], select[name="fireMode"], .field[data-path="fireMode"] select'
-      );
-
-      // collect strings used exclusively for suppression
-      const $supRows = $([
-        '.field[data-path="zoneWidth"]',
-        '.field[data-path="roundsFired"]',
-        '.field[data-path="targetsCount"]',
-        'input[name="fields.zoneWidth"], input[name="zoneWidth"]',
-        'input[name="fields.roundsFired"], input[name="roundsFired"]',
-        'input[name="fields.targetsCount"], input[name="targetsCount"]'
-      ].join(','), html)
-        .map((i, el) => $(el).closest('.field, .form-group')[0])
-        .get()
-        .reduce((jq, el) => jq.add(el), $());
-
-      const updateVisibility = () => {
-        const isSup = $fireMode.val() === fireModes.suppressive;
-        $supRows.toggle(isSup);
-      };
-
-      updateVisibility();
-      $fireMode.on('change', updateVisibility);
     }
   
     /** @override */

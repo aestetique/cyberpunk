@@ -44,6 +44,14 @@ export async function migrateWorld(targetVersion) {
     // to the canonical "Submachine Gun" spelling adopted in 2.0.7.
     await _renameSubmachineGunSkill();
 
+    // 2.1.1: Unified bonus op pipeline. Stamp op:"+" on legacy bonus rows
+    // and rewrite property paths "stats.X.tempMod" → "stats.X".
+    await _normalizeBonusOps();
+
+    // 2.1.1: Convert legacy isChipped skill flags into Skillchip cyberware items
+    // carrying an op:"=" override bonus. Clears the deprecated fields.
+    await _convertLegacyChippedSkills();
+
     for (const actor of game.actors.contents) {
         await processDocument(actor);
         for (const item of actor.items) await processDocument(item);
@@ -186,19 +194,47 @@ export function migrateItem(item) {
     itemUpdates["system.stat"] = "bt";
   }
 
+  // Armor gained the cyberware-style effect/embedded-weapon fields.
+  // Backfill them on pre-existing armor items so the new sheet renders and
+  // actor.js#_computeDerivedStats can iterate option attachments safely.
+  // (Option armors are identified via system.armorType === "option" — no
+  // slot/space accounting is done, so hasSlots/takesSpace are not on the
+  // armor schema.)
+  if (item.type === "armor") {
+    if (system.isWeapon === undefined)   itemUpdates["system.isWeapon"]   = false;
+    if (!Array.isArray(system.bonuses))  itemUpdates["system.bonuses"]    = [];
+    if (!system.shield || typeof system.shield !== "object") {
+      itemUpdates["system.shield"] = { stoppingPower: 0, ablation: 0 };
+    }
+    if (!system.weapon) {
+      itemUpdates["system.weapon"] = {
+        weaponType: "Martial", weaponClass: "Melee", attackSkill: "Brawling",
+        attackType: "", damage: "1d6", damageType: "blunt",
+        range: 1, accuracy: 0,
+        concealability: "hidden", reliability: "standard",
+        minimumBody: 0, shotsLeft: 0, shots: 0, rof: 1,
+        attachedAmmoId: "", charges: 0, chargesMax: 0,
+        effect: "", templateType: "", radius: 0,
+        caliber: "medium", ammoType: "standard"
+      };
+    }
+  }
+
   return itemUpdates;
 }
 
-// Take an old hardcoded skill and translate it into data for a skill item
+// Take an old hardcoded skill and translate it into data for a skill item.
+// Note: pre-2.0 chip state (skillData.chipped / chipValue) is not carried over —
+// chipping is now a cyberware item, and there's no actor-side hook here to
+// also spawn the Skillchip. Graceful degradation: the skill becomes a regular
+// level-N skill. Affects pre-item-era characters only.
 export function legacySkillToItem(name, skillData) {
     return {name: safeLocalize("Skill"+name, name), type: "skill", data: {
         flavor: "",
         notes: "",
         level: skillData.value || 0,
-        chipLevel: skillData.chipValue || 0,
-        isChipped: skillData.chipped,
         ip: skillData.ip,
-        diffMod: 1, // No skills have those currently.
+        diffMod: 1,
         isRoleSkill: skillData.isSpecial || false,
         stat: skillData.stat
     }};
@@ -1007,5 +1043,142 @@ async function _renameSubmachineGunSkill() {
             console.error(`CYBERPUNK | Skipping actor "${actor?.name}" during Submachine Gun rename:`, err);
             migrationSuccess = false;
         }
+    }
+}
+
+// ============================================================================
+// 2.1.1: Unified bonus op pipeline.
+// Stamp op:"+" on every existing bonus row (legacy rows were implicitly additive),
+// and rewrite legacy stat targets "stats.X.tempMod" → "stats.X" so the resolver
+// can apply the op in one place. Covers item types that carry a `bonuses[]`
+// array — cyberware, armor, tool, drug (plus drug `withdrawal[]`).
+// ============================================================================
+const _STAT_TEMPMOD_RX = /^stats\.([^.]+)\.tempMod$/;
+
+function _normalizeBonusList(list) {
+    if (!Array.isArray(list)) return null;
+    let changed = false;
+    const next = list.map(b => {
+        const nb = { ...b };
+        if (!nb.op) { nb.op = "+"; changed = true; }
+        if (nb.type === "property" && nb.property) {
+            const m = _STAT_TEMPMOD_RX.exec(nb.property);
+            if (m) { nb.property = `stats.${m[1]}`; changed = true; }
+        }
+        return nb;
+    });
+    return changed ? next : null;
+}
+
+async function _normalizeBonusOps() {
+    const scopeName = (p) => p === "world" ? "world" : `actor "${p.name}"`;
+
+    async function _updateOne(item, parent) {
+        const sys = item.system || {};
+        const updates = {};
+        const newBonuses = _normalizeBonusList(sys.bonuses);
+        if (newBonuses) updates["system.bonuses"] = newBonuses;
+        if (item.type === "drug") {
+            const newWd = _normalizeBonusList(sys.withdrawal);
+            if (newWd) updates["system.withdrawal"] = newWd;
+        }
+        if (foundry.utils.isEmpty(updates)) return false;
+        try {
+            if (parent === "world") await item.update(updates);
+            else await parent.updateEmbeddedDocuments("Item", [{ _id: item.id, ...updates }]);
+            return true;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to normalize bonus ops on "${item.name}" (${scopeName(parent)}):`, err);
+            migrationSuccess = false;
+            return false;
+        }
+    }
+
+    let touched = 0;
+    for (const item of game.items.contents) {
+        if (await _updateOne(item, "world")) touched++;
+    }
+    for (const actor of game.actors.contents) {
+        for (const item of actor.items) {
+            if (await _updateOne(item, actor)) touched++;
+        }
+    }
+    if (touched) console.log(`CYBERPUNK | Normalized bonus ops on ${touched} item(s)`);
+}
+
+// ============================================================================
+// 2.1.1: Convert legacy isChipped skill flags into Skillchip cyberware items
+// carrying an op:"=" override bonus. Chipping is now a cyberware mechanic —
+// unequipping the chip restores the natural skill, equipping a different chip
+// last-wins. Reads from actor._source so we still see the legacy fields after
+// they get stripped from the schema by template.json cleanup.
+// ============================================================================
+async function _convertLegacyChippedSkills() {
+    let convertedActors = 0;
+    let convertedSkills = 0;
+    for (const actor of game.actors.contents) {
+        if (actor.type !== "character" && actor.type !== "drone") continue;
+        const sourceItems = actor._source?.items || [];
+        const candidates = sourceItems.filter(src =>
+            src?.type === "skill" && src?.system?.isChipped
+        );
+        if (!candidates.length) continue;
+
+        const chipItemsToCreate = [];
+        const skillUpdates = [];
+        for (const src of candidates) {
+            const skillName = src.name;
+            const chipValue = Number(src.system.chipLevel) || 0;
+            const skillStat = src.system.stat || "ref";
+            // Embedded skill UUID — used to match the bonus to the skill at roll time.
+            const skillUuid = `Actor.${actor.id}.Item.${src._id}`;
+
+            // Always scrub legacy fields, whether or not there's a chip value to migrate.
+            skillUpdates.push({
+                _id: src._id,
+                "system.-=isChipped": null,
+                "system.-=chipLevel": null,
+                "system.-=chipName": null
+            });
+
+            if (chipValue > 0) {
+                const chipName = (src.system.chipName && src.system.chipName.trim()) || skillName;
+                chipItemsToCreate.push({
+                    name: `Skillchip: ${chipName}`,
+                    type: "cyberware",
+                    system: {
+                        cyberwareType: "chipware",
+                        equipped: true,
+                        chippedSkill: { uuid: skillUuid, name: skillName },
+                        chipValue: chipValue,
+                        bonuses: [{
+                            type: "skill",
+                            skillUuid: skillUuid,
+                            skillName: skillName,
+                            skillStat: skillStat,
+                            op: "=",
+                            value: chipValue
+                        }]
+                    }
+                });
+                convertedSkills++;
+            }
+        }
+
+        try {
+            if (chipItemsToCreate.length) {
+                await actor.createEmbeddedDocuments("Item", chipItemsToCreate);
+            }
+            if (skillUpdates.length) {
+                await actor.updateEmbeddedDocuments("Item", skillUpdates);
+            }
+            if (chipItemsToCreate.length) convertedActors++;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to convert chipped skills on actor "${actor.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
+    if (convertedSkills) {
+        console.log(`CYBERPUNK | Converted ${convertedSkills} chipped skill(s) to Skillchip cyberware on ${convertedActors} actor(s)`);
     }
 }

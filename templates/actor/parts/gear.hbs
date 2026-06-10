@@ -7,7 +7,7 @@
   {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems}}
 
   {{!-- 3. OUTFIT Block --}}
-  {{#if outfitItems.length}}
+  {{#if hasAnyOutfit}}
   <div class="gear-block">
     <header class="tab-header">
       <span class="tab-title">OUTFIT</span>
@@ -15,7 +15,7 @@
     </header>
     <div class="tab-content gear-content">
       {{#each outfitItems as |armor|}}
-        <div class="gear-row" data-item-id="{{armor.id}}">
+        <div class="gear-row armor-row" data-item-id="{{armor.id}}" {{#if armor.isBase}}data-is-base="true"{{/if}}>
           <div class="gear-icon">
             <img src="{{armor.img}}" alt="{{armor.name}}">
           </div>
@@ -55,7 +55,92 @@
             </button>
           </div>
         </div>
+
+        {{!-- Attached option armors render as children of this base armor --}}
+        {{#each armor.attachedOptions as |opt|}}
+          <div class="gear-row armor-row armor-option attached" data-item-id="{{opt.id}}" data-is-option="true" data-parent-id="{{opt.parentId}}">
+            <div class="option-icon detach-armor-option" data-item-id="{{opt.id}}" title="Detach Option">
+              <img src="systems/cyberpunk/img/ui/badge-option-on.svg" alt="Attached">
+            </div>
+            <div class="gear-icon">
+              <img src="{{opt.img}}" alt="{{opt.name}}">
+            </div>
+            <div class="gear-info">
+              <span class="gear-name">{{opt.name}}</span>
+              <span class="gear-context">{{opt.context}}</span>
+            </div>
+            <div class="gear-price">
+              <span class="price-value">{{opt.price}}</span>
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+            </div>
+            <div class="gear-weight">
+              <span class="price-value">{{opt.weight}}</span>
+              <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+            </div>
+            <div class="gear-field" style="width: 60px;">
+              <span class="field-top">{{opt.sp}}</span>
+              <span class="field-bottom" title="Stopping Power">SP</span>
+            </div>
+            <div class="gear-field" style="width: 60px;">
+              <span class="field-top">{{opt.encumbrance}}</span>
+              <span class="field-bottom" title="Encumbrance Value">EV</span>
+            </div>
+            <div class="gear-action-btn"></div>
+            <div class="gear-actions">
+              <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+              </button>
+              <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+              </button>
+            </div>
+          </div>
+        {{/each}}
       {{/each}}
+
+      {{!-- Detached option armors live in their own pool until dragged onto a base armor --}}
+      {{#if detachedArmorOptions.length}}
+        <div class="detached-options-header"><span>{{localize "CYBERPUNK.DetachedOptions"}}</span></div>
+        {{#each detachedArmorOptions as |opt|}}
+          <div class="gear-row armor-row armor-option detached" data-item-id="{{opt.id}}" data-is-option="true">
+            <div class="option-icon">
+              <img src="systems/cyberpunk/img/ui/badge-option-off.svg" alt="Detached">
+            </div>
+            <div class="gear-icon">
+              <img src="{{opt.img}}" alt="{{opt.name}}">
+            </div>
+            <div class="gear-info">
+              <span class="gear-name">{{opt.name}}</span>
+              <span class="gear-context">{{opt.context}}</span>
+            </div>
+            <div class="gear-price">
+              <span class="price-value">{{opt.price}}</span>
+              <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+            </div>
+            <div class="gear-weight">
+              <span class="price-value">{{opt.weight}}</span>
+              <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+            </div>
+            <div class="gear-field" style="width: 60px;">
+              <span class="field-top">{{opt.sp}}</span>
+              <span class="field-bottom" title="Stopping Power">SP</span>
+            </div>
+            <div class="gear-field" style="width: 60px;">
+              <span class="field-top">{{opt.encumbrance}}</span>
+              <span class="field-bottom" title="Encumbrance Value">EV</span>
+            </div>
+            <div class="gear-action-btn"></div>
+            <div class="gear-actions">
+              <button class="gear-view" type="button" data-item-id="{{opt.id}}" title="View">
+                <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+              </button>
+              <button class="gear-delete" type="button" data-item-id="{{opt.id}}" title="Delete">
+                <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+              </button>
+            </div>
+          </div>
+        {{/each}}
+      {{/if}}
     </div>
   </div>
   {{/if}}

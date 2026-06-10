@@ -823,10 +823,8 @@
 			"source": "",
 			"level": 0,
 			"ipLevel": 0,
-			"chipLevel": 0,
 			"ip": 0,
 			"diffMod": 1,
-			"isChipped": false,
 			"isRoleSkill": false,
 			"stat": "cool",
 			"askMods": false,
@@ -895,32 +893,41 @@
 			"templates": ["common"],
 			"armorType": "soft",
 			"coverage": {
-				"Head": {
-					"stoppingPower": 0,
-					"ablation": 0
-				},
-				"Torso": {
-					"stoppingPower": 0,
-					"ablation": 0
-				},
-				"lArm": {
-					"stoppingPower": 0,
-					"ablation": 0
-				},
-				"rArm": {
-					"stoppingPower": 0,
-					"ablation": 0
-				},
-				"lLeg": {
-					"stoppingPower": 0,
-					"ablation": 0
-				},
-				"rLeg": {
-					"stoppingPower": 0,
-					"ablation": 0
-				}
+				"Head":  { "stoppingPower": 0, "ablation": 0 },
+				"Torso": { "stoppingPower": 0, "ablation": 0 },
+				"lArm":  { "stoppingPower": 0, "ablation": 0 },
+				"rArm":  { "stoppingPower": 0, "ablation": 0 },
+				"lLeg":  { "stoppingPower": 0, "ablation": 0 },
+				"rLeg":  { "stoppingPower": 0, "ablation": 0 }
 			},
 			"encumbrance": 0,
+			"shield": { "stoppingPower": 0, "ablation": 0 },
+			"isWeapon": false,
+			"bonuses": [],
+			"weapon": {
+				"weaponType": "Martial",
+				"weaponClass": "Melee",
+				"attackSkill": "Brawling",
+				"attackType": "",
+				"damage": "1d6",
+				"damageType": "blunt",
+				"range": 1,
+				"accuracy": 0,
+				"concealability": "hidden",
+				"reliability": "standard",
+				"minimumBody": 0,
+				"shotsLeft": 0,
+				"shots": 0,
+				"rof": 1,
+				"attachedAmmoId": "",
+				"charges": 0,
+				"chargesMax": 0,
+				"effect": "",
+				"templateType": "",
+				"radius": 0,
+				"caliber": "medium",
+				"ammoType": "standard"
+			},
 			"lastOwnerId": ""
 		},
 		"cyberware": {

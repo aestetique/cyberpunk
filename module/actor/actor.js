@@ -126,12 +126,15 @@ export class CyberpunkActor extends Actor {
    */
   _computeDerivedStats(system) {
     const stats = system.stats;
-    // Calculate stat totals using base+temp
+    // Initial stat total: natural base + user's manual temp mod.
+    // Bonuses no longer write to tempMod — they apply directly to .total via
+    // the op pipeline below, so tempMod stays a clean "manual temp" field.
     for(const stat of Object.values(stats)) {
       stat.total = stat.base + stat.tempMod;
+      stat.overridden = false;
     }
     system.hitLocLookup = buildHitLocationIndex(system.hitLocations);
-    
+
     // Sort through this now so we don't have to later
     let equippedItems = this.items.contents.filter(item => {
       return item.system.equipped;
@@ -141,55 +144,90 @@ export class CyberpunkActor extends Actor {
     system.unarmedBaseDamage = "1d3";
     system.unarmedDamageMultiplier = 1;
 
-    // Apply bonuses from equipped tools, drugs, and cyberware
-    // For cyberware options, verify base cyberware is also equipped
-    const equippedWithBonuses = equippedItems.filter(i => {
-      if (i.type === "tool" || i.type === "drug") return true;
+    // Apply bonuses from equipped tools, drugs, cyberware, and armor.
+    // Cyberware and armor options apply when their PARENT (the cyberware/armor
+    // they are attached to) is equipped; the option's own equipped flag is
+    // ignored, because options aren't worn standalone.
+    const equippedWithBonuses = this.items.contents.filter(i => {
+      if (i.type === "tool" || i.type === "drug") return i.system.equipped;
       if (i.type === "cyberware") {
-        // For cyberware options, check if base is also equipped
         if (i.system.isOption) {
           const baseId = i.getFlag('cyberpunk', 'attachedTo');
           if (baseId) {
             const base = this.items.get(baseId);
-            // Option only applies if base exists and is equipped
             return base && base.system.equipped;
           }
-          // No base reference = don't apply
           return false;
         }
-        // Non-option cyberware always applies if equipped
-        return true;
+        return i.system.equipped;
+      }
+      if (i.type === "armor") {
+        if (i.system.armorType === "option") {
+          const baseId = i.getFlag('cyberpunk', 'attachedTo');
+          if (baseId) {
+            const base = this.items.get(baseId);
+            return base && base.type === "armor" && base.system.equipped;
+          }
+          return false;
+        }
+        return i.system.equipped;
       }
       return false;
     });
+    // Group property bonuses by target so we can apply × → + → = per target.
+    // Targets supported:
+    //   "stats.<key>"           — new shape, applies to stats[key].total
+    //   "stats.<key>.tempMod"   — legacy shape, treated identically (pre-migration)
+    //   "<propName>"            — direct system property (e.g. "initiativeMod")
+    const propertyOps = {};
+    const bucketFor = (target) => (propertyOps[target] ??= { mul: [], add: [], set: [] });
     equippedWithBonuses.forEach(item => {
       // Drugs in withdrawal phase apply their Withdrawal bonus list instead of Effect.
       const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
         ? (item.system.withdrawal || [])
         : (item.system.bonuses || []);
       bonuses.forEach(bonus => {
-        if (bonus.type === "property" && bonus.property) {
-          // Property bonuses modify stats directly
-          // Format: "stats.int.tempMod", "initiativeMod", etc.
-          const parts = bonus.property.split('.');
-          if (parts[0] === "stats" && parts.length === 3) {
-            // e.g., "stats.int.tempMod"
-            const statKey = parts[1];
-            if (stats[statKey]) {
-              stats[statKey].tempMod = (stats[statKey].tempMod || 0) + (bonus.value || 0);
-            }
-          } else if (parts.length === 1) {
-            // Direct property like "initiativeMod" or "unarmedDamageMultiplier"
-            system[bonus.property] = (system[bonus.property] || 0) + (bonus.value || 0);
-          }
-        }
-        // Note: Skill bonuses require separate handling during skill rolls
+        if (bonus.type !== "property" || !bonus.property) return;
+        const op = bonus.op || "+";
+        const value = Number(bonus.value) || 0;
+        const bucket = bucketFor(bonus.property);
+        if (op === "×") bucket.mul.push(value);
+        else if (op === "=") bucket.set.push(value);
+        else bucket.add.push(value);
       });
     });
 
-    // Recalculate stat totals after applying bonuses
-    for (const stat of Object.values(stats)) {
-      stat.total = stat.base + (stat.tempMod || 0);
+    // Apply collected ops to each target. Order is universal:
+    //   start from current value → × all multipliers → + all additives → = last (last-wins).
+    for (const [path, ops] of Object.entries(propertyOps)) {
+      const parts = path.split('.');
+      let current;
+      let writeBack;
+      let statKey = null;
+
+      if (parts[0] === "stats" && (parts.length === 2 || (parts.length === 3 && parts[2] === "tempMod"))) {
+        statKey = parts[1];
+        if (!stats[statKey]) continue;
+        current = stats[statKey].total;
+        writeBack = (v) => { stats[statKey].total = v; };
+      } else if (parts.length === 1) {
+        current = system[path] || 0;
+        writeBack = (v) => { system[path] = v; };
+      } else {
+        continue;
+      }
+
+      for (const m of ops.mul) current *= m;
+      for (const a of ops.add) current += a;
+      if (ops.set.length) {
+        if (ops.set.length > 1) {
+          console.warn(`CYBERPUNK | multiple "=" bonuses on ${path}; using last (${ops.set[ops.set.length - 1]})`);
+        }
+        current = ops.set[ops.set.length - 1];
+        if (statKey) stats[statKey].overridden = true;
+      }
+
+      writeBack(current);
     }
 
     // Check luck recovery (8 hours = 28,800,000 ms)
@@ -207,24 +245,40 @@ export class CyberpunkActor extends Actor {
     // Calculate effective luck (what's actually available to spend)
     stats.luck.effective = Math.max(0, stats.luck.total - (stats.luck.spent || 0));
 
-    // Reflex is affected by encumbrance values too
+    // Reflex is affected by encumbrance values too.
+    // Option-type armors are not equipped standalone; their SP and EV layer
+    // through their parent armor when that parent is equipped.
     stats.ref.armorMod = 0;
-    equippedItems.filter(i => i.type === "armor").forEach(armor => {
-      let armorData = armor.system;
-      if(armorData.encumbrance != null) {
-        stats.ref.armorMod -= armorData.encumbrance;
+    const layerArmor = (armorSys) => {
+      if (armorSys.encumbrance != null) {
+        stats.ref.armorMod -= armorSys.encumbrance;
       }
-
-      // Layered armor stacking per CP2020 rules
-      for (const armorArea in armorData.coverage) {
+      for (const armorArea in (armorSys.coverage || {})) {
         const location = system.hitLocations[armorArea];
         if (location !== undefined) {
-          const cov = armorData.coverage[armorArea];
+          const cov = armorSys.coverage[armorArea];
           const layerSP = Math.max(0, (Number(cov.stoppingPower) || 0) - (Number(cov.ablation) || 0));
           location.stoppingPower = stackArmorSP(Number(location.stoppingPower), layerSP);
         }
       }
-    });
+    };
+    equippedItems
+      .filter(i => i.type === "armor"
+                && i.system.armorType !== "option"
+                && i.system.armorType !== "shield")
+      .forEach(armor => {
+        layerArmor(armor.system);
+
+        // Fold in any attached option armors. Options extend the parent's
+        // coverage: they layer SP on every zone they cover (including zones
+        // the parent doesn't cover), and their EV adds to encumbrance.
+        const attachedOptions = this.items.filter(opt =>
+          opt.type === "armor" &&
+          opt.system.armorType === "option" &&
+          opt.getFlag?.('cyberpunk', 'attachedTo') === armor.id
+        );
+        attachedOptions.forEach(opt => layerArmor(opt.system));
+      });
 
     // Add cyberarmor SP to hit locations (same stacking rules)
     equippedItems.filter(i => i.type === "cyberware" && i.system.isArmor).forEach(cyber => {
@@ -239,6 +293,30 @@ export class CyberpunkActor extends Actor {
       }
     });
 
+    // Add equipped shield SP to ALL hit locations. Layers after body armor
+    // and cyberarmor but BEFORE active cover, so the order is:
+    //   body / cyberarmor → shield → cover.
+    // Each shield contributes its own SP (max - ablation); EV is folded into
+    // ref.armorMod by layerArmor() so we just iterate the SP here. The user
+    // handles directional logic manually (unequip the shield if hit from
+    // behind).
+    equippedItems
+      .filter(i => i.type === "armor" && i.system.armorType === "shield")
+      .forEach(shield => {
+        const sh = shield.system.shield || {};
+        if (shield.system.encumbrance != null) {
+          stats.ref.armorMod -= shield.system.encumbrance;
+        }
+        const layerSP = Math.max(0, (Number(sh.stoppingPower) || 0) - (Number(sh.ablation) || 0));
+        if (layerSP <= 0) return;
+        for (const loc of Object.keys(system.hitLocations)) {
+          const location = system.hitLocations[loc];
+          if (location !== undefined) {
+            location.stoppingPower = stackArmorSP(Number(location.stoppingPower), layerSP);
+          }
+        }
+      });
+
     // Add cover SP to ALL hit locations (cover is hard armor)
     const activeCover = system.activeCover;
     if (activeCover && COVER_TYPES[activeCover]) {
@@ -251,7 +329,9 @@ export class CyberpunkActor extends Actor {
       }
     }
 
-    stats.ref.total = stats.ref.base + stats.ref.tempMod + stats.ref.armorMod;
+    // Armor encumbrance pulls REF down — unless an override stamped REF
+    // (e.g. linear frame whose actuators carry the load regardless of EV).
+    if (!stats.ref.overridden) stats.ref.total += stats.ref.armorMod;
 
     const move = stats.ma;
     // Immobilized and prone conditions reduce movement to 0
@@ -1017,16 +1097,72 @@ export class CyberpunkActor extends Actor {
   getLearnedMartialArts() {
     return this.itemTypes.skill
       .filter(skill => skill.name.startsWith(localize("Martial")))
-      .filter(martial => CyberpunkActor.effectiveSkillLevel(martial) > 0)
+      .filter(martial => this._resolveSkillValue(martial).value > 0)
       .map(martial => martial.name);
   }
 
   static effectiveSkillLevel(skill) {
-    // Sometimes we use this to sort raw item data before it becomes a full-fledged item. So we use either system or data, as needed
+    // Raw baseline: natural level + IP-earned level. Override semantics
+    // (chips, etc.) live on equipped items and are applied via the actor's
+    // _resolveSkillValue pipeline, not here — this static helper has no
+    // actor context (used for sort + raw-data callers).
     if (!skill) return 0;
     const data = skill.system ?? skill;
-    if (data.isChipped) return Number(data.chipLevel) || 0;
     return (Number(data.level) || 0) + (Number(data.ipLevel) || 0);
+  }
+
+  /**
+   * Resolve a skill's effective rolled value via the universal op pipeline:
+   *   baseline → ×(all) → +(all) → =(last-wins).
+   * Equipped tools / drugs / cyberware contribute through their `bonuses[]`
+   * matched by uuid or by case-insensitive skill name. Used by every skill
+   * roll path and by resolveSkillTotal — single source of truth.
+   *
+   * @param {Item|null} skillItem  Owned skill item, or null for a virtual skill.
+   * @param {string|null} skillName Fallback name when skillItem is null.
+   * @returns {{value: number, overridden: boolean, baseline: number}}
+   */
+  _resolveSkillValue(skillItem, skillName = null) {
+    const name = (skillItem?.name || skillName || "").toLowerCase();
+    const uuid = skillItem?.uuid || null;
+
+    const baseline = skillItem
+      ? (Number(skillItem.system.level) || 0) + (Number(skillItem.system.ipLevel) || 0)
+      : 0;
+
+    const muls = [], adds = [], sets = [];
+    const equipped = this.items.contents.filter(i =>
+      (i.type === "tool" || i.type === "drug" || i.type === "cyberware") && i.system.equipped
+    );
+    for (const item of equipped) {
+      const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
+        ? (item.system.withdrawal || [])
+        : (item.system.bonuses || []);
+      for (const bonus of bonuses) {
+        if (bonus.type !== "skill") continue;
+        const matchByUuid = uuid && bonus.skillUuid === uuid;
+        const matchByName = name && bonus.skillName?.toLowerCase() === name;
+        if (!matchByUuid && !matchByName) continue;
+        const op = bonus.op || "+";
+        const value = Number(bonus.value) || 0;
+        if (op === "×") muls.push(value);
+        else if (op === "=") sets.push(value);
+        else adds.push(value);
+      }
+    }
+
+    let current = baseline;
+    for (const m of muls) current *= m;
+    for (const a of adds) current += a;
+    let overridden = false;
+    if (sets.length) {
+      if (sets.length > 1) {
+        console.warn(`CYBERPUNK | multiple "=" bonuses on skill "${name}"; using last (${sets[sets.length - 1]})`);
+      }
+      current = sets[sets.length - 1];
+      overridden = true;
+    }
+    return { value: current, overridden, baseline };
   }
 
   resolveSkillTotal(skillName) {
@@ -1040,55 +1176,7 @@ export class CyberpunkActor extends Actor {
       skillItem = this.itemTypes.skill.find(s => s.name === skillName);
     }
     if (!skillItem) return 0;
-
-    // Check if this skill is chipped by equipped chipware
-    const equippedChipware = this.items.contents.filter(i =>
-      i.type === "cyberware" &&
-      i.system.cyberwareType === "chipware" &&
-      i.system.equipped
-    );
-
-    let chipValue = null;
-    for (const chip of equippedChipware) {
-      const bonuses = chip.system.bonuses || [];
-      for (const bonus of bonuses) {
-        if (bonus.type === "skill" &&
-            bonus.skillName?.toLowerCase() === skillItem.name.toLowerCase() &&
-            bonus.value) {
-          if (chipValue === null || bonus.value > chipValue) {
-            chipValue = bonus.value;
-          }
-        }
-      }
-    }
-
-    if (chipValue !== null) return chipValue;
-
-    // Base level + IP-earned level
-    const baseLevel = Number(skillItem.system.level) || 0;
-    const ipLevel = Number(skillItem.system.ipLevel) || 0;
-    const totalLevel = baseLevel + ipLevel;
-
-    // Add skill bonuses from equipped tools, drugs, and cyberware
-    let skillBonus = 0;
-    const equippedItems = this.items.contents.filter(i =>
-      (i.type === "tool" || i.type === "drug" || i.type === "cyberware") && i.system.equipped
-    );
-    for (const item of equippedItems) {
-      const bonuses = item.system.bonuses || [];
-      for (const bonus of bonuses) {
-        if (bonus.type === "skill" && bonus.value) {
-          const matchByUuid = bonus.skillUuid && bonus.skillUuid === skillItem.uuid;
-          const matchByName = bonus.skillName &&
-            bonus.skillName.toLowerCase() === skillItem.name.toLowerCase();
-          if (matchByUuid || matchByName) {
-            skillBonus += bonus.value;
-          }
-        }
-      }
-    }
-
-    return totalLevel + skillBonus;
+    return this._resolveSkillValue(skillItem).value;
   }
 
   /**
@@ -1134,56 +1222,9 @@ export class CyberpunkActor extends Actor {
     // Sleep deprivation penalty (level 1 = awareness only, levels 2+ = all skills)
     const sleepPenalty = this.getSleepDeprivationPenalty(skill.name === awarenessSkillName);
 
-    // Check if this skill is chipped by equipped chipware
-    const equippedChipware = this.items.contents.filter(i =>
-      i.type === "cyberware" &&
-      i.system.cyberwareType === "chipware" &&
-      i.system.equipped
-    );
-
-    let chipValue = null;
-    for (const chip of equippedChipware) {
-      const bonuses = chip.system.bonuses || [];
-      for (const bonus of bonuses) {
-        if (bonus.type === "skill" &&
-            bonus.skillName?.toLowerCase() === skill.name.toLowerCase() &&
-            bonus.value) {
-          // Use highest chip value if multiple chips affect same skill
-          if (chipValue === null || bonus.value > chipValue) {
-            chipValue = bonus.value;
-          }
-        }
-      }
-    }
-
-    const isChipped = chipValue !== null;
-
-    // If chipped, use chip value INSTEAD of skill level
-    const skillValue = isChipped
-      ? chipValue
-      : CyberpunkActor.effectiveSkillLevel(skill);
-
-    // Calculate skill bonuses from equipped tools, drugs, and cyberware (NOT applied to chipped skills)
-    let skillBonus = 0;
-    if (!isChipped) {
-      const equippedItems = this.items.contents.filter(i =>
-        (i.type === "tool" || i.type === "drug" || i.type === "cyberware") && i.system.equipped
-      );
-      for (const item of equippedItems) {
-        const bonuses = item.system.bonuses || [];
-        for (const bonus of bonuses) {
-          if (bonus.type === "skill" && bonus.value) {
-            // Match by UUID or by name (case-insensitive)
-            const matchByUuid = bonus.skillUuid && bonus.skillUuid === skill.uuid;
-            const matchByName = bonus.skillName &&
-              bonus.skillName.toLowerCase() === skill.name.toLowerCase();
-            if (matchByUuid || matchByName) {
-              skillBonus += bonus.value;
-            }
-          }
-        }
-      }
-    }
+    // Unified resolver: baseline + IP, then × → + → = from equipped items.
+    // Override (chips / sets) shows up as overridden=true so we can gate IP gain.
+    const { value: skillValue } = this._resolveSkillValue(skill);
 
     // generate the list of modifiers
     const parts = [
@@ -1198,8 +1239,7 @@ export class CyberpunkActor extends Actor {
       fatiguePenalty || null,
       stressPenalty || null,
       awarenessConditionPenalty || null,
-      sleepPenalty || null,
-      skillBonus || null
+      sleepPenalty || null
     ].filter(Boolean);
 
     const makeRoll = () => buildD10Roll(parts, this.system);   // d10 + parts
@@ -1282,9 +1322,13 @@ export class CyberpunkActor extends Actor {
     // Sleep deprivation penalty (virtual skills are general skill rolls)
     const sleepPenalty = this.getSleepDeprivationPenalty(false);
 
+    // Virtual-skill value: run the unified pipeline against the skill name,
+    // so any additive boosters elsewhere can layer on the chip's "=" stamp.
+    const { value: skillValue } = this._resolveSkillValue(null, skillName);
+
     // Build roll parts
     const rollParts = [
-      bonus.value,
+      skillValue,
       `@stats.${stat}.total`,
       extraMod || null,
       actionSurgePenalty || null,
@@ -1400,50 +1444,10 @@ export class CyberpunkActor extends Actor {
     // Sleep deprivation penalty (level 1 = awareness only, levels 2+ = all skills)
     const sleepPenalty = this.getSleepDeprivationPenalty(skill.name === awarenessSkillName);
 
-    // Check if this skill is chipped by equipped chipware
-    const equippedChipware = this.items.contents.filter(i =>
-      i.type === "cyberware" &&
-      i.system.cyberwareType === "chipware" &&
-      i.system.equipped
-    );
-
-    let chipValue = null;
-    for (const chip of equippedChipware) {
-      const bonuses = chip.system.bonuses || [];
-      for (const bonus of bonuses) {
-        if (bonus.type === "skill" &&
-            bonus.skillName?.toLowerCase() === skill.name.toLowerCase() &&
-            bonus.value) {
-          if (chipValue === null || bonus.value > chipValue) {
-            chipValue = bonus.value;
-          }
-        }
-      }
-    }
-
-    const isChipped = chipValue !== null;
-    const skillValue = isChipped ? chipValue : CyberpunkActor.effectiveSkillLevel(skill);
-
-    // Calculate skill bonuses from equipped items (NOT for chipped)
-    let skillBonus = 0;
-    if (!isChipped) {
-      const equippedItems = this.items.contents.filter(i =>
-        (i.type === "tool" || i.type === "drug" || i.type === "cyberware") && i.system.equipped
-      );
-      for (const item of equippedItems) {
-        const bonuses = item.system.bonuses || [];
-        for (const bonus of bonuses) {
-          if (bonus.type === "skill" && bonus.value) {
-            const matchByUuid = bonus.skillUuid && bonus.skillUuid === skill.uuid;
-            const matchByName = bonus.skillName &&
-              bonus.skillName.toLowerCase() === skill.name.toLowerCase();
-            if (matchByUuid || matchByName) {
-              skillBonus += bonus.value;
-            }
-          }
-        }
-      }
-    }
+    // Unified resolver: baseline + IP, then × → + → = from equipped items.
+    // overridden = an "=" bonus stamped the value (chip / set). Used below to
+    // gate IP gain — overridden skills don't grant IP (the chip rolled, not you).
+    const { value: skillValue, overridden: isOverridden } = this._resolveSkillValue(skill);
 
     // Build roll formula parts
     const parts = [
@@ -1458,8 +1462,7 @@ export class CyberpunkActor extends Actor {
       fatiguePenalty || null,
       stressPenalty || null,
       awarenessConditionPenalty || null,
-      sleepPenalty || null,
-      skillBonus || null
+      sleepPenalty || null
     ].filter(Boolean);
 
     const roll = buildD10Roll(parts, this.system);
@@ -1472,9 +1475,10 @@ export class CyberpunkActor extends Actor {
     // Determine success: natural 1 always fails, otherwise compare to difficulty
     const success = !isNatural1 && roll.total >= difficulty;
 
-    // Auto IP gain on success (not for chipped skills)
+    // Auto IP gain on success (not when an override was used — chip/set rolls
+    // don't count as practice).
     let ipGained = 0;
-    if (success && !isChipped) {
+    if (success && !isOverridden) {
       const firstDigit = parseInt(String(roll.total)[0]);
       const isCrit = d10Result === 10;
       ipGained = firstDigit + (isCrit ? 1 : 0);
@@ -1518,7 +1522,9 @@ export class CyberpunkActor extends Actor {
       skill = this.itemTypes.skill.find(s => s.name === skillName);
     }
     if (!skill) return 0;
-    if (skill.system.isChipped) return 0;
+    // No IP gain when an equipped override (chip / set) stamped the value —
+    // the chip rolled, not the character's natural skill.
+    if (this._resolveSkillValue(skill).overridden) return 0;
 
     const firstDigit = parseInt(String(attackRoll.total)[0]);
     const isCrit = attackRoll.dice[0]?.results?.[0]?.result === 10;
@@ -1558,8 +1564,11 @@ export class CyberpunkActor extends Actor {
     const fatiguePenalty = this.getFatiguePenalty();
     const stressPenalty = this.getStressPenalty(stat === "cool");
 
+    // Virtual-skill value: unified pipeline (chip "=" stamp + any additive boosters).
+    const { value: skillValue } = this._resolveSkillValue(null, skillName);
+
     const rollParts = [
-      bonus.value,
+      skillValue,
       `@stats.${stat}.total`,
       extraMod || null,
       actionSurgePenalty || null,
@@ -1807,6 +1816,7 @@ export class CyberpunkActor extends Actor {
       // Apply Shocked condition on failure
       await this.toggleStatusEffect("shocked", { active: true });
     }
+    return success;
   }
 
   /**
@@ -1835,6 +1845,7 @@ export class CyberpunkActor extends Actor {
       await this.toggleStatusEffect("disabled", { active: true });
       await this.setFlag("cyberpunk", "disabledDuration", 1);
     }
+    return success;
   }
 
   /**
@@ -1870,6 +1881,7 @@ export class CyberpunkActor extends Actor {
       // Apply Poisoned condition on failure
       await this.toggleStatusEffect("poisoned", { active: true });
     }
+    return success;
   }
 
   /**
@@ -1899,6 +1911,7 @@ export class CyberpunkActor extends Actor {
     if (!success) {
       await this.toggleStatusEffect("dead", { active: true });
     }
+    return success;
   }
 
   /**

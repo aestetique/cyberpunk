@@ -159,14 +159,7 @@ export class CyberpunkLegacyItemSheet extends ItemSheet {
         const n = parseInt(v ?? 0, 10);
         return isNaN(n) ? 0 : n;
       };
-      foundry.utils.setProperty(data, "system.level",     fixNum(foundry.utils.getProperty(data,"system.level")));
-      foundry.utils.setProperty(data, "system.chipLevel", fixNum(foundry.utils.getProperty(data,"system.chipLevel")));
-    }
-
-    const legacy = foundry.utils.getProperty(data, "system.chipped");
-    if (legacy !== undefined) {
-      foundry.utils.setProperty(data, "system.isChipped", !!legacy);
-      if (data.system && "chipped" in data.system) delete data.system.chipped;
+      foundry.utils.setProperty(data, "system.level", fixNum(foundry.utils.getProperty(data, "system.level")));
     }
 
     await this.item.update(data);

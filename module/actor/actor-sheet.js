@@ -23,6 +23,16 @@ import { rangedClasses, martialClasses, getMartialSubtypeLabelKey, resolveWeapon
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 
 /**
+ * Render a bonus row's gear-context label: "INT +2", "BT ×2", "Reflex = 5".
+ * `+` keeps the signed form so negative additives read naturally ("INT -3").
+ */
+const formatBonusLabel = (label, op, value) => {
+    if (op === "×") return `${label} ×${value}`;
+    if (op === "=") return `${label} = ${value}`;
+    return `${label} ${value >= 0 ? '+' : ''}${value}`;
+};
+
+/**
  * Character sheet for Cyberpunk 2020 actors.
  * @extends {ActorSheet}
  */
@@ -560,8 +570,18 @@ export class CyberpunkActorSheet extends ActorSheet {
 
       // Armor location tooltip data
       const locFullNames = { Head: 'Head', Torso: 'Torso', lArm: 'Left Arm', rArm: 'Right Arm', lLeg: 'Left Leg', rLeg: 'Right Leg' };
-      const equippedArmor = this.actor.items.filter(i => i.type === "armor" && i.system.equipped);
+      // Body-armor pass excludes shields and options — shields layer across
+      // every location below, options layer through their parent armor.
+      const equippedArmor = this.actor.items.filter(i =>
+        i.type === "armor"
+        && i.system.equipped
+        && i.system.armorType !== "shield"
+        && i.system.armorType !== "option"
+      );
       const equippedCyberarmor = this.actor.items.filter(i => i.type === "cyberware" && i.system.isArmor && i.system.equipped);
+      const equippedShields = this.actor.items.filter(i =>
+        i.type === "armor" && i.system.equipped && i.system.armorType === "shield"
+      );
       const activeCover = system.activeCover;
 
       for (const loc of ['Head', 'Torso', 'lArm', 'rArm', 'lLeg', 'rLeg']) {
@@ -584,6 +604,13 @@ export class CyberpunkActorSheet extends ActorSheet {
             const type = (c.system.armor?.armorType === 'hard') ? 'Hard' : 'Soft';
             layers.push(`${c.name} (${type}): SP ${sp}`);
           }
+        });
+        // Shields layer on every hit location (after body armor / cyberarmor,
+        // before active cover) — mirrors actor.js#_computeDerivedStats.
+        equippedShields.forEach(s => {
+          const sh = s.system.shield || {};
+          const sp = Math.max(0, (Number(sh.stoppingPower) || 0) - (Number(sh.ablation) || 0));
+          if (sp > 0) layers.push(`${s.name} (Shield): SP ${sp}`);
         });
         if (activeCover && COVER_TYPES[activeCover]) {
           layers.push(`Cover: ${COVER_TYPES[activeCover].label}: SP ${COVER_TYPES[activeCover].sp}`);
@@ -769,100 +796,51 @@ export class CyberpunkActorSheet extends ActorSheet {
       specialSkillName = roleItem.system.specialSkill.name.toLowerCase();
     }
 
-    // Get equipped tools, drugs, and cyberware for skill bonus calculation
-    const equippedWithBonuses = this.actor.items.contents.filter(i =>
-      (i.type === "tool" || i.type === "drug" || i.type === "cyberware") && i.system.equipped
-    );
-
-    // Get equipped chipware with skill effects for chipping mechanic
+    // Virtual skills: skill bonuses on equipped chipware that target a skill
+    // the character doesn't own. Display the chip-granted value through the
+    // same resolver as everything else so additive boosters can layer on top.
     const equippedChipware = this.actor.items.contents.filter(i =>
       i.type === "cyberware" &&
       i.system.cyberwareType === "chipware" &&
       i.system.equipped
     );
-
-    // Build chipped skills map: skillName (lowercase) -> { chipValue, chipwareId, skillStat }
-    const chippedSkillsMap = new Map();
-    const virtualSkillsData = []; // Skills from chipware not owned by character
-
+    const seenVirtual = new Set();
+    const virtualSkillsData = [];
     for (const chip of equippedChipware) {
-      const bonuses = chip.system.bonuses || [];
-      for (const bonus of bonuses) {
-        if (bonus.type === "skill" && bonus.skillName && bonus.value) {
-          const skillNameLower = bonus.skillName.toLowerCase();
-          // Check if character has this skill
-          const ownedSkill = skills.find(s => s.name.toLowerCase() === skillNameLower);
-
-          if (ownedSkill) {
-            // Mark existing skill as chipped (use highest chip value if multiple)
-            const existing = chippedSkillsMap.get(skillNameLower);
-            if (!existing || bonus.value > existing.chipValue) {
-              chippedSkillsMap.set(skillNameLower, {
-                chipValue: bonus.value,
-                chipwareId: chip.id,
-                skillStat: bonus.skillStat || ownedSkill.system.stat || 'ref'
-              });
-            }
-          } else {
-            // Create virtual skill entry for display
-            virtualSkillsData.push({
-              id: `virtual-${chip.id}-${bonus.skillName}`,
-              name: bonus.skillName,
-              chipValue: bonus.value,
-              chipwareId: chip.id,
-              stat: bonus.skillStat || 'ref'
-            });
-          }
-        }
+      for (const bonus of (chip.system.bonuses || [])) {
+        if (bonus.type !== "skill" || !bonus.skillName) continue;
+        const nameLower = bonus.skillName.toLowerCase();
+        if (skills.some(s => s.name.toLowerCase() === nameLower)) continue;
+        if (seenVirtual.has(nameLower)) continue;
+        seenVirtual.add(nameLower);
+        virtualSkillsData.push({
+          id: `virtual-${chip.id}-${bonus.skillName}`,
+          name: bonus.skillName,
+          chipwareId: chip.id,
+          stat: bonus.skillStat || 'ref'
+        });
       }
     }
 
-    // Categorize and prepare skills
+    // Categorize and prepare skills via the unified resolver.
     const preparedSkills = skills.map(skill => {
       const skillNameLower = skill.name.toLowerCase();
       const isCareer = careerSkillNames.has(skillNameLower);
-      // Special icon only shows if skill name matches the role's special skill
       const isSpecial = specialSkillName && skillNameLower === specialSkillName;
 
-      // Check if this skill is chipped by equipped chipware
-      const chipInfo = chippedSkillsMap.get(skillNameLower);
-      const isChipped = !!chipInfo;
-
-      // Base level (manually set) and IP-earned level
       const baseLevel = skill.system.level || 0;
       const ipLevel = skill.system.ipLevel || 0;
       const totalLevel = baseLevel + ipLevel;
 
-      // When chipped, chip value OVERRIDES learned level entirely
-      const effectiveLevel = isChipped ? chipInfo.chipValue : totalLevel;
+      // Resolver runs × → + → = pipeline. Display delta (skillBonus) is
+      // effective − natural for the skill-row subtext.
+      const { value: effectiveLevel, overridden: isChipped } = this.actor._resolveSkillValue(skill);
+      const skillBonus = effectiveLevel - totalLevel;
 
       const diffMod = skill.system.diffMod || 1;
-      // IP cost for next level: total level × 10 × difficulty mod (minimum 10 × diffMod for level 0)
       const ipCost = totalLevel === 0 ? 10 * diffMod : totalLevel * 10 * diffMod;
       const currentIp = skill.system.ip || 0;
       const canIncrease = currentIp >= ipCost;
-
-      // Calculate skill bonus from equipped tools, drugs, and cyberware (NOT applied to chipped skills)
-      let skillBonus = 0;
-      if (!isChipped) {
-        for (const item of equippedWithBonuses) {
-          // Drugs in withdrawal phase apply their Withdrawal bonus list instead of Effect.
-          const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
-            ? (item.system.withdrawal || [])
-            : (item.system.bonuses || []);
-          for (const bonus of bonuses) {
-            if (bonus.type === "skill" && bonus.value) {
-              const matchByUuid = bonus.skillUuid && bonus.skillUuid === skill.uuid;
-              const matchByName = bonus.skillName &&
-                bonus.skillName.toLowerCase() === skillNameLower;
-              if (matchByUuid || matchByName) {
-                skillBonus += bonus.value;
-              }
-            }
-          }
-        }
-      }
-      const computedLevel = effectiveLevel + skillBonus;
 
       return {
         id: skill.id,
@@ -872,12 +850,12 @@ export class CyberpunkActorSheet extends ActorSheet {
         level: baseLevel,
         ipLevel,
         totalLevel,
-        chipValue: chipInfo?.chipValue,
+        chipValue: isChipped ? effectiveLevel : undefined,
         isChipped,
         isVirtual: false,
         effectiveLevel,
         skillBonus,
-        computedLevel,
+        computedLevel: effectiveLevel,
         ip: currentIp,
         ipCost,
         diffMod,
@@ -888,8 +866,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       };
     });
 
-    // Add virtual skills from chipware (skills the character doesn't own)
+    // Virtual skills (chip-only). Value resolved against the bonus skillName
+    // through the unified pipeline so additive boosters layer correctly.
     for (const vs of virtualSkillsData) {
+      const { value } = this.actor._resolveSkillValue(null, vs.name);
       preparedSkills.push({
         id: vs.id,
         name: vs.name,
@@ -898,12 +878,12 @@ export class CyberpunkActorSheet extends ActorSheet {
         level: 0,
         ipLevel: 0,
         totalLevel: 0,
-        chipValue: vs.chipValue,
+        chipValue: value,
         isChipped: true,
         isVirtual: true,
-        effectiveLevel: vs.chipValue,
+        effectiveLevel: value,
         skillBonus: 0,
-        computedLevel: vs.chipValue,
+        computedLevel: value,
         ip: 0,
         ipCost: 10,
         diffMod: 1,
@@ -1001,6 +981,21 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Combine base cyberweapons and attached cyberweapon options
     const allCyberweapons = [...cyberweapons, ...cyberweaponOptions];
 
+    // Armor-as-weapon follows the same equipped-or-attached-parent rule.
+    // Base armors surface when isWeapon && equipped; option armors surface
+    // only when their parent armor is equipped.
+    const armorWeaponsBase = armor.filter(a =>
+      a.system.isWeapon && a.system.equipped && a.system.armorType !== 'option'
+    );
+    const armorWeaponsOptions = armor.filter(a => {
+      if (!a.system.isWeapon || a.system.armorType !== 'option') return false;
+      const parentId = a.getFlag('cyberpunk', 'attachedTo');
+      if (!parentId) return false;
+      const parent = armor.find(p => p.id === parentId);
+      return parent && parent.system.equipped;
+    });
+    const allArmorWeapons = [...armorWeaponsBase, ...armorWeaponsOptions];
+
     // Helper to get loaded ammo type abbreviation (used by cyberweapons below)
     const getLoadedAmmoLabel = (loadedAmmoType) => {
       if (!loadedAmmoType) return '';
@@ -1010,9 +1005,10 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Regular weapons (shared with drone sheet)
     const weaponsList = buildWeaponsList(this.actor);
 
-    // Prepare cyberweapons data (cyberware with embedded weapon).
-    // resolveWeaponDiscriminator() normalises both new and legacy data.
-    const cyberweaponsList = allCyberweapons.map(c => {
+    // Prepare cyberweapons data (cyberware with embedded weapon, and armor-as-weapon).
+    // Both store the embedded weapon at system.weapon, so the same mapping handles
+    // both. resolveWeaponDiscriminator() normalises new and legacy data shapes.
+    const cyberweaponsList = [...allCyberweapons, ...allArmorWeapons].map(c => {
       const sys = c.system;
       const weapon = sys.weapon || {};
       const { weaponType: effectiveType, weaponClass: wClass } = resolveWeaponDiscriminator(weapon);
@@ -1060,7 +1056,8 @@ export class CyberpunkActorSheet extends ActorSheet {
         rof: weapon.rof ?? 1,
         canReload: isRanged && !!weapon.attachedAmmoId && (weapon.shotsLeft ?? 0) < (weapon.shots ?? 0),
         canCharge: (weapon.charges ?? 0) < (weapon.chargesMax ?? 0),
-        isCyberware: true,
+        isCyberware: c.type === 'cyberware',
+        isArmorWeapon: c.type === 'armor',
         isRanged: isRanged,
         isMelee: isMelee,
         isExotic: isExotic,
@@ -1130,12 +1127,13 @@ export class CyberpunkActorSheet extends ActorSheet {
       const sys = t.system;
       const bonuses = sys.bonuses || [];
       const effectLabels = bonuses.slice(0, 2).map(b => {
+        const op = b.op || "+";
         if (b.type === "property") {
           const propKey = toolBonusProperties[b.property];
           const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-          return `${propLabel} ${b.value >= 0 ? '+' : ''}${b.value}`;
+          return formatBonusLabel(propLabel, op, b.value);
         } else if (b.skillName) {
-          return `${b.skillName} ${b.value >= 0 ? '+' : ''}${b.value}`;
+          return formatBonusLabel(b.skillName, op, b.value);
         }
         return '';
       }).filter(l => l);
@@ -1164,12 +1162,13 @@ export class CyberpunkActorSheet extends ActorSheet {
         ? (sys.withdrawal || [])
         : (sys.bonuses || []);
       const effectLabels = sourceBonuses.slice(0, 2).map(b => {
+        const op = b.op || "+";
         if (b.type === "property") {
           const propKey = toolBonusProperties[b.property];
           const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-          return `${propLabel} ${b.value >= 0 ? '+' : ''}${b.value}`;
+          return formatBonusLabel(propLabel, op, b.value);
         } else if (b.skillName) {
-          return `${b.skillName} ${b.value >= 0 ? '+' : ''}${b.value}`;
+          return formatBonusLabel(b.skillName, op, b.value);
         }
         return '';
       }).filter(l => l);
@@ -1207,49 +1206,84 @@ export class CyberpunkActorSheet extends ActorSheet {
       };
     });
 
-    // Prepare armor/outfit data
-    sheetData.outfitItems = armor.map(a => {
+    // Prepare armor/outfit data. Mirrors cyberware's option pattern:
+    //   - "soft"/"hard" armors are base rows
+    //   - "option" armors are children (rendered under their parent if attached,
+    //     or in a detached pool when not attached to anything)
+    // No slot counting — any number of options can attach to a base armor.
+    const baseArmors   = armor.filter(a => a.system.armorType !== 'option');
+    const armorOptions = armor.filter(a => a.system.armorType === 'option');
+
+    const armorAttachmentMap = new Map();
+    const detachedArmorOptions = [];
+    for (const opt of armorOptions) {
+      const parentId = opt.getFlag('cyberpunk', 'attachedTo') || null;
+      if (parentId && baseArmors.some(b => b.id === parentId)) {
+        if (!armorAttachmentMap.has(parentId)) armorAttachmentMap.set(parentId, []);
+        armorAttachmentMap.get(parentId).push(opt);
+      } else {
+        detachedArmorOptions.push(opt);
+      }
+    }
+
+    const buildArmorRow = (a) => {
       const sys = a.system;
-      // Get coverage areas
-      const coverage = sys.coverage || {};
-      const areas = [];
+      const isShield = sys.armorType === 'shield';
 
-      // Check each area - SP > 0 means covered
-      if (coverage.Head?.stoppingPower > 0) areas.push('Head');
-      if (coverage.Torso?.stoppingPower > 0) areas.push('Torso');
-      // Combine arms
-      if (coverage.lArm?.stoppingPower > 0 || coverage.rArm?.stoppingPower > 0) areas.push('Arms');
-      // Combine legs
-      if (coverage.lLeg?.stoppingPower > 0 || coverage.rLeg?.stoppingPower > 0) areas.push('Legs');
-
-      // Get SP (same for all covered areas, use first found)
+      // Shields store their SP at system.shield (not per-zone). They layer
+      // across every location, so the gear-row badge just shows the shield SP.
       let sp = 0;
-      for (const loc of ['Head', 'Torso', 'lArm', 'rArm', 'lLeg', 'rLeg']) {
-        if (coverage[loc]?.stoppingPower > 0) {
-          sp = coverage[loc].stoppingPower;
-          break;
+      const areas = [];
+      if (isShield) {
+        const sh = sys.shield || {};
+        sp = Number(sh.stoppingPower) || 0;
+      } else {
+        const coverage = sys.coverage || {};
+        if (coverage.Head?.stoppingPower  > 0) areas.push('Head');
+        if (coverage.Torso?.stoppingPower > 0) areas.push('Torso');
+        if (coverage.lArm?.stoppingPower  > 0 || coverage.rArm?.stoppingPower > 0) areas.push('Arms');
+        if (coverage.lLeg?.stoppingPower  > 0 || coverage.rLeg?.stoppingPower > 0) areas.push('Legs');
+        for (const loc of ['Head', 'Torso', 'lArm', 'rArm', 'lLeg', 'rLeg']) {
+          if (coverage[loc]?.stoppingPower > 0) { sp = coverage[loc].stoppingPower; break; }
         }
       }
 
-      // Armor type
-      const armorType = sys.armorType === 'hard' ? 'Hard Armor' : 'Soft Armor';
-
-      // Build context
-      const contextParts = [armorType, ...areas];
-      const context = contextParts.join(' · ');
+      const armorTypeLabel = sys.armorType === 'hard'   ? 'Hard Armor'
+                           : sys.armorType === 'shield' ? 'Shield'
+                           : sys.armorType === 'option' ? 'Option'
+                                                       : 'Soft Armor';
+      const context = [armorTypeLabel, ...areas].join(' · ');
 
       return {
         id: a.id,
         img: a.img,
         name: a.name,
-        context: context,
+        context,
         price: sys.cost || 0,
         weight: sys.weight || 0,
-        sp: sp,
+        sp,
         encumbrance: sys.encumbrance ?? 0,
-        equipped: sys.equipped ?? false
+        equipped: sys.equipped ?? false,
+        isOption: sys.armorType === 'option',
+        isShield,
+        // Shields can't accept options — exclude them from being drop targets
+        // for armor-option drags by NOT marking them as a base in the template.
+        isBase: sys.armorType !== 'option' && !isShield
       };
+    };
+
+    sheetData.outfitItems = baseArmors.map(a => {
+      const row = buildArmorRow(a);
+      // Shields can't have attached options; skip the attachment lookup.
+      const attached = row.isShield ? [] : (armorAttachmentMap.get(a.id) || []);
+      row.attachedOptions = attached.map(opt => ({
+        ...buildArmorRow(opt),
+        isAttached: true,
+        parentId: a.id
+      }));
+      return row;
     });
+    sheetData.detachedArmorOptions = detachedArmorOptions.map(o => buildArmorRow(o));
 
     // Add cyberware with armor capability to outfit items (only if equipped)
     // Note: cyberware was already declared above at line 522
@@ -1305,6 +1339,12 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Combine regular outfits and cyberarmor
     sheetData.outfitItems = [...sheetData.outfitItems, ...cyberarmorItems];
+
+    // Drives the {{#if hasAnyOutfit}} guard around the OUTFIT block in gear.hbs
+    // (Handlebars doesn't have a built-in {{(or x y)}} helper, so we hoist the
+    // boolean here instead).
+    sheetData.hasAnyOutfit = sheetData.outfitItems.length > 0
+                          || sheetData.detachedArmorOptions.length > 0;
 
     // Prepare commodity/gear data
     sheetData.gearItems = commodity.map(m => {
@@ -1404,12 +1444,13 @@ export class CyberpunkActorSheet extends ActorSheet {
           // Summarize bonuses (first 2 effects)
           const bonuses = sys.bonuses || [];
           const effectLabels = bonuses.slice(0, 2).map(b => {
+            const op = b.op || "+";
             if (b.type === "property") {
               const propKey = toolBonusProperties[b.property];
               const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-              return `${propLabel} ${b.value >= 0 ? '+' : ''}${b.value}`;
+              return formatBonusLabel(propLabel, op, b.value);
             } else if (b.skillName) {
-              return `${b.skillName} ${b.value >= 0 ? '+' : ''}${b.value}`;
+              return formatBonusLabel(b.skillName, op, b.value);
             }
             return '';
           }).filter(l => l);
@@ -2128,42 +2169,13 @@ export class CyberpunkActorSheet extends ActorSheet {
       await this.actor.toggleStatusEffect(conditionId, { active: !isActive });
     });
 
-    // Skill level changes
+    // Skill level changes — chipping is now a cyberware item, not a skill flag,
+    // so this writes the natural level directly.
     html.find(".skill-level").click((event) => event.target.select()).change(async (event) => {
       let skill = this.actor.items.get(event.currentTarget.dataset.skillId);
-      let target = skill.system.isChipped ? "system.chipLevel" : "system.level";
-      let updateData = { _id: skill.id };
-      updateData[target] = parseInt(event.target.value, 10);
+      let updateData = { _id: skill.id, "system.level": parseInt(event.target.value, 10) };
       await this.actor.updateEmbeddedDocuments("Item", [updateData]);
       await this._syncCombatSense();
-    });
-
-    // Toggle skill chipped (legacy handler)
-    html.find(".chip-toggle").click(async ev => {
-      const skill = this.actor.items.get(ev.currentTarget.dataset.skillId);
-      const toggled = !skill.system.isChipped;
-
-      await this.actor.updateEmbeddedDocuments("Item", [{
-        _id: skill.id,
-        "system.isChipped": toggled,
-        "system.-=chipped": null
-      }]);
-    });
-
-    // Skill chip button - cycles through chip levels (0 → 1 → 2 → 3 → 0)
-    html.find(".skill-chip").click(async ev => {
-      const skill = this.actor.items.get(ev.currentTarget.dataset.skillId);
-      if (!skill) return;
-
-      const currentChipLevel = skill.system.isChipped ? (skill.system.chipLevel || 1) : 0;
-      const nextChipLevel = (currentChipLevel + 1) % 4;
-      const isChipped = nextChipLevel > 0;
-
-      await this.actor.updateEmbeddedDocuments("Item", [{
-        _id: skill.id,
-        "system.isChipped": isChipped,
-        "system.chipLevel": nextChipLevel
-      }]);
     });
 
     // Skill sorting
@@ -2268,34 +2280,6 @@ export class CyberpunkActorSheet extends ActorSheet {
         title: skill.name,
         statIcon: skill.system.stat
       }).render(true);
-    });
-
-    // Chip toggle (cycle 0 → 1 → 2 → 3 → 0) for new skills tab
-    html.find('.skill-chip').click(async ev => {
-      const skillId = ev.currentTarget.dataset.skillId;
-      const skill = this.actor.items.get(skillId);
-      if (!skill) return;
-
-      const currentChipLevel = skill.system.chipLevel || 0;
-      const isChipped = skill.system.isChipped;
-
-      let newChipLevel, newIsChipped;
-      if (!isChipped) {
-        newIsChipped = true;
-        newChipLevel = 1;
-      } else if (currentChipLevel < 3) {
-        newIsChipped = true;
-        newChipLevel = currentChipLevel + 1;
-      } else {
-        newIsChipped = false;
-        newChipLevel = 0;
-      }
-
-      await this.actor.updateEmbeddedDocuments("Item", [{
-        _id: skillId,
-        "system.isChipped": newIsChipped,
-        "system.chipLevel": newChipLevel
-      }]);
     });
 
     // Eurodollars input on Gear tab
@@ -2848,6 +2832,93 @@ export class CyberpunkActorSheet extends ActorSheet {
       });
     });
 
+    // ----- Armor option attach / detach (mirrors cyberware option pattern) -----
+
+    // Detach an option armor from its parent
+    html.find('.detach-armor-option').click(async ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+      await item.unsetFlag('cyberpunk', 'attachedTo');
+    });
+
+    // Make option armors draggable. Payload type is 'armor-option' so the
+    // base-armor drop handler can distinguish it from arbitrary Foundry drops
+    // (which would otherwise round-trip through ItemSheet._onDropItem and
+    // duplicate the item on the actor).
+    html.find('.armor-option').each((_, optionEl) => {
+      optionEl.setAttribute('draggable', 'true');
+
+      optionEl.addEventListener('dragstart', ev => {
+        const itemId = optionEl.dataset.itemId;
+        ev.dataTransfer.setData('text/plain', JSON.stringify({
+          type: 'armor-option',
+          itemId,
+          actorId: this.actor.id
+        }));
+        ev.dataTransfer.effectAllowed = 'move';
+        optionEl.classList.add('is-dragging');
+      });
+
+      optionEl.addEventListener('dragend', () => {
+        optionEl.classList.remove('is-dragging');
+      });
+    });
+
+    // Base armor rows accept drops of armor-option payloads.
+    html.find('.armor-row[data-is-base="true"]').each((_, baseEl) => {
+      baseEl.addEventListener('dragover', ev => {
+        ev.preventDefault();
+        baseEl.classList.add('drag-over');
+      });
+
+      baseEl.addEventListener('dragleave', () => {
+        baseEl.classList.remove('drag-over');
+      });
+
+      baseEl.addEventListener('drop', async ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        baseEl.classList.remove('drag-over');
+
+        let data;
+        try {
+          data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+        } catch (err) {
+          return;
+        }
+
+        // Only consume armor-option payloads; let Foundry handle anything else
+        // through its own pipeline (which won't attach but also won't duplicate
+        // since regular Item payloads on an already-owned item are a no-op).
+        if (data.type !== 'armor-option') return;
+        if (data.actorId !== this.actor.id) return;
+
+        const optionItem = this.actor.items.get(data.itemId);
+        const baseItem   = this.actor.items.get(baseEl.dataset.itemId);
+        if (!optionItem || !baseItem) return;
+
+        // Validate: both must be armor; option must be option-type; base must not be.
+        if (optionItem.type !== 'armor' || baseItem.type !== 'armor') return;
+        if (optionItem.system.armorType !== 'option') {
+          ui.notifications.warn(localize("OnlyOptionsCanAttach"));
+          return;
+        }
+        if (baseItem.system.armorType === 'option') {
+          ui.notifications.warn(localize("CannotAttachToOptions"));
+          return;
+        }
+        if (baseItem.system.armorType === 'shield') {
+          ui.notifications.warn(localize("CannotAttachToShield"));
+          return;
+        }
+
+        await optionItem.setFlag('cyberpunk', 'attachedTo', baseItem.id);
+      });
+    });
+
     // ----- Net Tab Event Listeners -----
 
     // NET Actions chip click: spend (available -> used) or refund (used -> available).
@@ -3378,8 +3449,15 @@ export class CyberpunkActorSheet extends ActorSheet {
       return this.actor.createEmbeddedDocuments("Item", [newData]);
     }
 
-    // Handle armor drops — add unequipped by default
+    // Handle armor drops — add unequipped by default.
+    // No-op when the item is already owned by this actor: the user is just
+    // re-arranging a gear row (or trying to attach an armor option via the
+    // armor-option drag handler above, which has its own payload type). The
+    // armor-option payload path is consumed before _onDropItem fires, so by
+    // the time we get here a same-actor armor drop is always a stray reorder
+    // and would otherwise duplicate the item.
     if (item.type === "armor") {
+      if (item.parent?.id === this.actor.id) return;
       const newData = item.toObject();
       newData.system.equipped = false;
       return this.actor.createEmbeddedDocuments("Item", [newData]);

@@ -113,8 +113,6 @@ export class RangeSelectionDialog extends Application {
         return localize("ThreeRoundBurstLabel");
       case fireModes.singleShot:
         return localize("SingleShotLabel");
-      case fireModes.suppressive:
-        return localize("SuppressiveLabel");
       default:
         return this.fireMode;
     }

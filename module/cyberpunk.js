@@ -244,7 +244,9 @@ Hooks.once("ready", async function() {
     //        (builtIn/finger/hand/feet); skill stat "body" → "bt" self-heal for the
     //        four pack skills that shipped with the wrong stat key (Endurance,
     //        Swimming, Controlled Hyperventilation, Strength Feat).
-    const NEEDS_MIGRATION_VERSION = "2.1.0";
+    // 2.1.1: Unified bonus op pipeline (+ / × / =); Armor compendium; legacy
+    //        isChipped skill flag → Skillchip cyberware items via op:"=" override.
+    const NEEDS_MIGRATION_VERSION = "2.1.1";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;

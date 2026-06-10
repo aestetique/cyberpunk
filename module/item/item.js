@@ -112,19 +112,23 @@ export class CyberpunkItem extends Item {
 
   /**
    * Get the weapon data sub-object.
-   * For regular weapons, this is `this.system`.
-   * For cyberware weapons, this is `this.system.weapon`.
+   * For regular weapons (type=weapon), this is `this.system`.
+   * For embedded weapons on cyberware OR armor (type=cyberware|armor with
+   * `isWeapon: true`), this is `this.system.weapon`.
    */
   get weaponData() {
-    return (this.type === "cyberware" && this.system.isWeapon) ? this.system.weapon : this.system;
+    const embedded = (this.type === "cyberware" || this.type === "armor") && this.system.isWeapon;
+    return embedded ? this.system.weapon : this.system;
   }
 
   /**
    * Build the correct Foundry update path for a weapon field.
-   * For regular weapons: "system.{field}". For cyberware: "system.weapon.{field}".
+   * Embedded (cyberware / armor with isWeapon): "system.weapon.{field}".
+   * Top-level weapon items:                     "system.{field}".
    */
   _weaponUpdatePath(field) {
-    return (this.type === "cyberware") ? `system.weapon.${field}` : `system.${field}`;
+    const embedded = (this.type === "cyberware" || this.type === "armor") && this.system.isWeapon;
+    return embedded ? `system.weapon.${field}` : `system.${field}`;
   }
 
   /**
@@ -312,8 +316,8 @@ export class CyberpunkItem extends Item {
 
   /**
    * The field on weaponData that holds the per-shot resource: 'charges' for
-   * Exotic, 'shotsLeft' for everything else. Used by burst/auto/suppressive
-   * fire so Exotic weapons spend their charges instead of a magazine.
+   * Exotic, 'shotsLeft' for everything else. Used by burst/auto fire so
+   * Exotic weapons spend their charges instead of a magazine.
    */
   _getAmmoField() {
     return this._getWeaponType() === "Exotic" ? "charges" : "shotsLeft";
@@ -390,7 +394,7 @@ export class CyberpunkItem extends Item {
    * Handle clickable rolls.
    */
   async roll() {
-    if (this.type !== "weapon" && !(this.type === "cyberware" && this.system.isWeapon)) return;
+    if (this.type !== "weapon" && !((this.type === "cyberware" || this.type === "armor") && this.system.isWeapon)) return;
     return this._resolveAttack();
   }
 
@@ -499,13 +503,10 @@ export class CyberpunkItem extends Item {
     else if(attackMods.fireMode === fireModes.singleShot) {
       return this._fireSingle(attackMods);
     }
-    else if(attackMods.fireMode === fireModes.suppressive) {
-      return this._fireSuppressive(attackMods);
-    }
   }
 
   _availableFireModes() {
-    if (this.type !== "weapon" && !(this.type === "cyberware" && this.system.isWeapon)) {
+    if (this.type !== "weapon" && !((this.type === "cyberware" || this.type === "armor") && this.system.isWeapon)) {
       console.error(`${this.name} is not a weapon, and therefore has no fire modes`)
       return [];
     }
@@ -518,7 +519,7 @@ export class CyberpunkItem extends Item {
       const modes = [fireModes.singleShot];
       if (wd.rof === 2) modes.unshift(fireModes.twoRoundBurst);
       if (wd.rof >= 3) modes.unshift(fireModes.threeRoundBurst);
-      if (wd.rof > 3) modes.unshift(fireModes.suppressive, fireModes.fullAuto);
+      if (wd.rof > 3) modes.unshift(fireModes.fullAuto);
       return modes;
     };
 
@@ -541,8 +542,7 @@ export class CyberpunkItem extends Item {
       [fireModes.fullAuto]: localize("FullAutoLabel"),
       [fireModes.threeRoundBurst]: localize("ThreeRoundBurstLabel"),
       [fireModes.twoRoundBurst]: localize("TwoRoundBurstLabel"),
-      [fireModes.singleShot]: localize("SingleShotLabel"),
-      [fireModes.suppressive]: localize("SuppressiveLabel")
+      [fireModes.singleShot]: localize("SingleShotLabel")
     };
     return labels[fireMode] || fireMode;
   }
@@ -619,6 +619,15 @@ export class CyberpunkItem extends Item {
       const ammoField = this._getAmmoField();
       let ammoLeft = Number(wd[ammoField]) || 0;
 
+      // Resolve effect once for the whole burst; the per-card template data
+      // below picks it up so the chat-card Apply path can fire the save loop.
+      const effectiveEffect = this._getEffectiveEffect();
+      const isExoticAuto = this._getWeaponType() === "Exotic";
+      const weaponEffect = (effectiveEffect && effectiveEffect !== "none") ? effectiveEffect : null;
+      const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
+      const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
+      const effectSaveCount = (weaponEffect && isExoticAuto) ? Math.max(1, Number(wd.rof) || 1) : 1;
+
       let rolls = [];
       let fumbleTriggered = false;
       let ipGranted = false;
@@ -691,6 +700,11 @@ export class CyberpunkItem extends Item {
               weaponType: this.getWeaponLineType(),
               loadedAmmoType: ammoTypeKey,
               damageType: wd.damageType || "",
+              weaponEffect: weaponEffect,
+              hasEffect: !!weaponEffect,
+              effectLabel: effectLabel,
+              effectIcon: effectIcon,
+              effectSaveCount: effectSaveCount,
               hasDamage: true,
               ipGained: ipGained
           };
@@ -762,6 +776,17 @@ export class CyberpunkItem extends Item {
               ));
           }
       }
+      // Surface the weapon's effect on the chat card so the Apply path
+      // dispatches the save loop. Exotic burst fires N rounds → N save
+      // attempts (stop on first failure, same rule as RoF in _fireSingle).
+      const effectiveEffect = this._getEffectiveEffect();
+      const tBurst = this._getWeaponType();
+      const isExoticBurst = tBurst === "Exotic";
+      const weaponEffect = (effectiveEffect && effectiveEffect !== "none") ? effectiveEffect : null;
+      const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
+      const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
+      const effectSaveCount = (weaponEffect && isExoticBurst) ? Math.max(1, Number(wd.rof) || 1) : 1;
+
       let templateData = {
           range: attackMods.range,
           toHit: DC,
@@ -777,6 +802,11 @@ export class CyberpunkItem extends Item {
           weaponType: this.getWeaponLineType(),
           loadedAmmoType: ammoTypeKey,
           damageType: wd.damageType || "",
+          weaponEffect: weaponEffect,
+          hasEffect: !!weaponEffect,
+          effectLabel: effectLabel,
+          effectIcon: effectIcon,
+          effectSaveCount: effectSaveCount,
           hasDamage: true,
           ipGained: ipGained
       };
@@ -784,51 +814,6 @@ export class CyberpunkItem extends Item {
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
       await this.update({[this._weaponUpdatePath(ammoField)]: ammoLeft - roundsFired});
       return roll;
-  }
-
-  async _fireSuppressive(mods = {}) {
-    const sys = this.weaponData;
-    const damageFormula = this._getEffectiveDamage() || "1d6";
-    const ammoTypeKey = this._getEffectiveAmmoType();
-    const minBodyPenalty = this._getMinBodyPenalty();
-    const effectiveRof = Math.max(1, Math.floor(sys.rof * minBodyPenalty.rofMultiplier));
-    const ammoField = this._getAmmoField();
-    const ammoLeft = Number(sys[ammoField]) || 0;
-    const rounds = clamp(Number(mods.roundsFired ?? effectiveRof), 1, ammoLeft);
-    const width = Math.max(2,  Number(mods.zoneWidth    ?? 2));
-    const targets = Math.max(1,  Number(mods.targetsCount ?? 1));
-
-    await this.update({ [this._weaponUpdatePath(ammoField)]: ammoLeft - rounds });
-
-    const saveDC = Math.ceil(rounds / width);
-    const dmgFormula = damageFormula;
-    const rollData = this.actor?.getRollData?.() ?? {};
-
-    const results = [];
-    for (let t = 0; t < targets; t++) {
-      const hitsRoll = await new Roll("1d6").evaluate();
-      const areaDamages = {};
-
-      for (let i = 0; i < hitsRoll.total; i++) {
-        const loc = (await rollLocation(mods.targetActor, mods.targetArea)).areaHit;
-        const dmg = (await new Roll(dmgFormula, rollData).evaluate()).total;
-        if (!areaDamages[loc]) areaDamages[loc] = [];
-        areaDamages[loc].push({ dmg });
-      }
-
-      results.push({ hitsRoll, areaDamages });
-    }
-
-    const html = await foundry.applications.handlebars.renderTemplate(
-      "systems/cyberpunk/templates/chat/suppressive.hbs",
-      { weaponName: this.name, rounds, width, saveDC, dmgFormula, results, loadedAmmoType: ammoTypeKey }
-    );
-
-    ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      content: html,
-      flags  : { cyberpunk: { fireMode: "suppressive" } }
-    });
   }
 
   async _fireSingle(attackMods) {
@@ -898,6 +883,10 @@ export class CyberpunkItem extends Item {
 
       const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
       const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
+      // Exotic weapons make the target save as many times as their RoF on a
+      // hit (the user keeps rolling until they fail, then the condition
+      // applies). All other weapon types stay at a single save attempt.
+      const effectSaveCount = (weaponEffect && isExotic) ? Math.max(1, Number(wd.rof) || 1) : 1;
 
       let templateData = {
           range: attackMods.range,
@@ -920,6 +909,7 @@ export class CyberpunkItem extends Item {
           effectLabel: effectLabel,
           effectIcon: effectIcon,
           hitLocation: hitLocation,
+          effectSaveCount: effectSaveCount,
           ipGained: ipGained
       };
 
@@ -1048,6 +1038,11 @@ export class CyberpunkItem extends Item {
       const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
       const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
 
+      // Exotic area weapons (e.g. RoF>1 microwavers) make the target save
+      // RoF times per hit; ordnance keeps the single-save behaviour.
+      const isExoticHere = t === "Exotic";
+      const effectSaveCount = (weaponEffect && isExoticHere) ? Math.max(1, Number(wd.rof) || 1) : 1;
+
       let templateData = {
           range: attackMods.range,
           toHit: DC,
@@ -1067,6 +1062,7 @@ export class CyberpunkItem extends Item {
           hasDamage: hasDamage,
           effectLabel: effectLabel,
           effectIcon: effectIcon,
+          effectSaveCount: effectSaveCount,
           isCircle: isCircle,
           scatterDistance: scatterDistance,
           ipGained: ipGained

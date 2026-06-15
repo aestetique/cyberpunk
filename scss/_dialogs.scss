@@ -15,7 +15,9 @@
 .app.window-app.stress-roll-dialog,
 .app.window-app.fright-roll-dialog,
 .app.window-app.create-item-dialog,
-.app.window-app.game-time-dialog {
+.app.window-app.game-time-dialog,
+.app.window-app.move-items-dialog,
+.app.window-app.shop-settings-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -47,7 +49,9 @@
 .stress-roll-wrapper,
 .fright-roll-wrapper,
 .create-item-wrapper,
-.game-time-wrapper {
+.game-time-wrapper,
+.move-items-wrapper,
+.shop-settings-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -449,6 +453,29 @@
       line-height: 36px;
       color: var(--chat-text, #FFF);
       text-align: center;
+    }
+
+    // Editable variant — Move Items dialog uses an <input type="number"> styled
+    // like the read-only span, so the user can type the quantity directly.
+    input.luck-value {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 0;
+      outline: none;
+      box-shadow: none;
+      -moz-appearance: textfield;
+
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: none;
+      }
     }
 
     .dice-value {

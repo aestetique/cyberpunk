@@ -14,7 +14,15 @@ import {
     getWeaponClasses,
     getMartialSubtypeLabelKey,
     getOrdnanceSubtypeLabelKey,
-    resolveWeaponDiscriminator
+    resolveWeaponDiscriminator,
+    toolBonusProperties,
+    surgeryCodes,
+    getCyberwareSubtypes,
+    programSubtypes,
+    boosterBonuses,
+    defenderDefences,
+    attackerClasses,
+    attackerEffects
 } from "../lookups.js";
 import { calibers as CALIBERS } from "../calibers.js";
 import { COVER_TYPES } from "../conditions.js";
@@ -299,4 +307,164 @@ export function buildDroneSkillsList(actor) {
             };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ---------------------------------------------------------------------------
+// Subtext (gear-row "context line") builders, shared between the character
+// sheet's gear / cyberware / netware tabs and the shop sheet's listings. Each
+// builder takes a full item (not just `system`) and returns a `·`-joined
+// string, matching the character sheet's formatting exactly.
+// ---------------------------------------------------------------------------
+
+/**
+ * Format a single bonus row: "INT +2", "BT ×2", "Reflex = 5". The `+` op keeps
+ * the signed form so negative additives read naturally ("INT -3").
+ */
+export function formatBonusLabel(label, op, value) {
+    if (op === "×") return `${label} ×${value}`;
+    if (op === "=") return `${label} = ${value}`;
+    return `${label} ${value >= 0 ? '+' : ''}${value}`;
+}
+
+/**
+ * Summarise the first N bonus entries on a bonuses array. Property bonuses get
+ * localized through `toolBonusProperties`; skill bonuses use the stored name.
+ * Used by tool, drug and chipware contexts.
+ */
+function summariseBonuses(bonuses, limit = 2) {
+    return (bonuses || []).slice(0, limit).map(b => {
+        const op = b.op || "+";
+        if (b.type === "property") {
+            const propKey = toolBonusProperties[b.property];
+            const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
+            return formatBonusLabel(propLabel, op, b.value);
+        }
+        if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
+        return '';
+    }).filter(Boolean);
+}
+
+/**
+ * Armor / outfit subtext — "Hard Armor · Head · Torso · Arms" etc.
+ * Shields show just "Shield"; options show just "Option".
+ */
+export function buildArmorContext(item) {
+    const sys = item.system || {};
+    const typeLabel = sys.armorType === 'hard'   ? 'Hard Armor'
+                    : sys.armorType === 'shield' ? 'Shield'
+                    : sys.armorType === 'option' ? 'Option'
+                                                 : 'Soft Armor';
+    if (sys.armorType === 'shield' || sys.armorType === 'option') return typeLabel;
+
+    const coverage = sys.coverage || {};
+    const areas = [];
+    if (coverage.Head?.stoppingPower > 0)  areas.push('Head');
+    if (coverage.Torso?.stoppingPower > 0) areas.push('Torso');
+    if (coverage.lArm?.stoppingPower  > 0 || coverage.rArm?.stoppingPower > 0) areas.push('Arms');
+    if (coverage.lLeg?.stoppingPower  > 0 || coverage.rLeg?.stoppingPower > 0) areas.push('Legs');
+    return [typeLabel, ...areas].join(' · ');
+}
+
+/**
+ * Cyberware subtext. Format differs per cyberwareType:
+ *   sensor    → subtype · base|option · surgery [· Weapon]
+ *   cyberlimb → subtype · base|option · surgery
+ *   implant   → subtype · surgery [· Weapon] [· Armor]
+ *   chipware  → subtype · {first 2 bonuses}
+ */
+export function buildCyberwareContext(item) {
+    const sys = item.system || {};
+    const cyberType = sys.cyberwareType || 'implant';
+    const subtypes = getCyberwareSubtypes(cyberType);
+    const subtypeKey = subtypes[sys.cyberwareSubtype];
+    const subtypeLabel = subtypeKey ? game.i18n.localize(`CYBERPUNK.${subtypeKey}`) : (sys.cyberwareSubtype || '');
+    const surgeryKey = surgeryCodes[sys.surgeryCode];
+    const surgeryLabel = surgeryKey ? game.i18n.localize(`CYBERPUNK.${surgeryKey}`) : (sys.surgeryCode || '');
+    const baseOrOption = sys.isOption ? 'Option' : 'Base';
+
+    const parts = [];
+    switch (cyberType) {
+        case 'sensor':
+            if (subtypeLabel) parts.push(subtypeLabel);
+            parts.push(baseOrOption);
+            if (surgeryLabel) parts.push(surgeryLabel);
+            if (sys.isWeapon) parts.push('Weapon');
+            break;
+        case 'cyberlimb':
+            if (subtypeLabel) parts.push(subtypeLabel);
+            parts.push(baseOrOption);
+            if (surgeryLabel) parts.push(surgeryLabel);
+            break;
+        case 'implant':
+            if (subtypeLabel) parts.push(subtypeLabel);
+            if (surgeryLabel) parts.push(surgeryLabel);
+            if (sys.isWeapon) parts.push('Weapon');
+            if (sys.isArmor)  parts.push('Armor');
+            break;
+        case 'chipware':
+            if (subtypeLabel) parts.push(subtypeLabel);
+            parts.push(...summariseBonuses(sys.bonuses));
+            break;
+    }
+    return parts.join(' · ');
+}
+
+/**
+ * Netware subtext. Cyberdeck shows slot count; programs branch by subtype.
+ */
+export function buildNetwareContext(item) {
+    const sys = item.system || {};
+    const type = sys.netwareType;
+    if (type === 'cyberdeck') return `Cyberdeck · ${sys.slots || 0} slots`;
+    if (type === 'upgrade')   return 'Upgrade';
+    if (type === 'program') {
+        const subtype = sys.programSubtype;
+        if (subtype === 'defender') {
+            const defKey = defenderDefences[sys.defenderDefence];
+            const defLabel = defKey ? game.i18n.localize(`CYBERPUNK.${defKey}`) : sys.defenderDefence;
+            const valuePart = sys.defenderDefence === 'armor' && sys.defenderValue ? ` ${sys.defenderValue}` : '';
+            return `Defender · ${defLabel}${valuePart}`;
+        }
+        if (subtype === 'booster') {
+            const bonusKey = boosterBonuses[sys.boosterBonus];
+            const bonusLabel = bonusKey ? game.i18n.localize(`CYBERPUNK.${bonusKey}`) : sys.boosterBonus;
+            return `Booster · ${bonusLabel} +${sys.boosterValue || 0}`;
+        }
+        if (subtype === 'attacker') {
+            const classKey = attackerClasses[sys.attackerClass];
+            const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : sys.attackerClass;
+            const parts = ['Attacker', classLabel];
+            if (sys.attackerEffect && sys.attackerEffect !== 'none') {
+                const effectKey = attackerEffects[sys.attackerEffect];
+                const effectLabel = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : sys.attackerEffect;
+                parts.push(effectLabel);
+            }
+            if (sys.attackerDamage) parts.push(sys.attackerDamage);
+            return parts.join(' · ');
+        }
+        const fallbackKey = programSubtypes[subtype];
+        const fallbackLabel = fallbackKey ? game.i18n.localize(`CYBERPUNK.${fallbackKey}`) : subtype;
+        return `Program · ${fallbackLabel}`;
+    }
+    return '';
+}
+
+/** Tool subtext — "Tool · {first 2 bonuses}". */
+export function buildToolContext(item) {
+    const parts = ['Tool', ...summariseBonuses(item.system?.bonuses)];
+    return parts.join(' · ');
+}
+
+/**
+ * Drug subtext — "Drug · {first 2 bonuses}". Always summarises the standard
+ * bonus list (not withdrawal), since shop drugs are inert.
+ */
+export function buildDrugContext(item) {
+    const parts = ['Drug', ...summariseBonuses(item.system?.bonuses)];
+    return parts.join(' · ');
+}
+
+/** Commodity subtext — fixed string, mirrors the character sheet's Gear tab. */
+export function buildCommodityContext(_item) {
+    return 'Commodity';
 }

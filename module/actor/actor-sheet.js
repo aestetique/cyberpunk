@@ -21,6 +21,7 @@ import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, 
 import { calibers as CALIBERS } from "../calibers.js"
 import { rangedClasses, martialClasses, getMartialSubtypeLabelKey, resolveWeaponDiscriminator } from "../lookups.js"
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
+import { shouldTransfer, transferItem } from "./item-transfer.js"
 
 /**
  * Render a bonus row's gear-context label: "INT +2", "BT ×2", "Reflex = 5".
@@ -3325,6 +3326,15 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Get dropped item first to check its type
     const item = await Item.implementation.fromDropData(data);
     if (!item) return;
+
+    // Cross-character transfer: gear items (weapon / armor / cyberware / netware /
+    // drug / tool / misc) dragged from a different character or drone go through
+    // the move-or-merge flow + chat post, instead of the per-type clone branches
+    // below. Skills and roles fall through to today's behaviour.
+    if (shouldTransfer(item, this.actor)) {
+      await transferItem(item, this.actor);
+      return;
+    }
 
     // Check for duplicate skills (by UUID or name)
     if (item.type === "skill") {

@@ -1,6 +1,7 @@
 import { CyberpunkActor } from "./actor/actor.js";
 import { CyberpunkActorSheet } from "./actor/actor-sheet.js";
 import { CyberpunkDroneSheet } from "./actor/drone-sheet.js";
+import { CyberpunkShopSheet } from "./actor/shop-sheet.js";
 import { CyberpunkItem } from "./item/item.js";
 import { CyberpunkLegacyItemSheet } from "./item/item-sheet.js";
 import { CyberpunkRoleSheet } from "./item/role-sheet.js";
@@ -68,6 +69,7 @@ Hooks.once('init', async function () {
     Actors.unregisterSheet("core", ActorSheet);
     Actors.registerSheet("cyberpunk", CyberpunkActorSheet, { types: ["character"], makeDefault: true });
     Actors.registerSheet("cyberpunk", CyberpunkDroneSheet,  { types: ["drone"],     makeDefault: true });
+    Actors.registerSheet("cyberpunk", CyberpunkShopSheet,   { types: ["shop"],      makeDefault: true });
     Items.unregisterSheet("core", ItemSheet);
     Items.registerSheet("cyberpunk", CyberpunkLegacyItemSheet, { makeDefault: true });
     Items.registerSheet("cyberpunk", CyberpunkRoleSheet, {
@@ -145,6 +147,22 @@ Hooks.once("setup", function() {
  * Ensure condition ActiveEffects are created with localized names.
  * Foundry v13 uses 'name' for display text in status effects.
  */
+/**
+ * Shops are shared trading-post actors. Default ownership is OWNER (3) so any
+ * connected player can run buy/sell directly — no GM-relay socket needed,
+ * works even with no GM online. The shop sheet hides edit affordances from
+ * non-GMs; technical players could still tamper via console, accepted risk.
+ */
+Hooks.on("preCreateActor", (actor, data, options, userId) => {
+    if (data.type !== "shop") return;
+    actor.updateSource({
+        ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
+        // Shops are typically merchants — neither friendly nor hostile out of
+        // the box. Lets the GM drop a token down without it auto-coloring red.
+        prototypeToken: { disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL }
+    });
+});
+
 Hooks.on("preCreateActiveEffect", (effect, data, options, userId) => {
     // Get the status ID from the effect
     const statusId = effect.statuses?.first();

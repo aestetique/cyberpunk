@@ -1,0 +1,24 @@
+<div class="cyberpunk-card cyberpunk-card--transfer">
+    {{!-- Gave section --}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="exchange" label=(loc "Gave")}}
+
+    {{!-- Item line: portrait + name + count chip (damage-chip style) --}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{itemImg}}" alt="{{itemName}}">
+        </div>
+        <span class="target-info__name">{{itemName}}</span>
+        <span class="target-info__damage">{{count}}</span>
+    </div>
+
+    {{!-- To section (no icon) --}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" label=(loc "To")}}
+
+    {{!-- Target line: portrait + name, no chip --}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{targetImg}}" alt="{{targetName}}">
+        </div>
+        <span class="target-info__name">{{targetName}}</span>
+    </div>
+</div>

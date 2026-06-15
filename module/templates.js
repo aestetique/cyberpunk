@@ -39,6 +39,9 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/melee-execute.hbs",
         "systems/cyberpunk/templates/chat/melee-hit.hbs",
         "systems/cyberpunk/templates/chat/ordnance-hit.hbs",
+        "systems/cyberpunk/templates/chat/item-transfer.hbs",
+        "systems/cyberpunk/templates/chat/item-trade.hbs",
+        "systems/cyberpunk/templates/actor/shop-sheet.hbs",
 
         // Chat card partials
         "systems/cyberpunk/templates/chat/partials/card-header.hbs",
@@ -92,6 +95,8 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/dialog/stress-roll.hbs",
         "systems/cyberpunk/templates/dialog/fright-roll.hbs",
         "systems/cyberpunk/templates/dialog/create-item.hbs",
+        "systems/cyberpunk/templates/dialog/move-items.hbs",
+        "systems/cyberpunk/templates/dialog/shop-settings.hbs",
 
         // Netware
         "systems/cyberpunk/templates/item/parts/netware/tab-description.hbs",

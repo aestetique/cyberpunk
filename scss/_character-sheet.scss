@@ -5,7 +5,8 @@
 // Borderless window styling - hide Foundry's default chrome
 // Applies to both the character sheet and the drone sheet (same outer-window treatment).
 .cyberpunk.character-sheet,
-.cyberpunk.drone-sheet {
+.cyberpunk.drone-sheet,
+.cyberpunk.shop-sheet {
   // Hide the outer Foundry window styling
   &.app {
     background: transparent;
@@ -881,6 +882,11 @@ input.info-value.info-input {
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+  }
+
+  &[readonly] {
+    cursor: default;
+    user-select: text;
   }
 }
 
@@ -1940,7 +1946,8 @@ input.skill-value.skill-level-input {
 // 5 stats × 60 + 4 gaps × 10 = 340 px wide rows.
 // No tab selector, no wounds/humanity block, no tabs, no inventory area.
 // ============================================
-.character-sheet.drone-sheet {
+.character-sheet.drone-sheet,
+.character-sheet.shop-sheet {
   width: 600px;
   // Resize floor — user can't drag the drone shorter than this. Bypassed during
   // minimize via inline `min-height: 0` (cleared on maximize), same as character.
@@ -2123,6 +2130,69 @@ input.skill-value.skill-level-input {
         cursor: pointer;
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shop sheet additions. Frame / sidebar / sheet-sections all ride on the
+// drone-sheet rules above (`.character-sheet.drone-sheet, .character-sheet.shop-sheet`).
+// Tabs / tab-header / divider styling rides on the .item-card rules, extended
+// to also match .character-sheet.shop-sheet. Only the genuinely new piece —
+// the GM-only inline settings button next to the gilt "Shop" label — needs
+// its own rule here.
+// ---------------------------------------------------------------------------
+.character-sheet.shop-sheet {
+  // Tab + divider + content stack — mirror the item-card's .item-content gap
+  // (12px) so the spacing between tabs / divider / gear list feels the same.
+  // Divider runs the full window width edge-to-edge; tabs sit 20px-inset.
+  .sheet-sections {
+    gap: 12px;
+  }
+  .sheet-sections .tabs-line {
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+  .sheet-sections .divider {
+    width: 100%;
+    margin: 0;
+  }
+
+  .shop-settings-btn {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+    box-shadow: none;
+
+    img { width: 100%; height: 100%; }
+    &:hover { opacity: 1; }
+  }
+
+  // Category status icons under the identity row. Two rows of four 70×60
+  // SVGs; `space-between` parks the outer icons against the sheet-details
+  // edges so the row's even gaps add up to the full 340px width. Read-only —
+  // no hover / cursor.
+  .shop-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .shop-categories-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .shop-category-icon {
+    width: 70px;
+    height: 60px;
+    border: none;
+    flex: 0 0 auto;
   }
 }
 

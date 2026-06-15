@@ -1131,6 +1131,14 @@ $fail-color: #d1502fb8;
   border-radius: 2px;
 }
 
+// Transfer / Buy / Sell chat cards lay each row out edge-to-edge so the item
+// and partner lines match the section bars' width. The parent .cyberpunk-card
+// is `align-items: center`, so the row needs its own width override.
+.transfer-line {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .target-info__portrait {
   width: 32px;
   height: 32px;

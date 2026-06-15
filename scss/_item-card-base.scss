@@ -270,7 +270,8 @@
 // ============================================
 // 5. Horizontal Divider
 // ============================================
-.item-card .divider {
+.item-card .divider,
+.character-sheet.shop-sheet .divider {
   width: 460px;
   height: 1px;
   background: linear-gradient(90deg, rgba(185, 178, 157, 0.00) 0%, #B9B29D 50%, rgba(185, 178, 157, 0.00) 100%);
@@ -491,7 +492,8 @@
 // ============================================
 // 12. Tabs Line (shared by weapon, outfit, role)
 // ============================================
-.item-card .tabs-line {
+.item-card .tabs-line,
+.character-sheet.shop-sheet .tabs-line {
   display: flex;
   width: 460px;
   height: 24px;
@@ -499,7 +501,8 @@
   gap: 8px;
 }
 
-.item-card .tab-header {
+.item-card .tabs-line .tab-header,
+.character-sheet.shop-sheet .tabs-line .tab-header {
   display: flex;
   height: 24px;
   padding: 0 1.5px;

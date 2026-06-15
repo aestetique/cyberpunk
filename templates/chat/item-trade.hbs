@@ -1,0 +1,24 @@
+<div class="cyberpunk-card cyberpunk-card--transfer">
+    {{!-- Bought / Sold section bar with sell.svg icon --}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" icon="sell" label=actionLabel}}
+
+    {{!-- Item line: portrait + name + count chip --}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{itemImg}}" alt="{{itemName}}">
+        </div>
+        <span class="target-info__name">{{itemName}}</span>
+        <span class="target-info__damage">{{count}}</span>
+    </div>
+
+    {{!-- From / To section (no icon) --}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" label=partyLabel}}
+
+    {{!-- Shop line: portrait + name, no chip --}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{shopImg}}" alt="{{shopName}}">
+        </div>
+        <span class="target-info__name">{{shopName}}</span>
+    </div>
+</div>

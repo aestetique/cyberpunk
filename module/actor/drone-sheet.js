@@ -4,6 +4,7 @@ import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildDroneSkillsLis
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js";
 import { DRONE_CONDITION_TOGGLE_ROW } from "../conditions.js";
 import { CreateItemDialog } from "../dialog/create-item-dialog.js";
+import { shouldTransfer, transferItem } from "./item-transfer.js";
 
 /**
  * Static zone metadata: display name, icon, and which shapes show this zone.
@@ -578,5 +579,21 @@ export class CyberpunkDroneSheet extends ActorSheet {
         statIcon: statName
       }).render(true);
     });
+  }
+
+  /**
+   * @override Cross-character gear transfers (move-or-merge + chat post)
+   * intercept here too so drones can both give and receive gear from
+   * characters / other drones. Falls through to the default clone behaviour
+   * for skills, role, or same-actor drops.
+   */
+  async _onDropItem(event, data) {
+    const item = await Item.implementation.fromDropData(data);
+    if (item && shouldTransfer(item, this.actor)) {
+      event.preventDefault();
+      await transferItem(item, this.actor);
+      return;
+    }
+    return super._onDropItem(event, data);
   }
 }

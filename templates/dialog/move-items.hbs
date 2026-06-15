@@ -1,0 +1,30 @@
+<div class="move-items-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{loc titleKey}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Quantity section bar --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/count.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.Quantity"}}</span>
+  </div>
+
+  {{!-- Quantity stepper (luck-style) --}}
+  <div class="luck-controls">
+    <button type="button" class="luck-btn qty-minus-btn{{#unless canDecrease}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canDecrease}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+    </button>
+    <div class="luck-display">
+      <input type="number" class="qty-input luck-value" value="{{quantity}}" min="1" max="{{maxQuantity}}">
+    </div>
+    <button type="button" class="luck-btn qty-plus-btn{{#unless canIncrease}} disabled{{/unless}}">
+      <img src="systems/cyberpunk/img/chat/{{#if canIncrease}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+    </button>
+  </div>
+
+  {{!-- Move button --}}
+  <button type="button" class="reload-apply-btn move-btn">
+    {{loc buttonKey}}
+  </button>
+</div>

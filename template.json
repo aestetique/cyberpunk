@@ -2,7 +2,8 @@
 	"Actor": {
 		"types": [
 			"character",
-			"drone"
+			"drone",
+			"shop"
 		],
 		"templates": {
 			"stats": {
@@ -802,6 +803,32 @@
 			"icon": "",
 			"skillsSortedBy": "Name",
 			"activeCover": null
+		},
+		"shop": {
+			"gear": {
+				"eurobucks": 0
+			},
+			"transient": {
+				"activeTab": "buy"
+			},
+			"settings": {
+				"buyPricePct": 100,
+				"sellPricePct": 50,
+				"tabs": {
+					"buy": true,
+					"sell": true
+				},
+				"categories": {
+					"weapons": true,
+					"outfit": true,
+					"cyberware": true,
+					"netware": true,
+					"tools": true,
+					"drugs": true,
+					"commodities": true,
+					"vehicles": true
+				}
+			}
 		}
 	},
 	"Item": {

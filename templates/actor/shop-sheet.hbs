@@ -1,0 +1,212 @@
+<form class="{{cssClass}}{{#unless isLocked}} unlocked{{/unless}}" autocomplete="off">
+  <div class="character-sheet shop-sheet">
+    <div class="sheet-frame">
+
+      {{!-- Header --}}
+      <header class="sheet-header">
+        {{#if isGM}}
+        <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+          <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
+        </button>
+        {{/if}}
+        <span class="actor-name">{{actor.name}}</span>
+        <a class="header-control" data-action="copyUuid" title="Copy Document UUID">
+          <i class="fas fa-passport"></i>
+        </a>
+        {{#if isGM}}
+        <a class="header-control" data-action="configureSheet" title="Sheet">
+          <i class="fas fa-cog"></i>
+        </a>
+        <a class="header-control" data-action="configureToken" title="Token">
+          <i class="fas fa-user-circle"></i>
+        </a>
+        {{/if}}
+        <a class="header-control close" data-action="closeSheet" title="Close">
+          <i class="fas fa-times"></i>
+        </a>
+      </header>
+
+      {{!-- Top row: portrait + identity. Title line carries the actor name,
+           the gilt "Shop" label, the settings button (GM only) and the
+           shop's eurobucks till (info-block, always visible + editable). --}}
+      <section class="sheet-content">
+        <aside class="left-sidebar">
+          <div class="portrait-section">
+            <div class="portrait-frame">
+              <img class="portrait-img" src="{{actor.img}}" title="{{actor.name}}">
+            </div>
+          </div>
+        </aside>
+
+        <div class="sheet-details">
+          <div class="character-identity">
+            <div class="identity-left">
+              <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#unless isUnlocked}}readonly{{/unless}}>
+              <div class="shape-display">
+                <span class="shape-prefix">{{localize "CYBERPUNK.Shop"}}</span>
+                {{#if isGM}}
+                <button class="shop-settings-btn" type="button" title="{{localize "CYBERPUNK.ShopSettings"}}">
+                  <img src="systems/cyberpunk/img/chat/settings.svg" alt="">
+                </button>
+                {{/if}}
+              </div>
+            </div>
+
+            {{!-- Till — same info-block style as Career on the character
+                 sheet. Always visible, always editable. --}}
+            <div class="identity-points">
+              <div class="info-block shop-till">
+                <span class="info-name">{{localize "CYBERPUNK.Funds"}}</span>
+                <input type="number" class="info-value info-input shop-eurobucks-input" value="{{shopBalance}}" min="0" {{#unless isGM}}readonly{{/unless}}>
+              </div>
+            </div>
+          </div>
+
+          {{!-- Two rows of 4 category status icons. Read-only: tells players
+               at a glance which wares the shop deals in. Toggled via the
+               Shop Settings dialog, not by clicking the icons here. --}}
+          <div class="shop-categories">
+            {{#each categoryIconRows as |row|}}
+              <div class="shop-categories-row">
+                {{#each row as |cat|}}
+                  <img class="shop-category-icon"
+                       src="systems/cyberpunk/img/ui/shop-{{cat.key}}-{{#if cat.on}}on{{else}}off{{/if}}.svg"
+                       alt="{{cat.label}}"
+                       title="{{cat.label}}">
+                {{/each}}
+              </div>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      {{!-- Full-width sections beneath the portrait row: tabs + gear list.
+           Tab bar + divider are hidden when only one tab is enabled (or both
+           are off); the gear pane drops straight into the active tab. --}}
+      <div class="sheet-sections">
+        {{#unless hideTabs}}
+        <div class="tabs-line">
+          <a class="tab-header {{#if buyActive}}active{{/if}}" data-tab="buy">
+            <span class="tab-text">{{localize "CYBERPUNK.Buy"}}</span>
+          </a>
+          <a class="tab-header {{#if sellActive}}active{{/if}}" data-tab="sell">
+            <span class="tab-text">{{localize "CYBERPUNK.Sell"}}</span>
+          </a>
+        </div>
+        <div class="divider"></div>
+        {{/unless}}
+
+        <div class="gear-container">
+          {{#if shopClosed}}
+            <div class="gear-empty-state">
+              <span class="gear-empty-text">{{localize "CYBERPUNK.ShopClosed"}}</span>
+            </div>
+          {{else if sellActive}}
+            {{#unless hasCharacter}}
+              <div class="gear-empty-state">
+                <span class="gear-empty-text">{{localize "CYBERPUNK.NoCharacterAssigned"}}</span>
+              </div>
+            {{/unless}}
+          {{/if}}
+
+          {{#each categories as |cat|}}
+            <div class="gear-block">
+              <header class="tab-header">
+                <span class="tab-title">{{cat.title}}</span>
+                <img class="tab-badge" src="systems/cyberpunk/img/ui/{{cat.badge}}.svg" alt="">
+              </header>
+              <div class="tab-content gear-content">
+                {{#each cat.rows as |row|}}
+                  <div class="gear-row" data-item-id="{{row.id}}" data-flavor="{{row.flavor}}">
+                    <div class="gear-icon">
+                      <img src="{{row.img}}" alt="{{row.name}}">
+                    </div>
+                    <div class="gear-info">
+                      <span class="gear-name">{{row.name}}</span>
+                      <span class="gear-context">{{row.context}}</span>
+                    </div>
+                    <div class="gear-price">
+                      <span class="price-value">{{row.price}}</span>
+                      <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
+                    </div>
+                    <div class="gear-weight">
+                      <span class="price-value">{{row.weight}}</span>
+                      <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
+                    </div>
+
+                    {{!-- Field 1 (Damage / SP / Humanity / Slots / Pack ...) --}}
+                    {{#if row.field1}}
+                      <div class="gear-field" style="width: 60px;">
+                        {{#if row.field1.editable}}
+                          <input type="number" class="zone-input gear-quantity-input"
+                                 data-item-id="{{row.id}}"
+                                 data-edit-as="{{row.field1.editAs}}"
+                                 {{#if row.field1.packSize}}data-pack-size="{{row.field1.packSize}}"{{/if}}
+                                 value="{{row.field1.value}}" min="0">
+                        {{else}}
+                          <span class="field-top">{{row.field1.value}}</span>
+                        {{/if}}
+                        <span class="field-bottom">{{row.field1.label}}</span>
+                      </div>
+                    {{else}}
+                      <div class="gear-field" style="width: 60px;"></div>
+                    {{/if}}
+
+                    {{!-- Field 2 (Magazine / Charges / EV / Spaces / Options) --}}
+                    {{#if row.field2}}
+                      <div class="gear-field" style="width: 60px;">
+                        {{#if row.field2.editable}}
+                          <input type="number" class="zone-input gear-quantity-input"
+                                 data-item-id="{{row.id}}"
+                                 data-edit-as="{{row.field2.editAs}}"
+                                 {{#if row.field2.packSize}}data-pack-size="{{row.field2.packSize}}"{{/if}}
+                                 value="{{row.field2.value}}" min="0">
+                        {{else}}
+                          <span class="field-top">{{row.field2.value}}</span>
+                        {{/if}}
+                        <span class="field-bottom">{{row.field2.label}}</span>
+                      </div>
+                    {{else}}
+                      <div class="gear-field" style="width: 60px;"></div>
+                    {{/if}}
+
+                    {{!-- Action button (Buy / Sell) --}}
+                    {{#if (eq cat.mode "buy")}}
+                      <div class="gear-action-btn buy-btn{{#unless row.canAfford}} disabled{{/unless}}"
+                           data-item-id="{{row.id}}"
+                           title="{{#if row.canAfford}}{{localize "CYBERPUNK.Buy"}}{{else}}{{localize "CYBERPUNK.NotEnoughEurobucks"}}{{/if}}">
+                        <img src="systems/cyberpunk/img/ui/badge-buy{{#unless row.canAfford}}-disabled{{/unless}}.svg" alt="Buy">
+                      </div>
+                    {{else}}
+                      <div class="gear-action-btn sell-btn{{#unless row.shopCanPay}} disabled{{/unless}}"
+                           data-item-id="{{row.id}}"
+                           title="{{#if row.shopCanPay}}{{localize "CYBERPUNK.Sell"}}{{else}}{{localize "CYBERPUNK.ShopCantAfford"}}{{/if}}">
+                        <img src="systems/cyberpunk/img/ui/badge-sell{{#unless row.shopCanPay}}-disabled{{/unless}}.svg" alt="Sell">
+                      </div>
+                    {{/if}}
+
+                    {{!-- View + Delete actions (mirror character gear tab) --}}
+                    <div class="gear-actions">
+                      <button class="gear-view" type="button" data-item-id="{{row.id}}" title="View">
+                        <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
+                      </button>
+                      <button class="gear-delete" type="button" data-item-id="{{row.id}}" title="Delete">
+                        <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+                      </button>
+                    </div>
+                  </div>
+                {{/each}}
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      </div>
+
+      {{!-- Resize handle (Foundry's default chrome is hidden — we own dragging
+           + resizing + dblclick-minimise via the sheet class). --}}
+      <div class="sheet-resize">
+        <img src="systems/cyberpunk/img/ui/resize.svg" alt="">
+      </div>
+    </div>
+  </div>
+</form>

@@ -17,7 +17,8 @@
 .app.window-app.create-item-dialog,
 .app.window-app.game-time-dialog,
 .app.window-app.move-items-dialog,
-.app.window-app.shop-settings-dialog {
+.app.window-app.shop-settings-dialog,
+.app.window-app.toolbox-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -51,7 +52,8 @@
 .create-item-wrapper,
 .game-time-wrapper,
 .move-items-wrapper,
-.shop-settings-wrapper {
+.shop-settings-wrapper,
+.toolbox-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;

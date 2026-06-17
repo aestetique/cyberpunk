@@ -42,13 +42,10 @@ export const GROUP = {
     mental: { id: "mental", name: "Mental", type: "system" },
     conditions: { id: "conditions", name: "Conditions", type: "system" },
 
-    // Utility parent
+    // Utility parent — stress / fright / fatigue / sleep moved to the GM
+    // Toolbox dialog; only initiative and saves remain in the HUD.
     initiative: { id: "initiative", name: "Initiative", type: "system" },
-    saves: { id: "saves", name: "Saves", type: "system" },
-    stress: { id: "stress", name: "Stress", type: "system" },
-    fright: { id: "fright", name: "Fright", type: "system" },
-    fatigue: { id: "fatigue", name: "Fatigue", type: "system" },
-    sleep: { id: "sleep", name: "Sleep", type: "system" }
+    saves: { id: "saves", name: "Saves", type: "system" }
 };
 
 /**

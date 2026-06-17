@@ -4816,7 +4816,8 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.create-item-dialog,
 .app.window-app.game-time-dialog,
 .app.window-app.move-items-dialog,
-.app.window-app.shop-settings-dialog {
+.app.window-app.shop-settings-dialog,
+.app.window-app.toolbox-dialog {
   background: var(--chat-back, #1A1A1A);
   border: 2px solid var(--chat-stroke, #252730);
   border-radius: 4px;
@@ -4836,7 +4837,8 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.create-item-dialog .window-header,
 .app.window-app.game-time-dialog .window-header,
 .app.window-app.move-items-dialog .window-header,
-.app.window-app.shop-settings-dialog .window-header {
+.app.window-app.shop-settings-dialog .window-header,
+.app.window-app.toolbox-dialog .window-header {
   display: none;
 }
 .app.window-app.reload-dialog .window-content,
@@ -4853,7 +4855,8 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.create-item-dialog .window-content,
 .app.window-app.game-time-dialog .window-content,
 .app.window-app.move-items-dialog .window-content,
-.app.window-app.shop-settings-dialog .window-content {
+.app.window-app.shop-settings-dialog .window-content,
+.app.window-app.toolbox-dialog .window-content {
   background: transparent;
   padding: 0;
   margin: 0;
@@ -4873,7 +4876,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper,
 .game-time-wrapper,
 .move-items-wrapper,
-.shop-settings-wrapper {
+.shop-settings-wrapper,
+.toolbox-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -4892,7 +4896,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-header,
 .game-time-wrapper .reload-header,
 .move-items-wrapper .reload-header,
-.shop-settings-wrapper .reload-header {
+.shop-settings-wrapper .reload-header,
+.toolbox-wrapper .reload-header {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4913,7 +4918,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-header .reload-title,
 .game-time-wrapper .reload-header .reload-title,
 .move-items-wrapper .reload-header .reload-title,
-.shop-settings-wrapper .reload-header .reload-title {
+.shop-settings-wrapper .reload-header .reload-title,
+.toolbox-wrapper .reload-header .reload-title {
   font-family: var(--font-refinery);
   font-size: 16px;
   font-weight: 500;
@@ -4934,7 +4940,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-header .header-control.close,
 .game-time-wrapper .reload-header .header-control.close,
 .move-items-wrapper .reload-header .header-control.close,
-.shop-settings-wrapper .reload-header .header-control.close {
+.shop-settings-wrapper .reload-header .header-control.close,
+.toolbox-wrapper .reload-header .header-control.close {
   position: absolute;
   right: 0;
   top: 50%;
@@ -4963,7 +4970,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-header .header-control.close:hover,
 .game-time-wrapper .reload-header .header-control.close:hover,
 .move-items-wrapper .reload-header .header-control.close:hover,
-.shop-settings-wrapper .reload-header .header-control.close:hover {
+.shop-settings-wrapper .reload-header .header-control.close:hover,
+.toolbox-wrapper .reload-header .header-control.close:hover {
   opacity: 1;
 }
 .reload-dialog-wrapper .reload-ammo-btn,
@@ -4979,7 +4987,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-ammo-btn,
 .game-time-wrapper .reload-ammo-btn,
 .move-items-wrapper .reload-ammo-btn,
-.shop-settings-wrapper .reload-ammo-btn {
+.shop-settings-wrapper .reload-ammo-btn,
+.toolbox-wrapper .reload-ammo-btn {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5004,7 +5013,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-ammo-btn:hover,
 .game-time-wrapper .reload-ammo-btn:hover,
 .move-items-wrapper .reload-ammo-btn:hover,
-.shop-settings-wrapper .reload-ammo-btn:hover {
+.shop-settings-wrapper .reload-ammo-btn:hover,
+.toolbox-wrapper .reload-ammo-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .reload-ammo-btn.selected,
@@ -5020,7 +5030,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-ammo-btn.selected,
 .game-time-wrapper .reload-ammo-btn.selected,
 .move-items-wrapper .reload-ammo-btn.selected,
-.shop-settings-wrapper .reload-ammo-btn.selected {
+.shop-settings-wrapper .reload-ammo-btn.selected,
+.toolbox-wrapper .reload-ammo-btn.selected {
   background: var(--chat-green, #24563D);
 }
 .reload-dialog-wrapper .reload-ammo-btn.selected:hover,
@@ -5036,7 +5047,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-ammo-btn.selected:hover,
 .game-time-wrapper .reload-ammo-btn.selected:hover,
 .move-items-wrapper .reload-ammo-btn.selected:hover,
-.shop-settings-wrapper .reload-ammo-btn.selected:hover {
+.shop-settings-wrapper .reload-ammo-btn.selected:hover,
+.toolbox-wrapper .reload-ammo-btn.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
 }
 .reload-dialog-wrapper .reload-ammo-btn .ammo-name,
@@ -5066,7 +5078,9 @@ input.skill-value.skill-level-input:focus {
 .move-items-wrapper .reload-ammo-btn .ammo-name,
 .move-items-wrapper .reload-ammo-btn .ammo-qty,
 .shop-settings-wrapper .reload-ammo-btn .ammo-name,
-.shop-settings-wrapper .reload-ammo-btn .ammo-qty {
+.shop-settings-wrapper .reload-ammo-btn .ammo-qty,
+.toolbox-wrapper .reload-ammo-btn .ammo-name,
+.toolbox-wrapper .reload-ammo-btn .ammo-qty {
   font-family: var(--font-blender);
   font-size: 16px;
   font-weight: 500;
@@ -5087,7 +5101,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-apply-btn,
 .game-time-wrapper .reload-apply-btn,
 .move-items-wrapper .reload-apply-btn,
-.shop-settings-wrapper .reload-apply-btn {
+.shop-settings-wrapper .reload-apply-btn,
+.toolbox-wrapper .reload-apply-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -5118,7 +5133,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-apply-btn:hover,
 .game-time-wrapper .reload-apply-btn:hover,
 .move-items-wrapper .reload-apply-btn:hover,
-.shop-settings-wrapper .reload-apply-btn:hover {
+.shop-settings-wrapper .reload-apply-btn:hover,
+.toolbox-wrapper .reload-apply-btn:hover {
   background: rgb(154.3392857143, 39.1607142857, 70.2589285714);
 }
 .reload-dialog-wrapper .reload-empty,
@@ -5134,7 +5150,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .reload-empty,
 .game-time-wrapper .reload-empty,
 .move-items-wrapper .reload-empty,
-.shop-settings-wrapper .reload-empty {
+.shop-settings-wrapper .reload-empty,
+.toolbox-wrapper .reload-empty {
   display: flex;
   height: 36px;
   padding: 0 6px;
@@ -5163,7 +5180,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .fire-mode-btn,
 .game-time-wrapper .fire-mode-btn,
 .move-items-wrapper .fire-mode-btn,
-.shop-settings-wrapper .fire-mode-btn {
+.shop-settings-wrapper .fire-mode-btn,
+.toolbox-wrapper .fire-mode-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -5194,7 +5212,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .fire-mode-btn:hover,
 .game-time-wrapper .fire-mode-btn:hover,
 .move-items-wrapper .fire-mode-btn:hover,
-.shop-settings-wrapper .fire-mode-btn:hover {
+.shop-settings-wrapper .fire-mode-btn:hover,
+.toolbox-wrapper .fire-mode-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .reload-ammo-btn,
@@ -5252,7 +5271,11 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .reload-ammo-btn,
 .shop-settings-wrapper .reload-apply-btn,
 .shop-settings-wrapper .fire-mode-btn,
-.shop-settings-wrapper .range-dropdown-btn {
+.shop-settings-wrapper .range-dropdown-btn,
+.toolbox-wrapper .reload-ammo-btn,
+.toolbox-wrapper .reload-apply-btn,
+.toolbox-wrapper .fire-mode-btn,
+.toolbox-wrapper .range-dropdown-btn {
   box-shadow: none;
 }
 .reload-dialog-wrapper .fire-mode-section,
@@ -5268,7 +5291,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .fire-mode-section,
 .game-time-wrapper .fire-mode-section,
 .move-items-wrapper .fire-mode-section,
-.shop-settings-wrapper .fire-mode-section {
+.shop-settings-wrapper .fire-mode-section,
+.toolbox-wrapper .fire-mode-section {
   display: flex;
   height: 26px;
   padding: 1px 0;
@@ -5291,7 +5315,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .fire-mode-section img,
 .game-time-wrapper .fire-mode-section img,
 .move-items-wrapper .fire-mode-section img,
-.shop-settings-wrapper .fire-mode-section img {
+.shop-settings-wrapper .fire-mode-section img,
+.toolbox-wrapper .fire-mode-section img {
   width: 16px;
   height: 16px;
   filter: brightness(0) invert(1);
@@ -5310,7 +5335,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .fire-mode-section .fire-mode-label,
 .game-time-wrapper .fire-mode-section .fire-mode-label,
 .move-items-wrapper .fire-mode-section .fire-mode-label,
-.shop-settings-wrapper .fire-mode-section .fire-mode-label {
+.shop-settings-wrapper .fire-mode-section .fire-mode-label,
+.toolbox-wrapper .fire-mode-section .fire-mode-label {
   font-family: var(--font-blender);
   font-size: 16px;
   font-weight: 500;
@@ -5331,7 +5357,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown,
 .game-time-wrapper .range-dropdown,
 .move-items-wrapper .range-dropdown,
-.shop-settings-wrapper .range-dropdown {
+.shop-settings-wrapper .range-dropdown,
+.toolbox-wrapper .range-dropdown {
   position: relative;
   width: 100%;
 }
@@ -5348,7 +5375,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-btn,
 .game-time-wrapper .range-dropdown-btn,
 .move-items-wrapper .range-dropdown-btn,
-.shop-settings-wrapper .range-dropdown-btn {
+.shop-settings-wrapper .range-dropdown-btn,
+.toolbox-wrapper .range-dropdown-btn {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5374,7 +5402,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-btn:hover,
 .game-time-wrapper .range-dropdown-btn:hover,
 .move-items-wrapper .range-dropdown-btn:hover,
-.shop-settings-wrapper .range-dropdown-btn:hover {
+.shop-settings-wrapper .range-dropdown-btn:hover,
+.toolbox-wrapper .range-dropdown-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .range-dropdown-btn.open,
@@ -5390,7 +5419,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-btn.open,
 .game-time-wrapper .range-dropdown-btn.open,
 .move-items-wrapper .range-dropdown-btn.open,
-.shop-settings-wrapper .range-dropdown-btn.open {
+.shop-settings-wrapper .range-dropdown-btn.open,
+.toolbox-wrapper .range-dropdown-btn.open {
   border-radius: 2px 2px 0 0;
 }
 .reload-dialog-wrapper .range-dropdown-btn .range-label,
@@ -5406,7 +5436,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-btn .range-label,
 .game-time-wrapper .range-dropdown-btn .range-label,
 .move-items-wrapper .range-dropdown-btn .range-label,
-.shop-settings-wrapper .range-dropdown-btn .range-label {
+.shop-settings-wrapper .range-dropdown-btn .range-label,
+.toolbox-wrapper .range-dropdown-btn .range-label {
   font-family: var(--font-blender);
   font-size: 16px;
   font-weight: 500;
@@ -5427,7 +5458,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-btn i,
 .game-time-wrapper .range-dropdown-btn i,
 .move-items-wrapper .range-dropdown-btn i,
-.shop-settings-wrapper .range-dropdown-btn i {
+.shop-settings-wrapper .range-dropdown-btn i,
+.toolbox-wrapper .range-dropdown-btn i {
   font-size: 12px;
   color: var(--chat-text, #FFF);
   transition: transform 0.2s;
@@ -5445,7 +5477,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-btn.open i,
 .game-time-wrapper .range-dropdown-btn.open i,
 .move-items-wrapper .range-dropdown-btn.open i,
-.shop-settings-wrapper .range-dropdown-btn.open i {
+.shop-settings-wrapper .range-dropdown-btn.open i,
+.toolbox-wrapper .range-dropdown-btn.open i {
   transform: rotate(180deg);
 }
 .reload-dialog-wrapper .range-dropdown-list,
@@ -5461,7 +5494,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-list,
 .game-time-wrapper .range-dropdown-list,
 .move-items-wrapper .range-dropdown-list,
-.shop-settings-wrapper .range-dropdown-list {
+.shop-settings-wrapper .range-dropdown-list,
+.toolbox-wrapper .range-dropdown-list {
   display: none;
   position: absolute;
   top: 100%;
@@ -5488,7 +5522,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-dropdown-list.open,
 .game-time-wrapper .range-dropdown-list.open,
 .move-items-wrapper .range-dropdown-list.open,
-.shop-settings-wrapper .range-dropdown-list.open {
+.shop-settings-wrapper .range-dropdown-list.open,
+.toolbox-wrapper .range-dropdown-list.open {
   display: block;
 }
 .reload-dialog-wrapper .range-option,
@@ -5504,7 +5539,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-option,
 .game-time-wrapper .range-option,
 .move-items-wrapper .range-option,
-.shop-settings-wrapper .range-option {
+.shop-settings-wrapper .range-option,
+.toolbox-wrapper .range-option {
   display: flex;
   align-items: center;
   height: 32px;
@@ -5530,7 +5566,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-option:hover,
 .game-time-wrapper .range-option:hover,
 .move-items-wrapper .range-option:hover,
-.shop-settings-wrapper .range-option:hover {
+.shop-settings-wrapper .range-option:hover,
+.toolbox-wrapper .range-option:hover {
   background: var(--chat-gray, #444856);
 }
 .reload-dialog-wrapper .range-option.selected,
@@ -5546,7 +5583,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-option.selected,
 .game-time-wrapper .range-option.selected,
 .move-items-wrapper .range-option.selected,
-.shop-settings-wrapper .range-option.selected {
+.shop-settings-wrapper .range-option.selected,
+.toolbox-wrapper .range-option.selected {
   background: var(--chat-green, #24563D);
 }
 .reload-dialog-wrapper .range-option.selected:hover,
@@ -5562,7 +5600,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .range-option.selected:hover,
 .game-time-wrapper .range-option.selected:hover,
 .move-items-wrapper .range-option.selected:hover,
-.shop-settings-wrapper .range-option.selected:hover {
+.shop-settings-wrapper .range-option.selected:hover,
+.toolbox-wrapper .range-option.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
 }
 .reload-dialog-wrapper .conditions-grid,
@@ -5578,7 +5617,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .conditions-grid,
 .game-time-wrapper .conditions-grid,
 .move-items-wrapper .conditions-grid,
-.shop-settings-wrapper .conditions-grid {
+.shop-settings-wrapper .conditions-grid,
+.toolbox-wrapper .conditions-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
@@ -5596,7 +5636,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .conditions-grid.disabled,
 .game-time-wrapper .conditions-grid.disabled,
 .move-items-wrapper .conditions-grid.disabled,
-.shop-settings-wrapper .conditions-grid.disabled {
+.shop-settings-wrapper .conditions-grid.disabled,
+.toolbox-wrapper .conditions-grid.disabled {
   pointer-events: none;
 }
 .reload-dialog-wrapper .conditions-grid.disabled .condition-btn,
@@ -5612,7 +5653,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .conditions-grid.disabled .condition-btn,
 .game-time-wrapper .conditions-grid.disabled .condition-btn,
 .move-items-wrapper .conditions-grid.disabled .condition-btn,
-.shop-settings-wrapper .conditions-grid.disabled .condition-btn {
+.shop-settings-wrapper .conditions-grid.disabled .condition-btn,
+.toolbox-wrapper .conditions-grid.disabled .condition-btn {
   background: #26282F;
   color: #444856;
   cursor: default;
@@ -5630,7 +5672,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .condition-btn,
 .game-time-wrapper .condition-btn,
 .move-items-wrapper .condition-btn,
-.shop-settings-wrapper .condition-btn {
+.shop-settings-wrapper .condition-btn,
+.toolbox-wrapper .condition-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -5662,7 +5705,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .condition-btn:hover,
 .game-time-wrapper .condition-btn:hover,
 .move-items-wrapper .condition-btn:hover,
-.shop-settings-wrapper .condition-btn:hover {
+.shop-settings-wrapper .condition-btn:hover,
+.toolbox-wrapper .condition-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .condition-btn.selected,
@@ -5678,7 +5722,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .condition-btn.selected,
 .game-time-wrapper .condition-btn.selected,
 .move-items-wrapper .condition-btn.selected,
-.shop-settings-wrapper .condition-btn.selected {
+.shop-settings-wrapper .condition-btn.selected,
+.toolbox-wrapper .condition-btn.selected {
   background: var(--chat-green, #24563D);
 }
 .reload-dialog-wrapper .condition-btn.selected:hover,
@@ -5694,7 +5739,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .condition-btn.selected:hover,
 .game-time-wrapper .condition-btn.selected:hover,
 .move-items-wrapper .condition-btn.selected:hover,
-.shop-settings-wrapper .condition-btn.selected:hover {
+.shop-settings-wrapper .condition-btn.selected:hover,
+.toolbox-wrapper .condition-btn.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
 }
 .reload-dialog-wrapper .luck-controls,
@@ -5710,7 +5756,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-controls,
 .game-time-wrapper .luck-controls,
 .move-items-wrapper .luck-controls,
-.shop-settings-wrapper .luck-controls {
+.shop-settings-wrapper .luck-controls,
+.toolbox-wrapper .luck-controls {
   display: flex;
   gap: 6px;
 }
@@ -5727,7 +5774,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-controls.disabled,
 .game-time-wrapper .luck-controls.disabled,
 .move-items-wrapper .luck-controls.disabled,
-.shop-settings-wrapper .luck-controls.disabled {
+.shop-settings-wrapper .luck-controls.disabled,
+.toolbox-wrapper .luck-controls.disabled {
   pointer-events: none;
 }
 .reload-dialog-wrapper .luck-controls.disabled .luck-btn,
@@ -5743,7 +5791,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-controls.disabled .luck-btn,
 .game-time-wrapper .luck-controls.disabled .luck-btn,
 .move-items-wrapper .luck-controls.disabled .luck-btn,
-.shop-settings-wrapper .luck-controls.disabled .luck-btn {
+.shop-settings-wrapper .luck-controls.disabled .luck-btn,
+.toolbox-wrapper .luck-controls.disabled .luck-btn {
   background: #26282F;
   cursor: default;
 }
@@ -5760,7 +5809,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-controls.disabled .luck-display .luck-value,
 .game-time-wrapper .luck-controls.disabled .luck-display .luck-value,
 .move-items-wrapper .luck-controls.disabled .luck-display .luck-value,
-.shop-settings-wrapper .luck-controls.disabled .luck-display .luck-value {
+.shop-settings-wrapper .luck-controls.disabled .luck-display .luck-value,
+.toolbox-wrapper .luck-controls.disabled .luck-display .luck-value {
   color: #444856;
 }
 .reload-dialog-wrapper .luck-btn,
@@ -5776,7 +5826,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-btn,
 .game-time-wrapper .luck-btn,
 .move-items-wrapper .luck-btn,
-.shop-settings-wrapper .luck-btn {
+.shop-settings-wrapper .luck-btn,
+.toolbox-wrapper .luck-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -5802,7 +5853,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-btn img,
 .game-time-wrapper .luck-btn img,
 .move-items-wrapper .luck-btn img,
-.shop-settings-wrapper .luck-btn img {
+.shop-settings-wrapper .luck-btn img,
+.toolbox-wrapper .luck-btn img {
   width: 24px;
   height: 24px;
   border: none;
@@ -5820,7 +5872,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-btn:hover:not(.disabled),
 .game-time-wrapper .luck-btn:hover:not(.disabled),
 .move-items-wrapper .luck-btn:hover:not(.disabled),
-.shop-settings-wrapper .luck-btn:hover:not(.disabled) {
+.shop-settings-wrapper .luck-btn:hover:not(.disabled),
+.toolbox-wrapper .luck-btn:hover:not(.disabled) {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .luck-btn.disabled,
@@ -5836,7 +5889,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-btn.disabled,
 .game-time-wrapper .luck-btn.disabled,
 .move-items-wrapper .luck-btn.disabled,
-.shop-settings-wrapper .luck-btn.disabled {
+.shop-settings-wrapper .luck-btn.disabled,
+.toolbox-wrapper .luck-btn.disabled {
   background: #26282F;
   cursor: not-allowed;
 }
@@ -5853,7 +5907,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-display,
 .game-time-wrapper .luck-display,
 .move-items-wrapper .luck-display,
-.shop-settings-wrapper .luck-display {
+.shop-settings-wrapper .luck-display,
+.toolbox-wrapper .luck-display {
   flex: 1;
   display: flex;
   justify-content: center;
@@ -5875,7 +5930,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-display .luck-value,
 .game-time-wrapper .luck-display .luck-value,
 .move-items-wrapper .luck-display .luck-value,
-.shop-settings-wrapper .luck-display .luck-value {
+.shop-settings-wrapper .luck-display .luck-value,
+.toolbox-wrapper .luck-display .luck-value {
   font-family: var(--font-blender);
   font-size: 32px;
   font-weight: 700;
@@ -5896,7 +5952,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-display input.luck-value,
 .game-time-wrapper .luck-display input.luck-value,
 .move-items-wrapper .luck-display input.luck-value,
-.shop-settings-wrapper .luck-display input.luck-value {
+.shop-settings-wrapper .luck-display input.luck-value,
+.toolbox-wrapper .luck-display input.luck-value {
   width: 100%;
   background: transparent;
   border: none;
@@ -5931,7 +5988,9 @@ input.skill-value.skill-level-input:focus {
 .move-items-wrapper .luck-display input.luck-value::-webkit-inner-spin-button,
 .move-items-wrapper .luck-display input.luck-value::-webkit-outer-spin-button,
 .shop-settings-wrapper .luck-display input.luck-value::-webkit-inner-spin-button,
-.shop-settings-wrapper .luck-display input.luck-value::-webkit-outer-spin-button {
+.shop-settings-wrapper .luck-display input.luck-value::-webkit-outer-spin-button,
+.toolbox-wrapper .luck-display input.luck-value::-webkit-inner-spin-button,
+.toolbox-wrapper .luck-display input.luck-value::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
@@ -5948,7 +6007,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-display input.luck-value:focus,
 .game-time-wrapper .luck-display input.luck-value:focus,
 .move-items-wrapper .luck-display input.luck-value:focus,
-.shop-settings-wrapper .luck-display input.luck-value:focus {
+.shop-settings-wrapper .luck-display input.luck-value:focus,
+.toolbox-wrapper .luck-display input.luck-value:focus {
   outline: none;
   box-shadow: none;
 }
@@ -5965,7 +6025,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .luck-display .dice-value,
 .game-time-wrapper .luck-display .dice-value,
 .move-items-wrapper .luck-display .dice-value,
-.shop-settings-wrapper .luck-display .dice-value {
+.shop-settings-wrapper .luck-display .dice-value,
+.toolbox-wrapper .luck-display .dice-value {
   font-family: var(--font-blender);
   font-size: 16px;
   font-weight: 500;
@@ -5987,7 +6048,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-controls,
 .game-time-wrapper .number-input-controls,
 .move-items-wrapper .number-input-controls,
-.shop-settings-wrapper .number-input-controls {
+.shop-settings-wrapper .number-input-controls,
+.toolbox-wrapper .number-input-controls {
   display: flex;
   gap: 6px;
 }
@@ -6004,7 +6066,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-controls.disabled,
 .game-time-wrapper .number-input-controls.disabled,
 .move-items-wrapper .number-input-controls.disabled,
-.shop-settings-wrapper .number-input-controls.disabled {
+.shop-settings-wrapper .number-input-controls.disabled,
+.toolbox-wrapper .number-input-controls.disabled {
   pointer-events: none;
 }
 .reload-dialog-wrapper .number-input-controls.disabled .number-input-btn,
@@ -6020,7 +6083,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-controls.disabled .number-input-btn,
 .game-time-wrapper .number-input-controls.disabled .number-input-btn,
 .move-items-wrapper .number-input-controls.disabled .number-input-btn,
-.shop-settings-wrapper .number-input-controls.disabled .number-input-btn {
+.shop-settings-wrapper .number-input-controls.disabled .number-input-btn,
+.toolbox-wrapper .number-input-controls.disabled .number-input-btn {
   background: #26282F;
   cursor: default;
 }
@@ -6037,7 +6101,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
 .game-time-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
 .move-items-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
-.shop-settings-wrapper .number-input-controls.disabled .number-input-display .number-input-value {
+.shop-settings-wrapper .number-input-controls.disabled .number-input-display .number-input-value,
+.toolbox-wrapper .number-input-controls.disabled .number-input-display .number-input-value {
   color: #444856;
 }
 .reload-dialog-wrapper .number-input-btn,
@@ -6053,7 +6118,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-btn,
 .game-time-wrapper .number-input-btn,
 .move-items-wrapper .number-input-btn,
-.shop-settings-wrapper .number-input-btn {
+.shop-settings-wrapper .number-input-btn,
+.toolbox-wrapper .number-input-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -6079,7 +6145,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-btn img,
 .game-time-wrapper .number-input-btn img,
 .move-items-wrapper .number-input-btn img,
-.shop-settings-wrapper .number-input-btn img {
+.shop-settings-wrapper .number-input-btn img,
+.toolbox-wrapper .number-input-btn img {
   width: 24px;
   height: 24px;
   border: none;
@@ -6097,7 +6164,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-btn:hover:not(.disabled),
 .game-time-wrapper .number-input-btn:hover:not(.disabled),
 .move-items-wrapper .number-input-btn:hover:not(.disabled),
-.shop-settings-wrapper .number-input-btn:hover:not(.disabled) {
+.shop-settings-wrapper .number-input-btn:hover:not(.disabled),
+.toolbox-wrapper .number-input-btn:hover:not(.disabled) {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .number-input-btn.disabled,
@@ -6113,7 +6181,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-btn.disabled,
 .game-time-wrapper .number-input-btn.disabled,
 .move-items-wrapper .number-input-btn.disabled,
-.shop-settings-wrapper .number-input-btn.disabled {
+.shop-settings-wrapper .number-input-btn.disabled,
+.toolbox-wrapper .number-input-btn.disabled {
   background: #26282F;
   cursor: not-allowed;
 }
@@ -6130,7 +6199,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-display,
 .game-time-wrapper .number-input-display,
 .move-items-wrapper .number-input-display,
-.shop-settings-wrapper .number-input-display {
+.shop-settings-wrapper .number-input-display,
+.toolbox-wrapper .number-input-display {
   flex: 1;
   display: flex;
   justify-content: center;
@@ -6152,7 +6222,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-display .number-input-value,
 .game-time-wrapper .number-input-display .number-input-value,
 .move-items-wrapper .number-input-display .number-input-value,
-.shop-settings-wrapper .number-input-display .number-input-value {
+.shop-settings-wrapper .number-input-display .number-input-value,
+.toolbox-wrapper .number-input-display .number-input-value {
   width: 100%;
   height: 100%;
   background: transparent;
@@ -6195,7 +6266,9 @@ input.skill-value.skill-level-input:focus {
 .move-items-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
 .move-items-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
 .shop-settings-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
-.shop-settings-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button {
+.shop-settings-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button,
+.toolbox-wrapper .number-input-display .number-input-value::-webkit-outer-spin-button,
+.toolbox-wrapper .number-input-display .number-input-value::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
@@ -6212,7 +6285,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-display .number-input-value:focus,
 .game-time-wrapper .number-input-display .number-input-value:focus,
 .move-items-wrapper .number-input-display .number-input-value:focus,
-.shop-settings-wrapper .number-input-display .number-input-value:focus {
+.shop-settings-wrapper .number-input-display .number-input-value:focus,
+.toolbox-wrapper .number-input-display .number-input-value:focus {
   background: rgba(255, 255, 255, 0.04);
 }
 .reload-dialog-wrapper .number-input-display .number-input-value:invalid,
@@ -6228,7 +6302,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .number-input-display .number-input-value:invalid,
 .game-time-wrapper .number-input-display .number-input-value:invalid,
 .move-items-wrapper .number-input-display .number-input-value:invalid,
-.shop-settings-wrapper .number-input-display .number-input-value:invalid {
+.shop-settings-wrapper .number-input-display .number-input-value:invalid,
+.toolbox-wrapper .number-input-display .number-input-value:invalid {
   box-shadow: none;
 }
 .reload-dialog-wrapper .location-grid,
@@ -6244,7 +6319,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-grid,
 .game-time-wrapper .location-grid,
 .move-items-wrapper .location-grid,
-.shop-settings-wrapper .location-grid {
+.shop-settings-wrapper .location-grid,
+.toolbox-wrapper .location-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
@@ -6262,7 +6338,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-grid.disabled,
 .game-time-wrapper .location-grid.disabled,
 .move-items-wrapper .location-grid.disabled,
-.shop-settings-wrapper .location-grid.disabled {
+.shop-settings-wrapper .location-grid.disabled,
+.toolbox-wrapper .location-grid.disabled {
   pointer-events: none;
 }
 .reload-dialog-wrapper .location-grid.disabled .location-btn,
@@ -6278,7 +6355,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-grid.disabled .location-btn,
 .game-time-wrapper .location-grid.disabled .location-btn,
 .move-items-wrapper .location-grid.disabled .location-btn,
-.shop-settings-wrapper .location-grid.disabled .location-btn {
+.shop-settings-wrapper .location-grid.disabled .location-btn,
+.toolbox-wrapper .location-grid.disabled .location-btn {
   background: #26282F;
   cursor: default;
 }
@@ -6295,7 +6373,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-grid.disabled .location-btn img,
 .game-time-wrapper .location-grid.disabled .location-btn img,
 .move-items-wrapper .location-grid.disabled .location-btn img,
-.shop-settings-wrapper .location-grid.disabled .location-btn img {
+.shop-settings-wrapper .location-grid.disabled .location-btn img,
+.toolbox-wrapper .location-grid.disabled .location-btn img {
   filter: none;
 }
 .reload-dialog-wrapper .location-btn,
@@ -6311,7 +6390,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn,
 .game-time-wrapper .location-btn,
 .move-items-wrapper .location-btn,
-.shop-settings-wrapper .location-btn {
+.shop-settings-wrapper .location-btn,
+.toolbox-wrapper .location-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -6336,7 +6416,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn img,
 .game-time-wrapper .location-btn img,
 .move-items-wrapper .location-btn img,
-.shop-settings-wrapper .location-btn img {
+.shop-settings-wrapper .location-btn img,
+.toolbox-wrapper .location-btn img {
   width: 24px;
   height: 24px;
   filter: brightness(0) invert(1);
@@ -6355,7 +6436,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn:hover,
 .game-time-wrapper .location-btn:hover,
 .move-items-wrapper .location-btn:hover,
-.shop-settings-wrapper .location-btn:hover {
+.shop-settings-wrapper .location-btn:hover,
+.toolbox-wrapper .location-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .location-btn.selected,
@@ -6371,7 +6453,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn.selected,
 .game-time-wrapper .location-btn.selected,
 .move-items-wrapper .location-btn.selected,
-.shop-settings-wrapper .location-btn.selected {
+.shop-settings-wrapper .location-btn.selected,
+.toolbox-wrapper .location-btn.selected {
   background: var(--chat-green, #24563D);
 }
 .reload-dialog-wrapper .location-btn.selected:hover,
@@ -6387,7 +6470,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn.selected:hover,
 .game-time-wrapper .location-btn.selected:hover,
 .move-items-wrapper .location-btn.selected:hover,
-.shop-settings-wrapper .location-btn.selected:hover {
+.shop-settings-wrapper .location-btn.selected:hover,
+.toolbox-wrapper .location-btn.selected:hover {
   background: rgb(43.5245901639, 103.9754098361, 73.75);
 }
 .reload-dialog-wrapper .location-btn.disabled,
@@ -6403,7 +6487,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn.disabled,
 .game-time-wrapper .location-btn.disabled,
 .move-items-wrapper .location-btn.disabled,
-.shop-settings-wrapper .location-btn.disabled {
+.shop-settings-wrapper .location-btn.disabled,
+.toolbox-wrapper .location-btn.disabled {
   background: #26282F;
   cursor: default;
   pointer-events: none;
@@ -6421,7 +6506,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn.disabled img,
 .game-time-wrapper .location-btn.disabled img,
 .move-items-wrapper .location-btn.disabled img,
-.shop-settings-wrapper .location-btn.disabled img {
+.shop-settings-wrapper .location-btn.disabled img,
+.toolbox-wrapper .location-btn.disabled img {
   filter: none;
 }
 .reload-dialog-wrapper .location-btn.no-zone,
@@ -6437,7 +6523,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn.no-zone,
 .game-time-wrapper .location-btn.no-zone,
 .move-items-wrapper .location-btn.no-zone,
-.shop-settings-wrapper .location-btn.no-zone {
+.shop-settings-wrapper .location-btn.no-zone,
+.toolbox-wrapper .location-btn.no-zone {
   background: #26282F;
   cursor: default;
   pointer-events: none;
@@ -6455,7 +6542,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .location-btn.no-zone:hover,
 .game-time-wrapper .location-btn.no-zone:hover,
 .move-items-wrapper .location-btn.no-zone:hover,
-.shop-settings-wrapper .location-btn.no-zone:hover {
+.shop-settings-wrapper .location-btn.no-zone:hover,
+.toolbox-wrapper .location-btn.no-zone:hover {
   background: #26282F;
 }
 .reload-dialog-wrapper .conditions-grid--single,
@@ -6471,7 +6559,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .conditions-grid--single,
 .game-time-wrapper .conditions-grid--single,
 .move-items-wrapper .conditions-grid--single,
-.shop-settings-wrapper .conditions-grid--single {
+.shop-settings-wrapper .conditions-grid--single,
+.toolbox-wrapper .conditions-grid--single {
   display: block;
 }
 .reload-dialog-wrapper .conditions-grid--single .execute-btn,
@@ -6487,7 +6576,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .conditions-grid--single .execute-btn,
 .game-time-wrapper .conditions-grid--single .execute-btn,
 .move-items-wrapper .conditions-grid--single .execute-btn,
-.shop-settings-wrapper .conditions-grid--single .execute-btn {
+.shop-settings-wrapper .conditions-grid--single .execute-btn,
+.toolbox-wrapper .conditions-grid--single .execute-btn {
   width: 100%;
 }
 .reload-dialog-wrapper .execute-btn,
@@ -6503,7 +6593,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .execute-btn,
 .game-time-wrapper .execute-btn,
 .move-items-wrapper .execute-btn,
-.shop-settings-wrapper .execute-btn {
+.shop-settings-wrapper .execute-btn,
+.toolbox-wrapper .execute-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -6535,7 +6626,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .execute-btn:hover,
 .game-time-wrapper .execute-btn:hover,
 .move-items-wrapper .execute-btn:hover,
-.shop-settings-wrapper .execute-btn:hover {
+.shop-settings-wrapper .execute-btn:hover,
+.toolbox-wrapper .execute-btn:hover {
   background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
 }
 .reload-dialog-wrapper .execute-btn.selected,
@@ -6551,7 +6643,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .execute-btn.selected,
 .game-time-wrapper .execute-btn.selected,
 .move-items-wrapper .execute-btn.selected,
-.shop-settings-wrapper .execute-btn.selected {
+.shop-settings-wrapper .execute-btn.selected,
+.toolbox-wrapper .execute-btn.selected {
   background: #1A804D;
 }
 .reload-dialog-wrapper .execute-btn.selected:hover,
@@ -6567,7 +6660,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .execute-btn.selected:hover,
 .game-time-wrapper .execute-btn.selected:hover,
 .move-items-wrapper .execute-btn.selected:hover,
-.shop-settings-wrapper .execute-btn.selected:hover {
+.shop-settings-wrapper .execute-btn.selected:hover,
+.toolbox-wrapper .execute-btn.selected:hover {
   background: rgb(30.3051948052, 149.1948051948, 89.75);
 }
 .reload-dialog-wrapper.ranged-attack-wrapper .unarmed-actions,
@@ -6583,7 +6677,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper.ranged-attack-wrapper .unarmed-actions,
 .game-time-wrapper.ranged-attack-wrapper .unarmed-actions,
 .move-items-wrapper.ranged-attack-wrapper .unarmed-actions,
-.shop-settings-wrapper.ranged-attack-wrapper .unarmed-actions {
+.shop-settings-wrapper.ranged-attack-wrapper .unarmed-actions,
+.toolbox-wrapper.ranged-attack-wrapper .unarmed-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -6601,7 +6696,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .create-item-grid,
 .game-time-wrapper .create-item-grid,
 .move-items-wrapper .create-item-grid,
-.shop-settings-wrapper .create-item-grid {
+.shop-settings-wrapper .create-item-grid,
+.toolbox-wrapper .create-item-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -6619,7 +6715,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper .create-item-row,
 .game-time-wrapper .create-item-row,
 .move-items-wrapper .create-item-row,
-.shop-settings-wrapper .create-item-row {
+.shop-settings-wrapper .create-item-row,
+.toolbox-wrapper .create-item-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -6637,7 +6734,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled,
 .game-time-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled,
 .move-items-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled,
-.shop-settings-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled {
+.shop-settings-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled,
+.toolbox-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled {
   background: #26282F;
   color: #444856;
   cursor: default;
@@ -6656,7 +6754,8 @@ input.skill-value.skill-level-input:focus {
 .create-item-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label,
 .game-time-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label,
 .move-items-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label,
-.shop-settings-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label {
+.shop-settings-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label,
+.toolbox-wrapper.defence-roll-wrapper .range-dropdown--disabled .range-dropdown-btn.disabled .range-label {
   color: #444856;
 }
 

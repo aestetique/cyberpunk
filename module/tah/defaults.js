@@ -61,11 +61,7 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                 name: "Utility",
                 groups: [
                     { ...groups.initiative, nestId: "utility_initiative" },
-                    { ...groups.saves, nestId: "utility_saves" },
-                    { ...groups.stress, nestId: "utility_stress" },
-                    { ...groups.fright, nestId: "utility_fright" },
-                    { ...groups.fatigue, nestId: "utility_fatigue" },
-                    { ...groups.sleep, nestId: "utility_sleep" }
+                    { ...groups.saves, nestId: "utility_saves" }
                 ]
             }
         ],

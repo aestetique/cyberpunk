@@ -1,0 +1,39 @@
+<div class="toolbox-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{localize "CYBERPUNK.Toolbox"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Bound-actor display. Solid frame + portrait when selected, dashed
+       hint frame when no token (or multiple) is selected. --}}
+  {{#if hasActor}}
+    <div class="target-info__selected toolbox-actor-line">
+      <div class="target-info__portrait">
+        <img src="{{actorImg}}" alt="{{actorName}}">
+      </div>
+      <span class="target-info__name">{{actorName}}</span>
+    </div>
+  {{else}}
+    <div class="target-info target-info--empty toolbox-actor-line">
+      {{emptyText}}
+    </div>
+  {{/if}}
+
+  {{!-- Stat rows: section bar (no icon) + standard luck-style stepper. --}}
+  {{#each stats}}
+    <div class="fire-mode-section">
+      <span class="fire-mode-label">{{label}}</span>
+    </div>
+    <div class="luck-controls">
+      <button type="button" class="luck-btn stat-minus-btn{{#unless canDecrease}} disabled{{/unless}}" data-stat="{{key}}">
+        <img src="systems/cyberpunk/img/chat/{{#if canDecrease}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+      </button>
+      <div class="luck-display">
+        <input type="number" class="stat-input luck-value" data-stat="{{key}}" value="{{value}}" min="0" max="{{max}}" step="{{step}}">
+      </div>
+      <button type="button" class="luck-btn stat-plus-btn{{#unless canIncrease}} disabled{{/unless}}" data-stat="{{key}}">
+        <img src="systems/cyberpunk/img/chat/{{#if canIncrease}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+      </button>
+    </div>
+  {{/each}}
+</div>

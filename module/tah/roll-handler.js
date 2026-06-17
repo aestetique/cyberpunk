@@ -12,11 +12,35 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
 
         /**
          * Handle action click from the HUD.
+         *
+         * Multi-token broadcast: when more than one token is controlled, the
+         * generic actions — Attributes / Saves / Initiative / Conditions —
+         * apply to every selected token in one click. Weapons / Skills /
+         * Unarmed / Ordnance stay single-actor (they're tied to whichever
+         * actor the HUD was built for).
+         *
+         * Attribute broadcast intentionally bypasses the SkillRollDialog —
+         * popping N dialogs would defeat the point. Rolls use the dialog's
+         * default difficulty (15) and no extra modifier; for fine-grained
+         * single-actor rolls the GM can deselect the rest.
+         *
          * @param {Event} event - The click event
          * @param {string} encodedValue - Pipe-delimited "actionType|actionId"
          */
         async handleActionClick(event, encodedValue) {
             const [actionType, actionId] = encodedValue.split("|");
+
+            const controlled = canvas?.tokens?.controlled || [];
+            const isBroadcastable = (
+                actionType === ACTION_TYPE.attribute ||
+                actionType === ACTION_TYPE.save ||
+                actionType === ACTION_TYPE.condition ||
+                (actionType === ACTION_TYPE.utility && actionId === "initiative")
+            );
+
+            if (isBroadcastable && controlled.length > 1) {
+                return this._broadcast(controlled, actionType, actionId);
+            }
 
             const actor = this.actor;
             if (!actor) return;
@@ -41,6 +65,53 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                 case ACTION_TYPE.utility:
                     return this._handleUtility(actor, actionId);
             }
+        }
+
+        /**
+         * Apply a broadcast-safe action to every controlled token. Initiative
+         * goes through a single `combat.rollInitiative([...ids])` call; the
+         * rest iterate per actor.
+         */
+        async _broadcast(tokens, actionType, actionId) {
+            if (actionType === ACTION_TYPE.utility && actionId === "initiative") {
+                return this._broadcastInitiative(tokens);
+            }
+
+            for (const token of tokens) {
+                const actor = token.actor;
+                if (!actor) continue;
+                switch (actionType) {
+                    case ACTION_TYPE.attribute:
+                        await actor.rollStatCheck(actionId, 15);
+                        break;
+                    case ACTION_TYPE.save:
+                        await this._handleSave(actor, actionId);
+                        break;
+                    case ACTION_TYPE.condition:
+                        await this._handleCondition(actor, token, actionId);
+                        break;
+                }
+            }
+        }
+
+        /**
+         * Initiative for every controlled token whose actor is in the active
+         * combat — single call, one chat batch.
+         */
+        async _broadcastInitiative(tokens) {
+            const combat = game.combat;
+            if (!combat) {
+                ui.notifications.warn(game.i18n.localize("CYBERPUNK.NoCombat"));
+                return;
+            }
+            const combatantIds = tokens
+                .map(t => combat.combatants.find(c => c.actorId === t.actor?.id)?.id)
+                .filter(Boolean);
+            if (!combatantIds.length) {
+                ui.notifications.warn(game.i18n.localize("CYBERPUNK.NotInCombat"));
+                return;
+            }
+            return combat.rollInitiative(combatantIds);
         }
 
         /**
@@ -192,76 +263,23 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
         }
 
         /**
-         * Toggle a condition on the token.
+         * Toggle a status effect on the actor. Foundry V13 removed
+         * `token.toggleActiveEffect` — `actor.toggleStatusEffect(statusId,
+         * { active })` is the supported path now, and matches the rest of
+         * the codebase (drone sheet, conditions, chat-message handlers).
          */
         async _handleCondition(actor, token, statusId) {
-            const effect = CONFIG.statusEffects.find(e =>
-                (e.statuses?.[0] || e.id) === statusId
-            );
-            if (!effect) return;
-
-            if (token) {
-                await token.toggleActiveEffect(effect);
-            }
+            if (!actor) return;
+            const isActive = actor.statuses?.has(statusId) === true;
+            await actor.toggleStatusEffect(statusId, { active: !isActive });
         }
 
         /**
-         * Handle utility actions (initiative, stress, fright, fatigue, sleep).
+         * Handle utility actions. After the stress / fright / fatigue / sleep
+         * removal this is just initiative.
          */
         async _handleUtility(actor, actionId) {
-            switch (actionId) {
-                case "initiative":
-                    return this._handleInitiative(actor);
-
-                case "stress-up": {
-                    const { StressRollDialog } = await import("../dialog/stress-roll-dialog.js");
-                    return new StressRollDialog(actor).render(true);
-                }
-                case "stress-down": {
-                    const current = actor.system.stress || 0;
-                    if (current > 0) return actor.update({ "system.stress": current - 1 });
-                    return;
-                }
-
-                case "fright-up": {
-                    const { FrightRollDialog } = await import("../dialog/fright-roll-dialog.js");
-                    return new FrightRollDialog(actor).render(true);
-                }
-                case "fright-down": {
-                    const current = actor.system.fright || 0;
-                    if (current > 0) return actor.update({ "system.fright": current - 1 });
-                    return;
-                }
-
-                case "fatigue-up":
-                    return actor.update({ "system.fatigue": (actor.system.fatigue || 0) + 1 });
-                case "fatigue-down": {
-                    const current = actor.system.fatigue || 0;
-                    if (current > 0) return actor.update({ "system.fatigue": current - 1 });
-                    return;
-                }
-
-                case "stayAwake": {
-                    const { SleepRollDialog } = await import("../dialog/sleep-roll-dialog.js");
-                    return new SleepRollDialog(actor, "stayAwake").render(true);
-                }
-                case "fallAsleep": {
-                    if (actor.statuses.has("insomnia")) {
-                        const { SleepRollDialog } = await import("../dialog/sleep-roll-dialog.js");
-                        return new SleepRollDialog(actor, "fallAsleep").render(true);
-                    } else {
-                        const current = actor.system.sleep || 0;
-                        if (current > 0) {
-                            await actor.update({ "system.sleep": current - 1 });
-                            if (actor.system.damage > 0) {
-                                const { HealDialog } = await import("../dialog/heal-dialog.js");
-                                new HealDialog(actor).render(true);
-                            }
-                        }
-                    }
-                    return;
-                }
-            }
+            if (actionId === "initiative") return this._handleInitiative(actor);
         }
 
         /**

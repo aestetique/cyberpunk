@@ -295,6 +295,29 @@ Hooks.on("getSceneControlButtons", (controls) => {
             }
         }
     };
+
+    // GM Toolbox — quick nudge of selected token's Wounds / Stress / Fright /
+    // Fatigue / Sleep / Humanity. Slot order 100 parks it directly under Game
+    // Time on the left menu. GM-only by guard inside `onChange`.
+    if (game.user?.isGM) {
+        controls.tokens.tools["toolbox"] = {
+            name: "toolbox",
+            title: "CYBERPUNK.Toolbox",
+            icon: "fa-solid fa-briefcase-medical",
+            order: 100,
+            button: true,
+            onChange: async () => {
+                if (!game.user.isGM) return;
+                const { ToolboxDialog } = await import("./dialog/toolbox-dialog.js");
+                if (!game.cyberpunk.toolboxDialog) {
+                    game.cyberpunk.toolboxDialog = new ToolboxDialog();
+                }
+                const dlg = game.cyberpunk.toolboxDialog;
+                if (dlg.rendered) dlg.close();
+                else              dlg.render(true);
+            }
+        };
+    }
 });
 
 /**

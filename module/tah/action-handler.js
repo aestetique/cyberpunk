@@ -64,25 +64,61 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
 
         /**
          * Build system-specific actions for the HUD.
-         * Called by TAH Core whenever the selected token changes.
+         *
+         * Single token: full build (skills, weapons, conditions, ...).
+         *
+         * Multiple tokens: TAH Core leaves `this.actor` null but exposes
+         * `this.actors`. Per-character lists (skills / weapons / unarmed /
+         * ordnance) don't aggregate sensibly across actors, so we omit them
+         * and only emit the broadcast-safe groups — Attributes, Conditions,
+         * Initiative, Saves — using the first actor as a template for the
+         * lists. The roll handler fans out clicks across every controlled
+         * token at execution time.
          */
         buildSystemActions(groupIds) {
             const actor = this.actor;
-            if (!actor) return;
+            const actors = this.actors || [];
 
+            if (actor) {
+                TOOLTIP_MAP.clear();
+                this._buildAttributeActions(actor);
+                this._buildSkillActions(actor);
+                this._buildWeaponActions(actor);
+                this._buildUnarmedActions(actor);
+                this._buildOrdnanceActions(actor);
+                this._buildConditionActions(actor);
+                this._buildInitiativeAction();
+                this._buildSaveActions();
+                return;
+            }
+
+            if (actors.length > 0) this._buildMultiActions(actors);
+        }
+
+        /**
+         * TAH Core also invokes this directly on some multi-select paths
+         * (depending on version) — point it at the same helper so we cover
+         * both entry points.
+         */
+        buildMultipleTokenActions(groupIds, tokens) {
+            const actors = (tokens || this.tokens || [])
+                .map(t => t.actor).filter(Boolean);
+            if (!actors.length) return;
+            this._buildMultiActions(actors);
+        }
+
+        /**
+         * Shared multi-token builder. Renders only the actions that can be
+         * applied uniformly across the selection.
+         */
+        _buildMultiActions(actors) {
+            const primary = actors[0];
+            if (!primary) return;
             TOOLTIP_MAP.clear();
-            this._buildAttributeActions(actor);
-            this._buildSkillActions(actor);
-            this._buildWeaponActions(actor);
-            this._buildUnarmedActions(actor);
-            this._buildOrdnanceActions(actor);
-            this._buildConditionActions(actor);
+            this._buildAttributeActions(primary);
+            this._buildConditionActions(primary);
             this._buildInitiativeAction();
             this._buildSaveActions();
-            this._buildStressActions(actor);
-            this._buildFrightActions(actor);
-            this._buildFatigueActions(actor);
-            this._buildSleepActions();
         }
 
         /**
@@ -344,80 +380,5 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
             this.addActions(actions, { id: "saves", type: "system" });
         }
 
-        /**
-         * Stress increase (roll dialog) / decrease buttons.
-         */
-        _buildStressActions(actor) {
-            const actions = [
-                {
-                    id: "stress-up",
-                    name: game.i18n.localize("CYBERPUNK.IncreaseStress"),
-                    encodedValue: [ACTION_TYPE.utility, "stress-up"].join("|")
-                },
-                {
-                    id: "stress-down",
-                    name: game.i18n.localize("CYBERPUNK.DecreaseStress"),
-                    encodedValue: [ACTION_TYPE.utility, "stress-down"].join("|")
-                }
-            ];
-            this.addActions(actions, { id: "stress", type: "system" });
-        }
-
-        /**
-         * Fright increase (COOL check dialog) / decrease buttons.
-         */
-        _buildFrightActions(actor) {
-            const actions = [
-                {
-                    id: "fright-up",
-                    name: game.i18n.localize("CYBERPUNK.IncreaseFright"),
-                    encodedValue: [ACTION_TYPE.utility, "fright-up"].join("|")
-                },
-                {
-                    id: "fright-down",
-                    name: game.i18n.localize("CYBERPUNK.DecreaseFright"),
-                    encodedValue: [ACTION_TYPE.utility, "fright-down"].join("|")
-                }
-            ];
-            this.addActions(actions, { id: "fright", type: "system" });
-        }
-
-        /**
-         * Fatigue increase / decrease buttons.
-         */
-        _buildFatigueActions(actor) {
-            const actions = [
-                {
-                    id: "fatigue-up",
-                    name: game.i18n.localize("CYBERPUNK.IncreaseFatigue"),
-                    encodedValue: [ACTION_TYPE.utility, "fatigue-up"].join("|")
-                },
-                {
-                    id: "fatigue-down",
-                    name: game.i18n.localize("CYBERPUNK.DecreaseFatigue"),
-                    encodedValue: [ACTION_TYPE.utility, "fatigue-down"].join("|")
-                }
-            ];
-            this.addActions(actions, { id: "fatigue", type: "system" });
-        }
-
-        /**
-         * Sleep: Stay Awake / Fall Asleep buttons.
-         */
-        _buildSleepActions() {
-            const actions = [
-                {
-                    id: "stayAwake",
-                    name: game.i18n.localize("CYBERPUNK.StayAwake"),
-                    encodedValue: [ACTION_TYPE.utility, "stayAwake"].join("|")
-                },
-                {
-                    id: "fallAsleep",
-                    name: game.i18n.localize("CYBERPUNK.FallAsleep"),
-                    encodedValue: [ACTION_TYPE.utility, "fallAsleep"].join("|")
-                }
-            ];
-            this.addActions(actions, { id: "sleep", type: "system" });
-        }
     };
 });

@@ -24,6 +24,22 @@ import { getCurrentGameTime, formatGameTimeShort, parseCampaignStartDate } from 
 // Token Action HUD integration (optional — only activates if TAH Core is installed)
 import "./tah/init.js";
 
+// Netrunning — region-based NET architecture (Foundry Regions, no custom
+// wall flags), NET icon lifecycle, one-way visibility filter (NET tokens
+// hidden from meatspace viewers), realm-aware canvas rendering (hides
+// scene background / lighting / tiles when the viewer is in NET), and the
+// canvas layer that paints the current NET region in cyan under fog.
+import "./netrun/net-architecture-layer.js";
+import "./netrun/realm-rendering.js";
+import "./netrun/region-config.js";
+import "./netrun/net-detection-mode.js";
+import "./netrun/vision.js";
+import "./netrun/vision-polygon.js";
+import "./netrun/collision.js";
+import "./netrun/movement-preview.js";
+import "./netrun/jack-in.js";
+import "./netrun/net-token-fx.js";
+
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
 import * as migrations from "./migrate.js";
@@ -318,6 +334,27 @@ Hooks.on("getSceneControlButtons", (controls) => {
             }
         };
     }
+
+    // Netrunning realm switcher — single-row "Meat Token / NET Token"
+    // window that lets the player jump between their meatspace token and
+    // their NET icon. Available to everyone (player + GM) because both
+    // need to be able to control either side during a run.
+    controls.tokens.tools["netrunning"] = {
+        name: "netrunning",
+        title: "CYBERPUNK.Netrunning",
+        icon: "fa-solid fa-network-wired",
+        order: 101,
+        button: true,
+        onChange: async () => {
+            const { RealmSwitcher } = await import("./netrun/realm-switcher.js");
+            if (!game.cyberpunk.realmSwitcher) {
+                game.cyberpunk.realmSwitcher = new RealmSwitcher();
+            }
+            const dlg = game.cyberpunk.realmSwitcher;
+            if (dlg.rendered) dlg.close();
+            else              dlg.render(true);
+        }
+    };
 });
 
 /**

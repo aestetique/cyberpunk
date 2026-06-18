@@ -98,6 +98,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/dialog/move-items.hbs",
         "systems/cyberpunk/templates/dialog/shop-settings.hbs",
         "systems/cyberpunk/templates/dialog/toolbox.hbs",
+        "systems/cyberpunk/templates/dialog/realm-switcher.hbs",
 
         // Netware
         "systems/cyberpunk/templates/item/parts/netware/tab-description.hbs",

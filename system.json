@@ -3,7 +3,7 @@
   "title": "Cyberpunk",
   "description": "An unofficial fan-made interpretation of the Cyberpunk game systems by R. Talsorian Games for Foundry Virtual Tabletop.",
   "background": "systems/cyberpunk/img/ui/system-background.webp",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13",
@@ -54,6 +54,16 @@
     }
   ],
   "socket": false,
+  "relationships": {
+    "recommends": [
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "manifest": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json",
+        "reason": "Conflict-free prototype patches for the netrunning canvas overlay (light filtering, sight polygon walls, movement bypass). System falls back to direct prototype patching if lib-wrapper is absent."
+      }
+    ]
+  },
   "packs": [
     {
       "name": "skills",

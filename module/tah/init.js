@@ -28,65 +28,90 @@ Hooks.on("tokenActionHudCoreApiReady", async () => {
 });
 
 /**
- * Attach delegated mouseenter/mousemove/mouseleave handlers on the TAH
- * container so our cyberpunk-tooltip follows the cursor, exactly like
- * the actor sheet tooltips.
+ * Cursor-following tooltip for TAH buttons. There's only ever ONE tooltip
+ * element in the DOM at a time, tracked via the module-local `activeTooltip`,
+ * not via a `_cpTooltip` ref on the button.
+ *
+ * The single-element design is what fixes the "ghost tooltip" bug — when TAH
+ * rerenders (e.g. after applying a condition triggers a recompute), the
+ * button that owned the tooltip gets removed from the DOM before `mouseleave`
+ * has a chance to fire. The old per-button ref couldn't be cleaned because
+ * the button was already gone; with one global element we just rip it on
+ * any of: mousedown anywhere, cursor leaving the TAH region, selection
+ * change (which is what triggers most TAH rerenders), or a defensive sweep
+ * on every show.
  */
+let activeTooltip = null;
+
+function _tahButton(target) {
+    return target?.closest?.("#token-action-hud button[value]") ?? null;
+}
+
+function _positionTip(tip, cx, cy) {
+    let top  = cy + 16;
+    let left = cx + 12;
+    if (top  + tip.offsetHeight > window.innerHeight) top  = cy - tip.offsetHeight - 8;
+    if (left + 290              > window.innerWidth)  left = cx - 290              - 12;
+    tip.style.top  = `${top}px`;
+    tip.style.left = `${left}px`;
+}
+
+function _hideTip() {
+    if (activeTooltip) {
+        activeTooltip.remove();
+        activeTooltip = null;
+    }
+    // Defensive sweep — any orphan tip that somehow escaped the global
+    // reference (rare race during TAH rerender) gets cleaned here too.
+    document.querySelectorAll(".cyberpunk-tooltip").forEach(el => el.remove());
+}
+
+function _showTip(html, cx, cy) {
+    _hideTip(); // never let two coexist
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const tip = wrapper.firstElementChild;
+    if (!tip) return;
+    tip.className = "cyberpunk-tooltip"; // reset TAH modifier class, keep base
+    document.body.appendChild(tip);
+    activeTooltip = tip;
+    _positionTip(tip, cx, cy);
+}
+
 function _registerTahTooltips() {
     document.addEventListener("mouseenter", (ev) => {
-        // Match any TAH action button with an encoded value
-        const btn = ev.target.closest?.("#token-action-hud button[value]");
+        const btn = _tahButton(ev.target);
         if (!btn) return;
-
-        const encodedValue = btn.value;
-        const html = TOOLTIP_MAP.get(encodedValue);
+        const html = TOOLTIP_MAP.get(btn.value);
         if (!html) return;
-
-        // html from TOOLTIP_MAP is a full <div class="cyberpunk-tooltip ...">...</div>
-        // Parse it and transplant content into our positioned tooltip element
-        const wrapper = document.createElement("div");
-        wrapper.innerHTML = html;
-        const tip = wrapper.firstElementChild;
-        // Reset TAH modifier class, keep base cyberpunk-tooltip for styling
-        tip.className = "cyberpunk-tooltip";
-        document.body.appendChild(tip);
-        btn._cpTooltip = tip;
-
-        let top = ev.clientY + 16;
-        let left = ev.clientX + 12;
-        if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
-        if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
-        tip.style.top = `${top}px`;
-        tip.style.left = `${left}px`;
+        _showTip(html, ev.clientX, ev.clientY);
     }, true);
 
     document.addEventListener("mousemove", (ev) => {
-        const btn = ev.target.closest?.("#token-action-hud button[value]");
-        if (!btn?._cpTooltip) return;
-
-        const tip = btn._cpTooltip;
-        let top = ev.clientY + 16;
-        let left = ev.clientX + 12;
-        if (top + tip.offsetHeight > window.innerHeight) top = ev.clientY - tip.offsetHeight - 8;
-        if (left + 290 > window.innerWidth) left = ev.clientX - 290 - 12;
-        tip.style.top = `${top}px`;
-        tip.style.left = `${left}px`;
+        if (!activeTooltip) return;
+        // Cursor left the TAH region while the tip was visible — drop it.
+        // Catches the case where TAH redraws under the cursor and the old
+        // button silently disappears.
+        if (!_tahButton(ev.target)) {
+            _hideTip();
+            return;
+        }
+        _positionTip(activeTooltip, ev.clientX, ev.clientY);
     }, true);
 
     document.addEventListener("mouseleave", (ev) => {
-        const btn = ev.target.closest?.("#token-action-hud button[value]");
-        if (!btn?._cpTooltip) return;
-
-        btn._cpTooltip.remove();
-        btn._cpTooltip = null;
+        if (!activeTooltip) return;
+        if (_tahButton(ev.target)) _hideTip();
     }, true);
 
-    // Also clean up on mousedown (clicking the button)
-    document.addEventListener("mousedown", (ev) => {
-        const btn = ev.target.closest?.("#token-action-hud button[value]");
-        if (!btn?._cpTooltip) return;
+    // Any click anywhere kills the tip — covers the costly-condition flow
+    // where the click triggers a rerender that removes the source button
+    // before `mouseleave` ever fires.
+    document.addEventListener("mousedown", _hideTip, true);
 
-        btn._cpTooltip.remove();
-        btn._cpTooltip = null;
-    }, true);
+    // TAH rebuilds on selection change. Snipe the tooltip on any of these
+    // signals so a stale one can't outlive its button.
+    Hooks.on("controlToken", _hideTip);
+    Hooks.on("updateActor",  _hideTip);
+    Hooks.on("updateToken",  _hideTip);
 }

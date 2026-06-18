@@ -1,0 +1,21 @@
+<div class="realm-switcher-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{localize "CYBERPUNK.Netrunning"}}</span>
+    <a class="header-control close"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{!-- Single row of toggleable buttons (gray / selected = green). Disabled
+       when the corresponding token doesn't exist on the scene. --}}
+  <div class="conditions-grid">
+    <button type="button"
+            class="condition-btn realm-btn{{#if meat.selected}} selected{{/if}}{{#unless meat}} disabled{{/unless}}"
+            data-token-id="{{meat.id}}">
+      {{localize "CYBERPUNK.MeatToken"}}
+    </button>
+    <button type="button"
+            class="condition-btn realm-btn{{#if net.selected}} selected{{/if}}{{#unless net}} disabled{{/unless}}"
+            data-token-id="{{net.id}}">
+      {{localize "CYBERPUNK.NetToken"}}
+    </button>
+  </div>
+</div>

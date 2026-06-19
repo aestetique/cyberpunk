@@ -18,6 +18,8 @@ import {
     toolBonusProperties,
     surgeryCodes,
     getCyberwareSubtypes,
+    SENSOR_TYPES,
+    isCyberlimbOption, isSensorOption,
     programSubtypes,
     boosterBonuses,
     defenderDefences,
@@ -380,16 +382,23 @@ export function buildCyberwareContext(item) {
     const subtypeLabel = subtypeKey ? game.i18n.localize(`CYBERPUNK.${subtypeKey}`) : (sys.cyberwareSubtype || '');
     const surgeryKey = surgeryCodes[sys.surgeryCode];
     const surgeryLabel = surgeryKey ? game.i18n.localize(`CYBERPUNK.${surgeryKey}`) : (sys.surgeryCode || '');
-    const baseOrOption = sys.isOption ? 'Option' : 'Base';
+    // Role derived from subtype (the new model). For sensors the subtype IS
+    // already "base"/"option" → labels render as "Base"/"Option".
+    const isOptionRow = isCyberlimbOption(item) || isSensorOption(item);
+    const baseOrOption = isOptionRow ? 'Option' : 'Base';
 
     const parts = [];
+    // Sensors share one "Sensors" gear section: shape the context as
+    // "Optics · Base · Surgery" instead of "Base · Base · Surgery".
+    if (SENSOR_TYPES.has(cyberType)) {
+        const typeKey = `CyberType${cyberType.charAt(0).toUpperCase()}${cyberType.slice(1)}`;
+        parts.push(game.i18n.localize(`CYBERPUNK.${typeKey}`));
+        parts.push(baseOrOption);
+        if (surgeryLabel) parts.push(surgeryLabel);
+        if (sys.isWeapon) parts.push('Weapon');
+        return parts.join(' · ');
+    }
     switch (cyberType) {
-        case 'sensor':
-            if (subtypeLabel) parts.push(subtypeLabel);
-            parts.push(baseOrOption);
-            if (surgeryLabel) parts.push(surgeryLabel);
-            if (sys.isWeapon) parts.push('Weapon');
-            break;
         case 'cyberlimb':
             if (subtypeLabel) parts.push(subtypeLabel);
             parts.push(baseOrOption);

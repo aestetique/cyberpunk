@@ -57,6 +57,11 @@ export async function migrateWorld(targetVersion) {
     // currently-applied effects on first load after the upgrade.
     await _migrateEquippedDrugsToEffects();
 
+    // 2.3.0: Cyberware type/subtype refactor. Sensor splits into optics/voice/
+    // audio types; cyberlimb subtypes collapse to arm/leg + placement; isOption
+    // is no longer read.
+    await _migrateCyberwareTypeSubtype();
+
     for (const actor of game.actors.contents) {
         await processDocument(actor);
         for (const item of actor.items) await processDocument(item);
@@ -1237,5 +1242,140 @@ async function _migrateEquippedDrugsToEffects() {
     }
     if (converted) {
         console.log(`CYBERPUNK | Migrated ${converted} equipped drug(s) to ActiveEffects across ${affectedActors} actor(s)`);
+    }
+}
+
+// ============================================================================
+// 2.3.0: Cyberware type/subtype refactor.
+//   - `sensor` type → split into `optics` / `voice` / `audio`. Old subtype
+//     names (voice/audio/optics) become types; `isOption` becomes a Base /
+//     Option subtype.
+//   - Cyberlimb subtypes collapse:
+//       leftArm  → subtype=arm, placement=left
+//       rightArm → subtype=arm, placement=right
+//       leftLeg  → subtype=leg, placement=left
+//       rightLeg → subtype=leg, placement=right
+//       extraArm → subtype=arm, placement=extra
+//       meatLimbs → subtype=arm, placement=left, structure.max=0
+//                   (skipped if the actor already has an Arm-Left)
+//       builtIn / finger / hand / feet stay as-is (subtype names unchanged)
+//   - `isOption` is cleared on every cyberware item (no longer read).
+// Idempotent: items already migrated (recognisable by the new subtype names)
+// pass through untouched.
+// ============================================================================
+const _OLD_LIMB_TO_NEW = {
+    leftArm:  { subtype: "arm", placement: "left" },
+    rightArm: { subtype: "arm", placement: "right" },
+    leftLeg:  { subtype: "leg", placement: "left" },
+    rightLeg: { subtype: "leg", placement: "right" },
+    extraArm: { subtype: "arm", placement: "extra" }
+    // meatLimbs handled specially (collision check)
+};
+const _OLD_SENSOR_SUBS = new Set(["voice", "audio", "optics"]);
+
+function _migrateOneCyberware(item, opts = {}) {
+    const sys = item.system || {};
+    if (sys.cyberwareType === "sensor" && _OLD_SENSOR_SUBS.has(sys.cyberwareSubtype)) {
+        return {
+            "system.cyberwareType":    sys.cyberwareSubtype,           // voice/audio/optics → type
+            "system.cyberwareSubtype": sys.isOption ? "option" : "base",
+            "system.isOption":         false
+        };
+    }
+    if (sys.cyberwareType === "cyberlimb") {
+        const map = _OLD_LIMB_TO_NEW[sys.cyberwareSubtype];
+        if (map) {
+            return {
+                "system.cyberwareSubtype": map.subtype,
+                "system.placement":        map.placement,
+                "system.isOption":         false
+            };
+        }
+        if (sys.cyberwareSubtype === "meatLimbs") {
+            // Caller decides whether to delete (collision) or convert.
+            return opts.meatLimbsConflict
+                ? { _delete: true }
+                : {
+                    "system.cyberwareSubtype": "arm",
+                    "system.placement":        "left",
+                    "system.structure.max":    0,
+                    "system.isOption":         false
+                };
+        }
+        // hand / feet / finger / builtIn: subtype name already matches; just
+        // clear the legacy isOption flag (was true; the new model infers it).
+        if (["hand", "feet", "finger", "builtIn"].includes(sys.cyberwareSubtype) && sys.isOption !== false) {
+            return { "system.isOption": false };
+        }
+    }
+    // Clear stale isOption everywhere else (defensive — only if set).
+    if (sys.isOption !== false && sys.isOption !== undefined) {
+        return { "system.isOption": false };
+    }
+    return null;
+}
+
+async function _migrateCyberwareTypeSubtype() {
+    let actorsTouched = 0;
+    let itemsTouched  = 0;
+    let meatLimbsDeleted = 0;
+
+    for (const actor of game.actors.contents) {
+        const cyber = actor.items.contents.filter(i => i.type === "cyberware");
+        if (cyber.length === 0) continue;
+
+        // First pass: detect meatLimbs items whose target slot (Arm-Left, with
+        // either old leftArm or new arm+left already on this actor) is taken.
+        const armLeftTaken = cyber.some(i => {
+            const s = i.system || {};
+            if (s.cyberwareType !== "cyberlimb") return false;
+            if (s.cyberwareSubtype === "leftArm") return true;                                  // pre-migration
+            if (s.cyberwareSubtype === "arm" && s.placement === "left") return true;           // post-migration
+            return false;
+        });
+
+        const updates = [];
+        const deletes = [];
+        for (const item of cyber) {
+            const meatConflict = (item.system?.cyberwareSubtype === "meatLimbs") && armLeftTaken;
+            const change = _migrateOneCyberware(item, { meatLimbsConflict: meatConflict });
+            if (!change) continue;
+            if (change._delete) {
+                deletes.push(item.id);
+                meatLimbsDeleted++;
+            } else {
+                updates.push({ _id: item.id, ...change });
+                itemsTouched++;
+            }
+        }
+
+        try {
+            if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+            if (deletes.length) await actor.deleteEmbeddedDocuments("Item", deletes);
+            if (updates.length || deletes.length) actorsTouched++;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to migrate cyberware on actor "${actor.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
+
+    // World-level items (sidebar items folder).
+    for (const item of game.items.contents) {
+        if (item.type !== "cyberware") continue;
+        // World items can't collide with an actor's arm-left, so meatLimbs
+        // always converts to Arm-Left Structure 0.
+        const change = _migrateOneCyberware(item, { meatLimbsConflict: false });
+        if (!change || change._delete) continue;
+        try {
+            await item.update(change);
+            itemsTouched++;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to migrate world cyberware item "${item.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
+
+    if (itemsTouched || meatLimbsDeleted) {
+        console.log(`CYBERPUNK | Migrated ${itemsTouched} cyberware item(s) across ${actorsTouched} actor(s); deleted ${meatLimbsDeleted} redundant meatLimb item(s).`);
     }
 }

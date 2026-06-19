@@ -1843,15 +1843,14 @@ export class CyberpunkChatMessage extends ChatMessage {
             i.type === "cyberware" && i.system.equipped
         );
 
-        const optics = cyberware.filter(c =>
-            c.system.cyberwareType === "sensor" && c.system.cyberwareSubtype === "optics"
-        );
+        // Post-2.3.0 cyberware model: optics / voice / audio are top-level
+        // types (subtype = base/option). Filter on type alone for sensor
+        // groupings; the rolled effect applies whether base or option.
+        const optics = cyberware.filter(c => c.system.cyberwareType === "optics");
         const neuralware = cyberware.filter(c =>
             c.system.cyberwareType === "implant" && c.system.cyberwareSubtype === "neuralware"
         );
-        const audio = cyberware.filter(c =>
-            c.system.cyberwareType === "sensor" && c.system.cyberwareSubtype === "audio"
-        );
+        const audio = cyberware.filter(c => c.system.cyberwareType === "audio");
         const cyberlimbs = cyberware.filter(c =>
             c.system.cyberwareType === "cyberlimb"
         );

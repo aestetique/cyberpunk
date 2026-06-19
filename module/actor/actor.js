@@ -1,6 +1,6 @@
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes } from "./skill-sort.js";
-import { bodyTypeModifier, getInterfaceSkillRank } from "../lookups.js";
+import { bodyTypeModifier, getInterfaceSkillRank, isCyberlimbBase, isCyberlimbOption, isSensorOption } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
@@ -181,7 +181,10 @@ export class CyberpunkActor extends Actor {
       // own loop below.
       if (i.type === "drug") return false;
       if (i.type === "cyberware") {
-        if (i.system.isOption) {
+        // Options inherit equipped state from their base (the gear-tab
+        // "attached" lane has no individual toggle). Bases use their own
+        // `system.equipped`.
+        if (isCyberlimbOption(i) || isSensorOption(i)) {
           const baseId = i.getFlag('cyberpunk', 'attachedTo');
           if (baseId) {
             const base = this.items.get(baseId);
@@ -506,12 +509,21 @@ export class CyberpunkActor extends Actor {
       }
     }
 
-    // Calculate cyberlimb data from equipped cyberware items
-    const subtypeToLocation = {
-      'leftArm': 'lArm',
-      'rightArm': 'rArm',
-      'leftLeg': 'lLeg',
-      'rightLeg': 'rLeg'
+    // Cyberlimb derive: route equipped Arm/Leg bases into the 4-slot
+    //   { lArm | rArm | lLeg | rLeg } map via (subtype, placement).
+    // Skips:
+    //   - placement = "extra" (item exists on the actor but doesn't claim a
+    //     body zone — never hit, no armor slot, no cyber overlay).
+    //   - Structure.max = 0 (the "meat limb" rule — no cyber rendering, no
+    //     unarmed-damage bonus, no broken status). The item itself stays
+    //     listed under the Cyberware tab so the GM can still edit it.
+    const placementKeyForSubtype = {
+      arm: { left: "lArm", right: "rArm" },
+      leg: { left: "lLeg", right: "rLeg" }
+    };
+    const limbKeyFor = (item) => {
+      const s = item.system || {};
+      return placementKeyForSubtype[s.cyberwareSubtype]?.[s.placement] || null;
     };
 
     // Initialize cyberlimbs data
@@ -522,41 +534,24 @@ export class CyberpunkActor extends Actor {
       rLeg: { hasCyberlimb: false, sdp: 0, maxSdp: 0, disablesAt: 0, isBroken: false, itemId: null }
     };
 
-    // Find equipped cyberlimbs (only specific subtypes count)
-    const equippedCyberlimbs = equippedItems.filter(i =>
-      i.type === 'cyberware' &&
-      i.system.cyberwareType === 'cyberlimb' &&
-      !i.system.isOption &&
-      Object.keys(subtypeToLocation).includes(i.system.cyberwareSubtype)
-    );
+    // Sum SDP bonuses from cyberlimb-option items attached to a given base.
+    const sumAttachedSdp = (baseId) => this.items
+      .filter(i => isCyberlimbOption(i) && i.getFlag("cyberpunk", "attachedTo") === baseId)
+      .reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
 
-    for (const limb of equippedCyberlimbs) {
-      const loc = subtypeToLocation[limb.system.cyberwareSubtype];
-      if (!loc) continue;
+    for (const limb of equippedItems.filter(isCyberlimbBase)) {
+      const loc = limbKeyFor(limb);
+      if (!loc) continue;                                 // extra placement → skip
+      if ((limb.system.structure?.max ?? 0) === 0) continue; // meat-limb rule
+      if (system.cyberlimbs[loc].hasCyberlimb) continue;  // already claimed (1st wins)
 
-      // Only take the first active cyberlimb per location
-      if (system.cyberlimbs[loc].hasCyberlimb) continue;
-
-      const current = limb.system.structure?.current ?? 0;
-      const baseMax = limb.system.structure?.max ?? 0;
+      const current        = limb.system.structure?.current ?? 0;
+      const baseMax        = limb.system.structure?.max ?? 0;
       const baseDisablesAt = limb.system.disablesAt ?? 0;
-
-      // Find attached options and sum their SDP bonuses
-      const attachedOptions = this.items.filter(i =>
-        i.type === 'cyberware' &&
-        i.system.isOption &&
-        i.getFlag('cyberpunk', 'attachedTo') === limb.id
-      );
-
-      const sdpBonusTotal = attachedOptions.reduce((sum, opt) => {
-        return sum + (opt.system.sdpBonus || 0);
-      }, 0);
-
-      // Add SDP bonus to both maxSdp and disablesAt
-      const max = baseMax + sdpBonusTotal;
-      const disablesAt = baseDisablesAt + sdpBonusTotal;
-
-      const isBroken = current > 0 && current <= disablesAt;
+      const sdpBonusTotal  = sumAttachedSdp(limb.id);
+      const max            = baseMax + sdpBonusTotal;
+      const disablesAt     = baseDisablesAt + sdpBonusTotal;
+      const isBroken       = current > 0 && current <= disablesAt;
 
       system.cyberlimbs[loc] = {
         hasCyberlimb: true,
@@ -568,38 +563,29 @@ export class CyberpunkActor extends Actor {
       };
     }
 
-    // Helper function to check if cyberlimb is structurally broken
+    // Helper: is this Arm/Leg base structurally broken?
     const isCyberlimbBroken = (limb) => {
-      const current = limb.system.structure?.current ?? 0;
+      const current        = limb.system.structure?.current ?? 0;
       const baseDisablesAt = limb.system.disablesAt ?? 0;
-
-      // Find attached options and sum their SDP bonuses
-      const attachedOptions = this.items.filter(i =>
-        i.type === 'cyberware' &&
-        i.system.isOption &&
-        i.getFlag('cyberpunk', 'attachedTo') === limb.id
-      );
-      const sdpBonusTotal = attachedOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
-      const disablesAt = baseDisablesAt + sdpBonusTotal;
-
+      const disablesAt     = baseDisablesAt + sumAttachedSdp(limb.id);
       return current > 0 && current <= disablesAt;
     };
 
-    // Cyberarm/cyberleg upgrade unarmed damage (only if equipped and not broken)
-    const hasCyberarm = equippedItems.some(i =>
-      i.type === 'cyberware' &&
-      i.system.cyberwareType === 'cyberlimb' &&
-      !i.system.isOption &&
-      ['leftArm', 'rightArm', 'extraArm'].includes(i.system.cyberwareSubtype) &&
-      !isCyberlimbBroken(i)
-    );
-    const hasCyberleg = equippedItems.some(i =>
-      i.type === 'cyberware' &&
-      i.system.cyberwareType === 'cyberlimb' &&
-      !i.system.isOption &&
-      ['leftLeg', 'rightLeg'].includes(i.system.cyberwareSubtype) &&
-      !isCyberlimbBroken(i)
-    );
+    // Cyberarm/cyberleg upgrade unarmed damage — only counts when the limb
+    // has real Structure (meat-limb rule: max=0 is treated as a flesh limb)
+    // and isn't broken. Extra-placement limbs DO count for unarmed damage
+    // (you can punch with a third arm even though it has no zone), matching
+    // the old `extraArm` behaviour.
+    const isUsableCyberArm = (i) => isCyberlimbBase(i)
+      && i.system.cyberwareSubtype === "arm"
+      && (i.system.structure?.max ?? 0) > 0
+      && !isCyberlimbBroken(i);
+    const isUsableCyberLeg = (i) => isCyberlimbBase(i)
+      && i.system.cyberwareSubtype === "leg"
+      && (i.system.structure?.max ?? 0) > 0
+      && !isCyberlimbBroken(i);
+    const hasCyberarm = equippedItems.some(isUsableCyberArm);
+    const hasCyberleg = equippedItems.some(isUsableCyberLeg);
     if (hasCyberarm) system.unarmedBaseDamage = "1d6";
     system.kickBaseDamage = hasCyberleg ? "2d6" : "1d6";
 

@@ -21,6 +21,11 @@ import { spendNetAction } from "../action-tracker.js"
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext, buildWeaponContextString } from "./gear-data.js"
 import { calibers as CALIBERS } from "../calibers.js"
 import { rangedClasses, martialClasses, getMartialSubtypeLabelKey, resolveWeaponDiscriminator } from "../lookups.js"
+import {
+  SENSOR_TYPES,
+  isCyberlimbBase, isCyberlimbOption,
+  isSensorOption
+} from "../lookups.js"
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 import { shouldTransfer, transferItem } from "./item-transfer.js"
 
@@ -986,12 +991,18 @@ export class CyberpunkActorSheet extends ActorSheet {
     const tools = this.actor.itemTypes.tool || [];
     const drugs = this.actor.itemTypes.drug || [];
 
-    // Filter cyberweapons (base cyberware with isWeapon=true and equipped)
-    const cyberweapons = cyberware.filter(c => c.system.isWeapon && c.system.equipped && !c.system.isOption);
+    // Base-cyberware weapons: equipped implants etc. with isWeapon=true.
+    // Excludes anything that's an option (cyberlimb options + sensor options
+    // surface via their parent's equipped state instead).
+    const isCyberOptionRow = (c) => isCyberlimbOption(c) || isSensorOption(c);
+    const cyberweapons = cyberware.filter(c =>
+      c.system.isWeapon && c.system.equipped && !isCyberOptionRow(c)
+    );
 
-    // Also include cyberware OPTIONS with isWeapon=true when their parent is equipped
+    // Cyberware OPTIONS with isWeapon=true surface when their parent base
+    // is equipped (Hand-mounted Big Knuckle on an equipped arm, etc.).
     const cyberweaponOptions = cyberware.filter(c => {
-      if (!c.system.isWeapon || !c.system.isOption) return false;
+      if (!c.system.isWeapon || !isCyberOptionRow(c)) return false;
       const parentId = c.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false; // Detached options never appear in gear list
       const parent = cyberware.find(p => p.id === parentId);
@@ -1383,11 +1394,14 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Add cyberware with armor capability to outfit items (only if equipped)
     // Note: cyberware was already declared above at line 522
-    const cyberarmor = cyberware.filter(c => c.system.isArmor && c.system.equipped && !c.system.isOption);
+    const isCyberOptRow = (c) => isCyberlimbOption(c) || isSensorOption(c);
+    const cyberarmor = cyberware.filter(c =>
+      c.system.isArmor && c.system.equipped && !isCyberOptRow(c)
+    );
 
     // Also include cyberware OPTIONS with isArmor=true when their parent is equipped
     const cyberarmorOptions = cyberware.filter(c => {
-      if (!c.system.isArmor || !c.system.isOption) return false;
+      if (!c.system.isArmor || !isCyberOptRow(c)) return false;
       const parentId = c.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false; // Detached options never appear in gear list
       const parent = cyberware.find(p => p.id === parentId);
@@ -1504,21 +1518,29 @@ export class CyberpunkActorSheet extends ActorSheet {
     const buildContext = (item) => {
       const sys = item.system;
       const cyberType = sys.cyberwareType || 'implant';
+      // Role label derived from subtype (the new model). For sensors, the
+      // subtype IS already "base" or "option" → "Base" / "Option" labels.
+      // For cyberlimbs, infer base/option from the subtype identity.
+      const isOptionRow = isCyberlimbOption(item) || isSensorOption(item);
+      const baseOrOption = isOptionRow ? 'Option' : 'Base';
       const subtypeLabel = getSubtypeLabel(cyberType, sys.cyberwareSubtype);
       const surgeryLabel = getSurgeryLabel(sys.surgeryCode);
-      const baseOrOption = sys.isOption ? 'Option' : 'Base';
 
       const parts = [];
 
-      switch (cyberType) {
-        case 'sensor':
-          // Subtype · Base/Option · Surgery [· Weapon if weapon]
-          if (subtypeLabel) parts.push(subtypeLabel);
-          parts.push(baseOrOption);
-          if (surgeryLabel) parts.push(surgeryLabel);
-          if (sys.isWeapon) parts.push('Weapon');
-          break;
+      // Sensor cards (optics/voice/audio): the SUBTYPE label is already
+      // "Base"/"Option" — to avoid "Base · Base", show the TYPE label
+      // (Optics / Voice / Audio) followed by the role.
+      if (SENSOR_TYPES.has(cyberType)) {
+        const cyberTypeLabel = game.i18n.localize(`CYBERPUNK.CyberType${cyberType.charAt(0).toUpperCase()}${cyberType.slice(1)}`);
+        if (cyberTypeLabel) parts.push(cyberTypeLabel);
+        parts.push(baseOrOption);
+        if (surgeryLabel) parts.push(surgeryLabel);
+        if (sys.isWeapon) parts.push('Weapon');
+        return parts.join(' · ');
+      }
 
+      switch (cyberType) {
         case 'cyberlimb':
           // Subtype · Base/Option · Surgery
           if (subtypeLabel) parts.push(subtypeLabel);
@@ -1557,20 +1579,23 @@ export class CyberpunkActorSheet extends ActorSheet {
       return parts.join(' · ');
     };
 
-    // Helper: Check if cyberlimb is STRUCTURALLY broken (SDP <= disablesAt)
-    // This determines if the limb CAN be turned on at all
+    // Helper: Check if cyberlimb base is STRUCTURALLY broken
+    // (Structure ≤ disablesAt). This determines if the limb CAN be turned on
+    // at all. Meat-limbs (structure.max = 0) and options are excluded.
     const isStructurallyBroken = (item) => {
+      if (!isCyberlimbBase(item)) return false;
       const sys = item.system;
-      if (sys.cyberwareType !== 'cyberlimb') return false;
-      if (sys.isOption) return false;
+      if ((sys.structure?.max ?? 0) === 0) return false;  // meat-limb
       const current = sys.structure?.current ?? 0;
       const disablesAt = sys.disablesAt ?? 0;
       return current > 0 && current <= disablesAt;
     };
 
-    // Separate base items and options
-    const baseItems = cyberware.filter(c => !c.system.isOption);
-    const options = cyberware.filter(c => c.system.isOption);
+    // Base vs option resolved via the predicate (works across cyberlimb
+    // arm/leg/hand/feet/finger/built-in AND sensor base/option).
+    const isOptionItem = (i) => isCyberlimbOption(i) || isSensorOption(i);
+    const baseItems = cyberware.filter(c => !isOptionItem(c));
+    const options   = cyberware.filter(isOptionItem);
 
     // Build attachment map: parentId -> [option items]
     const attachmentMap = new Map();
@@ -1586,10 +1611,16 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
     }
 
+    // Optics / Voice / Audio all surface under one "Sensors" UI section
+    // (template-side key: `sensor`). Cyberlimb / implant / chipware keep
+    // their own keys.
+    const sectionKeyFor = (cyberType) => SENSOR_TYPES.has(cyberType) ? 'sensor' : cyberType;
+
     // Process each base cyberware item
     for (const item of baseItems) {
       const sys = item.system;
       const cyberType = sys.cyberwareType || 'implant';
+      const sectionKey = sectionKeyFor(cyberType);
 
       // Build prepared item data
       const preparedItem = {
@@ -1607,7 +1638,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         humanityCost: sys.humanityCost || '',
         humanityRolled: sys.humanityRolled || false,
 
-        // Slots (for sensors/cyberlimbs)
+        // Slots (for cyberlimb bases & sensor bases)
         hasSlots: sys.hasSlots || 0,
         usedSlots: 0, // Will calculate from attached options
 
@@ -1641,26 +1672,27 @@ export class CyberpunkActorSheet extends ActorSheet {
         });
       }
 
-      // Update slot display with used/total
-      if (cyberType === 'sensor' || cyberType === 'cyberlimb') {
+      // Used/total slot display for bases that have slots.
+      if (cyberType === 'cyberlimb' || SENSOR_TYPES.has(cyberType)) {
         preparedItem.slotDisplay = `${preparedItem.usedSlots} / ${preparedItem.hasSlots}`;
       } else {
         preparedItem.slotDisplay = '';
       }
 
-      // Add to appropriate category
-      if (categories[cyberType]) {
-        categories[cyberType].items.push(preparedItem);
+      // Add to appropriate category (sensors all collapse to `sensor`)
+      if (categories[sectionKey]) {
+        categories[sectionKey].items.push(preparedItem);
       }
     }
 
-    // Process detached options (for sensors and cyberlimbs only)
+    // Process detached options (only cyberlimb options and sensor options
+    // get a "detached" lane — implant / chipware never have options).
     for (const opt of detachedOptions) {
       const optSys = opt.system;
       const cyberType = optSys.cyberwareType || 'implant';
+      const sectionKey = sectionKeyFor(cyberType);
 
-      // Only sensor and cyberlimb options can be detached
-      if (cyberType !== 'sensor' && cyberType !== 'cyberlimb') continue;
+      if (sectionKey !== 'sensor' && sectionKey !== 'cyberlimb') continue;
 
       const preparedOption = {
         id: opt.id,
@@ -1678,9 +1710,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         equipped: optSys.equipped ?? true
       };
 
-      if (categories[cyberType]) {
-        categories[cyberType].detachedOptions.push(preparedOption);
-      }
+      categories[sectionKey].detachedOptions.push(preparedOption);
     }
 
     // Sort items alphabetically within each category
@@ -2704,28 +2734,23 @@ export class CyberpunkActorSheet extends ActorSheet {
         return;
       }
 
-      // Check for cyberlimb subtype limit BEFORE humanity roll
-      if (turningOn) {
+      // Slot uniqueness BEFORE humanity roll: cyberlimb arm/leg with
+      // placement Left or Right is unique per slot. Placement=Extra has no
+      // slot limit. Sensor bases (optics/voice/audio) are uncapped — a
+      // character can carry as many sets as they want.
+      if (turningOn && isCyberlimbBase(item)) {
         const sys = item.system;
-        if (sys.cyberwareType === 'cyberlimb' && !sys.isOption) {
-          const subtype = sys.cyberwareSubtype;
-          const limitedSubtypes = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
-
-          if (limitedSubtypes.includes(subtype)) {
-            // Check if there's already an active cyberlimb of the same subtype
-            const existingActive = this.actor.items.find(i =>
-              i.type === 'cyberware' &&
-              i.id !== item.id &&
-              i.system.cyberwareType === 'cyberlimb' &&
-              !i.system.isOption &&
-              i.system.cyberwareSubtype === subtype &&
-              i.system.equipped
-            );
-
-            if (existingActive) {
-              ui.notifications.error(`Cannot activate: ${existingActive.name} is already active for this location. Turn it off first.`);
-              return;
-            }
+        if (sys.placement && sys.placement !== "extra") {
+          const existingActive = this.actor.items.find(i =>
+            i.id !== item.id
+            && isCyberlimbBase(i)
+            && i.system.cyberwareSubtype === sys.cyberwareSubtype
+            && i.system.placement === sys.placement
+            && i.system.equipped
+          );
+          if (existingActive) {
+            ui.notifications.error(`Cannot activate: ${existingActive.name} is already active for this location. Turn it off first.`);
+            return;
           }
         }
       }
@@ -2840,8 +2865,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
         // Calculate remaining SDP bonus from other attached options (excluding the one just detached)
         const remainingOptions = this.actor.items.filter(i =>
-          i.type === 'cyberware' &&
-          i.system.isOption &&
+          isCyberlimbOption(i) &&
           i.id !== item.id &&
           i.getFlag('cyberpunk', 'attachedTo') === parentId
         );
@@ -2906,21 +2930,13 @@ export class CyberpunkActorSheet extends ActorSheet {
 
         if (!optionItem || !baseItem) return;
 
-        // Validate: option must match base cyberware type
-        if (optionItem.system.cyberwareType !== baseItem.system.cyberwareType) {
+        // Validate: the option/base combination has to satisfy the
+        // attachment rules (hand→arm, voice-option→voice-base, etc.)
+        // — also implicitly enforces "option must be an option" and "base
+        // must be a base" since canAttachOptionToBase checks both roles.
+        const { canAttachOptionToBase } = await import("../lookups.js");
+        if (!canAttachOptionToBase(optionItem, baseItem)) {
           ui.notifications.warn(localize("CyberwareTypeMismatch"));
-          return;
-        }
-
-        // Validate: option must be an option
-        if (!optionItem.system.isOption) {
-          ui.notifications.warn(localize("OnlyOptionsCanAttach"));
-          return;
-        }
-
-        // Validate: base must not be an option
-        if (baseItem.system.isOption) {
-          ui.notifications.warn(localize("CannotAttachToOptions"));
           return;
         }
 
@@ -2945,11 +2961,9 @@ export class CyberpunkActorSheet extends ActorSheet {
           const currentSdp = baseItem.system.structure?.current ?? 0;
           const baseMax = baseItem.system.structure?.max ?? 0;
 
-          // Calculate new max (base + all attached options' bonuses including this one)
+          // Recompute total bonus including this newly-attached option.
           const allAttachedOptions = this.actor.items.filter(i =>
-            i.type === 'cyberware' &&
-            i.system.isOption &&
-            i.getFlag('cyberpunk', 'attachedTo') === baseItem.id
+            isCyberlimbOption(i) && i.getFlag('cyberpunk', 'attachedTo') === baseItem.id
           );
           const totalBonus = allAttachedOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
           const newMaxSdp = baseMax + totalBonus;

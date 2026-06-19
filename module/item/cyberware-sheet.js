@@ -1,7 +1,12 @@
 import {
     availability,
-    cyberwareTypes, surgeryCodes,
-    getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor
+    cyberwareTypes, surgeryCodes, placementOptions,
+    getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor,
+    isPlacementRequired,
+    isCyberlimbBase, isCyberlimbOption,
+    isSensorBase, isSensorOption,
+    SENSOR_TYPES,
+    canAttachOptionToBase
 } from "../lookups.js";
 import { localize } from "../utils.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
@@ -40,36 +45,46 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
 
         const sys = data.system;
         const cyberType = sys.cyberwareType || "implant";
+        const cyberSubtype = sys.cyberwareSubtype || "";
 
         // --- Type/Category Flags ---
         data.cyberwareType = cyberType;
-        data.isSensor = cyberType === "sensor";
+        data.cyberwareSubtype = cyberSubtype;
         data.isCyberlimb = cyberType === "cyberlimb";
+        data.isSensor = SENSOR_TYPES.has(cyberType); // optics/voice/audio
         data.isImplant = cyberType === "implant";
         data.isChipware = cyberType === "chipware";
-        data.isSkillChip = cyberType === "chipware" && sys.cyberwareSubtype === "skill";
+        data.isSkillChip = cyberType === "chipware" && cyberSubtype === "skill";
 
-        // --- Option/Slot Logic ---
-        data.canHaveOptions = canHaveOptions(cyberType);
-        data.isOption = sys.isOption || false;
-        data.showStructure = cyberType === "cyberlimb" && !sys.isOption;
-        data.showSdpBonus = cyberType === "cyberlimb" && sys.isOption;
+        // --- Role flags (base vs option, derived from subtype alone) ---
+        data.isCyberlimbBase   = isCyberlimbBase(this.item);
+        data.isCyberlimbOption = isCyberlimbOption(this.item);
+        data.isSensorBase      = isSensorBase(this.item);
+        data.isSensorOption    = isSensorOption(this.item);
+        data.isBase            = data.isCyberlimbBase || data.isSensorBase;
+        data.isOption          = data.isCyberlimbOption || data.isSensorOption;
 
-        // --- Calculate effective structure values (base + SDP bonuses from attached options) ---
+        // --- Per-row visibility flags driving the details tab template ---
+        data.canHaveOptions    = canHaveOptions(cyberType, cyberSubtype);
+        data.needsPlacement    = isPlacementRequired(cyberType, cyberSubtype);
+        data.showStructure     = data.isCyberlimbBase;            // Structure + Disables-at row
+        data.showSdpBonus      = data.isCyberlimbOption;          // SDP Bonus on the option's row
+        data.showHasSlots      = data.isBase;                     // Has-Slots field on bases
+        data.showTakesSpace    = data.isOption;                   // Takes-Space field on options
+
+        // --- Effective structure (base + attached-option SDP bonuses) ---
         if (data.showStructure && this.item.actor) {
             const baseMax = sys.structure?.max ?? 0;
             const baseDisablesAt = sys.disablesAt ?? 0;
 
-            // Find attached options and sum their SDP bonuses
+            // Attached options route by `flags.cyberpunk.attachedTo`. Use the
+            // shared predicate to filter — covers Hand / Feet / Finger /
+            // Built-in regardless of subtype string.
             const attachedOptions = this.item.actor.items.filter(i =>
-                i.type === 'cyberware' &&
-                i.system.isOption &&
-                i.getFlag('cyberpunk', 'attachedTo') === this.item.id
+                isCyberlimbOption(i) && i.getFlag("cyberpunk", "attachedTo") === this.item.id
             );
 
-            const sdpBonusTotal = attachedOptions.reduce((sum, opt) => {
-                return sum + (opt.system.sdpBonus || 0);
-            }, 0);
+            const sdpBonusTotal = attachedOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
 
             data.sdpBonusTotal = sdpBonusTotal;
             data.effectiveMaxStructure = baseMax + sdpBonusTotal;
@@ -83,7 +98,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         }
 
         // --- Weapon/Armor Capability ---
-        data.canBeWeapon = canBeWeapon(cyberType, sys.isOption);
+        data.canBeWeapon = canBeWeapon(cyberType, cyberSubtype);
         data.canBeArmor = canBeArmor(cyberType);
         data.isWeapon = sys.isWeapon && data.canBeWeapon;
         data.isArmor = sys.isArmor && data.canBeArmor;
@@ -126,6 +141,19 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
         data.selectedSubtypeLabel = selectedSubKey
             ? game.i18n.localize(`CYBERPUNK.${selectedSubKey}`)
             : "";
+
+        // --- Placement Dropdown (cyberlimb arm/leg only) ---
+        if (data.needsPlacement) {
+            data.placementOptions = Object.entries(placementOptions).map(([value, labelKey]) => ({
+                value,
+                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+                selected: sys.placement === value
+            }));
+            const selectedPlacementKey = placementOptions[sys.placement];
+            data.selectedPlacementLabel = selectedPlacementKey
+                ? game.i18n.localize(`CYBERPUNK.${selectedPlacementKey}`)
+                : "";
+        }
 
         // --- Surgery Code Dropdown ---
         data.surgeryCodeOptions = Object.entries(surgeryCodes).map(([value, labelKey]) => ({
@@ -288,18 +316,43 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
             await this.item.update({ [field]: !current });
         });
 
-        // --- Cyberware Type change → reset subtype and flags ---
+        // --- Cyberware Type change → reset subtype, placement, and capability flags ---
         html.find('select[name="system.cyberwareType"]').change(async ev => {
             const newType = ev.currentTarget.value;
             const subtypes = getCyberwareSubtypes(newType);
             const firstSubtype = Object.keys(subtypes)[0] || "";
             await this.item.update({
-                "system.cyberwareType": newType,
-                "system.cyberwareSubtype": firstSubtype,
-                "system.isOption": false,
-                "system.isWeapon": false,
-                "system.isArmor": false
+                "system.cyberwareType":     newType,
+                "system.cyberwareSubtype":  firstSubtype,
+                "system.placement":         isPlacementRequired(newType, firstSubtype) ? "left" : "",
+                "system.isOption":          false,  // dead field but kept clean
+                "system.isWeapon":          false,
+                "system.isArmor":           false
             });
+        });
+
+        // --- Cyberware Subtype change → re-evaluate placement + weapon capability ---
+        // For cyberlimb, switching from arm/leg ↔ hand/feet/finger/built-in
+        // changes whether the placement dropdown should appear AND whether
+        // an embedded weapon is allowed; we reset both so the sheet
+        // re-renders consistently.
+        html.find('select[name="system.cyberwareSubtype"]').change(async ev => {
+            const newSubtype = ev.currentTarget.value;
+            const cyberType = this.item.system.cyberwareType;
+            const update = { "system.cyberwareSubtype": newSubtype };
+            // Placement is only meaningful for arm/leg bases. Default new
+            // arm/leg items to placement=left so the dropdown renders with a
+            // selected value; clear for anything else.
+            if (isPlacementRequired(cyberType, newSubtype)) {
+                if (!this.item.system.placement) update["system.placement"] = "left";
+            } else {
+                update["system.placement"] = "";
+            }
+            // If the new subtype can no longer host a weapon, turn the flag off.
+            if (!canBeWeapon(cyberType, newSubtype) && this.item.system.isWeapon) {
+                update["system.isWeapon"] = false;
+            }
+            await this.item.update(update);
         });
 
         // --- Armor current SP input ---

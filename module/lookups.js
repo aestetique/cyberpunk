@@ -455,33 +455,45 @@ export const attackerEffects = {
     crashed: "EffectCrashed"
 };
 
-/** Cyberware types */
+/**
+ * Cyberware types.
+ *
+ * The previous single `sensor` type fanned out into `optics` / `voice` / `audio`
+ * so each kind has its own base/option grouping in the gear tab. The three
+ * types are still displayed under one "Sensors" header (see actor-sheet).
+ */
 export const cyberwareTypes = {
-    sensor: "CyberTypeSensor",
     cyberlimb: "CyberTypeCyberlimb",
-    implant: "CyberTypeImplant",
-    chipware: "CyberTypeChipware"
+    optics:    "CyberTypeOptics",
+    voice:     "CyberTypeVoice",
+    audio:     "CyberTypeAudio",
+    implant:   "CyberTypeImplant",
+    chipware:  "CyberTypeChipware"
 };
 
-/** Cyberware subtypes by type */
+/**
+ * Cyberware subtypes by type.
+ *
+ *   - Cyberlimb subtype encodes role directly: arm/leg are bases, hand/feet/
+ *     finger/builtIn are options. The legacy `isOption` boolean is no longer
+ *     read (still in template.json as dead data for backward compat). For
+ *     arm/leg, the `placement` field (left/right/extra) supplies the actual
+ *     limb slot.
+ *   - Sensor types (optics/voice/audio) each have a parallel base/option pair.
+ *   - Implant / chipware unchanged.
+ */
 export const cyberwareSubtypes = {
-    sensor: {
-        voice: "CyberSubVoice",
-        audio: "CyberSubAudio",
-        optics: "CyberSubOptics"
-    },
     cyberlimb: {
-        leftArm: "CyberSubLeftArm",
-        rightArm: "CyberSubRightArm",
-        leftLeg: "CyberSubLeftLeg",
-        rightLeg: "CyberSubRightLeg",
-        extraArm: "CyberSubExtraArm",
-        meatLimbs: "CyberSubMeatLimbs",
-        builtIn: "CyberSubBuiltIn",
-        finger: "CyberSubFinger",
-        hand: "CyberSubHand",
-        feet: "CyberSubFeet"
+        arm:     "CyberSubArm",
+        leg:     "CyberSubLeg",
+        hand:    "CyberSubHand",
+        feet:    "CyberSubFeet",
+        finger:  "CyberSubFinger",
+        builtIn: "CyberSubBuiltIn"
     },
+    optics:    { base: "CyberSubBase", option: "CyberSubOption" },
+    voice:     { base: "CyberSubBase", option: "CyberSubOption" },
+    audio:     { base: "CyberSubBase", option: "CyberSubOption" },
     implant: {
         fashionware: "CyberSubFashionware",
         neuralware: "CyberSubNeuralware",
@@ -498,6 +510,93 @@ export const cyberwareSubtypes = {
         storage: "CyberSubStorage"
     }
 };
+
+/** Cyberlimb base subtypes (each takes a `placement`). */
+export const CYBERLIMB_BASE_SUBTYPES = new Set(["arm", "leg"]);
+
+/** Cyberlimb option subtypes (attach to a base via `flags.cyberpunk.attachedTo`). */
+export const CYBERLIMB_OPTION_SUBTYPES = new Set(["hand", "feet", "finger", "builtIn"]);
+
+/** Cyberware types that participate in the "Sensors" gear-tab section. */
+export const SENSOR_TYPES = new Set(["optics", "voice", "audio"]);
+
+/** Placement values for cyberlimb bases. */
+export const placementOptions = {
+    left:  "PlacementLeft",
+    right: "PlacementRight",
+    extra: "PlacementExtra"
+};
+
+/**
+ * Attachment rules: which (cyberware) bases an option may attach to.
+ * Cyberlimb options route by subtype; sensor options route by type.
+ *
+ *   hand    → cyberlimb arm
+ *   feet    → cyberlimb leg
+ *   finger  → cyberlimb arm
+ *   builtIn → cyberlimb arm OR cyberlimb leg
+ *   optics-option → optics-base
+ *   voice-option  → voice-base
+ *   audio-option  → audio-base
+ */
+const CYBERLIMB_ATTACH_RULES = {
+    hand:    new Set(["arm"]),
+    feet:    new Set(["leg"]),
+    finger:  new Set(["arm"]),
+    builtIn: new Set(["arm", "leg"])
+};
+
+/** True if `item` is a cyberlimb base (arm or leg). */
+export function isCyberlimbBase(item) {
+    if (item?.type !== "cyberware") return false;
+    return item.system?.cyberwareType === "cyberlimb"
+        && CYBERLIMB_BASE_SUBTYPES.has(item.system?.cyberwareSubtype);
+}
+
+/** True if `item` is a cyberlimb option (hand/feet/finger/built-in). */
+export function isCyberlimbOption(item) {
+    if (item?.type !== "cyberware") return false;
+    return item.system?.cyberwareType === "cyberlimb"
+        && CYBERLIMB_OPTION_SUBTYPES.has(item.system?.cyberwareSubtype);
+}
+
+/** True if `item` is a sensor base (optics/voice/audio base). */
+export function isSensorBase(item) {
+    if (item?.type !== "cyberware") return false;
+    return SENSOR_TYPES.has(item.system?.cyberwareType)
+        && item.system?.cyberwareSubtype === "base";
+}
+
+/** True if `item` is a sensor option. */
+export function isSensorOption(item) {
+    if (item?.type !== "cyberware") return false;
+    return SENSOR_TYPES.has(item.system?.cyberwareType)
+        && item.system?.cyberwareSubtype === "option";
+}
+
+/**
+ * True if `option` can attach to `base`. Both must be cyberware items.
+ * The role check (option/base) is part of this — calling with two bases
+ * or two options always returns false.
+ */
+export function canAttachOptionToBase(option, base) {
+    if (!option || !base) return false;
+    if (option.type !== "cyberware" || base.type !== "cyberware") return false;
+    const ot = option.system?.cyberwareType;
+    const os = option.system?.cyberwareSubtype;
+    const bt = base.system?.cyberwareType;
+    const bs = base.system?.cyberwareSubtype;
+
+    if (ot === "cyberlimb") {
+        if (bt !== "cyberlimb") return false;
+        const allowed = CYBERLIMB_ATTACH_RULES[os];
+        return !!(allowed && allowed.has(bs));
+    }
+    if (SENSOR_TYPES.has(ot)) {
+        return ot === bt && os === "option" && bs === "base";
+    }
+    return false;
+}
 
 /** Surgery codes */
 export const surgeryCodes = {
@@ -518,26 +617,46 @@ export function getCyberwareSubtypes(cyberwareType) {
 }
 
 /**
- * Check if cyberware type can have options (slots/spaces)
+ * True if a (type, subtype) combination can host options (i.e. it's a base).
+ * Cyberlimb arms/legs and sensor bases can; cyberlimb options, sensor
+ * options, implants, and chipware never.
  */
-export function canHaveOptions(cyberwareType) {
-    return cyberwareType === "sensor" || cyberwareType === "cyberlimb";
-}
-
-/**
- * Check if cyberware type can be a weapon
- */
-export function canBeWeapon(cyberwareType, isOption) {
-    if (cyberwareType === "implant") return true;
-    if ((cyberwareType === "sensor" || cyberwareType === "cyberlimb") && isOption) return true;
+export function canHaveOptions(cyberwareType, cyberwareSubtype) {
+    if (cyberwareType === "cyberlimb") return CYBERLIMB_BASE_SUBTYPES.has(cyberwareSubtype);
+    if (SENSOR_TYPES.has(cyberwareType)) return cyberwareSubtype === "base";
     return false;
 }
 
 /**
- * Check if cyberware type can be armor
+ * True if a (type, subtype) combination can carry an embedded weapon
+ * (system.isWeapon → renders Weapon tab on the sheet).
+ *
+ *   - All implants (book is broad on this)
+ *   - Cyberlimb options: hand, feet, finger, built-in
+ *   - Sensor options (any of optics / voice / audio)
+ */
+export function canBeWeapon(cyberwareType, cyberwareSubtype) {
+    if (cyberwareType === "implant") return true;
+    if (cyberwareType === "cyberlimb") return CYBERLIMB_OPTION_SUBTYPES.has(cyberwareSubtype);
+    if (SENSOR_TYPES.has(cyberwareType)) return cyberwareSubtype === "option";
+    return false;
+}
+
+/**
+ * True if a (type, subtype) carries an embedded armor block. Currently only
+ * implants (body plating et al). Kept as a 1-arg predicate for compatibility
+ * with the dead `isOption`-era signature.
  */
 export function canBeArmor(cyberwareType) {
     return cyberwareType === "implant";
+}
+
+/**
+ * True if a cyberware item requires the `placement` field (Left/Right/Extra).
+ * Only cyberlimb arm/leg bases — every other subtype ignores placement.
+ */
+export function isPlacementRequired(cyberwareType, cyberwareSubtype) {
+    return cyberwareType === "cyberlimb" && CYBERLIMB_BASE_SUBTYPES.has(cyberwareSubtype);
 }
 
 /**

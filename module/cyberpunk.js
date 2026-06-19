@@ -282,7 +282,9 @@ Hooks.once("ready", async function() {
     //        isChipped skill flag → Skillchip cyberware items via op:"=" override.
     // 2.2.0: Equipped drugs (system.equipped=true on drug items) → ActiveEffect
     //        documents on the owning actor, decoupling supply from application.
-    const NEEDS_MIGRATION_VERSION = "2.2.0";
+    // 2.3.0: Cyberware refactor. sensor → optics/voice/audio types;
+    //        cyberlimb subtypes collapse to arm/leg + placement; isOption dead.
+    const NEEDS_MIGRATION_VERSION = "2.3.0";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;

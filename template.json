@@ -961,6 +961,7 @@
 			"templates": ["common"],
 			"cyberwareType": "implant",
 			"cyberwareSubtype": "",
+			"placement": "",
 			"surgeryCode": "N",
 			"humanityCost": "1d6",
 			"humanityLoss": 0,

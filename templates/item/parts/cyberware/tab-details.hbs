@@ -107,136 +107,172 @@
 {{!-- Divider --}}
 <div class="cyber-divider"></div>
 
-{{!-- ===================== --}}
-{{!-- SENSOR / CYBERLIMB    --}}
-{{!-- ===================== --}}
-{{#if canHaveOptions}}
-  {{!-- Row 3: Is Option + Has Slots / Takes Space --}}
+{{!-- ====================================== --}}
+{{!-- CYBERLIMB BASE — Arm / Leg              --}}
+{{!-- ====================================== --}}
+{{#if isCyberlimbBase}}
+  {{!-- Row 1: Has Slots + Placement --}}
   <div class="variables-row">
     <div class="variable-field">
-      <label class="variable-label">{{localize "CYBERPUNK.IsOption"}}</label>
+      <label class="variable-label">{{localize "CYBERPUNK.HasSlots"}}</label>
       {{#if isLocked}}
-        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if isOption}}checked{{else}}unchecked{{/if}}.svg">
+        <span class="variable-value">{{system.hasSlots}}</span>
       {{else}}
-        <img class="checkbox-img checkbox-toggle" data-field="system.isOption"
-             src="systems/cyberpunk/img/ui/checkbox-active-{{#if isOption}}checked{{else}}unchecked{{/if}}.svg">
+        <input type="number" class="variable-input" name="system.hasSlots" value="{{system.hasSlots}}" min="0">
       {{/if}}
     </div>
 
-    {{#if isOption}}
-      {{!-- Takes Space (for options) --}}
-      <div class="variable-field">
-        <label class="variable-label">{{localize "CYBERPUNK.TakesSpace"}}</label>
-        {{#if isLocked}}
-          <span class="variable-value">{{system.takesSpace}}</span>
-        {{else}}
-          <input type="number" class="variable-input" name="system.takesSpace" value="{{system.takesSpace}}" min="0">
-        {{/if}}
-      </div>
-    {{else}}
-      {{!-- Has Slots (for parent cyberware) --}}
-      <div class="variable-field">
-        <label class="variable-label">{{localize "CYBERPUNK.HasSlots"}}</label>
-        {{#if isLocked}}
-          <span class="variable-value">{{system.hasSlots}}</span>
-        {{else}}
-          <input type="number" class="variable-input" name="system.hasSlots" value="{{system.hasSlots}}" min="0">
-        {{/if}}
-      </div>
-    {{/if}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.Placement"}}</label>
+      {{#if isLocked}}
+        <div class="dropdown">
+          <span class="dropdown-text">{{selectedPlacementLabel}}</span>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{else}}
+        <div class="dropdown-wrapper">
+          <select class="dropdown-select" name="system.placement">
+            {{#each placementOptions}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+          </select>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{/if}}
+    </div>
   </div>
 
-  {{!-- Cyberlimb-specific rows --}}
-  {{#if isCyberlimb}}
-    {{#if isOption}}
-      {{!-- Row 4: Is Weapon + SDP Bonus (for cyberlimb options) --}}
-      <div class="variables-row">
-        <div class="variable-field">
-          <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
-          {{#if isLocked}}
-            <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
-          {{else}}
-            <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
-                 src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
-          {{/if}}
-        </div>
+  {{!-- Row 2: Structure + Disables At --}}
+  <div class="variables-row">
+    <div class="variable-field dual-field">
+      <label class="variable-label">{{localize "CYBERPUNK.Structure"}}</label>
+      {{#if isLocked}}
+        <span class="dual-value">{{system.structure.current}}</span>
+      {{else}}
+        <input type="number" class="dual-input" name="system.structure.current" value="{{system.structure.current}}" min="0">
+      {{/if}}
+      <span class="dual-separator">/</span>
+      {{#if isLocked}}
+        {{#if hasBonus}}
+          <span class="dual-value with-bonus">{{effectiveMaxStructure}}</span>
+        {{else}}
+          <span class="dual-value">{{system.structure.max}}</span>
+        {{/if}}
+      {{else}}
+        <input type="number" class="dual-input" name="system.structure.max" value="{{system.structure.max}}" min="0">
+        {{#if hasBonus}}
+          <span class="bonus-indicator">(+{{sdpBonusTotal}})</span>
+        {{/if}}
+      {{/if}}
+    </div>
 
-        <div class="variable-field">
-          <label class="variable-label">{{localize "CYBERPUNK.SDPBonus"}}</label>
-          {{#if isLocked}}
-            <span class="variable-value">{{system.sdpBonus}}</span>
-          {{else}}
-            <input type="number" class="variable-input" name="system.sdpBonus" value="{{system.sdpBonus}}">
-          {{/if}}
-        </div>
-      </div>
-    {{else}}
-      {{!-- Row 4: Structure + Disables At (for cyberlimb parent) --}}
-      <div class="variables-row">
-        <div class="variable-field dual-field">
-          <label class="variable-label">{{localize "CYBERPUNK.Structure"}}</label>
-          {{#if isLocked}}
-            <span class="dual-value">{{system.structure.current}}</span>
-          {{else}}
-            <input type="number" class="dual-input" name="system.structure.current" value="{{system.structure.current}}" min="0">
-          {{/if}}
-          <span class="dual-separator">/</span>
-          {{#if isLocked}}
-            {{#if hasBonus}}
-              <span class="dual-value with-bonus">{{effectiveMaxStructure}}</span>
-            {{else}}
-              <span class="dual-value">{{system.structure.max}}</span>
-            {{/if}}
-          {{else}}
-            <input type="number" class="dual-input" name="system.structure.max" value="{{system.structure.max}}" min="0">
-            {{#if hasBonus}}
-              <span class="bonus-indicator">(+{{sdpBonusTotal}})</span>
-            {{/if}}
-          {{/if}}
-        </div>
-
-        <div class="variable-field">
-          <label class="variable-label">{{localize "CYBERPUNK.DisablesAt"}}</label>
-          {{#if isLocked}}
-            {{#if hasBonus}}
-              <span class="variable-value with-bonus">{{effectiveDisablesAt}}</span>
-            {{else}}
-              <span class="variable-value">{{system.disablesAt}}</span>
-            {{/if}}
-          {{else}}
-            <input type="number" class="variable-input" name="system.disablesAt" value="{{system.disablesAt}}">
-            {{#if hasBonus}}
-              <span class="bonus-indicator">(+{{sdpBonusTotal}})</span>
-            {{/if}}
-          {{/if}}
-        </div>
-      </div>
-    {{/if}}
-  {{/if}}
-
-  {{!-- Sensor option: Is Weapon checkbox --}}
-  {{#if isSensor}}
-    {{#if isOption}}
-      <div class="variables-row">
-        <div class="variable-field">
-          <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
-          {{#if isLocked}}
-            <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
-          {{else}}
-            <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
-                 src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
-          {{/if}}
-        </div>
-      </div>
-    {{/if}}
-  {{/if}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.DisablesAt"}}</label>
+      {{#if isLocked}}
+        {{#if hasBonus}}
+          <span class="variable-value with-bonus">{{effectiveDisablesAt}}</span>
+        {{else}}
+          <span class="variable-value">{{system.disablesAt}}</span>
+        {{/if}}
+      {{else}}
+        <input type="number" class="variable-input" name="system.disablesAt" value="{{system.disablesAt}}">
+        {{#if hasBonus}}
+          <span class="bonus-indicator">(+{{sdpBonusTotal}})</span>
+        {{/if}}
+      {{/if}}
+    </div>
+  </div>
 {{/if}}
 
-{{!-- ===================== --}}
-{{!-- IMPLANT               --}}
-{{!-- ===================== --}}
+{{!-- ============================================== --}}
+{{!-- CYBERLIMB OPTION — Hand / Feet / Finger / Built-in --}}
+{{!-- ============================================== --}}
+{{#if isCyberlimbOption}}
+  {{!-- Row 1: Takes Space + SDP Bonus --}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.TakesSpace"}}</label>
+      {{#if isLocked}}
+        <span class="variable-value">{{system.takesSpace}}</span>
+      {{else}}
+        <input type="number" class="variable-input" name="system.takesSpace" value="{{system.takesSpace}}" min="0">
+      {{/if}}
+    </div>
+
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.SDPBonus"}}</label>
+      {{#if isLocked}}
+        <span class="variable-value">{{system.sdpBonus}}</span>
+      {{else}}
+        <input type="number" class="variable-input" name="system.sdpBonus" value="{{system.sdpBonus}}">
+      {{/if}}
+    </div>
+  </div>
+
+  {{!-- Row 2: Is a Weapon --}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
+      {{#if isLocked}}
+        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
+      {{else}}
+        <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+             src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
+      {{/if}}
+    </div>
+  </div>
+{{/if}}
+
+{{!-- ====================================== --}}
+{{!-- SENSOR BASE — Optics / Voice / Audio    --}}
+{{!-- ====================================== --}}
+{{#if isSensorBase}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.HasSlots"}}</label>
+      {{#if isLocked}}
+        <span class="variable-value">{{system.hasSlots}}</span>
+      {{else}}
+        <input type="number" class="variable-input" name="system.hasSlots" value="{{system.hasSlots}}" min="0">
+      {{/if}}
+    </div>
+  </div>
+{{/if}}
+
+{{!-- ====================================== --}}
+{{!-- SENSOR OPTION                            --}}
+{{!-- ====================================== --}}
+{{#if isSensorOption}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.TakesSpace"}}</label>
+      {{#if isLocked}}
+        <span class="variable-value">{{system.takesSpace}}</span>
+      {{else}}
+        <input type="number" class="variable-input" name="system.takesSpace" value="{{system.takesSpace}}" min="0">
+      {{/if}}
+    </div>
+
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
+      {{#if isLocked}}
+        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
+      {{else}}
+        <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+             src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
+      {{/if}}
+    </div>
+  </div>
+{{/if}}
+
+{{!-- ====================================== --}}
+{{!-- IMPLANT — unchanged                     --}}
+{{!-- ====================================== --}}
 {{#if isImplant}}
-  {{!-- Row 3: Is Weapon + Is Armor --}}
   <div class="variables-row">
     <div class="variable-field">
       <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
@@ -260,7 +296,4 @@
   </div>
 {{/if}}
 
-{{!-- ===================== --}}
-{{!-- CHIPWARE              --}}
-{{!-- ===================== --}}
-{{!-- Chipware uses Effects tab for skill chips --}}
+{{!-- Chipware: no rows below the divider. Skill chips use the Effects tab. --}}

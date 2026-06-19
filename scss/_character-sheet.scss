@@ -975,6 +975,10 @@ input.info-value.info-input {
 // ============================================
 
 .character-sheet {
+  .locked {
+    height: 100%;
+  }
+
   .tab {
     min-height: 260px;
     max-height: 900px;

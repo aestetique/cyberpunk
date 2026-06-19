@@ -1,5 +1,6 @@
-import { availability, toolBonusProperties } from "../lookups.js";
+import { availability, toolBonusProperties, isAttributeProperty } from "../lookups.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import { prepareEffectTabContext } from "./embedded-helpers.js";
 
 /**
  * Tool Item Sheet with custom card design and tabs
@@ -33,44 +34,8 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
         const selectedAvail = availability[data.system.availability] || "Common";
         data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
 
-        // --- Bonuses ---
-        const rawBonuses = this.item.system.bonuses || [];
-        const usedProperties = new Set(
-            rawBonuses.filter(b => b.type === "property").map(b => b.property)
-        );
-
-        data.bonuses = rawBonuses.map(bonus => {
-            const op = bonus.op || "+";
-            const opOptions = [
-                { value: "+", label: "+", selected: op === "+" },
-                { value: "×", label: "×", selected: op === "×" },
-                { value: "=", label: "=", selected: op === "=" }
-            ];
-            if (bonus.type === "property") {
-                const labelKey = toolBonusProperties[bonus.property];
-                return {
-                    ...bonus,
-                    op, opOptions,
-                    isProperty: true,
-                    label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
-                };
-            }
-            return {
-                ...bonus,
-                op, opOptions,
-                isSkill: true,
-                hasFilled: !!(bonus.skillUuid),
-                label: bonus.skillName || ""
-            };
-        });
-
-        // Property dropdown options — exclude properties already in bonuses
-        data.propertyOptions = Object.entries(toolBonusProperties)
-            .filter(([key]) => !usedProperties.has(key))
-            .map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`)
-            }));
+        // --- Bonuses --- (shared shape with cyberware / outfit / drug)
+        prepareEffectTabContext(data, this.item.system.bonuses || []);
 
         return data;
     }
@@ -102,21 +67,26 @@ export class CyberpunkToolSheet extends CyberpunkItemSheet {
 
         if (this._isLocked) return;
 
-        // Add property bonus
-        html.find('.add-property').click(async ev => {
-            ev.preventDefault();
+        // Add attribute / property bonus — same data shape (`type: "property"`),
+        // filtered to stats.* vs everything-else by which button was clicked.
+        const addPropertyBonus = async (filterFn) => {
             const bonuses = [...(this.item.system.bonuses || [])];
-            const usedProperties = new Set(
-                bonuses.filter(b => b.type === "property").map(b => b.property)
-            );
-            // Find first available property
-            const firstAvailable = Object.keys(toolBonusProperties).find(k => !usedProperties.has(k));
+            const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
+            const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
             if (!firstAvailable) {
                 ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
                 return;
             }
             bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
             await this.item.update({ "system.bonuses": bonuses });
+        };
+        html.find('.add-attribute').click(ev => {
+            ev.preventDefault();
+            addPropertyBonus(isAttributeProperty);
+        });
+        html.find('.add-property').click(ev => {
+            ev.preventDefault();
+            addPropertyBonus(k => !isAttributeProperty(k));
         });
 
         // Add skill bonus (empty slot)

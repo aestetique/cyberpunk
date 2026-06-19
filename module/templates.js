@@ -14,6 +14,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/actor/parts/drone-skills-block.hbs",
         "systems/cyberpunk/templates/actor/parts/cover-row.hbs",
         "systems/cyberpunk/templates/actor/parts/conditions-block.hbs",
+        "systems/cyberpunk/templates/actor/parts/state-effects-block.hbs",
         "systems/cyberpunk/templates/actor/parts/cyberware.hbs",
         "systems/cyberpunk/templates/actor/parts/armor-display.hbs",
         "systems/cyberpunk/templates/actor/parts/netrunning.hbs",
@@ -41,6 +42,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/ordnance-hit.hbs",
         "systems/cyberpunk/templates/chat/item-transfer.hbs",
         "systems/cyberpunk/templates/chat/item-trade.hbs",
+        "systems/cyberpunk/templates/chat/drug-use.hbs",
         "systems/cyberpunk/templates/actor/shop-sheet.hbs",
 
         // Chat card partials

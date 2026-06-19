@@ -1067,6 +1067,10 @@
 			"templates": ["common"],
 			"quantity": 1,
 			"phase": "active",
+			"duration": 3600,
+			"strength": 1,
+			"withdrawalDuration": 3600,
+			"withdrawalStrength": 1,
 			"bonuses": [],
 			"withdrawal": []
 		}

@@ -22,11 +22,18 @@ export function registerSystemSettings() {
 
   /**
    * Game time offset from campaign start (ms). Hidden setting.
+   * onChange: drug effects key their phase-expiration to this clock, so any
+   * advancement (combat round, calendar dialog) re-checks every active drug
+   * effect for wear-off / phase swap. Runs on the active GM only.
    */
   game.settings.register("cyberpunk", "gameTimeOffset", {
     scope: "world",
     config: false,
     type: Number,
-    default: 0
+    default: 0,
+    onChange: async () => {
+      const { checkDrugEffectExpiration } = await import("./drug-effects.js");
+      await checkDrugEffectExpiration();
+    }
   });
 }

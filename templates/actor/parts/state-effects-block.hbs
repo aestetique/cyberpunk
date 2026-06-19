@@ -1,0 +1,67 @@
+{{!--
+  State-tab effects sections — Active Drugs and Item Effects.
+
+  Active Drugs: applied ActiveEffect docs (drug-flagged) on this actor.
+  Phase button cycles Active → Withdrawal → Wear Off, deleting the effect
+  on the final tap. Row icon is the drug's per-dose image so the same
+  picture players see on the token shows up here.
+
+  Item Effects: read-only mirror of equipped items with non-empty
+  bonuses[]. No action button — these are managed by the source item's
+  equipped state on the Gear tab. Click row → open source item sheet.
+--}}
+
+{{#if activeDrugRows.length}}
+<div class="gear-block">
+  <header class="tab-header">
+    <span class="tab-title">{{localize "CYBERPUNK.ActiveDrugs"}}</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-drug.svg" alt="">
+  </header>
+  <div class="tab-content gear-content">
+    {{#each activeDrugRows as |row|}}
+      <div class="gear-row" data-effect-id="{{row.id}}">
+        <div class="gear-icon">
+          <img src="{{row.img}}" alt="{{row.name}}">
+        </div>
+        <div class="gear-info">
+          <span class="gear-name">{{row.name}}</span>
+          <span class="gear-context">{{row.subtext}}</span>
+        </div>
+        <div class="gear-field" style="width: 60px;">
+          <span class="field-top">{{row.durationDisplay}}</span>
+          <span class="field-bottom">{{localize "CYBERPUNK.Duration"}}</span>
+        </div>
+        <div class="gear-field" style="width: 60px;">
+          <span class="field-top">{{row.strength}}</span>
+          <span class="field-bottom">{{localize "CYBERPUNK.Strength"}}</span>
+        </div>
+        <div class="gear-action-btn drug-phase-toggle" data-effect-id="{{row.id}}" title="{{row.actionLabel}}">
+          <img src="systems/cyberpunk/img/ui/{{row.actionBadge}}" alt="{{row.actionLabel}}">
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</div>
+{{/if}}
+
+{{#if itemEffectRows.length}}
+<div class="gear-block">
+  <header class="tab-header">
+    <span class="tab-title">{{localize "CYBERPUNK.ItemEffects"}}</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-item-effect.svg" alt="">
+  </header>
+  <div class="tab-content gear-content">
+    {{#each itemEffectRows as |row|}}
+      <div class="gear-row item-effect-row" data-item-id="{{row.id}}">
+        <div class="gear-icon">
+          <img src="{{row.img}}" alt="{{row.name}}">
+        </div>
+        <div class="gear-info">
+          <span class="gear-name">{{row.name}}</span>
+          <span class="gear-context">{{row.subtext}}</span>
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</div>
+{{/if}}

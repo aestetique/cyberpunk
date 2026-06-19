@@ -4,6 +4,7 @@ import { getSkillsForCategory } from "./lookups.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
 import { formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
+import { applyDrugToActor } from "./drug-effects.js";
 
 /**
  * Custom ChatMessage rendering for the Cyberpunk system.
@@ -275,8 +276,27 @@ export class CyberpunkChatMessage extends ChatMessage {
                 }
             }
 
+            // Apply drug button — same lifecycle as Apply Damage but creates an
+            // ActiveEffect on each target instead of subtracting HP. Idempotent
+            // via the `drugApplied` flag so re-renders show the locked state.
+            const applyDrugBtn = targetSelector.querySelector(".apply-drug-btn");
+            if (applyDrugBtn) {
+                if (this.getFlag("cyberpunk", "drugApplied")) {
+                    applyDrugBtn.textContent = "APPLIED";
+                    applyDrugBtn.disabled = true;
+                    const tabs = targetSelector.querySelector(".target-selector__tabs");
+                    if (tabs) tabs.style.display = "none";
+                    const savedHtml = this.getFlag("cyberpunk", "appliedTargetHtml");
+                    const content = targetSelector.querySelector(".target-selector__content");
+                    if (savedHtml && content) content.innerHTML = savedHtml;
+                } else {
+                    applyDrugBtn.addEventListener("click", (event) => this._onApplyDrug(event, html));
+                }
+            }
+
             // Initialize target info based on current mode (only if not already applied)
-            if (!this.getFlag("cyberpunk", "damageApplied")) {
+            if (!this.getFlag("cyberpunk", "damageApplied")
+                && !this.getFlag("cyberpunk", "drugApplied")) {
                 this._updateTargetInfo(html, "targeted");
             }
 
@@ -665,6 +685,12 @@ export class CyberpunkChatMessage extends ChatMessage {
         const defenceBtns = html.querySelectorAll(".defence-btn");
 
         if (!content || !targetSelector) return;
+
+        // Drug-use cards have no damage data / defence / hints — they just
+        // need a target list and an enabled Apply button. Dispatch early.
+        if (targetSelector.dataset.drugMode === "use") {
+            return this._updateDrugTargetInfo(html, mode);
+        }
 
         // Get damage data from the selector
         let damageData;
@@ -1410,6 +1436,97 @@ export class CyberpunkChatMessage extends ChatMessage {
         // Persist the applied state and the target info HTML so it survives reloads
         const content = html.querySelector(".target-selector__content");
         await this.setFlag("cyberpunk", "damageApplied", true);
+        if (content) {
+            await this.setFlag("cyberpunk", "appliedTargetHtml", content.innerHTML);
+        }
+    }
+
+    /**
+     * Drug-card variant of _updateTargetInfo. No damage preview / defence
+     * buttons / hint text — just paint the target portraits and toggle the
+     * Apply button based on whether any targets are present.
+     * @private
+     */
+    _updateDrugTargetInfo(html, mode) {
+        const content = html.querySelector(".target-selector__content");
+        const applyBtn = html.querySelector(".apply-drug-btn");
+        if (!content) return;
+
+        const targets = mode === "targeted"
+            ? Array.from(game.user.targets)
+            : (canvas.tokens?.controlled || []);
+
+        if (targets.length === 0) {
+            content.innerHTML = `<div class="target-info target-info--empty">${localize("SelectTarget")}</div>`;
+            if (applyBtn) applyBtn.disabled = true;
+            return;
+        }
+
+        let infoHtml = "";
+        for (const token of targets) {
+            const actor = token.actor;
+            if (!actor) continue;
+            infoHtml += `
+                <div class="target-info__selected" data-token-id="${token.id}">
+                    <div class="target-info__portrait">
+                        <img src="${actor.img}" alt="${actor.name}">
+                    </div>
+                    <span class="target-info__name">${actor.name}</span>
+                </div>
+            `;
+        }
+        content.innerHTML = infoHtml;
+        if (applyBtn) applyBtn.disabled = false;
+    }
+
+    /**
+     * Apply Drug — materialise one dose of the supply (identified by UUID in
+     * the card's `data-supply-uuid` attribute) as an ActiveEffect on each
+     * target actor. Mirrors _onApplyDamage's target-mode dispatch and the
+     * idempotent "APPLIED" lock-up flag. The supply is decremented inside
+     * applyDrugToActor — once here per dose, regardless of target count
+     * (multiple targets from one card would each consume one dose; rare
+     * but handled).
+     * @private
+     */
+    async _onApplyDrug(event, html) {
+        event.preventDefault();
+
+        const targetSelector = html.querySelector(".target-selector");
+        if (!targetSelector) return;
+
+        const supplyUuid = targetSelector.dataset.supplyUuid;
+        if (!supplyUuid) return;
+        const supply = await fromUuid(supplyUuid);
+        if (!supply) {
+            ui.notifications.warn(localize("DrugSupplyGone"));
+            return;
+        }
+
+        const activeTab = html.querySelector(".target-selector__tab--active");
+        const mode = activeTab?.dataset.mode || "targeted";
+        let targets = mode === "targeted"
+            ? Array.from(game.user.targets)
+            : (canvas.tokens?.controlled || []);
+        if (targets.length === 0) return;
+
+        // For each target: re-fetch supply each iteration so the quantity
+        // check in applyDrugToActor sees the running decrement (3 targets
+        // can drain a stack of 2).
+        for (const token of targets) {
+            const actor = token.actor;
+            if (!actor) continue;
+            const live = await fromUuid(supplyUuid);
+            if (!live || (Number(live.system?.quantity) || 0) <= 0) {
+                ui.notifications.warn(localize("NoDosesLeft"));
+                break;
+            }
+            await applyDrugToActor(live, actor);
+        }
+
+        // Lock the card so a re-render shows APPLIED, matching damage UX.
+        const content = html.querySelector(".target-selector__content");
+        await this.setFlag("cyberpunk", "drugApplied", true);
         if (content) {
             await this.setFlag("cyberpunk", "appliedTargetHtml", content.innerHTML);
         }

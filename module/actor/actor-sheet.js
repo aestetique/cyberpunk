@@ -8,6 +8,7 @@ import { MeleeAttackDialog } from "../dialog/melee-attack-dialog.js"
 import { OrdnanceAttackDialog } from "../dialog/ordnance-attack-dialog.js"
 import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
+import { getDrugRemainingSeconds } from "../drug-effects.js"
 import { SortModes } from "./skill-sort.js";
 import { MedicalHelpDialog } from "../dialog/medical-help-dialog.js"
 import { StressRollDialog } from "../dialog/stress-roll-dialog.js"
@@ -25,12 +26,15 @@ import { shouldTransfer, transferItem } from "./item-transfer.js"
 
 /**
  * Render a bonus row's gear-context label: "INT +2", "BT ×2", "Reflex = 5".
- * `+` keeps the signed form so negative additives read naturally ("INT -3").
+ * Each op gets a distinct sigil; for the implicit-sign ops (`+`/`−`) we
+ * keep the signed form so a +1 stays "+1" and a -1 stays "-1".
  */
 const formatBonusLabel = (label, op, value) => {
     if (op === "×") return `${label} ×${value}`;
+    if (op === "÷") return `${label} ÷${value}`;
+    if (op === "−") return `${label} −${value}`;
     if (op === "=") return `${label} = ${value}`;
-    return `${label} ${value >= 0 ? '+' : ''}${value}`;
+    return `${label} ${value >= 0 ? '+' : ''}${value}`; // "+" and unknown
 };
 
 /**
@@ -313,6 +317,21 @@ export class CyberpunkActorSheet extends ActorSheet {
         const tempMod = s.tempMod || 0;
         if (tempMod !== 0) parts.push(`Gear ${tempMod > 0 ? "+" : ""}${tempMod}`);
         if (key === "ref" && s.armorMod) parts.push(`Armor ${s.armorMod}`);
+        // Item-driven bonuses (drugs, cyberware, tools, armor options) flow
+        // through the propertyOps pipeline in actor.js, which leaves an
+        // `appliedBonuses` array on each affected stat. Render each entry as
+        // `Source op value` (e.g. "Speed +2", "Glands \u00d72", "Drain \u00f72",
+        // "Hit \u22121", "Override =10").
+        if (Array.isArray(s.appliedBonuses)) {
+          for (const b of s.appliedBonuses) {
+            const v = Number(b.value) || 0;
+            if      (b.op === "\u00d7") parts.push(`${b.source} \u00d7${v}`);
+            else if (b.op === "\u00f7") parts.push(`${b.source} \u00f7${v}`);
+            else if (b.op === "\u2212") parts.push(`${b.source} \u2212${v}`);
+            else if (b.op === "=") parts.push(`${b.source} =${v}`);
+            else                   parts.push(`${b.source} ${v >= 0 ? "+" : "\u2212"}${Math.abs(v)}`); // "+"
+          }
+        }
         if (key === "emp") {
           const hloss = Math.floor((s.humanityDamage || 0) / 10);
           if (hloss > 0) parts.push(`Humanity \u2212${hloss}`);
@@ -1151,17 +1170,112 @@ export class CyberpunkActorSheet extends ActorSheet {
       };
     });
 
-    // Prepare drug data
+    // --- Active Drugs (State tab) ---
+    // Each row is one drug ActiveEffect on the actor. Phase determines the
+    // action button label / next state, mirroring the action chain that
+    // used to live on the supply item in Gear.
+    // Compact human-readable duration: largest unit that yields a whole
+    // number ≥ 1. < 60 s → "X s", < 1 h → "X m", < 24 h → "X h", else "X d".
+    // Boundaries match the rule the user specified for the State-tab display.
+    // Infinity (= no duration / manual-only drug) renders as a dash.
+    const formatDrugDuration = (seconds) => {
+      if (!Number.isFinite(seconds)) return "—";
+      const s = Math.max(0, Math.floor(Number(seconds) || 0));
+      if (s < 60)      return `${s} s`;
+      if (s < 3600)    return `${Math.floor(s / 60)} m`;
+      if (s < 86400)   return `${Math.floor(s / 3600)} h`;
+      return `${Math.floor(s / 86400)} d`;
+    };
+
+    sheetData.activeDrugRows = (this.actor.effects?.contents || [])
+      .filter(e => e.getFlag?.("cyberpunk", "isDrugEffect") === true)
+      .map(e => {
+        const phase = e.getFlag("cyberpunk", "phase") || "active";
+        const isActive = phase === "active";
+        // Subtext: phase label · effect summary (first two bonuses).
+        const phaseLabel = isActive
+          ? game.i18n.localize("CYBERPUNK.Active")
+          : game.i18n.localize("CYBERPUNK.Withdrawal");
+        const bonusList = isActive
+          ? (e.getFlag("cyberpunk", "activeChanges") || [])
+          : (e.getFlag("cyberpunk", "withdrawalChanges") || []);
+        const effectLabels = bonusList.slice(0, 2).map(b => {
+          const op = b.op || "+";
+          if (b.type === "property") {
+            const propKey = toolBonusProperties[b.property];
+            const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
+            return formatBonusLabel(propLabel, op, b.value);
+          }
+          if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
+          return "";
+        }).filter(Boolean);
+        const subtext = [phaseLabel, ...effectLabels].join(" · ");
+        // Drugs with no withdrawal bonuses skip the withdrawal step and
+        // wear off on the first click — so the tooltip should label the
+        // actual next action, not a phase the user can't reach.
+        const hasWithdrawal = ((e.getFlag("cyberpunk", "withdrawalChanges") || []).length) > 0;
+        const nextIsWithdrawal = isActive && hasWithdrawal;
+        // Duration / Strength belong to the CURRENT phase. The "Duration"
+        // value is REMAINING seconds against the system's own clock
+        // (gameTimeOffset) — the same clock the auto-advance logic uses,
+        // so display and behaviour can't drift apart.
+        const durationSeconds = getDrugRemainingSeconds(e);
+        const strength = isActive
+          ? (e.getFlag("cyberpunk", "strength") ?? 0)
+          : (e.getFlag("cyberpunk", "withdrawalStrength") ?? 0);
+        return {
+          id: e.id,
+          img: e.img || e.icon,
+          name: e.name,
+          subtext,
+          phase,
+          durationDisplay: formatDrugDuration(durationSeconds),
+          strength,
+          actionLabel: nextIsWithdrawal
+            ? game.i18n.localize("CYBERPUNK.Withdrawal")
+            : game.i18n.localize("CYBERPUNK.WearOff"),
+          // Badge shows the CURRENT phase, not the next action. Tooltip
+          // (`actionLabel`) carries the "click to advance" semantics.
+          actionBadge: isActive ? "badge-used.svg" : "badge-withdrawal.svg"
+        };
+      });
+
+    // --- Item Effects (State tab) ---
+    // Mirror of equipped items with non-empty bonuses[]. Read-only — clicking
+    // a row opens the source item; no inline action button.
+    const itemEffectSource = this.actor.items.contents.filter(i => {
+      if (!Array.isArray(i.system?.bonuses) || i.system.bonuses.length === 0) return false;
+      if (i.type === "tool" || i.type === "weapon" || i.type === "armor" || i.type === "cyberware" || i.type === "netware") {
+        return i.system.equipped === true;
+      }
+      return false;
+    });
+    sheetData.itemEffectRows = itemEffectSource.map(i => {
+      const effectLabels = (i.system.bonuses || []).slice(0, 3).map(b => {
+        const op = b.op || "+";
+        if (b.type === "property") {
+          const propKey = toolBonusProperties[b.property];
+          const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
+          return formatBonusLabel(propLabel, op, b.value);
+        }
+        if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
+        return "";
+      }).filter(Boolean);
+      return {
+        id: i.id,
+        img: i.img,
+        name: i.name,
+        subtext: effectLabels.join(" · ")
+      };
+    });
+
+    // Prepare drug data. Drugs in Gear are pure SUPPLY — they don't carry
+    // an "applied" state anymore; clicking Use posts the chat card and the
+    // dose materialises as an ActiveEffect on the chosen target. Phase /
+    // withdrawal information lives on the applied effect, not here.
     sheetData.drugItems = drugs.map(d => {
       const sys = d.system;
-      const equipped = sys.equipped ?? false;
-      const phase = sys.phase || "active";
-      const hasWithdrawal = (sys.withdrawal || []).length > 0;
-
-      // Summarize the bonus set that's currently in effect (or would be on Use, when inactive)
-      const sourceBonuses = (equipped && phase === "withdrawal")
-        ? (sys.withdrawal || [])
-        : (sys.bonuses || []);
+      const sourceBonuses = sys.bonuses || [];
       const effectLabels = sourceBonuses.slice(0, 2).map(b => {
         const op = b.op || "+";
         if (b.type === "property") {
@@ -1175,22 +1289,6 @@ export class CyberpunkActorSheet extends ActorSheet {
       }).filter(l => l);
       const contextParts = ['Drug', ...effectLabels];
 
-      // Badge + next-action title following the Use → [Withdrawal] → Wear Off chain.
-      let badgeFile, nextActionLabel;
-      if (!equipped) {
-        badgeFile = "badge-wearoff.svg";
-        nextActionLabel = game.i18n.localize("CYBERPUNK.Use");
-      } else if (phase === "withdrawal") {
-        badgeFile = "badge-withdrawal.svg";
-        nextActionLabel = game.i18n.localize("CYBERPUNK.WearOff");
-      } else if (hasWithdrawal) {
-        badgeFile = "badge-used.svg";
-        nextActionLabel = game.i18n.localize("CYBERPUNK.Withdrawal");
-      } else {
-        badgeFile = "badge-used.svg";
-        nextActionLabel = game.i18n.localize("CYBERPUNK.WearOff");
-      }
-
       return {
         id: d.id,
         img: d.img,
@@ -1199,11 +1297,8 @@ export class CyberpunkActorSheet extends ActorSheet {
         price: sys.cost || 0,
         weight: sys.weight || 0,
         quantity: sys.quantity ?? 0,
-        equipped,
-        phase,
-        hasWithdrawal,
-        badgeFile,
-        nextActionLabel
+        badgeFile: "badge-used.svg",
+        nextActionLabel: game.i18n.localize("CYBERPUNK.Use")
       };
     });
 
@@ -2488,35 +2583,68 @@ export class CyberpunkActorSheet extends ActorSheet {
       await item.update({ "system.equipped": !currentEquipped });
     });
 
-    // Toggle drug use → [withdrawal] → wearoff (gear tab)
-    html.find('.toggle-drug').click(async ev => {
+    // Use drug — posts a chat card carrying the supply UUID; the player
+    // (or GM, for cross-target) selects targets and clicks Apply on the
+    // card to materialise the dose as an ActiveEffect. Action cost is
+    // committed at click time via registerAction — cancelling on the
+    // chat card doesn't refund (the dose is already being prepped).
+    html.find('.use-drug').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const item = this.actor.items.get(itemId);
       if (!item) return;
-
-      const equipped = item.system.equipped ?? false;
-      const phase = item.system.phase || "active";
-      const hasWithdrawal = (item.system.withdrawal || []).length > 0;
-
-      if (!equipped) {
-        // Inactive → Active (Use)
-        await item.update({ "system.equipped": true, "system.phase": "active" });
-      } else if (phase === "active" && hasWithdrawal) {
-        // Active → Withdrawal
-        await item.update({ "system.phase": "withdrawal" });
-      } else {
-        // Active (no withdrawal) OR Withdrawal → Wear Off (decrement quantity, reset phase)
-        const newQty = (item.system.quantity ?? 1) - 1;
-        if (newQty <= 0) {
-          await item.delete();
-        } else {
-          await item.update({
-            "system.equipped": false,
-            "system.quantity": newQty,
-            "system.phase": "active"
-          });
-        }
+      if ((Number(item.system.quantity) || 0) <= 0) {
+        ui.notifications.warn(game.i18n.localize("CYBERPUNK.NoDosesLeft"));
+        return;
       }
+
+      const { registerAction } = await import("../action-tracker.js");
+      await registerAction(this.actor, "use drug");
+
+      // Subtext is the same bonus summary the Gear-tab drug row shows,
+      // capped at two bonuses to match the gear card. No "Drug · " prefix
+      // here — the section bar already carries the action context.
+      const sourceBonuses = item.system.bonuses || [];
+      const subtext = sourceBonuses.slice(0, 2).map(b => {
+        const op = b.op || "+";
+        if (b.type === "property") {
+          const propKey = toolBonusProperties[b.property];
+          const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
+          return formatBonusLabel(propLabel, op, b.value);
+        }
+        if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
+        return "";
+      }).filter(Boolean).join(" · ");
+      const html2 = await renderTemplate(
+        "systems/cyberpunk/templates/chat/drug-use.hbs",
+        {
+          actionLabel: game.i18n.localize("CYBERPUNK.UseDrug"),
+          drugImg: item.img,
+          drugName: item.name,
+          drugSubtext: subtext,
+          supplyUuid: item.uuid
+        }
+      );
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: html2
+      });
+    });
+
+    // State-tab Active Drugs: phase toggle (active → withdrawal → wear off).
+    html.find('.drug-phase-toggle').click(async ev => {
+      ev.stopPropagation();
+      const effectId = ev.currentTarget.dataset.effectId;
+      const effect = this.actor.effects.get(effectId);
+      if (!effect) return;
+      const { advanceDrugPhase } = await import("../drug-effects.js");
+      await advanceDrugPhase(effect);
+    });
+
+    // State-tab Item Effects: click row to open the source item sheet.
+    html.find('.item-effect-row').click(ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (item) item.sheet.render(true);
     });
 
     // (.gear-fire-weapon and .gear-fire-ordnance are wired by
@@ -3393,6 +3521,14 @@ export class CyberpunkActorSheet extends ActorSheet {
         }
       }
 
+      // Same-actor reorder → no-op. The stack-by-sourceUuid path below
+      // matches on `sourceUuid`, which points at the COMPENDIUM the ammo
+      // was first dropped from, not at the actor's own item. So when you
+      // drag an existing ammo row onto another spot on the same sheet,
+      // `find()` returns nothing and we'd happily create a brand-new pack —
+      // free ammo every drag. Mirrors the same guard on armor below.
+      if (item.parent?.id === this.actor.id) return;
+
       // Fall through: stack by source UUID
       const droppedUuid = item.uuid;
       const packQty = Number(item.system?.packSize) || 20;
@@ -3435,6 +3571,11 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // Handle drug drops — stack by name, add unused by default
     if (item.type === "drug") {
+      // Same-actor reorder → no-op. Stack-by-name matches the dragged item
+      // itself, so without this guard a drag-and-drop within the same sheet
+      // would add a free dose every time. Mirrors the ammo/armor guards.
+      if (item.parent?.id === this.actor.id) return;
+
       const existingDrug = this.actor.items.find(i =>
         i.type === "drug" && i.name === item.name
       );

@@ -198,82 +198,8 @@
     line-height: 16px;
   }
 
-  // ============================================
-  // Dual Field (Structure, etc.)
-  // Inherited from weapon-sheet pattern
-  // ============================================
-  .dual-field {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    flex: 1 0 0;
-  }
-
-  .dual-value {
-    display: flex;
-    width: 47px;
-    height: 26px;
-    padding: 5px 8px;
-    align-items: center;
-    border-radius: 4px;
-    background: var(--Chat-Front, #26282F);
-    color: #808090;
-    font-family: var(--font-blender);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 16px;
-    text-align: left;
-  }
-
-  .dual-value-narrow {
-    width: 40px;
-  }
-
-  .dual-input {
-    display: flex;
-    width: 47px;
-    height: 26px;
-    padding: 5px 8px;
-    justify-content: center;
-    align-items: center;
-    border-radius: 4px;
-    background: var(--Chat-Front, #26282F);
-    border: none;
-    color: var(--Chat-Text, #FFF);
-    font-family: var(--font-blender);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 16px;
-    text-align: left;
-    outline: none;
-
-    &:focus {
-      outline: none;
-      box-shadow: none;
-    }
-
-    &::-webkit-inner-spin-button,
-    &::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    -moz-appearance: textfield;
-  }
-
-  .dual-input-narrow {
-    width: 40px;
-  }
-
-  .dual-separator {
-    color: var(--Sheet-Key, #B9B29D);
-    font-family: var(--font-blender);
-    font-size: 14px;
-    font-style: normal;
-    font-weight: 500;
-    line-height: 16px;
-    flex-shrink: 0;
-  }
+  // `.dual-*` rules live in _item-card-base.scss now (shared by every
+  // item sheet). Only cyberware-specific overrides stay here.
 
   // Bonus indicator for SDP bonuses from attached options
   .bonus-indicator {
@@ -409,7 +335,8 @@
   .effect-bonuses {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    // Matches `.tab-content` rhythm (12px). See _tool-sheet.scss.
+    gap: 12px;
     align-self: stretch;
   }
 

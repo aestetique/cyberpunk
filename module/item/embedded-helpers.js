@@ -17,7 +17,8 @@ import {
     getAttackSkillsForWeapon,
     getRangedClassesForSkill,
     resolveWeaponDiscriminator,
-    toolBonusProperties
+    toolBonusProperties,
+    isAttributeProperty
 } from "../lookups.js";
 import { calibers as CALIBERS, getDamageForCaliber } from "../calibers.js";
 
@@ -35,21 +36,36 @@ export const DEFAULT_CLASS_BY_TYPE = {
 // Effect / Bonuses context
 // ---------------------------------------------------------------------------
 
-/** Build display-ready bonus rows for the Effect tab. */
+/**
+ * Build display-ready bonus rows for the Effect tab.
+ *
+ * Property-type rows split into TWO categories at the UI level:
+ *   - `isAttribute` — keys like `stats.int`, `stats.emp`, ... (Key Attributes)
+ *   - `isProperty`  — everything else (initiativeMod, saves, ignoreFatigue, …)
+ * The underlying data shape is identical (`type: "property"` + `property`
+ * key); the split is purely so the dropdown can offer the relevant subset
+ * and the label can read "Attribute" vs "Property". Pre-existing rows
+ * detect their category from the key itself, so older saved bonuses keep
+ * working without migration.
+ */
 export function prepareBonuses(rawBonuses) {
     return (rawBonuses || []).map(bonus => {
         const op = bonus.op || "+";
         const opOptions = [
             { value: "+", label: "+", selected: op === "+" },
+            { value: "−", label: "−", selected: op === "−" },
             { value: "×", label: "×", selected: op === "×" },
+            { value: "÷", label: "÷", selected: op === "÷" },
             { value: "=", label: "=", selected: op === "=" }
         ];
         if (bonus.type === "property") {
             const labelKey = toolBonusProperties[bonus.property];
+            const attribute = isAttributeProperty(bonus.property);
             return {
                 ...bonus,
                 op, opOptions,
-                isProperty: true,
+                isAttribute: attribute,
+                isProperty: !attribute,
                 label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
             };
         }
@@ -63,21 +79,30 @@ export function prepareBonuses(rawBonuses) {
     });
 }
 
-/** Property keys not yet used by another bonus row. */
+/**
+ * Property-key catalogues filtered by category and de-duplicated against
+ * what's already in `bonuses`. Returns `{attributes, properties}` so the
+ * sheet can populate the two split dropdowns.
+ */
 export function getAvailablePropertyOptions(bonuses) {
     const used = new Set((bonuses || []).filter(b => b.type === "property").map(b => b.property));
-    return Object.entries(toolBonusProperties)
-        .filter(([key]) => !used.has(key))
-        .map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`)
-        }));
+    const attributes = [];
+    const properties = [];
+    for (const [key, labelKey] of Object.entries(toolBonusProperties)) {
+        if (used.has(key)) continue;
+        const opt = { value: key, label: game.i18n.localize(`CYBERPUNK.${labelKey}`) };
+        if (isAttributeProperty(key)) attributes.push(opt);
+        else properties.push(opt);
+    }
+    return { attributes, properties };
 }
 
-/** Convenience: stuff both prepared bonuses and propertyOptions into sheetData. */
+/** Convenience: stuff both prepared bonuses and split-options into sheetData. */
 export function prepareEffectTabContext(data, rawBonuses) {
     data.bonuses = prepareBonuses(rawBonuses);
-    data.propertyOptions = getAvailablePropertyOptions(rawBonuses);
+    const opts = getAvailablePropertyOptions(rawBonuses);
+    data.attributeOptions = opts.attributes;
+    data.propertyOptions  = opts.properties;
 }
 
 // ---------------------------------------------------------------------------
@@ -225,17 +250,26 @@ export function prepareWeaponTabContext(data, weapon) {
 export function bindEffectTabListeners(html, item, { isLocked = false } = {}) {
     if (isLocked) return;
 
-    html.find('.add-property').click(async ev => {
-        ev.preventDefault();
+    // Add Attribute → property bonus targeting the first unused Key Attribute
+    // (stats.*); Add Property → targets the first unused non-stat property.
+    const addPropertyBonus = async (filterFn, warnKey) => {
         const bonuses = [...(item.system.bonuses || [])];
         const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
-        const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k));
+        const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
         if (!firstAvailable) {
-            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+            ui.notifications.warn(game.i18n.localize(warnKey));
             return;
         }
         bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
         await item.update({ "system.bonuses": bonuses });
+    };
+    html.find('.add-attribute').click(ev => {
+        ev.preventDefault();
+        addPropertyBonus(isAttributeProperty, "CYBERPUNK.DuplicateBonus");
+    });
+    html.find('.add-property').click(ev => {
+        ev.preventDefault();
+        addPropertyBonus(k => !isAttributeProperty(k), "CYBERPUNK.DuplicateBonus");
     });
 
     html.find('.add-skill').click(async ev => {

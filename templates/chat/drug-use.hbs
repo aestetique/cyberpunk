@@ -1,0 +1,45 @@
+{{!--
+  Drug-use chat card.
+
+  Posted when a player clicks "Use" on a drug item. Carries the supply
+  UUID so the Apply handler can re-fetch the source item at click time
+  (cheaper than embedding the full item snapshot in the card, and avoids
+  drift if the supply was edited between post and apply).
+
+  Visual layout:
+    [card-header] — standard actor portrait + name from Foundry speaker
+    [section-bar] — "USE DRUG" label
+    [drug-line]   — drug icon + name + subtext, mirroring weapon-line.hbs
+    [target-selector] — Targeted/Selected tabs + Apply button
+--}}
+<div class="cyberpunk-card cyberpunk-card--drug-use">
+
+    {{!-- Section Bar: action label + drug icon --}}
+    {{> "systems/cyberpunk/templates/chat/partials/section-bar.hbs" label=actionLabel icon="drug"}}
+
+    {{!-- Drug line: icon + name + subtext --}}
+    <div class="weapon-line">
+        <div class="weapon-line__icon">
+            <img src="{{drugImg}}" alt="{{drugName}}">
+        </div>
+        <div class="weapon-line__info">
+            <div class="weapon-line__name">{{drugName}}</div>
+            <div class="weapon-line__type">{{drugSubtext}}</div>
+        </div>
+    </div>
+
+    {{!-- Apply block — Targeted / Selected + Apply button --}}
+    <div class="target-selector" data-supply-uuid="{{supplyUuid}}" data-drug-mode="use">
+        <div class="target-selector__tabs">
+            <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{loc "Targeted"}}</button>
+            <span class="target-selector__divider"></span>
+            <button class="target-selector__tab" data-mode="selected">{{loc "Selected"}}</button>
+        </div>
+        <div class="target-selector__content">
+            <div class="target-info target-info--empty">
+                {{loc "SelectTarget"}}
+            </div>
+        </div>
+        <button class="apply-drug-btn" disabled>{{loc "Apply"}}</button>
+    </div>
+</div>

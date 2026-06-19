@@ -1,5 +1,6 @@
-import { availability, toolBonusProperties } from "../lookups.js";
+import { availability, toolBonusProperties, isAttributeProperty } from "../lookups.js";
 import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import { prepareBonuses, getAvailablePropertyOptions } from "./embedded-helpers.js";
 
 /**
  * Drug Item Sheet with custom card design and tabs
@@ -32,47 +33,14 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
     }
 
     /**
-     * Build a shaped bonus list (with isProperty/isSkill/label) and the property-dropdown
-     * options for a given bonus set on this item.
+     * Build a shaped bonus list + the split attribute/property dropdowns for a
+     * given bonus set on this item. Delegates to the shared embedded-helpers
+     * so drug / tool / cyberware / outfit all see the same row shape.
      */
     _buildBonusViewData(rawBonuses) {
-        const usedProperties = new Set(
-            rawBonuses.filter(b => b.type === "property").map(b => b.property)
-        );
-
-        const shaped = rawBonuses.map(bonus => {
-            const op = bonus.op || "+";
-            const opOptions = [
-                { value: "+", label: "+", selected: op === "+" },
-                { value: "×", label: "×", selected: op === "×" },
-                { value: "=", label: "=", selected: op === "=" }
-            ];
-            if (bonus.type === "property") {
-                const labelKey = toolBonusProperties[bonus.property];
-                return {
-                    ...bonus,
-                    op, opOptions,
-                    isProperty: true,
-                    label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
-                };
-            }
-            return {
-                ...bonus,
-                op, opOptions,
-                isSkill: true,
-                hasFilled: !!(bonus.skillUuid),
-                label: bonus.skillName || ""
-            };
-        });
-
-        const propertyOptions = Object.entries(toolBonusProperties)
-            .filter(([key]) => !usedProperties.has(key))
-            .map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`)
-            }));
-
-        return { shaped, propertyOptions };
+        const shaped = prepareBonuses(rawBonuses);
+        const opts = getAvailablePropertyOptions(rawBonuses);
+        return { shaped, attributeOptions: opts.attributes, propertyOptions: opts.properties };
     }
 
     /** @override */
@@ -92,11 +60,13 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
         // --- Bonuses (Effect tab) ---
         const effect = this._buildBonusViewData(this.item.system.bonuses || []);
         data.bonuses = effect.shaped;
+        data.attributeOptions = effect.attributeOptions;
         data.propertyOptions = effect.propertyOptions;
 
         // --- Withdrawal bonuses ---
         const wd = this._buildBonusViewData(this.item.system.withdrawal || []);
         data.withdrawal = wd.shaped;
+        data.withdrawalAttributeOptions = wd.attributeOptions;
         data.withdrawalPropertyOptions = wd.propertyOptions;
 
         return data;
@@ -129,21 +99,37 @@ export class CyberpunkDrugSheet extends CyberpunkItemSheet {
 
         if (this._isLocked) return;
 
-        // Add property bonus
-        html.find('.add-property').click(async ev => {
-            ev.preventDefault();
-            const set = this._bonusSetFor(ev.currentTarget);
+        // Duration / Strength inputs are integer-only — strip any decimal or
+        // negative the user types BEFORE Foundry's form-submit picks the
+        // value up. Both fields share `.drug-meta-input`; the `name` on each
+        // input (`system.duration` etc.) routes the value to the right slot.
+        html.find('.drug-meta-input').on('change blur', ev => {
+            const clean = Math.max(0, Math.floor(Number(ev.currentTarget.value) || 0));
+            ev.currentTarget.value = String(clean);
+        });
+
+        // Add attribute / property bonus — same data shape (`type: "property"`
+        // + property key), routed to either the stats.* subset or the rest of
+        // the catalogue depending on which button was clicked.
+        const addPropertyBonus = async (target, filterFn) => {
+            const set = this._bonusSetFor(target);
             const bonuses = [...(this.item.system[set] || [])];
-            const usedProperties = new Set(
-                bonuses.filter(b => b.type === "property").map(b => b.property)
-            );
-            const firstAvailable = Object.keys(toolBonusProperties).find(k => !usedProperties.has(k));
+            const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
+            const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
             if (!firstAvailable) {
                 ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
                 return;
             }
             bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
             await this.item.update({ [`system.${set}`]: bonuses });
+        };
+        html.find('.add-attribute').click(ev => {
+            ev.preventDefault();
+            addPropertyBonus(ev.currentTarget, isAttributeProperty);
+        });
+        html.find('.add-property').click(ev => {
+            ev.preventDefault();
+            addPropertyBonus(ev.currentTarget, k => !isAttributeProperty(k));
         });
 
         // Add skill bonus (empty slot)

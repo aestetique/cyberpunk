@@ -394,8 +394,14 @@ export const toolBonusProperties = {
     "fallAsleepBonus": "PropFallAsleepBonus",
     "bonusActions": "PropBonusActions",
     "ignoreStressFright": "PropIgnoreStressFright",
-    "ignoreFatigue": "PropIgnoreFatigue"
+    "ignoreFatigue": "PropIgnoreFatigue",
+    "ignoreWounds": "PropIgnoreWounds"
 };
+
+/** True if a `toolBonusProperties` key targets a Key Attribute (stats.*). */
+export function isAttributeProperty(key) {
+    return typeof key === "string" && key.startsWith("stats.");
+}
 
 /** Netware types */
 export const netwareTypes = {

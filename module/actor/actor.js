@@ -74,6 +74,28 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Suppress Foundry's auto-apply for drug-flagged ActiveEffects — we read
+   * them manually inside `_computeDerivedStats` so they merge with item
+   * bonuses through the single × → + → = pipeline (and contribute named
+   * entries to `stat.appliedBonuses` for the attribute-tooltip breakdown).
+   * Letting Foundry apply them too would either double-count or apply them
+   * in the wrong order relative to item bonuses. All other effects (status
+   * markers like jacked-in/scrambled which don't use `changes[]`, and any
+   * third-party module effects) pass through untouched.
+   */
+  applyActiveEffects() {
+    const stash = [];
+    for (const e of this.effects) {
+      if (e.getFlag("cyberpunk", "isDrugEffect")) {
+        stash.push([e, e.disabled]);
+        e.disabled = true;
+      }
+    }
+    super.applyActiveEffects();
+    for (const [e, prev] of stash) e.disabled = prev;
+  }
+
+  /**
    * Minimal derived-stat pass for drones. No wounds, no saves, no carry weight,
    * no humanity/empathy logic — just stat totals, MA-derived movement, and Luck.effective.
    * Notably, Luck does NOT auto-regen on the 8-hour timer for drones.
@@ -132,6 +154,10 @@ export class CyberpunkActor extends Actor {
     for(const stat of Object.values(stats)) {
       stat.total = stat.base + stat.tempMod;
       stat.overridden = false;
+      // Reset the per-derive breakdown so the propertyOps pipeline below
+      // starts from a clean list every run (prepareDerivedData fires more
+      // than once per actor lifetime — accumulating would stale-grow it).
+      stat.appliedBonuses = [];
     }
     system.hitLocLookup = buildHitLocationIndex(system.hitLocations);
 
@@ -149,7 +175,11 @@ export class CyberpunkActor extends Actor {
     // they are attached to) is equipped; the option's own equipped flag is
     // ignored, because options aren't worn standalone.
     const equippedWithBonuses = this.items.contents.filter(i => {
-      if (i.type === "tool" || i.type === "drug") return i.system.equipped;
+      if (i.type === "tool") return i.system.equipped;
+      // Drugs no longer flow through the equipped-items pipeline — applied
+      // doses live as ActiveEffects on the actor and are ingested in their
+      // own loop below.
+      if (i.type === "drug") return false;
       if (i.type === "cyberware") {
         if (i.system.isOption) {
           const baseId = i.getFlag('cyberpunk', 'attachedTo');
@@ -179,26 +209,51 @@ export class CyberpunkActor extends Actor {
     //   "stats.<key>"           — new shape, applies to stats[key].total
     //   "stats.<key>.tempMod"   — legacy shape, treated identically (pre-migration)
     //   "<propName>"            — direct system property (e.g. "initiativeMod")
+    // Each bucket entry is `{ value, source }` so we can show WHICH item
+    // contributed each part in the attribute-tooltip breakdown. The op stays
+    // implicit in which sub-bucket (mul/add/set) the entry lives in.
     const propertyOps = {};
-    const bucketFor = (target) => (propertyOps[target] ??= { mul: [], add: [], set: [] });
+    const bucketFor = (target) => (propertyOps[target] ??= { mul: [], div: [], add: [], sub: [], set: [] });
+    const pushOp = (bucket, op, entry) => {
+      if      (op === "×") bucket.mul.push(entry);
+      else if (op === "÷") bucket.div.push(entry);
+      else if (op === "−") bucket.sub.push(entry);
+      else if (op === "=") bucket.set.push(entry);
+      else                 bucket.add.push(entry); // "+" and unknown
+    };
     equippedWithBonuses.forEach(item => {
-      // Drugs in withdrawal phase apply their Withdrawal bonus list instead of Effect.
-      const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
-        ? (item.system.withdrawal || [])
-        : (item.system.bonuses || []);
+      const bonuses = item.system.bonuses || [];
       bonuses.forEach(bonus => {
         if (bonus.type !== "property" || !bonus.property) return;
         const op = bonus.op || "+";
         const value = Number(bonus.value) || 0;
-        const bucket = bucketFor(bonus.property);
-        if (op === "×") bucket.mul.push(value);
-        else if (op === "=") bucket.set.push(value);
-        else bucket.add.push(value);
+        pushOp(bucketFor(bonus.property), op, { value, source: item.name });
       });
     });
 
-    // Apply collected ops to each target. Order is universal:
-    //   start from current value → × all multipliers → + all additives → = last (last-wins).
+    // Drug ActiveEffects on this actor — same pipeline, source attribution
+    // by effect name. The effect carries BOTH active and withdrawal bonus
+    // lists in flags; pick the one matching its current phase.
+    for (const effect of this.effects) {
+      if (effect.disabled) continue;
+      if (effect.getFlag("cyberpunk", "isDrugEffect") !== true) continue;
+      const phase = effect.getFlag("cyberpunk", "phase") || "active";
+      const bonuses = (phase === "withdrawal"
+        ? effect.getFlag("cyberpunk", "withdrawalChanges")
+        : effect.getFlag("cyberpunk", "activeChanges")) || [];
+      for (const bonus of bonuses) {
+        if (bonus.type !== "property" || !bonus.property) continue;
+        const op = bonus.op || "+";
+        const value = Number(bonus.value) || 0;
+        pushOp(bucketFor(bonus.property), op, { value, source: effect.name });
+      }
+    }
+
+    // Apply collected ops to each target. Universal order:
+    //   start → × multipliers → ÷ dividers → + additives → − subtractives → = last-wins.
+    // Multiplicative first, additive second, override last — keeps the math
+    // invariant when the user mixes ops on the same target. Division by 0
+    // is a no-op (skip the divisor) so a typo doesn't NaN the sheet.
     for (const [path, ops] of Object.entries(propertyOps)) {
       const parts = path.split('.');
       let current;
@@ -217,17 +272,32 @@ export class CyberpunkActor extends Actor {
         continue;
       }
 
-      for (const m of ops.mul) current *= m;
-      for (const a of ops.add) current += a;
+      for (const m of ops.mul) current *= m.value;
+      for (const d of ops.div) if (d.value !== 0) current /= d.value;
+      for (const a of ops.add) current += a.value;
+      for (const s of ops.sub) current -= s.value;
       if (ops.set.length) {
         if (ops.set.length > 1) {
-          console.warn(`CYBERPUNK | multiple "=" bonuses on ${path}; using last (${ops.set[ops.set.length - 1]})`);
+          console.warn(`CYBERPUNK | multiple "=" bonuses on ${path}; using last (${ops.set[ops.set.length - 1].value})`);
         }
-        current = ops.set[ops.set.length - 1];
+        current = ops.set[ops.set.length - 1].value;
         if (statKey) stats[statKey].overridden = true;
       }
 
       writeBack(current);
+
+      // Publish the breakdown to the stat so buildStatCalc on the sheet can
+      // render `Speed +2`, `Glands ×2`, etc. alongside Base / Gear / Humanity.
+      // Accumulates across paths so a target hit via both `stats.<k>` (new)
+      // and legacy `stats.<k>.tempMod` shapes both surface in the same hint.
+      if (statKey) {
+        const out = stats[statKey].appliedBonuses;
+        for (const e of ops.mul) out.push({ ...e, op: "×" });
+        for (const e of ops.div) out.push({ ...e, op: "÷" });
+        for (const e of ops.add) out.push({ ...e, op: "+" });
+        for (const e of ops.sub) out.push({ ...e, op: "−" });
+        for (const e of ops.set) out.push({ ...e, op: "=" });
+      }
     }
 
     // Check luck recovery (8 hours = 28,800,000 ms)
@@ -358,20 +428,26 @@ export class CyberpunkActor extends Actor {
       system.carryWeight += parseFloat(item.system?.weight) || 0;
     }
 
-    // Apply wound penalties to stats, tracking the delta in stat.woundMod
+    // Apply wound penalties to stats, tracking the delta in stat.woundMod.
+    // `ignoreWounds` (from drugs / cyberware / etc., applied through the
+    // bonus pipeline above) zeroes out BOTH the stat penalty AND the save-
+    // threshold shift below — the actor takes wounds and tracks damage, but
+    // operates as if they had none until the effect wears off.
     let woundState = this.getWoundLevel();
+    const ignoringWounds = (system.ignoreWounds || 0) > 0;
+    const effectiveWoundState = ignoringWounds ? 0 : woundState;
     let woundStat = function(stat, totalChange) {
         let newTotal = totalChange(stat.total)
         stat.woundMod = -(stat.total - newTotal);
         stat.total = newTotal;
     }
-    if(woundState >= 4) {
+    if(effectiveWoundState >= 4) {
       [stats.ref, stats.int, stats.cool].forEach(stat => woundStat(stat, total => Math.ceil(total/3)));
-    } 
-    else if(woundState == 3) {
+    }
+    else if(effectiveWoundState == 3) {
       [stats.ref, stats.int, stats.cool].forEach(stat => woundStat(stat, total => Math.ceil(total/2)));
     }
-    else if(woundState == 2) {
+    else if(effectiveWoundState == 2) {
       woundStat(stats.ref, total => total - 2);
     }
 
@@ -386,8 +462,10 @@ export class CyberpunkActor extends Actor {
       }
     }
 
-    // Save thresholds (stored for Monk's Token Bar accessibility)
-    const stunBase = body.total - woundState + 1;
+    // Save thresholds (stored for Monk's Token Bar accessibility). Uses the
+    // same `effectiveWoundState` as the stat-penalty block above so the
+    // ignoreWounds effect blanks both at once.
+    const stunBase = body.total - effectiveWoundState + 1;
     system.stunSave = stunBase + (system.stunSaveMod || 0);
     system.poisonSave = stunBase + (system.poisonSaveMod || 0);
     system.deathSave = stunBase + 3 + (system.deathSaveMod || 0);
@@ -403,8 +481,11 @@ export class CyberpunkActor extends Actor {
       total: (emp.base * 10) - humanityDamage  // Current humanity
     };
 
-    // EMP reduction: -1 per 10 humanity lost
-    emp.total = emp.base + emp.tempMod - Math.floor(humanityDamage / 10);
+    // EMP reduction: -1 per 10 humanity lost. Apply the delta to the RUNNING
+    // total — the bonus pipeline above may have already nudged emp.total with
+    // drug / cyberware / tool effects, and recomputing from `base + tempMod`
+    // would silently wipe those out (was a real bug for EMP-boosting drugs).
+    emp.total -= Math.floor(humanityDamage / 10);
 
     // Sleep deprivation: escalating stat penalties (min 2 for REF/INT/COOL, min 0 for EMP)
     const sleepLevel = this.getSleepDeprivationLevel();
@@ -1130,30 +1211,44 @@ export class CyberpunkActor extends Actor {
       ? (Number(skillItem.system.level) || 0) + (Number(skillItem.system.ipLevel) || 0)
       : 0;
 
-    const muls = [], adds = [], sets = [];
+    const muls = [], divs = [], adds = [], subs = [], sets = [];
     const equipped = this.items.contents.filter(i =>
-      (i.type === "tool" || i.type === "drug" || i.type === "cyberware") && i.system.equipped
+      (i.type === "tool" || i.type === "cyberware") && i.system.equipped
     );
+    const pushBonus = (bonus) => {
+      if (bonus.type !== "skill") return;
+      const matchByUuid = uuid && bonus.skillUuid === uuid;
+      const matchByName = name && bonus.skillName?.toLowerCase() === name;
+      if (!matchByUuid && !matchByName) return;
+      const op = bonus.op || "+";
+      const value = Number(bonus.value) || 0;
+      if      (op === "×") muls.push(value);
+      else if (op === "÷") divs.push(value);
+      else if (op === "−") subs.push(value);
+      else if (op === "=") sets.push(value);
+      else                 adds.push(value); // "+" and unknown
+    };
     for (const item of equipped) {
-      const bonuses = (item.type === "drug" && item.system.phase === "withdrawal")
-        ? (item.system.withdrawal || [])
-        : (item.system.bonuses || []);
-      for (const bonus of bonuses) {
-        if (bonus.type !== "skill") continue;
-        const matchByUuid = uuid && bonus.skillUuid === uuid;
-        const matchByName = name && bonus.skillName?.toLowerCase() === name;
-        if (!matchByUuid && !matchByName) continue;
-        const op = bonus.op || "+";
-        const value = Number(bonus.value) || 0;
-        if (op === "×") muls.push(value);
-        else if (op === "=") sets.push(value);
-        else adds.push(value);
-      }
+      for (const bonus of (item.system.bonuses || [])) pushBonus(bonus);
+    }
+    // Drug ActiveEffects contribute skill bonuses via their phase-tagged
+    // flag payload (skill bonuses don't have a clean ActiveEffect change
+    // mapping, so we read them from `activeChanges` / `withdrawalChanges`).
+    for (const effect of this.effects) {
+      if (effect.disabled) continue;
+      if (effect.getFlag("cyberpunk", "isDrugEffect") !== true) continue;
+      const phase = effect.getFlag("cyberpunk", "phase") || "active";
+      const bonuses = (phase === "withdrawal"
+        ? effect.getFlag("cyberpunk", "withdrawalChanges")
+        : effect.getFlag("cyberpunk", "activeChanges")) || [];
+      for (const bonus of bonuses) pushBonus(bonus);
     }
 
     let current = baseline;
     for (const m of muls) current *= m;
+    for (const d of divs) if (d !== 0) current /= d;
     for (const a of adds) current += a;
+    for (const s of subs) current -= s;
     let overridden = false;
     if (sets.length) {
       if (sets.length > 1) {

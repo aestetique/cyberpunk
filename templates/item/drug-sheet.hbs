@@ -123,8 +123,47 @@
         </div>
 
       {{else if (eq activeTab 'effect')}}
+        {{!-- Duration + Strength row (Effect phase) — matches the Damage
+             input shape on the weapon sheet (.variable-input, 126px). --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugDuration"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.duration}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input drug-meta-input" name="system.duration" value="{{system.duration}}" step="1" min="0">
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugStrength"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.strength}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input drug-meta-input" name="system.strength" value="{{system.strength}}" step="1" min="0">
+            {{/if}}
+          </div>
+        </div>
         {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=bonuses propertyOptions=propertyOptions bonusSet="bonuses" isLocked=isLocked}}
       {{else}}
+        {{!-- Duration + Strength row (Withdrawal phase) --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugDuration"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.withdrawalDuration}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input drug-meta-input" name="system.withdrawalDuration" value="{{system.withdrawalDuration}}" step="1" min="0">
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugStrength"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.withdrawalStrength}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input drug-meta-input" name="system.withdrawalStrength" value="{{system.withdrawalStrength}}" step="1" min="0">
+            {{/if}}
+          </div>
+        </div>
         {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=withdrawal propertyOptions=withdrawalPropertyOptions bonusSet="withdrawal" isLocked=isLocked}}
       {{/if}}
     </div>

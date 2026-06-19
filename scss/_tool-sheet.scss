@@ -216,7 +216,10 @@
 .drug-card .effect-bonuses {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  // Matches the surrounding `.tab-content` rhythm (12px), so bonus rows
+  // sit at the same vertical spacing as siblings above/below (e.g., the
+  // drug-sheet Duration/Strength row).
+  gap: 12px;
   align-self: stretch;
 }
 

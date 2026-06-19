@@ -52,6 +52,11 @@ export async function migrateWorld(targetVersion) {
     // carrying an op:"=" override bonus. Clears the deprecated fields.
     await _convertLegacyChippedSkills();
 
+    // 2.2.0: Equipped drugs are no longer item-based; convert each one to an
+    // ActiveEffect on the owning actor so existing characters don't lose their
+    // currently-applied effects on first load after the upgrade.
+    await _migrateEquippedDrugsToEffects();
+
     for (const actor of game.actors.contents) {
         await processDocument(actor);
         for (const item of actor.items) await processDocument(item);
@@ -1180,5 +1185,57 @@ async function _convertLegacyChippedSkills() {
     }
     if (convertedSkills) {
         console.log(`CYBERPUNK | Converted ${convertedSkills} chipped skill(s) to Skillchip cyberware on ${convertedActors} actor(s)`);
+    }
+}
+
+// 2.2.0: Drug items no longer carry their applied state on `system.equipped`
+// — instead, applied doses live as ActiveEffects on the owning actor (this
+// is what enables token icons, native duration, and the State-tab "Active
+// Drugs" section). Migrate each equipped drug into one ActiveEffect mirroring
+// its current phase, and clear the legacy flag on the source item. Best-effort:
+// duration is not recoverable (the old model had no timer), so migrated
+// effects come up with no duration — the GM tracks them by hand until they
+// click Wear Off, same as before.
+async function _migrateEquippedDrugsToEffects() {
+    const { buildDrugEffectData } = await import("./drug-effects.js");
+    let converted = 0;
+    let affectedActors = 0;
+    for (const actor of game.actors.contents) {
+        const equippedDrugs = actor.items.contents.filter(i =>
+            i.type === "drug" && i.system?.equipped === true
+        );
+        if (equippedDrugs.length === 0) continue;
+        try {
+            const newEffects = [];
+            for (const drug of equippedDrugs) {
+                const data = buildDrugEffectData(drug);
+                // Drop the duration — the legacy item had no timer, so we
+                // can't reconstruct one. GM clicks Wear Off when ready.
+                data.duration = {};
+                // Preserve whatever phase the supply was in at migration time.
+                const phase = drug.system?.phase === "withdrawal" ? "withdrawal" : "active";
+                if (phase === "withdrawal") {
+                    data.changes = (await import("./drug-effects.js"))
+                        .bonusesToChanges(drug.system.withdrawal || []);
+                    data.statuses = ["drug-withdrawal"];
+                    data.flags.cyberpunk.phase = "withdrawal";
+                }
+                newEffects.push(data);
+            }
+            await actor.createEmbeddedDocuments("ActiveEffect", newEffects);
+            await actor.updateEmbeddedDocuments("Item", equippedDrugs.map(d => ({
+                _id: d.id,
+                "system.equipped": false,
+                "system.phase": "active"
+            })));
+            converted += equippedDrugs.length;
+            affectedActors++;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to migrate equipped drugs on actor "${actor.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
+    if (converted) {
+        console.log(`CYBERPUNK | Migrated ${converted} equipped drug(s) to ActiveEffects across ${affectedActors} actor(s)`);
     }
 }

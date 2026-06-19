@@ -1,10 +1,45 @@
-{{!-- Effect Tab --}}
+{{!--
+  Shared Effect-tab bonus list — used by cyberware / outfit / tool.
+
+  Context provided by the sheet's getData() via prepareEffectTabContext():
+    bonuses          — shaped rows (isAttribute / isProperty / isSkill + label)
+    attributeOptions — dropdown options for "Add Attribute" (stats.*)
+    propertyOptions  — dropdown options for "Add Property" (everything else)
+    isLocked         — sheet lock flag
+
+  Drug has its own copy (parts/drug-bonuses.hbs) because it manages two
+  parallel bonus sets (Effect AND Withdrawal) on one sheet; the shape and
+  buttons are identical.
+--}}
 <div class="effect-bonuses" data-drop-target="skill-bonus">
   {{#each bonuses}}
     <div class="bonus-row" data-index="{{@index}}">
 
-      {{#if this.isProperty}}
-        {{!-- Property bonus row --}}
+      {{#if this.isAttribute}}
+        {{!-- Attribute bonus row (stats.*) --}}
+        <label class="variable-label">{{localize "CYBERPUNK.Attribute"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select bonus-property-select" data-index="{{@index}}">
+              <option value="{{this.property}}" selected>{{this.label}}</option>
+              {{#each ../attributeOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      {{else if this.isProperty}}
+        {{!-- Property bonus row (non-stat) --}}
         <label class="variable-label">{{localize "CYBERPUNK.Property"}}</label>
         {{#if ../isLocked}}
           <div class="dropdown">
@@ -73,9 +108,10 @@
   {{/each}}
 </div>
 
-{{!-- Action buttons --}}
+{{!-- Action buttons: Attribute → Property → Skill --}}
 {{#unless isLocked}}
   <div class="effect-actions">
+    <button type="button" class="add-attribute">{{localize "CYBERPUNK.AddAttribute"}}</button>
     <button type="button" class="add-property">{{localize "CYBERPUNK.AddProperty"}}</button>
     <button type="button" class="add-skill">{{localize "CYBERPUNK.AddSkill"}}</button>
   </div>

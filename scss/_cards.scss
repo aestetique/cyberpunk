@@ -1173,8 +1173,9 @@ $fail-color: #d1502fb8;
   color: var(--chat-text);
 }
 
-// Apply damage button
-.apply-damage-btn {
+// Apply damage / drug button — same visual treatment, different handlers.
+.apply-damage-btn,
+.apply-drug-btn {
   width: 100%;
   height: 36px;
   border-radius: 2px;

@@ -726,6 +726,86 @@
 }
 
 // ============================================
+// 15b. Dual Field (label + value/input pair — shared across item sheets)
+// Promoted here from weapon-sheet so drug/cyberware/outfit/tool sheets
+// don't each redefine the same 47px chip-style numeric input.
+// ============================================
+.item-card .dual-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+}
+
+.item-card .dual-value {
+  display: flex;
+  width: 47px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+  text-align: left;
+}
+
+.item-card .dual-value-narrow {
+  width: 40px;
+}
+
+.item-card .dual-input {
+  display: flex;
+  width: 47px;
+  height: 26px;
+  padding: 5px 8px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  border: none;
+  color: var(--Chat-Text, #FFF);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+  text-align: left;
+  outline: none;
+
+  &:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  // Remove spinner
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  -moz-appearance: textfield;
+}
+
+.item-card .dual-input-narrow {
+  width: 40px;
+}
+
+.item-card .dual-separator {
+  color: var(--Sheet-Key, #B9B29D);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16px;
+  flex-shrink: 0;
+}
+
+// ============================================
 // 16. Unlocked Stats Block (shared by weapon, outfit, ammo, commodity)
 // ============================================
 .item-card.unlocked .item-stats {

@@ -280,7 +280,9 @@ Hooks.once("ready", async function() {
     //        Swimming, Controlled Hyperventilation, Strength Feat).
     // 2.1.1: Unified bonus op pipeline (+ / × / =); Armor compendium; legacy
     //        isChipped skill flag → Skillchip cyberware items via op:"=" override.
-    const NEEDS_MIGRATION_VERSION = "2.1.1";
+    // 2.2.0: Equipped drugs (system.equipped=true on drug items) → ActiveEffect
+    //        documents on the owning actor, decoupling supply from application.
+    const NEEDS_MIGRATION_VERSION = "2.2.0";
     console.log("CYBERPUNK: Last migrated in version: " + lastMigrateVersion);
     const needsMigration = foundry.utils.isNewerVersion(NEEDS_MIGRATION_VERSION, lastMigrateVersion);
     if ( !needsMigration ) return;

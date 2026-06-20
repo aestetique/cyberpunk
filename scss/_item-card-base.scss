@@ -714,15 +714,7 @@
     outline: none;
     box-shadow: none;
   }
-
-  // Remove spinner
-  &::-webkit-inner-spin-button,
-  &::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-
-  -moz-appearance: textfield;
+  // Spinner removal lives in §17 (`.item-card input[type="number"]`).
 }
 
 // ============================================
@@ -780,15 +772,7 @@
     outline: none;
     box-shadow: none;
   }
-
-  // Remove spinner
-  &::-webkit-inner-spin-button,
-  &::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-
-  -moz-appearance: textfield;
+  // Spinner removal lives in §17 (`.item-card input[type="number"]`).
 }
 
 .item-card .dual-input-narrow {
@@ -881,15 +865,218 @@
       height: 8px;
     }
   }
+  // Spinner removal lives in §17 (`.item-card input[type="number"]`).
+}
 
-  // Remove spinner from number inputs
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+// ============================================
+// 17. Effect-Bonuses block (shared by tool / drug / cyberware / outfit)
+// Previously triplicated across _tool-sheet, _cyberware-sheet, and the
+// drug branch of _tool-sheet — promoted here under `.item-card` so the
+// four card flavours render the same bonus list without per-card copies.
+// ============================================
+.item-card {
+  .effect-bonuses {
+    display: flex;
+    flex-direction: column;
+    // Matches the surrounding `.tab-content` rhythm so bonus rows sit at
+    // the same vertical spacing as siblings above/below (e.g. the drug-
+    // sheet Duration/Strength row).
+    gap: 12px;
+    align-self: stretch;
   }
 
+  .effect-actions {
+    display: flex;
+    gap: 12px;
+    align-self: stretch;
+
+    button {
+      flex: 1;
+      height: 26px;
+      border-radius: 4px;
+      border: 1px dashed var(--Chat-Gray, #444856);
+      background: transparent;
+      color: var(--Chat-Gray, #444856);
+      font-family: var(--font-blender);
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 16px;
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--Sheet-Key, #B9B29D);
+        color: var(--Sheet-Key, #B9B29D);
+        box-shadow: none;
+      }
+    }
+  }
+
+  .bonus-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: stretch;
+
+    .dropdown-wrapper {
+      flex: 1 0 0;
+
+      .dropdown-select {
+        width: 100%;
+      }
+    }
+
+    // Locked property dropdown — stretch to fill
+    .dropdown {
+      flex: 1 0 0;
+      width: auto;
+    }
+
+    // Op picker (+/−/×/÷/=) — fixed 50px to match the value input next to it.
+    .op-wrapper {
+      flex: 0 0 50px;
+      width: 50px;
+
+      .bonus-op-select {
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+    .bonus-op {
+      display: flex;
+      width: 50px;
+      height: 26px;
+      padding: 5px 8px;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border-radius: 4px;
+      background: var(--Chat-Front, #26282F);
+      color: #808090;
+      font-family: var(--font-blender);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 16px;
+    }
+  }
+
+  // Bonus value (locked) — read-only display chip
+  .bonus-value {
+    display: flex;
+    width: 50px;
+    height: 26px;
+    padding: 5px 8px;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: var(--Chat-Front, #26282F);
+    color: #808090;
+    font-family: var(--font-blender);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 16px;
+  }
+
+  // Bonus value (unlocked) — editable input. The shared spinner-removal
+  // rule below covers `::-webkit-*-spin-button` for every number input
+  // inside an `.item-card`, so this rule only sets the box styling.
+  .bonus-value-input {
+    width: 50px;
+    height: 26px;
+    padding: 5px 8px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: var(--Chat-Front, #26282F);
+    border: none;
+    color: var(--Chat-Text, #FFF);
+    font-family: var(--font-blender);
+    font-size: 14px;
+    font-weight: 400;
+    outline: none;
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  // Skill drop zones (filled / empty) — used by bonus-rows that target a skill
+  .skill-drop.filled {
+    display: block;
+    padding: 0 8px;
+    gap: 10px;
+    flex: 1 0 0;
+    align-self: stretch;
+    border-radius: 4px;
+    background: var(--Chat-Front, #26282F);
+    border: none;
+
+    .skill-name {
+      flex: 1;
+      color: var(--Chat-Text, #FFF);
+      font-family: var(--font-blender);
+      font-size: 14px;
+      font-weight: 400;
+      height: 26px;
+      line-height: 14px;
+      cursor: pointer;
+
+      &:hover { text-decoration: underline; }
+    }
+  }
+
+  // Locked variant — desaturated filled skill name
+  &:not(.unlocked) .skill-drop.filled .skill-name {
+    color: #808090;
+  }
+
+  .skill-drop.empty {
+    display: block;
+    padding: 0 8px;
+    align-items: center;
+    gap: 10px;
+    flex: 1 0 0;
+    border-radius: 4px;
+    border: 1px dashed var(--Chat-Gray, #444856);
+
+    .placeholder {
+      color: var(--Chat-Gray, #444856);
+      font-family: var(--font-blender);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 24px;
+    }
+  }
+
+  // Trash button next to a bonus row
+  .remove-bonus {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0.6;
+    flex-shrink: 0;
+
+    img { width: 100%; height: 100%; }
+
+    &:hover { opacity: 1; }
+  }
+
+  // ============================================
+  // Shared number-input spinner removal. Was previously declared per
+  // chip class (`.dual-input`, `.bonus-value-input`, etc.) and inside
+  // `.item-card.unlocked .item-stats`. One scope covers all of them.
+  // ============================================
   input[type="number"] {
     -moz-appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
   }
 }

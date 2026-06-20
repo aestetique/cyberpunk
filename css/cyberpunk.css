@@ -4397,13 +4397,6 @@ input.skill-value.skill-level-input:focus {
   outline: none;
   box-shadow: none;
 }
-.item-card .variable-input::-webkit-inner-spin-button, .item-card .variable-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.item-card .variable-input {
-  -moz-appearance: textfield;
-}
 
 .item-card .dual-field {
   display: flex;
@@ -4454,13 +4447,6 @@ input.skill-value.skill-level-input:focus {
 .item-card .dual-input:focus {
   outline: none;
   box-shadow: none;
-}
-.item-card .dual-input::-webkit-inner-spin-button, .item-card .dual-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.item-card .dual-input {
-  -moz-appearance: textfield;
 }
 
 .item-card .dual-input-narrow {
@@ -4542,13 +4528,175 @@ input.skill-value.skill-level-input:focus {
   width: 8px;
   height: 8px;
 }
-.item-card.unlocked .item-stats input[type=number]::-webkit-inner-spin-button,
-.item-card.unlocked .item-stats input[type=number]::-webkit-outer-spin-button {
+
+.item-card .effect-bonuses {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: stretch;
+}
+.item-card .effect-actions {
+  display: flex;
+  gap: 12px;
+  align-self: stretch;
+}
+.item-card .effect-actions button {
+  flex: 1;
+  height: 26px;
+  border-radius: 4px;
+  border: 1px dashed var(--Chat-Gray, #444856);
+  background: transparent;
+  color: var(--Chat-Gray, #444856);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  cursor: pointer;
+}
+.item-card .effect-actions button:hover {
+  border-color: var(--Sheet-Key, #B9B29D);
+  color: var(--Sheet-Key, #B9B29D);
+  box-shadow: none;
+}
+.item-card .bonus-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+}
+.item-card .bonus-row .dropdown-wrapper {
+  flex: 1 0 0;
+}
+.item-card .bonus-row .dropdown-wrapper .dropdown-select {
+  width: 100%;
+}
+.item-card .bonus-row .dropdown {
+  flex: 1 0 0;
+  width: auto;
+}
+.item-card .bonus-row .op-wrapper {
+  flex: 0 0 50px;
+  width: 50px;
+}
+.item-card .bonus-row .op-wrapper .bonus-op-select {
+  width: 100%;
+  text-align: center;
+}
+.item-card .bonus-row .bonus-op {
+  display: flex;
+  width: 50px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+}
+.item-card .bonus-value {
+  display: flex;
+  width: 50px;
+  height: 26px;
+  padding: 5px 8px;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: #808090;
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16px;
+}
+.item-card .bonus-value-input {
+  width: 50px;
+  height: 26px;
+  padding: 5px 8px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  border: none;
+  color: var(--Chat-Text, #FFF);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  outline: none;
+}
+.item-card .bonus-value-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.item-card .skill-drop.filled {
+  display: block;
+  padding: 0 8px;
+  gap: 10px;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  border: none;
+}
+.item-card .skill-drop.filled .skill-name {
+  flex: 1;
+  color: var(--Chat-Text, #FFF);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  height: 26px;
+  line-height: 14px;
+  cursor: pointer;
+}
+.item-card .skill-drop.filled .skill-name:hover {
+  text-decoration: underline;
+}
+.item-card:not(.unlocked) .skill-drop.filled .skill-name {
+  color: #808090;
+}
+.item-card .skill-drop.empty {
+  display: block;
+  padding: 0 8px;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+  border-radius: 4px;
+  border: 1px dashed var(--Chat-Gray, #444856);
+}
+.item-card .skill-drop.empty .placeholder {
+  color: var(--Chat-Gray, #444856);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
+}
+.item-card .remove-bonus {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.item-card .remove-bonus img {
+  width: 100%;
+  height: 100%;
+}
+.item-card .remove-bonus:hover {
+  opacity: 1;
+}
+.item-card input[type=number] {
+  -moz-appearance: textfield;
+}
+.item-card input[type=number]::-webkit-inner-spin-button, .item-card input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-.item-card.unlocked .item-stats input[type=number] {
-  -moz-appearance: textfield;
 }
 
 .cyberpunk.role-sheet.app {
@@ -7043,217 +7191,6 @@ input.skill-value.skill-level-input:focus {
   min-height: 400px;
 }
 
-.tool-card .bonus-row,
-.drug-card .bonus-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  align-self: stretch;
-}
-
-.tool-card .bonus-row .dropdown-wrapper,
-.drug-card .bonus-row .dropdown-wrapper {
-  flex: 1 0 0;
-}
-
-.tool-card .bonus-row .dropdown-wrapper .dropdown-select,
-.drug-card .bonus-row .dropdown-wrapper .dropdown-select {
-  width: 100%;
-}
-
-.tool-card .bonus-row .dropdown,
-.drug-card .bonus-row .dropdown {
-  flex: 1 0 0;
-  width: auto;
-}
-
-.tool-card .bonus-row .op-wrapper,
-.drug-card .bonus-row .op-wrapper {
-  flex: 0 0 50px;
-  width: 50px;
-}
-
-.tool-card .bonus-row .op-wrapper .bonus-op-select,
-.drug-card .bonus-row .op-wrapper .bonus-op-select {
-  width: 100%;
-  text-align: center;
-}
-
-.tool-card .bonus-row .bonus-op,
-.drug-card .bonus-row .bonus-op {
-  display: flex;
-  width: 50px;
-  height: 26px;
-  padding: 5px 8px;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: #808090;
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-}
-
-.tool-card .bonus-value,
-.drug-card .bonus-value {
-  display: flex;
-  width: 50px;
-  height: 26px;
-  padding: 5px 8px;
-  align-items: center;
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: #808090;
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-}
-
-.tool-card .bonus-value-input,
-.drug-card .bonus-value-input {
-  width: 50px;
-  height: 26px;
-  padding: 5px 8px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  outline: none;
-}
-.tool-card .bonus-value-input::-webkit-inner-spin-button, .tool-card .bonus-value-input::-webkit-outer-spin-button,
-.drug-card .bonus-value-input::-webkit-inner-spin-button,
-.drug-card .bonus-value-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.tool-card .bonus-value-input,
-.drug-card .bonus-value-input {
-  -moz-appearance: textfield;
-}
-.tool-card .bonus-value-input:focus,
-.drug-card .bonus-value-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-.tool-card .skill-drop.filled,
-.drug-card .skill-drop.filled {
-  display: block;
-  padding: 0 8px;
-  gap: 10px;
-  flex: 1 0 0;
-  align-self: stretch;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-}
-.tool-card .skill-drop.filled .skill-name,
-.drug-card .skill-drop.filled .skill-name {
-  flex: 1;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  height: 26px;
-  line-height: 14px;
-  cursor: pointer;
-}
-.tool-card .skill-drop.filled .skill-name:hover,
-.drug-card .skill-drop.filled .skill-name:hover {
-  text-decoration: underline;
-}
-
-.tool-card:not(.unlocked) .skill-drop.filled .skill-name,
-.drug-card:not(.unlocked) .skill-drop.filled .skill-name {
-  color: #808090;
-}
-
-.tool-card .skill-drop.empty,
-.drug-card .skill-drop.empty {
-  display: block;
-  padding: 0 8px;
-  align-items: center;
-  gap: 10px;
-  flex: 1 0 0;
-  border-radius: 4px;
-  border: 1px dashed var(--Chat-Gray, #444856);
-}
-.tool-card .skill-drop.empty .placeholder,
-.drug-card .skill-drop.empty .placeholder {
-  color: var(--Chat-Gray, #444856);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 24px;
-}
-
-.tool-card .remove-bonus,
-.drug-card .remove-bonus {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  opacity: 0.6;
-  flex-shrink: 0;
-}
-.tool-card .remove-bonus img,
-.drug-card .remove-bonus img {
-  width: 100%;
-  height: 100%;
-}
-.tool-card .remove-bonus:hover,
-.drug-card .remove-bonus:hover {
-  opacity: 1;
-}
-
-.tool-card .effect-bonuses,
-.drug-card .effect-bonuses {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-self: stretch;
-}
-
-.tool-card .effect-actions,
-.drug-card .effect-actions {
-  display: flex;
-  gap: 12px;
-  align-self: stretch;
-}
-
-.tool-card .effect-actions button,
-.drug-card .effect-actions button {
-  flex: 1;
-  height: 26px;
-  border-radius: 4px;
-  border: 1px dashed var(--Chat-Gray, #444856);
-  background: transparent;
-  color: var(--Chat-Gray, #444856);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 16px;
-  cursor: pointer;
-}
-.tool-card .effect-actions button:hover,
-.drug-card .effect-actions button:hover {
-  border-color: var(--Sheet-Key, #B9B29D);
-  color: var(--Sheet-Key, #B9B29D);
-  box-shadow: none;
-}
-
 .cyberpunk.drug-sheet.app {
   background: transparent;
   box-shadow: none;
@@ -7551,201 +7488,6 @@ input.skill-value.skill-level-input:focus {
 .outfit-card .variable-value.with-bonus {
   color: #1A804D;
 }
-.cyberware-card .bonus-row,
-.outfit-card .bonus-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  align-self: stretch;
-}
-.cyberware-card .bonus-row .dropdown-wrapper,
-.outfit-card .bonus-row .dropdown-wrapper {
-  flex: 1 0 0;
-}
-.cyberware-card .bonus-row .dropdown-wrapper .dropdown-select,
-.outfit-card .bonus-row .dropdown-wrapper .dropdown-select {
-  width: 100%;
-}
-.cyberware-card .bonus-row .dropdown,
-.outfit-card .bonus-row .dropdown {
-  flex: 1 0 0;
-  width: auto;
-}
-.cyberware-card .bonus-row .op-wrapper,
-.outfit-card .bonus-row .op-wrapper {
-  flex: 0 0 50px;
-  width: 50px;
-}
-.cyberware-card .bonus-row .op-wrapper .bonus-op-select,
-.outfit-card .bonus-row .op-wrapper .bonus-op-select {
-  width: 100%;
-  text-align: center;
-}
-.cyberware-card .bonus-row .bonus-op,
-.outfit-card .bonus-row .bonus-op {
-  display: flex;
-  width: 50px;
-  height: 26px;
-  padding: 5px 8px;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: #808090;
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-}
-.cyberware-card .bonus-value,
-.outfit-card .bonus-value {
-  display: flex;
-  width: 50px;
-  height: 26px;
-  padding: 5px 8px;
-  align-items: center;
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  color: #808090;
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 16px;
-}
-.cyberware-card .bonus-value-input,
-.outfit-card .bonus-value-input {
-  width: 50px;
-  height: 26px;
-  padding: 5px 8px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  outline: none;
-}
-.cyberware-card .bonus-value-input::-webkit-inner-spin-button, .cyberware-card .bonus-value-input::-webkit-outer-spin-button,
-.outfit-card .bonus-value-input::-webkit-inner-spin-button,
-.outfit-card .bonus-value-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.cyberware-card .bonus-value-input,
-.outfit-card .bonus-value-input {
-  -moz-appearance: textfield;
-}
-.cyberware-card .bonus-value-input:focus,
-.outfit-card .bonus-value-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-.cyberware-card .remove-bonus,
-.outfit-card .remove-bonus {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  opacity: 0.6;
-  flex-shrink: 0;
-}
-.cyberware-card .remove-bonus img,
-.outfit-card .remove-bonus img {
-  width: 100%;
-  height: 100%;
-}
-.cyberware-card .remove-bonus:hover,
-.outfit-card .remove-bonus:hover {
-  opacity: 1;
-}
-.cyberware-card .effect-bonuses,
-.outfit-card .effect-bonuses {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-self: stretch;
-}
-.cyberware-card .effect-actions,
-.outfit-card .effect-actions {
-  display: flex;
-  gap: 12px;
-  align-self: stretch;
-}
-.cyberware-card .effect-actions button,
-.outfit-card .effect-actions button {
-  flex: 1;
-  height: 26px;
-  border-radius: 4px;
-  border: 1px dashed var(--Chat-Gray, #444856);
-  background: transparent;
-  color: var(--Chat-Gray, #444856);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 16px;
-  cursor: pointer;
-}
-.cyberware-card .effect-actions button:hover,
-.outfit-card .effect-actions button:hover {
-  border-color: var(--Sheet-Key, #B9B29D);
-  color: var(--Sheet-Key, #B9B29D);
-  box-shadow: none;
-}
-.cyberware-card .skill-drop.filled,
-.outfit-card .skill-drop.filled {
-  display: block;
-  padding: 0 8px;
-  gap: 10px;
-  flex: 1 0 0;
-  align-self: stretch;
-  border-radius: 4px;
-  background: var(--Chat-Front, #26282F);
-  border: none;
-}
-.cyberware-card .skill-drop.filled .skill-name,
-.outfit-card .skill-drop.filled .skill-name {
-  flex: 1;
-  color: var(--Chat-Text, #FFF);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  height: 26px;
-  line-height: 14px;
-  cursor: pointer;
-}
-.cyberware-card .skill-drop.filled .skill-name:hover,
-.outfit-card .skill-drop.filled .skill-name:hover {
-  text-decoration: underline;
-}
-.cyberware-card:not(.unlocked) .skill-drop.filled .skill-name,
-.outfit-card:not(.unlocked) .skill-drop.filled .skill-name {
-  color: #808090;
-}
-.cyberware-card .skill-drop.empty,
-.outfit-card .skill-drop.empty {
-  display: block;
-  padding: 0 8px;
-  align-items: center;
-  gap: 10px;
-  flex: 1 0 0;
-  border-radius: 4px;
-  border: 1px dashed var(--Chat-Gray, #444856);
-}
-.cyberware-card .skill-drop.empty .placeholder,
-.outfit-card .skill-drop.empty .placeholder {
-  color: var(--Chat-Gray, #444856);
-  font-family: var(--font-blender);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 24px;
-}
 .cyberware-card .weapon-divider,
 .outfit-card .weapon-divider {
   width: 100%;
@@ -7866,14 +7608,4 @@ input.skill-value.skill-level-input:focus {
 .outfit-card .sp-input:focus {
   outline: none;
   box-shadow: none;
-}
-.cyberware-card .sp-input::-webkit-inner-spin-button, .cyberware-card .sp-input::-webkit-outer-spin-button,
-.outfit-card .sp-input::-webkit-inner-spin-button,
-.outfit-card .sp-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.cyberware-card .sp-input,
-.outfit-card .sp-input {
-  -moz-appearance: textfield;
 }

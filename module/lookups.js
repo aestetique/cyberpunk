@@ -460,7 +460,7 @@ export const attackerEffects = {
  *
  * The previous single `sensor` type fanned out into `optics` / `voice` / `audio`
  * so each kind has its own base/option grouping in the gear tab. The three
- * types are still displayed under one "Sensors" header (see actor-sheet).
+ * types are still displayed under one "Sensors" header (see character-sheet).
  */
 export const cyberwareTypes = {
     cyberlimb: "CyberTypeCyberlimb",

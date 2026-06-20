@@ -17,6 +17,21 @@ const NET_ICON_TINT  = 0x66DDFF; // soft cyan, less harsh than pure 00FFFF
 const NET_ICON_ALPHA = 0.6;      // translucent enough to read as "projection"
 
 /**
+ * Per-token cache of `canViewerSeeNetIcon` results, valid for ONE perception
+ * cycle. NET regions don't move between frames within a single refresh, so a
+ * single point-in-region test per token per cycle is enough. Cleared on the
+ * hooks that genuinely change the result (selection change, token movement,
+ * NET-region flag flip).
+ */
+const _canSeeCache = new Map();
+function _clearCanSeeCache() { _canSeeCache.clear(); }
+Hooks.on("controlToken",      _clearCanSeeCache);
+Hooks.on("updateToken",       _clearCanSeeCache);
+Hooks.on("createRegion",      _clearCanSeeCache);
+Hooks.on("updateRegion",      _clearCanSeeCache);
+Hooks.on("deleteRegion",      _clearCanSeeCache);
+
+/**
  * Visual treatment for a NET icon, plus the brute-force override that
  * keeps its portrait visible to other NET viewers regardless of physical
  * walls between them.
@@ -41,7 +56,15 @@ function applyNetIconFx(token) {
     // viewer's controlled NET icon, don't force it visible. The standard
     // visibility chain (via our isVisible wrap) has already set
     // mesh.visible=false; we just need to not override it back to true.
-    if (!canViewerSeeNetIcon(token)) return;
+    // Cached for the lifetime of one perception cycle — `refreshToken`
+    // fires once per token but the underlying region containment can be
+    // tested once for the whole batch.
+    let canSee = _canSeeCache.get(token.id);
+    if (canSee === undefined) {
+        canSee = canViewerSeeNetIcon(token);
+        _canSeeCache.set(token.id, canSee);
+    }
+    if (!canSee) return;
 
     // Detection + permission state — covers the "silhouette" path.
     token.detected = true;

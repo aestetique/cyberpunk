@@ -1,4 +1,4 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, weaponEffects, toolBonusProperties, surgeryCodes, getCyberwareSubtypes, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, weaponEffects, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
 import { localize, tabBeautifying, toTitleCase, bindHoverTooltips } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
@@ -18,7 +18,7 @@ import { CreateItemDialog } from "../dialog/create-item-dialog.js"
 import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
-import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext, buildWeaponContextString } from "./gear-data.js"
+import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext, buildWeaponContextString, buildCyberwareContext, formatBonusLabel, summariseBonuses } from "./gear-data.js"
 import { calibers as CALIBERS } from "../calibers.js"
 import { rangedClasses, martialClasses, getMartialSubtypeLabelKey, resolveWeaponDiscriminator } from "../lookups.js"
 import {
@@ -29,24 +29,13 @@ import {
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
 import { shouldTransfer, transferItem } from "./item-transfer.js"
 
-/**
- * Render a bonus row's gear-context label: "INT +2", "BT ×2", "Reflex = 5".
- * Each op gets a distinct sigil; for the implicit-sign ops (`+`/`−`) we
- * keep the signed form so a +1 stays "+1" and a -1 stays "-1".
- */
-const formatBonusLabel = (label, op, value) => {
-    if (op === "×") return `${label} ×${value}`;
-    if (op === "÷") return `${label} ÷${value}`;
-    if (op === "−") return `${label} −${value}`;
-    if (op === "=") return `${label} = ${value}`;
-    return `${label} ${value >= 0 ? '+' : ''}${value}`; // "+" and unknown
-};
+// `formatBonusLabel` + `summariseBonuses` live in gear-data.js — imported above.
 
 /**
  * Character sheet for Cyberpunk 2020 actors.
  * @extends {ActorSheet}
  */
-export class CyberpunkActorSheet extends ActorSheet {
+export class CyberpunkCharacterSheet extends ActorSheet {
 
   /**
    * Lock state for the sheet (locked = view mode, unlocked = edit mode)
@@ -97,7 +86,7 @@ export class CyberpunkActorSheet extends ActorSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["cyberpunk", "sheet", "actor", "character-sheet"],
-      template: "systems/cyberpunk/templates/actor/actor-sheet.hbs",
+      template: "systems/cyberpunk/templates/actor/character-sheet.hbs",
       width: 930,
       height: 624,
       resizable: true,
@@ -115,7 +104,7 @@ export class CyberpunkActorSheet extends ActorSheet {
   setPosition(position = {}) {
     // If height is being set (from resize), remember it
     if (position.height) {
-      CyberpunkActorSheet._sheetHeights.set(this.actor.id, position.height);
+      CyberpunkCharacterSheet._sheetHeights.set(this.actor.id, position.height);
     }
     return super.setPosition(position);
   }
@@ -140,7 +129,7 @@ export class CyberpunkActorSheet extends ActorSheet {
 
     // On first render, use remembered height or default minimum
     if (!this.rendered) {
-      const rememberedHeight = CyberpunkActorSheet._sheetHeights.get(this.actor.id);
+      const rememberedHeight = CyberpunkCharacterSheet._sheetHeights.get(this.actor.id);
       if (rememberedHeight) {
         options.height = rememberedHeight;
       } else {
@@ -1156,19 +1145,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // Prepare tool data
     sheetData.toolItems = tools.map(t => {
       const sys = t.system;
-      const bonuses = sys.bonuses || [];
-      const effectLabels = bonuses.slice(0, 2).map(b => {
-        const op = b.op || "+";
-        if (b.type === "property") {
-          const propKey = toolBonusProperties[b.property];
-          const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-          return formatBonusLabel(propLabel, op, b.value);
-        } else if (b.skillName) {
-          return formatBonusLabel(b.skillName, op, b.value);
-        }
-        return '';
-      }).filter(l => l);
-      const contextParts = ['Tool', ...effectLabels];
+      const contextParts = ['Tool', ...summariseBonuses(sys.bonuses)];
 
       return {
         id: t.id,
@@ -1210,16 +1187,7 @@ export class CyberpunkActorSheet extends ActorSheet {
         const bonusList = isActive
           ? (e.getFlag("cyberpunk", "activeChanges") || [])
           : (e.getFlag("cyberpunk", "withdrawalChanges") || []);
-        const effectLabels = bonusList.slice(0, 2).map(b => {
-          const op = b.op || "+";
-          if (b.type === "property") {
-            const propKey = toolBonusProperties[b.property];
-            const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-            return formatBonusLabel(propLabel, op, b.value);
-          }
-          if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
-          return "";
-        }).filter(Boolean);
+        const effectLabels = summariseBonuses(bonusList);
         const subtext = [phaseLabel, ...effectLabels].join(" · ");
         // Drugs with no withdrawal bonuses skip the withdrawal step and
         // wear off on the first click — so the tooltip should label the
@@ -1261,24 +1229,12 @@ export class CyberpunkActorSheet extends ActorSheet {
       }
       return false;
     });
-    sheetData.itemEffectRows = itemEffectSource.map(i => {
-      const effectLabels = (i.system.bonuses || []).slice(0, 3).map(b => {
-        const op = b.op || "+";
-        if (b.type === "property") {
-          const propKey = toolBonusProperties[b.property];
-          const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-          return formatBonusLabel(propLabel, op, b.value);
-        }
-        if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
-        return "";
-      }).filter(Boolean);
-      return {
-        id: i.id,
-        img: i.img,
-        name: i.name,
-        subtext: effectLabels.join(" · ")
-      };
-    });
+    sheetData.itemEffectRows = itemEffectSource.map(i => ({
+      id: i.id,
+      img: i.img,
+      name: i.name,
+      subtext: summariseBonuses(i.system.bonuses, 3).join(" · ")
+    }));
 
     // Prepare drug data. Drugs in Gear are pure SUPPLY — they don't carry
     // an "applied" state anymore; clicking Use posts the chat card and the
@@ -1286,20 +1242,7 @@ export class CyberpunkActorSheet extends ActorSheet {
     // withdrawal information lives on the applied effect, not here.
     sheetData.drugItems = drugs.map(d => {
       const sys = d.system;
-      const sourceBonuses = sys.bonuses || [];
-      const effectLabels = sourceBonuses.slice(0, 2).map(b => {
-        const op = b.op || "+";
-        if (b.type === "property") {
-          const propKey = toolBonusProperties[b.property];
-          const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-          return formatBonusLabel(propLabel, op, b.value);
-        } else if (b.skillName) {
-          return formatBonusLabel(b.skillName, op, b.value);
-        }
-        return '';
-      }).filter(l => l);
-      const contextParts = ['Drug', ...effectLabels];
-
+      const contextParts = ['Drug', ...summariseBonuses(sys.bonuses)];
       return {
         id: d.id,
         img: d.img,
@@ -1501,83 +1444,10 @@ export class CyberpunkActorSheet extends ActorSheet {
       chipware: { items: [], badge: 'badge-chipware.svg', title: 'CHIPWARE' }
     };
 
-    // Helper: Get surgery code label
-    const getSurgeryLabel = (code) => {
-      const labelKey = surgeryCodes[code];
-      return labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : code || '';
-    };
-
-    // Helper: Get subtype label
-    const getSubtypeLabel = (cyberType, subtype) => {
-      const subtypes = getCyberwareSubtypes(cyberType);
-      const labelKey = subtypes[subtype];
-      return labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : subtype || '';
-    };
-
-    // Helper: Build context string based on cyberware type
-    const buildContext = (item) => {
-      const sys = item.system;
-      const cyberType = sys.cyberwareType || 'implant';
-      // Role label derived from subtype (the new model). For sensors, the
-      // subtype IS already "base" or "option" → "Base" / "Option" labels.
-      // For cyberlimbs, infer base/option from the subtype identity.
-      const isOptionRow = isCyberlimbOption(item) || isSensorOption(item);
-      const baseOrOption = isOptionRow ? 'Option' : 'Base';
-      const subtypeLabel = getSubtypeLabel(cyberType, sys.cyberwareSubtype);
-      const surgeryLabel = getSurgeryLabel(sys.surgeryCode);
-
-      const parts = [];
-
-      // Sensor cards (optics/voice/audio): the SUBTYPE label is already
-      // "Base"/"Option" — to avoid "Base · Base", show the TYPE label
-      // (Optics / Voice / Audio) followed by the role.
-      if (SENSOR_TYPES.has(cyberType)) {
-        const cyberTypeLabel = game.i18n.localize(`CYBERPUNK.CyberType${cyberType.charAt(0).toUpperCase()}${cyberType.slice(1)}`);
-        if (cyberTypeLabel) parts.push(cyberTypeLabel);
-        parts.push(baseOrOption);
-        if (surgeryLabel) parts.push(surgeryLabel);
-        if (sys.isWeapon) parts.push('Weapon');
-        return parts.join(' · ');
-      }
-
-      switch (cyberType) {
-        case 'cyberlimb':
-          // Subtype · Base/Option · Surgery
-          if (subtypeLabel) parts.push(subtypeLabel);
-          parts.push(baseOrOption);
-          if (surgeryLabel) parts.push(surgeryLabel);
-          break;
-
-        case 'implant':
-          // Subtype · Surgery [· "Weapon" if weapon] [· "Armor" if armor]
-          if (subtypeLabel) parts.push(subtypeLabel);
-          if (surgeryLabel) parts.push(surgeryLabel);
-          if (sys.isWeapon) parts.push('Weapon');
-          if (sys.isArmor) parts.push('Armor');
-          break;
-
-        case 'chipware':
-          // Subtype · {Effects summary}
-          if (subtypeLabel) parts.push(subtypeLabel);
-          // Summarize bonuses (first 2 effects)
-          const bonuses = sys.bonuses || [];
-          const effectLabels = bonuses.slice(0, 2).map(b => {
-            const op = b.op || "+";
-            if (b.type === "property") {
-              const propKey = toolBonusProperties[b.property];
-              const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-              return formatBonusLabel(propLabel, op, b.value);
-            } else if (b.skillName) {
-              return formatBonusLabel(b.skillName, op, b.value);
-            }
-            return '';
-          }).filter(l => l);
-          parts.push(...effectLabels);
-          break;
-      }
-
-      return parts.join(' · ');
-    };
+    // `buildCyberwareContext` lives in gear-data.js — single source of truth
+    // for the row-context string ("Arm · Base · Minor" etc.). Aliased here
+    // as `buildContext` so the existing callsites read naturally.
+    const buildContext = buildCyberwareContext;
 
     // Helper: Check if cyberlimb base is STRUCTURALLY broken
     // (Structure ≤ disablesAt). This determines if the limb CAN be turned on
@@ -2633,17 +2503,7 @@ export class CyberpunkActorSheet extends ActorSheet {
       // Subtext is the same bonus summary the Gear-tab drug row shows,
       // capped at two bonuses to match the gear card. No "Drug · " prefix
       // here — the section bar already carries the action context.
-      const sourceBonuses = item.system.bonuses || [];
-      const subtext = sourceBonuses.slice(0, 2).map(b => {
-        const op = b.op || "+";
-        if (b.type === "property") {
-          const propKey = toolBonusProperties[b.property];
-          const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
-          return formatBonusLabel(propLabel, op, b.value);
-        }
-        if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);
-        return "";
-      }).filter(Boolean).join(" · ");
+      const subtext = summariseBonuses(item.system.bonuses).join(" · ");
       const html2 = await renderTemplate(
         "systems/cyberpunk/templates/chat/drug-use.hbs",
         {

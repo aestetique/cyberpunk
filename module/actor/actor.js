@@ -161,10 +161,27 @@ export class CyberpunkActor extends Actor {
     }
     system.hitLocLookup = buildHitLocationIndex(system.hitLocations);
 
-    // Sort through this now so we don't have to later
-    let equippedItems = this.items.contents.filter(item => {
-      return item.system.equipped;
-    });
+    // Single-pass grouping over `this.items` — every downstream loop in
+    // derive reads from these collections instead of issuing its own filter.
+    // For an actor with 30+ items the overall scan count drops from ~7 to 1.
+    //
+    //   equippedItems     — every item with system.equipped === true
+    //   optionsByParent   — parentId → [option-style children attached to it]
+    //                       (covers cyberlimb options AND armor options; they
+    //                       can't collide since the parent id-space is disjoint)
+    const allItems = this.items.contents;
+    const equippedItems = [];
+    const optionsByParent = new Map();
+    for (const i of allItems) {
+      if (i.system?.equipped) equippedItems.push(i);
+      const isCybOpt = isCyberlimbOption(i);
+      const isArmOpt = i.type === "armor" && i.system?.armorType === "option";
+      if (!isCybOpt && !isArmOpt) continue;
+      const parentId = i.getFlag?.("cyberpunk", "attachedTo");
+      if (!parentId) continue;
+      if (!optionsByParent.has(parentId)) optionsByParent.set(parentId, []);
+      optionsByParent.get(parentId).push(i);
+    }
 
     // Initialize unarmed combat properties BEFORE applying bonuses
     system.unarmedBaseDamage = "1d3";
@@ -174,7 +191,7 @@ export class CyberpunkActor extends Actor {
     // Cyberware and armor options apply when their PARENT (the cyberware/armor
     // they are attached to) is equipped; the option's own equipped flag is
     // ignored, because options aren't worn standalone.
-    const equippedWithBonuses = this.items.contents.filter(i => {
+    const equippedWithBonuses = allItems.filter(i => {
       if (i.type === "tool") return i.system.equipped;
       // Drugs no longer flow through the equipped-items pipeline — applied
       // doses live as ActiveEffects on the actor and are ingested in their
@@ -345,12 +362,13 @@ export class CyberpunkActor extends Actor {
         // Fold in any attached option armors. Options extend the parent's
         // coverage: they layer SP on every zone they cover (including zones
         // the parent doesn't cover), and their EV adds to encumbrance.
-        const attachedOptions = this.items.filter(opt =>
-          opt.type === "armor" &&
-          opt.system.armorType === "option" &&
-          opt.getFlag?.('cyberpunk', 'attachedTo') === armor.id
-        );
-        attachedOptions.forEach(opt => layerArmor(opt.system));
+        // Pulled from the precomputed `optionsByParent` map — O(1) lookup
+        // instead of an O(items) filter per equipped armor.
+        const attachedOptions = optionsByParent.get(armor.id) || [];
+        for (const opt of attachedOptions) {
+          if (opt.type !== "armor") continue; // skip cyberlimb options sharing a parentId namespace
+          layerArmor(opt.system);
+        }
       });
 
     // Add cyberarmor SP to hit locations (same stacking rules)
@@ -535,9 +553,11 @@ export class CyberpunkActor extends Actor {
     };
 
     // Sum SDP bonuses from cyberlimb-option items attached to a given base.
-    const sumAttachedSdp = (baseId) => this.items
-      .filter(i => isCyberlimbOption(i) && i.getFlag("cyberpunk", "attachedTo") === baseId)
-      .reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
+    // Reads from the precomputed `optionsByParent` map so each base lookup
+    // is O(1) — previously this was O(items) per base.
+    const sumAttachedSdp = (baseId) =>
+      (optionsByParent.get(baseId) || [])
+        .reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
 
     for (const limb of equippedItems.filter(isCyberlimbBase)) {
       const loc = limbKeyFor(limb);

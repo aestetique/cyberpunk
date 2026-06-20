@@ -60,7 +60,7 @@ function localizeKey(key) {
 /**
  * Build the context-line subtext for a weapon row (gear tab). Shared between
  * regular weapons (gear-data.js#buildWeaponsList) and cyberware embedded
- * weapons (actor-sheet.js cyberweaponsList builder). The two callers used to
+ * weapons (character-sheet.js cyberweaponsList builder). The two callers used to
  * each carry their own near-identical version of this assembly.
  *
  * Inputs:
@@ -319,21 +319,28 @@ export function buildDroneSkillsList(actor) {
 // ---------------------------------------------------------------------------
 
 /**
- * Format a single bonus row: "INT +2", "BT ×2", "Reflex = 5". The `+` op keeps
- * the signed form so negative additives read naturally ("INT -3").
+ * Format a single bonus row's display: "INT +2", "Reflex ×2", "BT ÷4",
+ * "Hit −1", "Override =10". For `+`/unknown ops the value keeps its sign,
+ * so a negative additive reads as "INT -3" naturally.
  */
 export function formatBonusLabel(label, op, value) {
     if (op === "×") return `${label} ×${value}`;
+    if (op === "÷") return `${label} ÷${value}`;
+    if (op === "−") return `${label} −${value}`;
     if (op === "=") return `${label} = ${value}`;
-    return `${label} ${value >= 0 ? '+' : ''}${value}`;
+    return `${label} ${value >= 0 ? '+' : ''}${value}`; // "+" and unknown
 }
 
 /**
- * Summarise the first N bonus entries on a bonuses array. Property bonuses get
- * localized through `toolBonusProperties`; skill bonuses use the stored name.
- * Used by tool, drug and chipware contexts.
+ * Summarise the first `limit` bonus rows on a bonuses array as display
+ * strings ("INT +2", "Stealth ×2", ...). Property bonuses get localized
+ * through `toolBonusProperties`; skill bonuses use the stored name.
+ * Empty / unrecognised rows are filtered out.
+ *
+ * Single source of truth for the bonus-summary subtext used across the
+ * gear tab, the state tab, the chat cards, etc.
  */
-function summariseBonuses(bonuses, limit = 2) {
+export function summariseBonuses(bonuses, limit = 2) {
     return (bonuses || []).slice(0, limit).map(b => {
         const op = b.op || "+";
         if (b.type === "property") {

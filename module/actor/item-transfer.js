@@ -22,7 +22,7 @@ function isStackable(item) {
 }
 
 /**
- * Should the actor-sheet drop handler delegate to the transfer flow?
+ * Should the character-sheet drop handler delegate to the transfer flow?
  * Only true when the dropped item comes from a different gear-carrying actor
  * and is one of the transferrable types.
  */
@@ -167,7 +167,7 @@ function buildTransferData(item, idMap = null) {
 /**
  * Find an existing same-shape stack on the target actor that we should merge
  * into. Drugs stack by name; Ammo stacks by sourceUuid (matches the
- * single-actor drop logic in actor-sheet.js).
+ * single-actor drop logic in character-sheet.js).
  */
 /**
  * Find an existing same-shape stack on the target. Matches on semantic

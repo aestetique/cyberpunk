@@ -46,7 +46,7 @@ function setTooltip(encodedValue, name, desc, calc) {
     TOOLTIP_MAP.set(encodedValue, buildTooltipHtml(name, desc, calc));
 }
 
-// Stat flavor descriptions (same as actor-sheet.js)
+// Stat flavor descriptions (same as character-sheet.js)
 const STAT_FLAVORS = {
     int: "Problem solving ability, awareness, perception, memory, and the ability to learn quickly.",
     ref: "Combined agility, manual dexterity, and reaction speed. Affects combat initiative and ranged weapon accuracy.",

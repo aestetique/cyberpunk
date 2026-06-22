@@ -320,8 +320,14 @@ export class CyberpunkChatMessage extends ChatMessage {
             });
         }
 
-        // Defence buttons (Parry / Dodge)
+        // Defence buttons (Parry / Dodge / Escape) — enabled on every client
+        // that can resolve a defender (controlled token OR assigned character).
+        // Independent of the GM-side "apply damage" target selection — the
+        // defender rolls for THEIR character, not for whatever the GM has
+        // targeted. The click handler issues a no-actor warning if neither
+        // side resolves.
         html.querySelectorAll(".defence-btn").forEach(btn => {
+            btn.disabled = false;
             btn.addEventListener("click", (event) => this._onDefenceClick(event, html));
         });
 
@@ -682,7 +688,6 @@ export class CyberpunkChatMessage extends ChatMessage {
         const applyBtn = html.querySelector(".apply-damage-btn");
         const hintEl = html.querySelector(".target-selector__hint");
         const targetSelector = html.querySelector(".target-selector");
-        const defenceBtns = html.querySelectorAll(".defence-btn");
 
         if (!content || !targetSelector) return;
 
@@ -733,7 +738,8 @@ export class CyberpunkChatMessage extends ChatMessage {
             }
             content.innerHTML = `<div class="target-info target-info--empty">${emptyHint}</div>`;
             if (applyBtn) applyBtn.disabled = true;
-            defenceBtns.forEach(b => b.disabled = true);
+            // Defence buttons stay enabled — they're for the defender to
+            // click, not gated by the attacker/GM's apply-damage target list.
             if (hintEl) hintEl.textContent = "";
             return;
         }
@@ -781,11 +787,12 @@ export class CyberpunkChatMessage extends ChatMessage {
             hintEl.textContent = hintParts.join(" | ");
         }
 
-        // Enable apply button and defence buttons if there are valid targets
+        // Apply button is target-gated (apply-damage is the GM workflow);
+        // defence buttons stay enabled regardless of targets, see
+        // `_activateListeners`.
         if (applyBtn) {
             applyBtn.disabled = targets.length === 0;
         }
-        defenceBtns.forEach(b => b.disabled = targets.length === 0);
 
         // Check if targets are restrained or immobilized - if so, show only Escape button
         const defenceButtons = html.querySelector(".defence-buttons");

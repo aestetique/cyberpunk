@@ -167,8 +167,11 @@ export function buildWeaponsList(actor) {
                 price: sys.cost || 0,
                 weight: sys.weight || 0,
                 damage: (() => {
-                    // For Ranged, the damage on the line is the ammo's damage
-                    const dmg = isRanged ? (attachedAmmo?.system?.damage || sys.damage) : sys.damage;
+                    // For Ranged, the damage on the line is the ammo's damage.
+                    // `_getEffectiveDamage` falls back to the caliber's
+                    // canonical damage when the stored `damage` field is
+                    // empty (compendium imports often leave it blank).
+                    const dmg = w._getEffectiveDamage();
                     return dmg && dmg !== '0' && dmg !== 0 ? dmg : '–';
                 })(),
                 shotsLeft: sys.shotsLeft ?? 0,

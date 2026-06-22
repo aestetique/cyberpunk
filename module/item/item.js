@@ -1,4 +1,5 @@
 import { weaponTypes, rangedAttackTypes, meleeAttackTypes, fireModes, ranges, rangeDCs, rangeResolve, getAttackSkillsForWeapon, getWeaponClasses, martialActions, meleeDamageBonus, weaponEffects, resolveWeaponDiscriminator } from "../lookups.js"
+import { getDamageForCaliber } from "../calibers.js"
 import { RollBundle, buildD10Roll }  from "../dice.js"
 import { clamp, getByPath, localize, rollLocation } from "../utils.js"
 import { CyberpunkActor } from "../actor/actor.js";
@@ -155,14 +156,28 @@ export class CyberpunkItem extends Item {
 
   /**
    * Effective damage formula. For Ranged with attached ammo, comes from ammo;
-   * otherwise from the weapon itself.
+   * otherwise from the weapon itself. When the stored `damage` field is empty
+   * but a caliber is set (common shape for compendium-sourced weapons that
+   * ship caliber but no pre-stamped damage), fall back to the caliber's
+   * canonical damage. This is the same backfill the weapon-sheet's caliber-
+   * change handler used to be the ONLY trigger for — resolving at read time
+   * here means compendium drops don't need a "change & change back" dance.
    */
   _getEffectiveDamage() {
     if (this._getWeaponType() === "Ranged") {
       const ammo = this._getAttachedAmmo();
       if (ammo?.system?.damage) return ammo.system.damage;
+      // Ammo carries its own damage; if missing but caliber known, resolve.
+      if (ammo) {
+        const ammoCalDmg = getDamageForCaliber(ammo.system?.caliber);
+        if (ammoCalDmg) return ammoCalDmg;
+      }
     }
-    return this.weaponData?.damage || "0";
+    const wd = this.weaponData;
+    if (wd?.damage) return wd.damage;
+    const calDmg = getDamageForCaliber(wd?.caliber);
+    if (calDmg) return calDmg;
+    return "0";
   }
 
   /**

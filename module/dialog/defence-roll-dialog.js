@@ -305,6 +305,23 @@ export class DefenceRollDialog extends Application {
     const isNatural1 = d10Result === 1;
     const success = !isNatural1 && roll.total >= this.attackTotal;
 
+    // Auto-IP gain on successful defence — same formula as performSkillRoll
+    // (first digit of the rolled total, +1 on a natural 10). Skipped when
+    // the skill value came from an override (chip / `=` bonus) — chip-driven
+    // rolls don't count as practice.
+    let ipGained = 0;
+    const { overridden: isOverridden } = this.actor._resolveSkillValue(skill);
+    if (success && !isOverridden) {
+      const firstDigit = parseInt(String(roll.total)[0]);
+      const isCrit = d10Result === 10;
+      ipGained = firstDigit + (isCrit ? 1 : 0);
+      const currentIp = skill.system.ip || 0;
+      await this.actor.updateEmbeddedDocuments("Item", [{
+        _id: skill.id,
+        "system.ip": currentIp + ipGained
+      }]);
+    }
+
     let actionLabel;
     if (this.defenceType === "parry") {
       actionLabel = localize("Parry");
@@ -319,7 +336,8 @@ export class DefenceRollDialog extends Application {
       .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: "defend",
         difficulty: this.attackTotal,
-        success
+        success,
+        ipGained
       });
 
     // Fumble on natural 1

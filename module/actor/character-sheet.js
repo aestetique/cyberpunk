@@ -1047,10 +1047,11 @@ export class CyberpunkCharacterSheet extends ActorSheet {
         sys: weapon, wType: effectiveType, wClass, attachedAmmo
       });
 
-      // For Ranged, damage on the row comes from attached ammo if present
-      const effectiveDamage = isRanged
-        ? (attachedAmmo?.system?.damage || weapon.damage)
-        : weapon.damage;
+      // For Ranged, damage on the row comes from attached ammo if present.
+      // `_getEffectiveDamage` handles the ammo→weapon→caliber-fallback chain
+      // (caliber fallback covers compendium imports where the stored damage
+      // field is empty but caliber is set).
+      const effectiveDamage = c._getEffectiveDamage();
 
       // Attached-ammo addon price = cost/packSize * quantity (mirrors gear-data)
       const attachedAmmoPrice = attachedAmmo ? (() => {

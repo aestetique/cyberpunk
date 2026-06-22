@@ -24,6 +24,10 @@ import { getCurrentGameTime, formatGameTimeShort, parseCampaignStartDate } from 
 // Token Action HUD integration (optional — only activates if TAH Core is installed)
 import "./tah/init.js";
 
+// Defensive wrap around the V13 hover hit-test path; catches the
+// `alphaData is undefined` crash and falls back to bounds hover.
+import "./canvas/hover-guard.js";
+
 // Netrunning — region-based NET architecture (Foundry Regions, no custom
 // wall flags), NET icon lifecycle, one-way visibility filter (NET tokens
 // hidden from meatspace viewers), realm-aware canvas rendering (hides
@@ -70,6 +74,12 @@ Hooks.once('init', async function () {
 
     // Register custom token ruler for color-coded movement
     CONFIG.Token.rulerClass = CyberpunkTokenRuler;
+
+    // V13-namespaced collection / sheet references (the bare globals are
+    // deprecated and removed in v15).
+    const { Actors, Items } = foundry.documents.collections;
+    const { ActorSheet, ItemSheet } = foundry.appv1.sheets;
+    const { ItemDirectory } = foundry.applications.sidebar.tabs;
 
     // Override the Items sidebar "Create Item" button with our custom dialog
     class CyberpunkItemDirectory extends ItemDirectory {

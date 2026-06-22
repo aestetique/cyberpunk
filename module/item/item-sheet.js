@@ -7,7 +7,7 @@ import { getMartialKeyByName } from '../utils.js'
  * Item sheet for the Cyberpunk 2020 system.
  * @extends {ItemSheet}
  */
-export class CyberpunkLegacyItemSheet extends ItemSheet {
+export class CyberpunkLegacyItemSheet extends foundry.appv1.sheets.ItemSheet {
 
   /** @override */
   static get defaultOptions() {

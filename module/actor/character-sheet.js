@@ -35,7 +35,7 @@ import { shouldTransfer, transferItem } from "./item-transfer.js"
  * Character sheet for Cyberpunk 2020 actors.
  * @extends {ActorSheet}
  */
-export class CyberpunkCharacterSheet extends ActorSheet {
+export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
 
   /**
    * Lock state for the sheet (locked = view mode, unlocked = edit mode)

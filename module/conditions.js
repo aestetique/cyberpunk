@@ -4,6 +4,23 @@
  */
 
 /**
+ * V13/V14 dual-compat alias for ActiveEffect change-mode constants.
+ * V14 renamed `CONST.ACTIVE_EFFECT_MODES` (UPPERCASE keys, values 0-5) to
+ * `CONST.ACTIVE_EFFECT_CHANGE_TYPES` (lowercase keys, values 0/10/20/...).
+ * V14 still Proxies the old name but logs a deprecation warning on every
+ * access. We feature-detect the new constant once and build a local map
+ * with our preferred uppercase keys.
+ */
+const EFFECT_MODE = (() => {
+    const t = CONST.ACTIVE_EFFECT_CHANGE_TYPES;
+    if (t) return {
+        CUSTOM: t.custom, MULTIPLY: t.multiply, ADD: t.add,
+        DOWNGRADE: t.downgrade, UPGRADE: t.upgrade, OVERRIDE: t.override
+    };
+    return CONST.ACTIVE_EFFECT_MODES;
+})();
+
+/**
  * Map wound state (1-10) to condition ID. WOUND_CONDITION_IDS is derived below.
  */
 export const WOUND_STATE_TO_CONDITION = {
@@ -411,65 +428,65 @@ export const CONDITION_EFFECTS = {
     "seriously-wounded": {
         // REF -2
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "-2" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.ADD, value: "-2" }
         ]
     },
     "critically-wounded": {
         // REF, INT, COOL reduced by half
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.5" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.5" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.5" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.5" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.5" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.5" }
         ]
     },
     "mortally-wounded-0": {
         // REF, INT, COOL reduced to 1/3
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "mortally-wounded-1": {
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "mortally-wounded-2": {
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "mortally-wounded-3": {
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "mortally-wounded-4": {
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "mortally-wounded-5": {
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "mortally-wounded-6": {
         changes: [
-            { key: "system.stats.ref.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.int.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" },
-            { key: "system.stats.cool.value", mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY, value: "0.33" }
+            { key: "system.stats.ref.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.int.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" },
+            { key: "system.stats.cool.value", mode: EFFECT_MODE.MULTIPLY, value: "0.33" }
         ]
     },
     "shocked": {
@@ -515,19 +532,19 @@ export const CONDITION_EFFECTS = {
     "poisoned": {
         // REF -4
         changes: [
-            { key: "system.stats.ref.tempMod", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "-4" }
+            { key: "system.stats.ref.tempMod", mode: EFFECT_MODE.ADD, value: "-4" }
         ]
     },
     "confused": {
         // INT -4
         changes: [
-            { key: "system.stats.int.tempMod", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "-4" }
+            { key: "system.stats.int.tempMod", mode: EFFECT_MODE.ADD, value: "-4" }
         ]
     },
     "tearing": {
         // REF -2
         changes: [
-            { key: "system.stats.ref.tempMod", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "-2" }
+            { key: "system.stats.ref.tempMod", mode: EFFECT_MODE.ADD, value: "-2" }
         ]
     },
     "unconscious": {
@@ -549,7 +566,7 @@ export const CONDITION_EFFECTS = {
     "shorted": {
         // REF -3
         changes: [
-            { key: "system.stats.ref.tempMod", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "-3" }
+            { key: "system.stats.ref.tempMod", mode: EFFECT_MODE.ADD, value: "-3" }
         ]
     },
     "deafened": {

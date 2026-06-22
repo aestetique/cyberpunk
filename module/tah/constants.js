@@ -3,7 +3,7 @@
  * Defines action types, groups, and default layout.
  */
 
-export const REQUIRED_CORE_MODULE_VERSION = "2.0";
+export const REQUIRED_CORE_MODULE_VERSION = "2.1";
 
 /**
  * Action type identifiers — used in encodedValue as the first segment.

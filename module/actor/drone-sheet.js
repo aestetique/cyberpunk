@@ -39,7 +39,7 @@ function formatHitRange(loc) {
  *
  * @extends {ActorSheet}
  */
-export class CyberpunkDroneSheet extends ActorSheet {
+export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
 
   /** @type {boolean} */
   _isLocked = true;

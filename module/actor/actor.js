@@ -83,7 +83,10 @@ export class CyberpunkActor extends Actor {
    * markers like jacked-in/scrambled which don't use `changes[]`, and any
    * third-party module effects) pass through untouched.
    */
-  applyActiveEffects() {
+  applyActiveEffects(phase) {
+    // V14 calls this twice with `phase` = "initial" / "final"; V13 calls
+    // with no args. Forward whatever we got so V14 stays quiet and V13's
+    // (arity-0) super just ignores the extra param.
     const stash = [];
     for (const e of this.effects) {
       if (e.getFlag("cyberpunk", "isDrugEffect")) {
@@ -91,7 +94,7 @@ export class CyberpunkActor extends Actor {
         e.disabled = true;
       }
     }
-    super.applyActiveEffects();
+    super.applyActiveEffects(phase);
     for (const [e, prev] of stash) e.disabled = prev;
   }
 

@@ -189,7 +189,7 @@ function buildFields(item) {
   return { field1: null, field2: null };
 }
 
-export class CyberpunkShopSheet extends ActorSheet {
+export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
 
   /** @type {"buy"|"sell"} */
   _activeTab = "buy";

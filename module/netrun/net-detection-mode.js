@@ -33,8 +33,12 @@ Hooks.once("init", () => {
             });
         }
 
-        /** @override — only NET-flagged targets are detection candidates. */
-        _canDetect(_visionSource, target) {
+        /**
+         * @override — only NET-flagged targets are detection candidates.
+         * The trailing `_level` parameter is V14's new perception-depth arg
+         * (`undefined` on V13); we ignore it either way.
+         */
+        _canDetect(_visionSource, target, _level) {
             return isNetIcon(target);
         }
 

@@ -5,7 +5,7 @@ import { localize } from "../utils.js";
  * All item sheets (skill, role, etc.) should extend this class
  * @extends {ItemSheet}
  */
-export class CyberpunkItemSheet extends ItemSheet {
+export class CyberpunkItemSheet extends foundry.appv1.sheets.ItemSheet {
 
   /**
    * Lock state for the sheet (locked = view mode, unlocked = edit mode)

@@ -774,6 +774,12 @@
 			"stress": 0,
 			"fright": 0,
 			"sleep": 0,
+			"humanityLoss": {
+				"alienation": 0,
+				"egotism": 0,
+				"obsession": 0,
+				"paranoia": 0
+			},
 			"activeCover": null,
 			"skillsSortedBy": "Name",
 			"CombatSenseMod": 0,

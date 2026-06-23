@@ -31,6 +31,77 @@ import { shouldTransfer, transferItem } from "./item-transfer.js"
 
 // `formatBonusLabel` + `summariseBonuses` live in gear-data.js — imported above.
 
+// Humanity Loss psychosis brackets (Grimm's Cybertales).
+// Each flavour shares the same 0 / 1-50 / 51+ structure. The bracket `key` is
+// the suffix used to look up label + flavor in lang/en.json under
+// `CYBERPUNK.HumanityLoss.Bracket.<Flavour>.<Key>` (label) and `<Key>Flavor`
+// (description). Mechanical lines are duplicated in the actor.js penalty
+// calculations below — the locale tooltip stays the player-facing source.
+const HUMANITY_BRACKETS = {
+  alienation: [
+    { min: 0,  max: 0,   key: "Normal" },
+    { min: 1,  max: 10,  key: "Distant" },
+    { min: 11, max: 20,  key: "AbsentMinded" },
+    { min: 21, max: 30,  key: "Eccentric" },
+    { min: 31, max: 40,  key: "Delusions" },
+    { min: 41, max: 50,  key: "Hallucinations" },
+    { min: 51, max: 100, key: "Schizophrenic" }
+  ],
+  egotism: [
+    { min: 0,  max: 0,   key: "Normal" },
+    { min: 1,  max: 10,  key: "Arrogant" },
+    { min: 11, max: 20,  key: "Stubborn" },
+    { min: 21, max: 30,  key: "Conceited" },
+    { min: 31, max: 40,  key: "Egocentric" },
+    { min: 41, max: 50,  key: "Narcissistic" },
+    { min: 51, max: 100, key: "Megalomania" }
+  ],
+  obsession: [
+    { min: 0,  max: 0,   key: "Normal" },
+    { min: 1,  max: 10,  key: "Playful" },
+    { min: 11, max: 20,  key: "Distracted" },
+    { min: 21, max: 30,  key: "Compulsive" },
+    { min: 31, max: 40,  key: "Addict" },
+    { min: 41, max: 50,  key: "Obsessive" },
+    { min: 51, max: 100, key: "Monomania" }
+  ],
+  paranoia: [
+    { min: 0,  max: 0,   key: "Normal" },
+    { min: 1,  max: 10,  key: "Nervy" },
+    { min: 11, max: 20,  key: "Nervous" },
+    { min: 21, max: 30,  key: "Hypochondriac" },
+    { min: 31, max: 40,  key: "Phobic" },
+    { min: 41, max: 50,  key: "Paranoid" },
+    { min: 51, max: 100, key: "HomicidalMania" }
+  ]
+};
+
+const FLAVOUR_CAP = { alienation: "Alienation", egotism: "Egotism", obsession: "Obsession", paranoia: "Paranoia" };
+
+function _humanityBracketFor(flavour, value) {
+  const table = HUMANITY_BRACKETS[flavour];
+  if (!table) return null;
+  return table.find(b => value >= b.min && value <= b.max) ?? table[table.length - 1];
+}
+
+function _humanityBracketLabel(flavour, bracket) {
+  return localize(`HumanityLossPanel.Bracket.${FLAVOUR_CAP[flavour]}.${bracket.key}`);
+}
+
+function _humanityBracketFlavor(flavour, bracket) {
+  return localize(`HumanityLossPanel.Bracket.${FLAVOUR_CAP[flavour]}.${bracket.key}Flavor`);
+}
+
+function _humanityNextBracketCalc(flavour, value) {
+  const table = HUMANITY_BRACKETS[flavour];
+  if (!table) return "";
+  const cur = _humanityBracketFor(flavour, value);
+  const idx = table.indexOf(cur);
+  const next = table[idx + 1];
+  if (!next) return "";
+  return localize("HumanityLossPanel.Next", { label: _humanityBracketLabel(flavour, next), min: next.min });
+}
+
 /**
  * Character sheet for Cyberpunk 2020 actors.
  * @extends {ActorSheet}
@@ -391,11 +462,13 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
         return { label, hasWound, dots };
       });
 
-      // Humanity blocks data for template
+      // Humanity blocks data for template (Grimm's Cybertales).
+      // Max humanity is always 100; `humanityLimit` is the practical max
+      // after base EMP-derived loss (100 − baseLoss). Dots above the limit
+      // render as gray ("off") and represent the base humanity loss.
       const emp = stats.emp || {};
-      const humanityBase = (emp.base || 0) * 10; // EMP * 10 = max humanity
-      const humanityTotal = emp.humanity?.total ?? humanityBase;
-      const humanityLimit = humanityBase; // Max humanity based on EMP
+      const humanityLimit = emp.humanity?.base ?? 100;
+      const humanityTotal = emp.humanity?.total ?? humanityLimit;
 
       sheetData.humanityBlocks = [];
       for (let blockIndex = 0; blockIndex < 10; blockIndex++) {
@@ -452,12 +525,17 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       sheetData.woundsFlavor = "Track wounds taken in 4-point blocks. Each wound level imposes cumulative penalties to Stun and Death saves.";
       sheetData.woundsCalc = `Damage ${damage} / 40 \u2014 ${woundStatusLabel}`;
 
-      // Humanity tooltip data
+      // Humanity tooltip data \u2014 out of an absolute max of 100.
+      // Base loss is the EMP-derived gray dots; damage is the cyberware /
+      // event loss that reduces EMP at 1 per 10. Both feed the Humanity
+      // Loss distribution pool on the State tab.
       const humanityDamage = emp.humanityDamage || 0;
-      sheetData.humanityFlavor = "Tracks humanity lost to cyberware and trauma. Every 10 points lost reduces current EMP by 1.";
-      sheetData.humanityCalc = humanityDamage > 0
-        ? `EMP ${emp.base || 0} \u00d7 10 \u2212 Loss ${humanityDamage} = ${humanityTotal}`
-        : `EMP ${emp.base || 0} \u00d7 10 = ${humanityBase}`;
+      const humanityBaseLoss = emp.humanity?.baseLoss ?? 0;
+      const humanityTotalLoss = humanityBaseLoss + humanityDamage;
+      sheetData.humanityFlavor = "Tracks humanity lost to low base EMP, cyberware, and trauma. Every 10 points of cyberware loss reduces current EMP by 1.";
+      sheetData.humanityCalc = humanityTotalLoss > 0
+        ? `100 \u2212 Base ${humanityBaseLoss} \u2212 Damage ${humanityDamage} = ${humanityTotal}`
+        : `100 / 100`;
 
       // Info blocks data for template
       const ma = stats.ma || {};
@@ -742,6 +820,62 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
     };
     sheetData.fatigueTooltipFlavor = fatigueTooltipFlavors[fatigueLevel] ?? "No penalties.";
     sheetData.fatigueTooltipCalc = fatigueTooltipCalcs[fatigueLevel] ?? "";
+
+    // Humanity-driven penalty hint suffix. Appended to Stress / Fright /
+    // Fatigue tooltips so a player reading any of them sees the full
+    // active-modifier picture from the psychosis brackets.
+    const _hlObsessionMono   = (system.humanityLoss?.obsession ?? 0) >= 51;
+    const _hlParanoia        = system.humanityLoss?.paranoia ?? 0;
+    const _hlParanoiaFright  = _hlParanoia >= 41 ? -4 : (_hlParanoia >= 11 ? -2 : 0);
+    const _hlParanoiaCool    = _hlParanoia >= 41;
+    const _hlHints = [];
+    if (_hlObsessionMono)  _hlHints.push(localize("HumanityLossPanel.HintMonomania"));
+    if (_hlParanoiaFright) _hlHints.push(localize("HumanityLossPanel.HintParanoiaFright", { value: _hlParanoiaFright }));
+    if (_hlParanoiaCool)   _hlHints.push(localize("HumanityLossPanel.HintParanoiaCool"));
+    const _hlHintSuffix = _hlHints.length ? ` ${localize("HumanityLossPanel.HintPrefix")}: ${_hlHints.join("; ")}.` : "";
+    if (_hlHintSuffix) {
+      sheetData.stressTooltipFlavor  = (sheetData.stressTooltipFlavor  ?? "") + _hlHintSuffix;
+      sheetData.frightTooltipFlavor  = (sheetData.frightTooltipFlavor  ?? "") + _hlHintSuffix;
+      sheetData.fatigueTooltipFlavor = (sheetData.fatigueTooltipFlavor ?? "") + _hlHintSuffix;
+    }
+
+    // Humanity Loss — four psychosis flavours, each 0..100. Status bands and
+    // explanatory tooltips land later; for now everything reads "Normal".
+    // Distribution: total humanity damage (Y) is the pool of points that can
+    // be spent across the four flavours (X = their sum). Up arrows go inert
+    // once X reaches Y, since there are no more points to assign.
+    const HL = system.humanityLoss ?? {};
+    const hlValues = {
+      alienation: HL.alienation ?? 0,
+      egotism:    HL.egotism    ?? 0,
+      obsession:  HL.obsession  ?? 0,
+      paranoia:   HL.paranoia   ?? 0
+    };
+    const hlDistributed = hlValues.alienation + hlValues.egotism + hlValues.obsession + hlValues.paranoia;
+    // Pool = EMP-derived base loss + cyberware/event humanity damage. We read
+    // the derived emp.humanity.damage (floored) — not the raw stored field —
+    // so the X/Y counter and arrow caps match the rest of the sheet.
+    const hlBaseLoss = system.stats?.emp?.humanity?.baseLoss ?? 0;
+    const hlDamage   = system.stats?.emp?.humanity?.damage   ?? 0;
+    const hlTotal    = hlBaseLoss + hlDamage;
+    const hlFull     = hlDistributed >= hlTotal;
+    sheetData.humanityLossCounter = `${hlDistributed} / ${hlTotal}`;
+    sheetData.humanityLossBlocks = ["alienation", "egotism", "obsession", "paranoia"].map(flavour => {
+      const value = hlValues[flavour];
+      const bracket = _humanityBracketFor(flavour, value);
+      const label = localize(`HumanityLossPanel.${FLAVOUR_CAP[flavour]}`);
+      return {
+        label,
+        value,
+        field: `system.humanityLoss.${flavour}`,
+        upIcon:   (value >= 100 || hlFull) ? "badge-up-disabled.svg"   : "badge-up.svg",
+        downIcon:  value <= 0              ? "badge-down-disabled.svg" : "badge-down.svg",
+        status: bracket ? _humanityBracketLabel(flavour, bracket) : "",
+        tooltipName: label,
+        flavor: bracket ? _humanityBracketFlavor(flavour, bracket) : "",
+        calc: _humanityNextBracketCalc(flavour, value)
+      };
+    });
 
     // Sleep block data (state tab)
     const sleep = system.sleep || 0;
@@ -2106,6 +2240,34 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       if (current > 0) this.actor.update({ [field]: current - 1 });
     });
 
+    // Humanity Loss arrows — clamped 0..100 per block, plus a global cap:
+    // the sum across all four flavours cannot exceed total humanity damage
+    // (Y in the header counter). Disabled icon swaps happen in getData; this
+    // is the runtime no-op enforcement for the same rules.
+    html.find('.humanity-up').click(async ev => {
+      ev.preventDefault();
+      const field = ev.currentTarget.dataset.field;
+      const current = foundry.utils.getProperty(this.actor, field) || 0;
+      if (current >= 100) return;
+      const HL = this.actor.system.humanityLoss ?? {};
+      const distributed = (HL.alienation||0) + (HL.egotism||0) + (HL.obsession||0) + (HL.paranoia||0);
+      const baseLoss = this.actor.system.stats?.emp?.humanity?.baseLoss ?? 0;
+      const damage   = this.actor.system.stats?.emp?.humanity?.damage   ?? 0;
+      if (distributed >= baseLoss + damage) return;
+      await this.actor.update({ [field]: current + 1 });
+      // Crossing 51 in any flavour triggers Insane — refresh syncs it.
+      await this.actor.refreshInsaneStatus();
+    });
+    html.find('.humanity-down').click(async ev => {
+      ev.preventDefault();
+      const field = ev.currentTarget.dataset.field;
+      const current = foundry.utils.getProperty(this.actor, field) || 0;
+      if (current <= 0) return;
+      await this.actor.update({ [field]: current - 1 });
+      // Dropping below 51 may release the Insane status (if no other source holds it).
+      await this.actor.refreshInsaneStatus();
+    });
+
     // Sleep block: stay awake / fall asleep
     html.find('.sleep-up').click(ev => {
       ev.preventDefault();
@@ -2623,17 +2785,12 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
           const roll = new Roll(formula);
           await roll.evaluate();
 
-          // Store roll result on item and turn it on
+          // Store roll result on item and turn it on. The actor-side
+          // updateItem hook ratchets stored humanityDamage up to match.
           await item.update({
             "system.humanityLoss": roll.total,
             "system.humanityRolled": true,
             "system.equipped": true
-          });
-
-          // Apply PERMANENT humanity damage to actor
-          const currentDamage = this.actor.system.stats.emp.humanityDamage || 0;
-          await this.actor.update({
-            "system.stats.emp.humanityDamage": currentDamage + roll.total
           });
 
           // Show roll in chat with custom humanity template
@@ -2688,18 +2845,13 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
         sound: CONFIG.sounds.dice
       });
 
-      // Store roll result on item
+      // Store roll result on item. The actor-side updateItem hook
+      // ratchets stored humanityDamage up to match.
       await this.actor.updateEmbeddedDocuments("Item", [{
         _id: itemId,
         "system.humanityLoss": roll.total,
         "system.humanityRolled": true
       }]);
-
-      // Apply PERMANENT humanity damage to actor
-      const currentDamage = this.actor.system.stats.emp.humanityDamage || 0;
-      await this.actor.update({
-        "system.stats.emp.humanityDamage": currentDamage + roll.total
-      });
     });
 
     // Detach option from base cyberware

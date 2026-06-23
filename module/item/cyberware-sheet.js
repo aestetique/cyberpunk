@@ -283,17 +283,12 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
                 sound: CONFIG.sounds.dice
             });
 
+            // The updateItem hook on the actor side ratchets stored
+            // humanityDamage up to include this roll — no explicit bump here.
             await this.item.update({
                 "system.humanityLoss": roll.total,
                 "system.humanityRolled": true
             });
-
-            if (this.item.actor) {
-                const currentDamage = this.item.actor.system.stats.emp.humanityDamage || 0;
-                await this.item.actor.update({
-                    "system.stats.emp.humanityDamage": currentDamage + roll.total
-                });
-            }
         });
 
         // Reset humanity roll (unlocked mode only)

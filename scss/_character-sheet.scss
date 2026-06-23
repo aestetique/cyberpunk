@@ -713,8 +713,10 @@ input.stat-value.stat-input {
 }
 
 .tracker-badge {
+  box-sizing: border-box;
   width: 20px;
   height: 26px;
+  padding: 2px 0 8px 4px;
   flex-shrink: 0;
 }
 
@@ -1027,11 +1029,26 @@ input.info-value.info-input {
   font-size: 16px;
   line-height: 36px;
   color: #B9B29D;
+  text-transform: uppercase;
 }
 
 .tab-badge {
   width: 16px;
   height: 16px;
+}
+
+.humanity-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.humanity-counter {
+  font-family: var(--font-blender);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 36px;
+  color: #B9B29D;
 }
 
 .netactions-tracker {
@@ -1744,6 +1761,7 @@ input.skill-value.skill-level-input {
 .state-row {
   display: flex;
   padding: 0 4px;
+  margin: 4px 0;
   gap: 16px;
 }
 

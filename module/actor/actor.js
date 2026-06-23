@@ -494,15 +494,28 @@ export class CyberpunkActor extends Actor {
     system.poisonSave = stunBase + (system.poisonSaveMod || 0);
     system.deathSave = stunBase + 3 + (system.deathSaveMod || 0);
 
-    // Calculate and configure humanity
-    // Humanity damage is PERMANENT (only restored through therapy)
+    // Calculate and configure humanity (Grimm's Cybertales).
+    // Max humanity is fixed at 100. Starting "base loss" comes from low EMP:
+    //   (10 - empBase) * 5, clamped at 0 — so EMP 10 → 0, EMP 9 → 5, ... EMP 2 → 40.
+    // Cyberware damage is a high-water mark: ratchets up whenever items'
+    // summed humanityLoss exceeds the stored field (see the createItem /
+    // updateItem hooks at the bottom of this module). Removing a piece does
+    // NOT restore humanity — the stored value stays where it last peaked.
     const emp = stats.emp;
-    const humanityDamage = emp.humanityDamage || 0;
+    const empBase = Math.min(emp.base ?? 0, 10);
+    const baseHumanityLoss = Math.max(0, (10 - empBase) * 5);
+    const stored = Number(emp.humanityDamage) || 0;
+    const itemsSum = this.itemTypes?.cyberware
+      ?.reduce((sum, i) => sum + (Number(i.system?.humanityLoss) || 0), 0) ?? 0;
+    // Round .5 down on the distribution sum (Grimm's Cybertales doesn't
+    // specify, so we floor — keeps Y, tooltip, and statsrow as integers).
+    const humanityDamage = Math.floor(Math.max(stored, itemsSum));
 
     emp.humanity = {
-      base: emp.base * 10,           // Max humanity = EMP × 10
-      damage: humanityDamage,        // Permanent damage (from cyberware + other sources)
-      total: (emp.base * 10) - humanityDamage  // Current humanity
+      base: 100 - baseHumanityLoss,                   // Practical max — what therapy can restore to
+      baseLoss: baseHumanityLoss,                     // EMP-derived starting loss (the gray dots)
+      damage: humanityDamage,                         // High-water mark
+      total: (100 - baseHumanityLoss) - humanityDamage  // Current humanity
     };
 
     // EMP reduction: -1 per 10 humanity lost. Apply the delta to the RUNNING
@@ -528,6 +541,13 @@ export class CyberpunkActor extends Actor {
       if (empPen[sleepLevel]) {
         stats.emp.total = Math.max(0, stats.emp.total + empPen[sleepLevel]);
       }
+    }
+
+    // Paranoia at Paranoid+ (41) drops current COOL by 1 (min 2). Matches the
+    // sleep-deprivation floor so we never bottom-out the stat past its
+    // gameplay minimum.
+    if ((system.humanityLoss?.paranoia ?? 0) >= 41) {
+      stats.cool.total = Math.max(2, stats.cool.total - 1);
     }
 
     // Cyberlimb derive: route equipped Arm/Leg bases into the 4-slot
@@ -879,6 +899,34 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * Returns true if any source currently demands the Insane status:
+   * Stress level >= 4 (Cracked), Fright level == 5 (Blown Away), or any
+   * Humanity Loss flavour >= 51 (Schizophrenic / Megalomania / Monomania /
+   * Homicidal Mania). Used by `refreshInsaneStatus` to apply/remove the
+   * status without each handler needing to know about the other sources.
+   */
+  shouldBeInsane() {
+    if (this.getStressLevel?.() >= 4) return true;
+    if (this.getFrightLevel?.() >= 5) return true;
+    const hl = this.system.humanityLoss ?? {};
+    return ((hl.alienation ?? 0) >= 51)
+        || ((hl.egotism    ?? 0) >= 51)
+        || ((hl.obsession  ?? 0) >= 51)
+        || ((hl.paranoia   ?? 0) >= 51);
+  }
+
+  /** Apply/remove the Insane status to match `shouldBeInsane()`. Idempotent. */
+  async refreshInsaneStatus() {
+    const shouldBe = this.shouldBeInsane();
+    const isInsane = this.statuses.has("insane");
+    if (shouldBe && !isInsane) {
+      await this.toggleStatusEffect("insane", { active: true });
+    } else if (!shouldBe && isInsane) {
+      await this.toggleStatusEffect("insane", { active: false });
+    }
+  }
+
+  /**
    * Get the roll penalty (or bonus) for the current stress level.
    * @param {boolean} isCoolRoll - Whether this is a COOL-based roll
    * @returns {number} Penalty/bonus (e.g. +1 for Fresh on COOL, -1 to -5 for negative conditions)
@@ -942,12 +990,9 @@ export class CyberpunkActor extends Actor {
       await this.toggleStatusEffect("insomnia", { active: false });
     }
 
-    // Cracked → Insane (auto-remove only when below Cracked AND fright below Blown Away)
-    if (increased && level >= 4 && !this.statuses.has("insane")) {
-      await this.toggleStatusEffect("insane", { active: true });
-    } else if (level < 4 && this.getFrightLevel() < 5 && this.statuses.has("insane")) {
-      await this.toggleStatusEffect("insane", { active: false });
-    }
+    // Insane is sourced by Stress 4+, Fright 5, or any humanityLoss 51+.
+    // refreshInsaneStatus checks all three and toggles accordingly.
+    await this.refreshInsaneStatus();
   }
 
   /**
@@ -978,12 +1023,9 @@ export class CyberpunkActor extends Actor {
       if (this.statuses.has("fleeing")) await this.toggleStatusEffect("fleeing", { active: false });
     }
 
-    // Blown Away → Insane (auto-remove only when stress also below Cracked)
-    if (increased && level === 5 && !this.statuses.has("insane")) {
-      await this.toggleStatusEffect("insane", { active: true });
-    } else if (level < 5 && this.getStressLevel() < 4 && this.statuses.has("insane")) {
-      await this.toggleStatusEffect("insane", { active: false });
-    }
+    // Centralized — Insane is sourced by Stress 4+, Fright 5, or any
+    // humanityLoss 51+. refreshInsaneStatus inspects all three.
+    await this.refreshInsaneStatus();
   }
 
   /**
@@ -1301,6 +1343,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all skill rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1337,6 +1380,7 @@ export class CyberpunkActor extends Actor {
       skill.name === localize("SkillAwarenessNotice") ? "@CombatSenseMod" : null,
       extraMod || null,
       actionSurgePenalty || null,
+      monomaniaPenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
       grapplingPenalty || null,
@@ -1411,6 +1455,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all skill rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1436,6 +1481,7 @@ export class CyberpunkActor extends Actor {
       `@stats.${stat}.total`,
       extraMod || null,
       actionSurgePenalty || null,
+      monomaniaPenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
       grapplingPenalty || null,
@@ -1480,6 +1526,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all stat rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1495,6 +1542,7 @@ export class CyberpunkActor extends Actor {
 
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
+    if (monomaniaPenalty) parts.push(monomaniaPenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
     if (restrainedPenalty) parts.push(restrainedPenalty);
     if (grapplingPenalty) parts.push(grapplingPenalty);
@@ -1523,6 +1571,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all skill rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1560,6 +1609,7 @@ export class CyberpunkActor extends Actor {
       skill.name === localize("SkillAwarenessNotice") ? "@CombatSenseMod" : null,
       extraMod || null,
       actionSurgePenalty || null,
+      monomaniaPenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
       grapplingPenalty || null,
@@ -1662,6 +1712,7 @@ export class CyberpunkActor extends Actor {
 
     const stat = bonus.skillStat || 'ref';
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
@@ -1676,6 +1727,7 @@ export class CyberpunkActor extends Actor {
       `@stats.${stat}.total`,
       extraMod || null,
       actionSurgePenalty || null,
+      monomaniaPenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
       grapplingPenalty || null,
@@ -1714,6 +1766,7 @@ export class CyberpunkActor extends Actor {
   async rollStatCheck(statName, difficulty, extraMod = 0) {
     const fullStatName = localize(toTitleCase(statName) + "Full");
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
@@ -1722,6 +1775,7 @@ export class CyberpunkActor extends Actor {
 
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
+    if (monomaniaPenalty) parts.push(monomaniaPenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
     if (restrainedPenalty) parts.push(restrainedPenalty);
     if (grapplingPenalty) parts.push(grapplingPenalty);
@@ -1809,19 +1863,25 @@ export class CyberpunkActor extends Actor {
    */
   async rollFrightCheck(difficulty, extraMod = 0) {
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
+    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
     const fatiguePenalty = this.getFatiguePenalty();
     const stressPenalty = this.getStressPenalty(true); // COOL-based roll
+    // Paranoia: -2 on Fright checks at Nervous+ (11), upgraded to -4 at Paranoid+ (41).
+    const paranoia = this.system.humanityLoss?.paranoia ?? 0;
+    const paranoiaFrightPenalty = paranoia >= 41 ? -4 : (paranoia >= 11 ? -2 : 0);
 
     const parts = ["@stats.cool.total"];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
+    if (monomaniaPenalty) parts.push(monomaniaPenalty);
     if (fastDrawPenalty) parts.push(fastDrawPenalty);
     if (restrainedPenalty) parts.push(restrainedPenalty);
     if (grapplingPenalty) parts.push(grapplingPenalty);
     if (fatiguePenalty) parts.push(fatiguePenalty);
     if (stressPenalty) parts.push(stressPenalty);
+    if (paranoiaFrightPenalty) parts.push(paranoiaFrightPenalty);
     if (extraMod) parts.push(extraMod);
 
     const roll = buildD10Roll(parts, this.system);
@@ -2108,3 +2168,36 @@ export class CyberpunkActor extends Actor {
     return roll.total;
   }
 }
+
+// --- Humanity high-water hooks ----------------------------------------------
+// The character's stored humanityDamage is a sticky high-water mark: it
+// ratchets up whenever the sum of installed cyberware items' humanityLoss
+// exceeds it, but never drops on its own. Removing a piece of cyberware does
+// not restore humanity (RAW permanent-loss semantics); the stored value just
+// stays. The live max(stored, sum) is computed in prepareData above — these
+// hooks are what PERSIST any increase so removals can't undo it later.
+//
+// Triggers covered: drag-from-compendium (createItem with humanityLoss > 0),
+// roll-in-install-dialog (updateItem changing humanityLoss), manual edits.
+// No deleteItem handler — removal is intentionally a no-op.
+
+function _ratchetActorHumanity(item) {
+    const actor = item.parent;
+    if (!actor || actor.documentName !== "Actor") return;
+    if (item.type !== "cyberware") return;
+    // One client does the write — the actor.update propagates to everyone.
+    if (!actor.isOwner) return;
+    const sum = actor.itemTypes.cyberware
+        .reduce((s, i) => s + (Number(i.system?.humanityLoss) || 0), 0);
+    const stored = Number(actor.system?.stats?.emp?.humanityDamage) || 0;
+    if (sum > stored) {
+        actor.update({ "system.stats.emp.humanityDamage": sum });
+    }
+}
+
+Hooks.on("createItem", (item, _options, _userId) => _ratchetActorHumanity(item));
+Hooks.on("updateItem", (item, changes, _options, _userId) => {
+    // Only react when humanityLoss actually changed — cheap guard.
+    if (!("humanityLoss" in (changes.system ?? {}))) return;
+    _ratchetActorHumanity(item);
+});

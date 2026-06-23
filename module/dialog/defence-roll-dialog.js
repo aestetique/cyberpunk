@@ -274,11 +274,12 @@ export class DefenceRollDialog extends Application {
     const skill = this.actor.items.get(this._selectedSkill.id);
     if (!skill) return;
 
-    // Action Surge / Fast Draw penalties
+    // Action Surge / Fast Draw / Monomania penalties
     const actionSurgePenalty = this.actor.statuses.has("action-surge") ? -3 : 0;
     const fastDrawPenalty = this.actor.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.actor.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.actor.statuses.has("grappling") ? -2 : 0;
+    const monomaniaPenalty = (this.actor.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Skill value (same as resolveSkillTotal but we need it as a number for the formula)
     const skillValue = this._selectedSkill.value;
@@ -294,7 +295,8 @@ export class DefenceRollDialog extends Application {
       actionSurgePenalty || null,
       fastDrawPenalty || null,
       restrainedPenalty || null,
-      grapplingPenalty || null
+      grapplingPenalty || null,
+      monomaniaPenalty || null
     ].filter(Boolean);
 
     const roll = buildD10Roll(parts, this.actor.system);

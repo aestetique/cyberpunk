@@ -308,6 +308,29 @@
                 </div>
               </div>
 
+              <div class="gear-block">
+                <header class="tab-header">
+                  <span class="tab-title">{{localize "CYBERPUNK.HumanityLoss"}}</span>
+                  <div class="humanity-header-right">
+                    <span class="humanity-counter">{{humanityLossCounter}}</span>
+                    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-humanity.svg" alt="">
+                  </div>
+                </header>
+                <div class="tab-content state-row">
+                  {{#each humanityLossBlocks as |hb|}}
+                  <div class="state-block" data-tooltip-name="{{hb.tooltipName}}" data-flavor="{{hb.flavor}}" data-calc="{{hb.calc}}" data-token-path="@humanityLoss.{{hb.label}}">
+                    <span class="state-label">{{hb.label}}</span>
+                    <div class="state-value-row">
+                      <img class="state-btn humanity-up" data-field="{{hb.field}}" title="Increase" src="systems/cyberpunk/img/ui/{{hb.upIcon}}" alt="Increase">
+                      <span class="state-value">{{hb.value}}</span>
+                      <img class="state-btn humanity-down" data-field="{{hb.field}}" title="Decrease" src="systems/cyberpunk/img/ui/{{hb.downIcon}}" alt="Decrease">
+                    </div>
+                    <span class="state-status">{{hb.status}}</span>
+                  </div>
+                  {{/each}}
+                </div>
+              </div>
+
               {{> "systems/cyberpunk/templates/actor/parts/state-effects-block.hbs"}}
 
               <div class="gear-block">

@@ -605,6 +605,7 @@ export class CyberpunkItem extends Item {
     if(this.actor.statuses.has("restrained")) attackTerms.push(-2);
     if(this.actor.statuses.has("grappling")) attackTerms.push(-2);
     if(!isRanged && this.actor.statuses.has("prone")) attackTerms.push(-2);
+    if((this.actor.system.humanityLoss?.obsession ?? 0) >= 51) attackTerms.push(-4);
 
     const minBodyPenalty = this._getMinBodyPenalty();
     if (minBodyPenalty.accuracyPenalty) {

@@ -34,7 +34,7 @@
         <input type="text" class="humanity-formula-input" name="system.humanityCost" value="{{system.humanityCost}}" placeholder="1d6">
       {{/if}}
       {{#if canRollHumanity}}
-        <button class="humanity-roll-btn" type="button" title="Roll Humanity Loss">
+        <button class="humanity-roll-btn" type="button" data-action="rollHumanity" title="Roll Humanity Loss">
           <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
         </button>
       {{else}}
@@ -44,7 +44,7 @@
               <img src="systems/cyberpunk/img/dice/d10gray.png" alt="Rolled">
             </button>
           {{else}}
-            <button class="humanity-reset-btn" type="button" title="Reset Humanity Roll">
+            <button class="humanity-reset-btn" type="button" data-action="resetHumanity" title="Reset Humanity Roll">
               <img src="systems/cyberpunk/img/ui/badge-reset.svg" alt="Reset">
             </button>
           {{/if}}
@@ -105,7 +105,7 @@
 </div>
 
 {{!-- Divider --}}
-<div class="cyber-divider"></div>
+<div class="divider"></div>
 
 {{!-- ====================================== --}}
 {{!-- CYBERLIMB BASE — Arm / Leg              --}}
@@ -155,7 +155,7 @@
       {{else}}
         <input type="number" class="dual-input" name="system.structure.current" value="{{system.structure.current}}" min="0">
       {{/if}}
-      <span class="dual-separator">/</span>
+      <span class="dual-separator">of</span>
       {{#if isLocked}}
         {{#if hasBonus}}
           <span class="dual-value with-bonus">{{effectiveMaxStructure}}</span>
@@ -213,17 +213,29 @@
     </div>
   </div>
 
-  {{!-- Row 2: Is a Weapon --}}
+  {{!-- Row 2: Is a Weapon (+ EMP Shielding on built-ins) --}}
   <div class="variables-row">
     <div class="variable-field">
       <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
       {{#if isLocked}}
         <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
       {{else}}
-        <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isWeapon"
              src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
       {{/if}}
     </div>
+
+    {{#if canEmpShield}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.EMPShielding"}}</label>
+      {{#if isLocked}}
+        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.empShielding}}checked{{else}}unchecked{{/if}}.svg">
+      {{else}}
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.empShielding"
+             src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.empShielding}}checked{{else}}unchecked{{/if}}.svg">
+      {{/if}}
+    </div>
+    {{/if}}
   </div>
 {{/if}}
 
@@ -262,11 +274,26 @@
       {{#if isLocked}}
         <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
       {{else}}
-        <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isWeapon"
              src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
       {{/if}}
     </div>
   </div>
+
+  {{!-- Row 2: EMP Shielding (optics/audio options only) --}}
+  {{#if canEmpShield}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.EMPShielding"}}</label>
+      {{#if isLocked}}
+        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.empShielding}}checked{{else}}unchecked{{/if}}.svg">
+      {{else}}
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.empShielding"
+             src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.empShielding}}checked{{else}}unchecked{{/if}}.svg">
+      {{/if}}
+    </div>
+  </div>
+  {{/if}}
 {{/if}}
 
 {{!-- ====================================== --}}
@@ -279,7 +306,7 @@
       {{#if isLocked}}
         <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
       {{else}}
-        <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isWeapon"
              src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
       {{/if}}
     </div>
@@ -289,7 +316,7 @@
       {{#if isLocked}}
         <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isArmor}}checked{{else}}unchecked{{/if}}.svg">
       {{else}}
-        <img class="checkbox-img checkbox-toggle" data-field="system.isArmor"
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isArmor"
              src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isArmor}}checked{{else}}unchecked{{/if}}.svg">
       {{/if}}
     </div>

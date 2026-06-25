@@ -2,7 +2,43 @@
 // Dialog Styles (shared across all game dialogs)
 // ============================================
 
-// Override Foundry's default Application window chrome
+// Override Foundry's default Application window chrome.
+// V1 root has `.app.window-app.<class>`, V2 root has `.application.<class>`.
+// We list both so the same chrome-reset applies whichever framework owns the dialog.
+@mixin dialog-chrome-reset {
+  background: var(--chat-back, #1A1A1A) !important;
+  border: 2px solid var(--chat-stroke, #252730) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+
+  // Remove default window header
+  > .window-header {
+    display: none;
+  }
+
+  // Remove default window content padding/styling and V14 theme blur
+  > .window-content {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  // V14 adds a focus halo (outline + box-shadow) on every <button>; kill it
+  // for the dialog body so clicked condition / luck / dice buttons don't
+  // leave a residual glow.
+  button {
+    --button-focus-outline-color: transparent;
+    &:focus,
+    &:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+}
+
 .app.window-app.reload-dialog,
 .app.window-app.ranged-attack-dialog,
 .app.window-app.range-selection-dialog,
@@ -19,24 +55,29 @@
 .app.window-app.move-items-dialog,
 .app.window-app.shop-settings-dialog,
 .app.window-app.toolbox-dialog,
-.app.window-app.realm-switcher-dialog {
-  background: var(--chat-back, #1A1A1A);
-  border: 2px solid var(--chat-stroke, #252730);
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-
-  // Remove default window header
-  .window-header {
-    display: none;
-  }
-
-  // Remove default window content padding/styling
-  .window-content {
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    overflow: visible;
-  }
+.app.window-app.realm-switcher-dialog,
+.application.reload-dialog,
+.application.ranged-attack-dialog,
+.application.range-selection-dialog,
+.application.melee-attack-dialog,
+.application.skill-roll-dialog,
+.application.defence-roll-dialog,
+.application.initiative-roll-dialog,
+.application.medical-help-dialog,
+.application.heal-dialog,
+.application.stress-roll-dialog,
+.application.fright-roll-dialog,
+.application.create-item-dialog,
+.application.game-time-dialog,
+.application.move-items-dialog,
+.application.shop-settings-dialog,
+.application.toolbox-dialog,
+.application.punch-dialog,
+.application.unarmed-attack-dialog,
+.application.sleep-roll-dialog,
+.application.ordnance-attack-dialog,
+.application.realm-switcher-dialog {
+  @include dialog-chrome-reset;
 }
 
 // Dialog content wrapper (shared by all attack/roll dialogs)

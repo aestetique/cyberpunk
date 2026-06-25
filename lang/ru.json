@@ -613,6 +613,7 @@
   "CYBERPUNK.TakesSpace": "Занимает места",
   "CYBERPUNK.IsAWeapon": "Является оружием",
   "CYBERPUNK.IsArmor": "Является бронёй",
+  "CYBERPUNK.EMPShielding": "Защита от ЭМИ",
   "CYBERPUNK.Structure": "Структура",
   "CYBERPUNK.DisablesAt": "Отключается при",
   "CYBERPUNK.SDPBonus": "Бонус SDP",

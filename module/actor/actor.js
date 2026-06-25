@@ -99,9 +99,10 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
-   * Minimal derived-stat pass for drones. No wounds, no saves, no carry weight,
-   * no humanity/empathy logic — just stat totals, MA-derived movement, and Luck.effective.
-   * Notably, Luck does NOT auto-regen on the 8-hour timer for drones.
+   * Minimal derived-stat pass for drones. No wounds, no saves, no humanity/empathy
+   * logic — just stat totals, MA-derived movement, BODY-derived carry/lift/BTM,
+   * and Luck.effective. Notably, Luck does NOT auto-regen on the 8-hour timer
+   * for drones.
    */
   _computeDroneStats(system) {
     const stats = system.stats;
@@ -112,6 +113,12 @@ export class CyberpunkActor extends Actor {
     if (ma) {
       ma.run = ma.total * 3;
       ma.leap = Math.floor(ma.run / 4);
+    }
+    const body = stats.bt;
+    if (body) {
+      body.carry = body.total * 10;
+      body.lift = body.total * 40;
+      body.modifier = bodyTypeModifier(body.total);
     }
     const luck = stats.luck;
     if (luck) {

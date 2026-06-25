@@ -1,65 +1,72 @@
 import { localize } from "../utils.js";
 import { NumberInput } from "./number-input.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Skill/Attribute Roll Dialog — select difficulty and modifiers before rolling.
+ * @extends {ApplicationV2}
  */
-export class SkillRollDialog extends Application {
+export class SkillRollDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-  /**
-   * @param {Actor} actor        The owning actor
-   * @param {Object} options     Configuration options
-   * @param {string} options.rollType - "skill" or "stat"
-   * @param {string} options.skillId  - Skill item ID (for skill rolls)
-   * @param {string} options.statName - Stat key (for stat rolls)
-   * @param {string} options.title    - Display title for the dialog header
-   * @param {string} options.statIcon - Icon key for the section bar
-   */
   constructor(actor, options = {}) {
-    super();
+    super({});
     this.actor = actor;
     this.rollType = options.rollType || "skill";
     this.skillId = options.skillId || null;
     this.statName = options.statName || null;
     this._dialogTitle = options.title || localize("Skill");
     this.statIcon = options.statIcon || null;
-
-    // Difficulty selection (default: 15, clamped 10-40 by the NumberInput)
     this._difficulty = 15;
-
-    // Condition toggles (only Prepared and Distracted)
-    this._conditions = {
-      prepared: false,
-      distracted: false
-    };
-
-    // Luck spending
+    this._conditions = { prepared: false, distracted: false };
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ??
                           actor.system.stats.luck?.total ?? 0;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "skill-roll-dialog",
-      classes: ["cyberpunk", "skill-roll-dialog"],
-      template: "systems/cyberpunk/templates/dialog/skill-roll.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "skill-roll-dialog",
+    classes: ["cyberpunk", "skill-roll-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:     SkillRollDialog._onCloseDialog,
+      toggleCondition: SkillRollDialog._onToggleCondition,
+      luckPlus:        SkillRollDialog._onLuckPlus,
+      luckMinus:       SkillRollDialog._onLuckMinus,
+      roll:            SkillRollDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/skill-roll.hbs" }
+  };
+
+  get title() { return this._dialogTitle; }
+
+  static _onCloseDialog(event, _target) { event?.preventDefault?.(); this.close({ animate: false }); }
+
+  static _onToggleCondition(event, target) {
+    event?.preventDefault?.();
+    const condition = target?.dataset?.condition;
+    if (!condition) return;
+    this._conditions[condition] = !this._conditions[condition];
+    target.classList.toggle('selected', this._conditions[condition]);
   }
 
-  /** @override */
-  get title() {
-    return this._dialogTitle;
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend < this._availableLuck) { this._luckToSpend++; this._updateLuckDisplay(); }
   }
 
-  /** @override */
-  getData() {
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend > 0) { this._luckToSpend--; this._updateLuckDisplay(); }
+  }
+
+  static _onRoll(event, _target) { event?.preventDefault?.(); this._executeRoll(); }
+
+  async _prepareContext(_options) {
     return {
       title: this._dialogTitle,
       statIcon: this.statIcon,
@@ -73,85 +80,39 @@ export class SkillRollDialog extends Application {
     };
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Difficulty number-input stepper
-    this._difficultyInput = new NumberInput(html, '.difficulty-input-wrap', {
+    const $el = $(this.element);
+    this._difficultyInput = new NumberInput($el, '.difficulty-input-wrap', {
       min: 10, max: 40, step: 5, value: this._difficulty,
       onChange: (v) => { this._difficulty = v; }
     });
-
-    // Condition button toggles
-    html.find('.condition-btn').click(ev => {
-      const btn = ev.currentTarget;
-      const condition = btn.dataset.condition;
-      this._conditions[condition] = !this._conditions[condition];
-      btn.classList.toggle('selected', this._conditions[condition]);
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(() => {
-      if (this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(() => {
-      if (this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
-    });
   }
 
-  /**
-   * Update the luck display and button states
-   * @param {jQuery} html - The dialog HTML element
-   */
-  _updateLuckDisplay(html) {
-    html.find('.luck-value').text(this._luckToSpend);
-
+  _updateLuckDisplay() {
+    const luckVal = this.element.querySelector('.luck-value');
+    if (luckVal) luckVal.textContent = this._luckToSpend;
     const minusDisabled = this._luckToSpend <= 0;
     const plusDisabled = this._luckToSpend >= this._availableLuck;
-
-    html.find('.luck-minus-btn').toggleClass('disabled', minusDisabled);
-    html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
-
-    // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src',
+    const minusBtn = this.element.querySelector('.luck-minus-btn');
+    const plusBtn = this.element.querySelector('.luck-plus-btn');
+    minusBtn?.classList.toggle('disabled', minusDisabled);
+    plusBtn?.classList.toggle('disabled', plusDisabled);
+    minusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src',
+    plusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
-  /**
-   * Execute roll with selected options
-   */
   async _executeRoll() {
-    // Calculate condition modifiers
     const conditionMod = (this._conditions.prepared ? 2 : 0) +
                          (this._conditions.distracted ? -2 : 0);
     const extraMod = conditionMod + this._luckToSpend;
 
-    // Spend luck if any was used
     if (this._luckToSpend > 0) {
       const currentSpent = this.actor.system.stats.luck.spent || 0;
       const currentSpentAt = this.actor.system.stats.luck.spentAt;
@@ -161,31 +122,16 @@ export class SkillRollDialog extends Application {
       });
     }
 
-    this.close();
+    this.close({ animate: false });
 
-    // Perform the roll via actor method
     if (this.rollType === "skill") {
-      this.actor.rollSkillCheck(
-        this.skillId,
-        this._difficulty,
-        extraMod
-      );
+      this.actor.rollSkillCheck(this.skillId, this._difficulty, extraMod);
     } else {
-      this.actor.rollStatCheck(
-        this.statName,
-        this._difficulty,
-        extraMod
-      );
+      this.actor.rollStatCheck(this.statName, this._difficulty, extraMod);
     }
 
-    // Register action AFTER executing
     const { registerAction } = await import("../action-tracker.js");
     const actionType = this.rollType === "skill" ? "skill roll" : "stat roll";
     await registerAction(this.actor, actionType);
-  }
-
-  /** @override */
-  close(options) {
-    return super.close(options);
   }
 }

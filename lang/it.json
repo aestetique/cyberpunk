@@ -534,6 +534,7 @@
   "CYBERPUNK.TakesSpace": "Occupa Spazio",
   "CYBERPUNK.IsAWeapon": "È un'Arma",
   "CYBERPUNK.IsArmor": "È Armatura",
+  "CYBERPUNK.EMPShielding": "Schermatura EMP",
   "CYBERPUNK.Structure": "Struttura",
   "CYBERPUNK.DisablesAt": "Si Disattiva A",
   "CYBERPUNK.SDPBonus": "Bonus SDP",

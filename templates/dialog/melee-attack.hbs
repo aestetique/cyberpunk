@@ -1,7 +1,7 @@
 <div class="melee-attack-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{weaponName}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{!-- Strike section bar --}}
@@ -12,7 +12,7 @@
 
   {{!-- Execute toggle (Coup De Grace / Knockout) --}}
   <div class="conditions-grid conditions-grid--single">
-    <button type="button" class="execute-btn{{#if executeSelected}} selected{{/if}}"
+    <button type="button" class="execute-btn{{#if executeSelected}} selected{{/if}}" data-action="toggleExecute"
             data-condition="{{executeCondition}}">
       {{executeLabel}}
     </button>
@@ -26,16 +26,16 @@
 
   {{!-- Condition buttons - 2x2 grid --}}
   <div class="conditions-grid{{#if executeSelected}} disabled{{/if}}">
-    <button type="button" class="condition-btn" data-condition="prepared">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="prepared">
       {{localize "CYBERPUNK.ConditionPrepared"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="ambush">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="ambush">
       {{localize "CYBERPUNK.ConditionAmbush"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="distracted">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="distracted">
       {{localize "CYBERPUNK.ConditionDistracted"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="indirect">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="indirect">
       {{localize "CYBERPUNK.ConditionIndirect"}}
     </button>
   </div>
@@ -48,22 +48,22 @@
 
   {{!-- Location buttons - 2x3 grid --}}
   <div class="location-grid{{#if executeSelected}} disabled{{/if}}">
-    <button type="button" class="location-btn{{#if (contains hiddenLocations 'LeftArm')}} no-zone{{/if}}" data-location="LeftArm">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'LeftArm')}} no-zone{{/if}}" data-action="pickLocation" data-location="LeftArm">
       {{#unless (contains hiddenLocations 'LeftArm')}}<img src="systems/cyberpunk/img/chat/LeftArm.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn{{#if (contains hiddenLocations 'Head')}} no-zone{{/if}}" data-location="Head">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'Head')}} no-zone{{/if}}" data-action="pickLocation" data-location="Head">
       {{#unless (contains hiddenLocations 'Head')}}<img src="systems/cyberpunk/img/chat/Head.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn{{#if (contains hiddenLocations 'RightArm')}} no-zone{{/if}}" data-location="RightArm">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'RightArm')}} no-zone{{/if}}" data-action="pickLocation" data-location="RightArm">
       {{#unless (contains hiddenLocations 'RightArm')}}<img src="systems/cyberpunk/img/chat/RightArm.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn{{#if (contains hiddenLocations 'LeftLeg')}} no-zone{{/if}}" data-location="LeftLeg">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'LeftLeg')}} no-zone{{/if}}" data-action="pickLocation" data-location="LeftLeg">
       {{#unless (contains hiddenLocations 'LeftLeg')}}<img src="systems/cyberpunk/img/chat/LeftLeg.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn{{#if (contains hiddenLocations 'Torso')}} no-zone{{/if}}" data-location="Torso">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'Torso')}} no-zone{{/if}}" data-action="pickLocation" data-location="Torso">
       {{#unless (contains hiddenLocations 'Torso')}}<img src="systems/cyberpunk/img/chat/Torso.svg" alt="">{{/unless}}
     </button>
-    <button type="button" class="location-btn{{#if (contains hiddenLocations 'RightLeg')}} no-zone{{/if}}" data-location="RightLeg">
+    <button type="button" class="location-btn{{#if (contains hiddenLocations 'RightLeg')}} no-zone{{/if}}" data-action="pickLocation" data-location="RightLeg">
       {{#unless (contains hiddenLocations 'RightLeg')}}<img src="systems/cyberpunk/img/chat/RightLeg.svg" alt="">{{/unless}}
     </button>
   </div>
@@ -76,19 +76,19 @@
 
   {{!-- Luck controls --}}
   <div class="luck-controls{{#if luckDisabled}} disabled{{/if}}">
-    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}" data-action="luckMinus">
       <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="luck-value">{{luckToSpend}}</span>
     </div>
-    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}" data-action="luckPlus">
       <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
 
   {{!-- Roll button --}}
-  <button type="button" class="reload-apply-btn roll-btn">
+  <button type="button" class="reload-apply-btn roll-btn" data-action="roll">
     {{localize "CYBERPUNK.Roll"}}
   </button>
 </div>

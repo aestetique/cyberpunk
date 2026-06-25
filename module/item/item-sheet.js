@@ -1,167 +1,98 @@
-import { weaponTypes, sortedAttackTypes, concealability, availability, reliability, getAttackSkillsForWeapon, meleeAttackTypes, getStatNames, ammoCalibersByWeaponType, weaponToAmmoType } from "../lookups.js";
-import { containsDice } from "../dice.js";
+import {
+  weaponTypes, sortedAttackTypes, concealability, availability, reliability,
+  getAttackSkillsForWeapon, meleeAttackTypes, getStatNames,
+  ammoCalibersByWeaponType, weaponToAmmoType
+} from "../lookups.js";
 import { localize } from "../utils.js";
-import { getMartialKeyByName } from '../utils.js'
+import { getMartialKeyByName } from "../utils.js";
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const ItemSheetV2Base =
+  foundry.applications.sheets.ItemSheetV2 ?? foundry.applications.sheets.ItemSheet;
 
 /**
- * Item sheet for the Cyberpunk 2020 system.
- * @extends {ItemSheet}
+ * Legacy fallback Item sheet — registered as default for any item type that
+ * doesn't have a specialized sheet (currently no live types). V2 native frame.
+ * @extends {ItemSheetV2}
  */
-export class CyberpunkLegacyItemSheet extends foundry.appv1.sheets.ItemSheet {
+export class CyberpunkLegacyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2Base) {
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["cyberpunk", "sheet", "item"],
-      width: 520,
-      height: 480,
-      tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }]
-    });
-  }
+  static DEFAULT_OPTIONS = {
+    classes: ["cyberpunk", "sheet", "item"],
+    position: { width: 520, height: 480 },
+    window: { resizable: true },
+    form: { submitOnChange: true, closeOnSubmit: false }
+  };
 
-  /** @override */
-  get template() {
-    return `systems/cyberpunk/templates/item/item-sheet.hbs`;
-  }
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/item/item-sheet.hbs" }
+  };
 
-  /* -------------------------------------------- */
+  async _prepareContext(options) {
+    const ctx = await super._prepareContext(options);
+    ctx.item = this.document;
+    ctx.system = this.document.system;
+    ctx.owner = this.document.isOwner;
 
-  /** @override */
-  getData() {
-    // This means the handlebars data and the form edit data actually mirror each other
-    const data = super.getData();
-    data.system = this.item.system;
-
-    switch (this.item.type) {
-      case "weapon":
-        this._buildWeaponContext(data);
-        break;
-    
-      case "armor":
-        this._buildArmorContext(data);
-        break;
-
-      case "skill":
-        this._buildSkillContext(data);
-        break;
-
-      default:
-        break;
+    switch (this.document.type) {
+      case "weapon": this._buildWeaponContext(ctx); break;
+      case "armor":  this._buildArmorContext(ctx);  break;
+      case "skill":  this._buildSkillContext(ctx);  break;
     }
-    return data;
+    return ctx;
   }
 
-  _buildSkillContext(sheet) {
-    sheet.stats = getStatNames();
+  _buildSkillContext(ctx) {
+    ctx.stats = getStatNames();
   }
 
-  _buildWeaponContext(sheet) {
-    sheet.weaponTypes = Object.values(weaponTypes).sort();
-    if(this.item.system.weaponType === weaponTypes.melee) {
-      sheet.attackTypes = Object.values(meleeAttackTypes).sort();
-    }
-    else {
-      sheet.attackTypes = sortedAttackTypes;
-    }
-    sheet.concealabilities = Object.values(concealability);
-    sheet.availabilities = Object.values(availability);
-    sheet.reliabilities = Object.values(reliability);
+  _buildWeaponContext(ctx) {
+    ctx.weaponTypes = Object.values(weaponTypes).sort();
+    ctx.attackTypes = this.document.system.weaponType === weaponTypes.melee
+      ? Object.values(meleeAttackTypes).sort()
+      : sortedAttackTypes;
+    ctx.concealabilities = Object.values(concealability);
+    ctx.availabilities = Object.values(availability);
+    ctx.reliabilities = Object.values(reliability);
 
-    sheet.attackSkills = [
-      ...getAttackSkillsForWeapon(this.item.system.weaponType)
-        .map(x => localize("Skill"+x)),
-      ...(this.actor?.getLearnedMartialArts()
-        .map(name => localize('Skill'+getMartialKeyByName(name))) || [])
+    ctx.attackSkills = [
+      ...getAttackSkillsForWeapon(this.document.system.weaponType).map(x => localize("Skill" + x)),
+      ...(this.document.actor?.getLearnedMartialArts()
+        .map(name => localize("Skill" + getMartialKeyByName(name))) || [])
     ];
 
-
-    if(!sheet.attackSkills.length && this.actor) {
-      if(this.actor) {
-        sheet.attackSkills = this.actor.itemTypes.skill.map(skill => skill.name).sort();
-      }
+    if (!ctx.attackSkills.length && this.document.actor) {
+      ctx.attackSkills = this.document.actor.itemTypes.skill.map(s => s.name).sort();
     }
 
-    // Caliber options for ranged weapons that use ammo
-    const ammoWT = weaponToAmmoType[this.item.system.weaponType];
+    const ammoWT = weaponToAmmoType[this.document.system.weaponType];
     if (ammoWT) {
       const calibers = ammoCalibersByWeaponType[ammoWT] || {};
       const calKeys = Object.keys(calibers);
-      sheet.showCaliber = calKeys.length > 0;
-      sheet.caliberChoices = calKeys.map(key => ({
-        value: key,
-        localKey: calibers[key]
-      }));
+      ctx.showCaliber = calKeys.length > 0;
+      ctx.caliberChoices = calKeys.map(key => ({ value: key, localKey: calibers[key] }));
     } else {
-      sheet.showCaliber = false;
-      sheet.caliberChoices = [];
+      ctx.showCaliber = false;
+      ctx.caliberChoices = [];
     }
   }
 
-  _buildArmorContext(sheet) {
-    sheet.armorTypeChoices = [
+  _buildArmorContext(ctx) {
+    ctx.armorTypeChoices = [
       { value: "soft", localKey: "CYBERPUNK.ArmorTypeSoft" },
       { value: "hard", localKey: "CYBERPUNK.ArmorTypeHard" }
     ];
   }
 
-  /* -------------------------------------------- */
-
-  /** @override */
-  setPosition(options = {}) {
-    const position = super.setPosition(options);
-    const sheetBody = this.element.find(".sheet-body");
-    const bodyHeight = position.height - 192;
-    sheetBody.css("height", bodyHeight);
-    return position;
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Everything below here is only needed if the sheet is editable
-    if (!this.options.editable) return;
-
-    // Roll handlers, click handlers, etc. would go here, same as actor sheet.
-    html.find(".item-roll").click(this.item.roll.bind(this));
-
-    html.find(".accel").click(() => this.item.accel());
-    html.find(".decel").click(() => this.item.accel(true));
-    
-    // roll for humanity loss on cyberware 
-    html.find('.humanity-cost-roll').click(async ev => {
-      ev.stopPropagation();
-      const cyber = this.object;
-      const hc = cyber.system.humanityCost;
-      let loss = 0;
-      // determine if humanity cost is a number or dice
-      if (containsDice(hc)) {
-        // roll the humanity cost
-        let r = await new Roll(hc).evaluate();
-        loss = r.total ? r.total : 0;
-      } else {
-        const num = Number(hc);
-        loss = (isNaN(num)) ? 0 : num;
-      }
-      cyber.system.humanityLoss = loss;
-      cyber.sheet.render(true);
-    });
-  }
-
-  /** @override */
-  async _updateObject(event, formData) {
-    const data = foundry.utils.expandObject(formData);
-
-    if (this.item.type === "skill") {
+  async _processSubmitData(event, form, submitData, options) {
+    const data = foundry.utils.expandObject(submitData);
+    if (this.document.type === "skill") {
       const fixNum = v => {
         const n = parseInt(v ?? 0, 10);
         return isNaN(n) ? 0 : n;
       };
       foundry.utils.setProperty(data, "system.level", fixNum(foundry.utils.getProperty(data, "system.level")));
     }
-
-    await this.item.update(data);
+    return super._processSubmitData(event, form, foundry.utils.flattenObject(data), options);
   }
 }

@@ -1862,18 +1862,38 @@ export class CyberpunkChatMessage extends ChatMessage {
             c.system.cyberwareType === "cyberlimb"
         );
 
+        // EMP Shielding: an option with system.empShielding=true attached to a
+        // base protects that base from the matching microwave result. Built-in
+        // cyberlimb options shield their parent limb; optics-options shield the
+        // optics base; audio-options shield the audio base.
+        //
+        // Note: we DON'T check the option's own `system.equipped` here — options
+        // inherit equipped state from their base (see actor.js #_computeDerivedStats),
+        // so their own `equipped` flag is usually false even when in play. The base
+        // we're testing is already guaranteed equipped (filtered above on line 1849).
+        const isShielded = (base) => actor.items.some(i =>
+            i.type === "cyberware"
+            && i.system.empShielding
+            && i.getFlag("cyberpunk", "attachedTo") === base.id
+        );
+
         let effectMessage = "";
 
         switch (result) {
-            case 1:
-                if (optics.length > 0) {
+            case 1: {
+                const opticsBases = optics.filter(c => c.system.cyberwareSubtype === "base");
+                const unshielded = opticsBases.filter(b => !isShielded(b));
+                if (opticsBases.length === 0) {
+                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNoOptics");
+                } else if (unshielded.length === 0) {
+                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveOpticsShielded");
+                } else {
                     await actor.toggleStatusEffect("blinded", { active: true });
                     await this._setConditionDuration(actor, "blinded", 3);
                     effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveOptics");
-                } else {
-                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNoOptics");
                 }
                 break;
+            }
 
             case 2:
                 if (neuralware.length > 0) {
@@ -1884,21 +1904,28 @@ export class CyberpunkChatMessage extends ChatMessage {
                 }
                 break;
 
-            case 3:
-                if (audio.length > 0) {
+            case 3: {
+                const audioBases = audio.filter(c => c.system.cyberwareSubtype === "base");
+                const unshielded = audioBases.filter(b => !isShielded(b));
+                if (audioBases.length === 0) {
+                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNoAudio");
+                } else if (unshielded.length === 0) {
+                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveAudioShielded");
+                } else {
                     await actor.toggleStatusEffect("deafened", { active: true });
                     await this._setConditionDuration(actor, "deafened", 3);
                     effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveAudio");
-                } else {
-                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNoAudio");
                 }
                 break;
+            }
 
-            case 4:
-                // Filter to cyberlimbs that can still be disabled (current SDP > disablesAt)
-                const disableableLimbs = cyberlimbs.filter(c =>
+            case 4: {
+                // Bases that can still be disabled (current SDP > disablesAt).
+                const damageable = cyberlimbs.filter(c =>
                     c.system.structure.current > c.system.disablesAt
                 );
+                // Excluding ones shielded by an EMP-shielding built-in.
+                const disableableLimbs = damageable.filter(c => !isShielded(c));
 
                 if (disableableLimbs.length > 0) {
                     // Pick random limb and set SDP to disablesAt threshold
@@ -1914,10 +1941,14 @@ export class CyberpunkChatMessage extends ChatMessage {
                     };
                     const limbName = limbNames[target.system.cyberwareSubtype] || target.name;
                     effectMessage = game.i18n.format("CYBERPUNK.MicrowaveCyberlimb", { limb: limbName });
+                } else if (damageable.length > 0) {
+                    // They have damageable limbs but every one is shielded.
+                    effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveCyberlimbShielded");
                 } else {
                     effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNoCyberlimb");
                 }
                 break;
+            }
 
             case 5:
                 await actor.toggleStatusEffect("shocked", { active: true });

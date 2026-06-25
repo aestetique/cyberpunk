@@ -3,18 +3,19 @@ import { getSkillsForCategory, meleeDamageBonus, ramBaseDamage } from "../lookup
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { rollLocation } from "../utils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Punch Dialog — attack configuration for unarmed Punch.
- * Combines the MeleeAttackDialog layout (conditions, location, luck)
- * with a skill selector from DefenceRollDialog (using unarmedAttacks mapping).
+ * @extends {ApplicationV2}
  */
-export class PunchDialog extends Application {
+export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /**
    * @param {Actor} actor  The attacking actor
    */
   constructor(actor, { actionKey = "Punch", targetTokens = null } = {}) {
-    super();
+    super({});
     this.actor = actor;
     this.targetTokens = targetTokens || (game.user?.targets ? Array.from(game.user.targets) : []);
     this._actionKey = actionKey;
@@ -86,19 +87,85 @@ export class PunchDialog extends Application {
     return formula; // Fallback if format doesn't match
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "punch-dialog",
-      classes: ["cyberpunk", "melee-attack-dialog"],
-      template: "systems/cyberpunk/templates/dialog/punch-attack.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "punch-dialog",
+    classes: ["cyberpunk", "melee-attack-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:     PunchDialog._onCloseDialog,
+      toggleDropdown:  PunchDialog._onToggleDropdown,
+      pickSkill:       PunchDialog._onPickSkill,
+      toggleCondition: PunchDialog._onToggleCondition,
+      pickLocation:    PunchDialog._onPickLocation,
+      luckPlus:        PunchDialog._onLuckPlus,
+      luckMinus:       PunchDialog._onLuckMinus,
+      roll:            PunchDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/punch-attack.hbs" }
+  };
+
+  static _onCloseDialog(event, _target) { event?.preventDefault?.(); this.close({ animate: false }); }
+
+  static _onToggleDropdown(event, _target) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    this._dropdownOpen = !this._dropdownOpen;
+    this.element.querySelector('.range-dropdown-list')?.classList.toggle('open', this._dropdownOpen);
+    this.element.querySelector('.range-dropdown-btn')?.classList.toggle('open', this._dropdownOpen);
   }
+
+  static _onPickSkill(event, target) {
+    event?.preventDefault?.();
+    const skillId = target.dataset.skillId;
+    const selected = this._skillOptions.find(s => s.id === skillId);
+    if (!selected) return;
+    this._selectedSkill = selected;
+    this._dropdownOpen = false;
+    const labelEl = this.element.querySelector('.range-dropdown-btn .range-label');
+    if (labelEl) labelEl.textContent = selected.label;
+    this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+    this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
+    this.element.querySelectorAll('.range-option').forEach(el => el.classList.remove('selected'));
+    target.classList.add('selected');
+  }
+
+  static _onToggleCondition(event, target) {
+    event?.preventDefault?.();
+    const condition = target?.dataset?.condition;
+    if (!condition) return;
+    this._conditions[condition] = !this._conditions[condition];
+    target.classList.toggle('selected', this._conditions[condition]);
+  }
+
+  static _onPickLocation(event, target) {
+    event?.preventDefault?.();
+    if (target.disabled || target.classList.contains('disabled') || target.classList.contains('no-zone')) return;
+    const location = target.dataset.location;
+    if (this._selectedLocation === location) {
+      this._selectedLocation = null;
+      target.classList.remove('selected');
+    } else {
+      this.element.querySelectorAll('.location-btn').forEach(b => b.classList.remove('selected'));
+      this._selectedLocation = location;
+      target.classList.add('selected');
+    }
+  }
+
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend < this._availableLuck) { this._luckToSpend++; this._updateLuckDisplay(); }
+  }
+
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend > 0) { this._luckToSpend--; this._updateLuckDisplay(); }
+  }
+
+  static _onRoll(event, _target) { event?.preventDefault?.(); this._executeRoll(); }
 
   /**
    * Build skill options from the unarmedAttacks skill mapping.
@@ -139,8 +206,7 @@ export class PunchDialog extends Application {
     return options;
   }
 
-  /** @override */
-  getData() {
+  async _prepareContext(_options) {
     const hasSkills = this._skillOptions.length > 0;
     const noDamageActions = ["Disarm", "Sweep", "Grapple", "Hold"];
     // Choke and Crush hide location selector (target Head/Torso automatically)
@@ -175,119 +241,34 @@ export class PunchDialog extends Application {
     };
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Skill dropdown toggle
-    html.find('.range-dropdown-btn').click(ev => {
-      ev.stopPropagation();
-      this._dropdownOpen = !this._dropdownOpen;
-      html.find('.range-dropdown-list').toggleClass('open', this._dropdownOpen);
-      html.find('.range-dropdown-btn').toggleClass('open', this._dropdownOpen);
-    });
-
-    // Skill option selection
-    html.find('.range-option').click(ev => {
-      const skillId = ev.currentTarget.dataset.skillId;
-      const selected = this._skillOptions.find(s => s.id === skillId);
-      if (selected) {
-        this._selectedSkill = selected;
-        this._dropdownOpen = false;
-
-        html.find('.range-dropdown-btn .range-label').text(selected.label);
-        html.find('.range-dropdown-list').removeClass('open');
-        html.find('.range-dropdown-btn').removeClass('open');
-
-        html.find('.range-option').removeClass('selected');
-        ev.currentTarget.classList.add('selected');
-      }
-    });
-
-    // Close dropdown when clicking outside
+    $(document).off('click.punchDialogDropdown');
     $(document).on('click.punchDialogDropdown', (ev) => {
       if (!$(ev.target).closest('.range-dropdown').length) {
         this._dropdownOpen = false;
-        html.find('.range-dropdown-list').removeClass('open');
-        html.find('.range-dropdown-btn').removeClass('open');
+        this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+        this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
       }
-    });
-
-    // Condition button toggles
-    html.find('.condition-btn').click(ev => {
-      const btn = ev.currentTarget;
-      const condition = btn.dataset.condition;
-      this._conditions[condition] = !this._conditions[condition];
-      btn.classList.toggle('selected', this._conditions[condition]);
-    });
-
-    // Location button selection
-    html.find('.location-btn').click(ev => {
-      const btn = ev.currentTarget;
-
-      // Ignore clicks on disabled or hidden buttons
-      if (btn.disabled || btn.classList.contains('disabled') || btn.classList.contains('no-zone')) {
-        return;
-      }
-
-      const location = btn.dataset.location;
-
-      if (this._selectedLocation === location) {
-        this._selectedLocation = null;
-        btn.classList.remove('selected');
-      } else {
-        html.find('.location-btn').removeClass('selected');
-        this._selectedLocation = location;
-        btn.classList.add('selected');
-      }
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(() => {
-      if (this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(() => {
-      if (this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
     });
   }
 
-  /**
-   * Update the luck display and button states
-   */
-  _updateLuckDisplay(html) {
-    html.find('.luck-value').text(this._luckToSpend);
-
+  _updateLuckDisplay() {
+    const luckVal = this.element.querySelector('.luck-value');
+    if (luckVal) luckVal.textContent = this._luckToSpend;
     const minusDisabled = this._luckToSpend <= 0;
     const plusDisabled = this._luckToSpend >= this._availableLuck;
-
-    html.find('.luck-minus-btn').toggleClass('disabled', minusDisabled);
-    html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
-
-    html.find('.luck-minus-btn img').attr('src',
+    const minusBtn = this.element.querySelector('.luck-minus-btn');
+    const plusBtn = this.element.querySelector('.luck-plus-btn');
+    minusBtn?.classList.toggle('disabled', minusDisabled);
+    plusBtn?.classList.toggle('disabled', plusDisabled);
+    minusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src',
+    plusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
@@ -318,7 +299,7 @@ export class PunchDialog extends Application {
       });
     }
 
-    this.close();
+    this.close({ animate: false });
 
     // === ATTACK ROLL ===
     const isBlinded = this.actor.statuses.has("blinded");
@@ -482,7 +463,7 @@ export class PunchDialog extends Application {
     }
 
     // Close dialog
-    this.close();
+    this.close({ animate: false });
 
     // Minimize all open windows
     Object.values(ui.windows).forEach(w => w.minimize());
@@ -510,12 +491,9 @@ export class PunchDialog extends Application {
       y: destination.y - (actorToken.document.height * canvas.grid.size) / 2
     });
 
-    // Calculate distance moved (in meters)
-    const distanceMoved = canvas.grid.measureDistance(
-      startPos,
-      destination,
-      { gridSpaces: false }
-    );
+    // Calculate distance moved (in meters).
+    // V14 removed canvas.grid.measureDistance; use measurePath().distance.
+    const distanceMoved = canvas.grid.measurePath([startPos, destination]).distance;
 
     // Calculate distance-based modifiers
     const runDistance = system.stats.ma.run;
@@ -681,15 +659,20 @@ export class PunchDialog extends Application {
       const walkDistance = this.actor.system.stats?.ma?.total ?? 0;
       const runDistance = this.actor.system.stats?.ma?.run ?? (walkDistance * 3);
 
-      // Mouse move - show ruler to cursor
+      // Mouse move - show ruler to cursor.
+      // V14 removed getSnappedPosition / measureDistance; use new APIs.
       handlers.mm = (event) => {
         event.stopPropagation();
         const pos = event.getLocalPosition(canvas.tokens);
-        const snapped = canvas.grid.getSnappedPosition(pos.x, pos.y, 2);
+        const M = CONST.GRID_SNAPPING_MODES;
+        const snapped = canvas.grid.getSnappedPoint(
+          { x: pos.x, y: pos.y },
+          { mode: M.CENTER | M.VERTEX, resolution: 2 }
+        );
         hoveredPos = snapped;
 
         // Calculate distance for color coding
-        const distance = canvas.grid.measureDistance(startPos, snapped, { gridSpaces: false });
+        const distance = canvas.grid.measurePath([startPos, snapped]).distance;
 
         // Determine color based on distance (same as CyberpunkTokenRuler)
         let color;

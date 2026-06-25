@@ -1,5 +1,70 @@
 // Utilities to reset some kinds of elements to a vanilla foundation of styling to work on
 
+// ============================================
+// Shared Foundry window-chrome reset
+// ============================================
+// Hides Foundry's default window chrome (V1 `.app` AND V2 `.application` roots).
+// Used by every cyberpunk sheet — character / drone / shop actor sheets and every
+// item card sheet. Dialogs do NOT include this; they use their own reset because
+// they actually want a panel background (see _dialogs.scss).
+//
+// !important is needed throughout because V14 theme styles (body.theme-dark.application)
+// out-specify our `.cyberpunk.<sheet-class>.application` chain.
+@mixin sheet-chrome-reset {
+  &.app,
+  &.application {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    min-width: 0;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+  }
+
+  > .window-header {
+    display: none;
+  }
+
+  // V14 theme-dark adds `backdrop-filter: blur(4px)` here (foundry2.css:1036) —
+  // shows up as a soft halo around the sheet; cancel it explicitly.
+  > .window-content {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  // V1 + V2 resize handle names — we draw our own.
+  > .window-resizable-handle,
+  > .window-resize-handle {
+    display: none !important;
+  }
+
+  // V14 puts a focus halo on every <button>; we draw our own affordances.
+  button, a {
+    --button-focus-outline-color: transparent;
+    &:focus {
+      box-shadow: none;
+      outline: none;
+    }
+  }
+
+  img {
+    border: none;
+  }
+
+  h1, h2 {
+    border: none;
+    border-bottom: none;
+  }
+}
+
 @mixin reset-input {
     border: 0 none;
     border-radius: 0px;

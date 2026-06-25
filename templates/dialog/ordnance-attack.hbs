@@ -1,7 +1,7 @@
 <div class="range-selection-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{ordnanceName}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{!-- Conditions section bar --}}
@@ -12,16 +12,16 @@
 
   {{!-- Condition buttons - 2x2 grid --}}
   <div class="conditions-grid">
-    <button type="button" class="condition-btn" data-condition="prepared">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="prepared">
       {{localize "CYBERPUNK.ConditionPrepared"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="ambush">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="ambush">
       {{localize "CYBERPUNK.ConditionAmbush"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="distracted">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="distracted">
       {{localize "CYBERPUNK.ConditionDistracted"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="ricochet">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="ricochet">
       {{localize "CYBERPUNK.ConditionRicochet"}}
     </button>
   </div>
@@ -34,13 +34,13 @@
   </div>
 
   <div class="luck-controls">
-    <button type="button" class="luck-btn dice-minus-btn{{#unless canDecreaseDice}} disabled{{/unless}}">
+    <button type="button" class="luck-btn dice-minus-btn{{#unless canDecreaseDice}} disabled{{/unless}}" data-action="diceMinus">
       <img src="systems/cyberpunk/img/chat/{{#if canDecreaseDice}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="dice-value">{{damageDice}}d{{dieSize}}</span>
     </div>
-    <button type="button" class="luck-btn dice-plus-btn{{#unless canIncreaseDice}} disabled{{/unless}}">
+    <button type="button" class="luck-btn dice-plus-btn{{#unless canIncreaseDice}} disabled{{/unless}}" data-action="dicePlus">
       <img src="systems/cyberpunk/img/chat/{{#if canIncreaseDice}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
@@ -54,19 +54,19 @@
 
   {{!-- Luck controls --}}
   <div class="luck-controls{{#unless hasAnyLuck}} disabled{{/unless}}">
-    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}" data-action="luckMinus">
       <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="luck-value">{{luckToSpend}}</span>
     </div>
-    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}" data-action="luckPlus">
       <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
 
   {{!-- Roll button --}}
-  <button type="button" class="reload-apply-btn roll-btn">
+  <button type="button" class="reload-apply-btn roll-btn" data-action="roll">
     {{localize "CYBERPUNK.PlaceTemplateAndRoll"}}
   </button>
 </div>

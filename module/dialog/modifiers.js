@@ -1,126 +1,124 @@
-import { setByPath, localize } from "../utils.js"
-import { defaultTargetLocations } from "../lookups.js"
+import { setByPath, localize } from "../utils.js";
+
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
- * A specialized form used to select the modifiers for shooting with a weapon
- * This could, I guess, also be done with dialog and FormDataExtended
- * @implements {FormApplication}
+ * Modifiers dialog — pick attack modifiers (and optionally adv/dis) before firing.
+ * V2 form: root is `<form>`, submission flows through the configured `form.handler`.
+ * @extends {ApplicationV2}
  */
- export class ModifiersDialog extends FormApplication {
+export class ModifiersDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-    /** @override */
-      static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-        id: "weapon-modifier",
-        classes: ["cyberpunk"],
-        title: localize("AttackModifiers"),
-        template: "systems/cyberpunk/templates/dialog/modifiers.hbs",
-        width: 500,
-        height: "auto",
-        weapon: null,
-        // Use like [[mod1, mod2], [mod3, mod4, mod5]] etc to add groupings,
-        modifierGroups: [],
-        targetTokens: [], // id and name for each target token
-        // Extra mod field for miscellaneous mod
-        extraMod: true,
-        showAdvDis: false,
-        advantage: false,
-        disadvantage: false,
-        closeOnSubmit: false,
+  /**
+   * @param {Actor}  actor     The actor firing — used to register the action after confirm.
+   * @param {object} options   Per-call config (weapon, modifierGroups, targetTokens, etc.).
+   */
+  constructor(actor, options = {}) {
+    super({});
+    this.actor = actor;
+    // V2 freezes this.options, so stash the per-call config separately.
+    this._cfg = {
+      weapon:         options.weapon ?? null,
+      modifierGroups: options.modifierGroups ?? [],
+      targetTokens:   options.targetTokens ?? [],
+      extraMod:       options.extraMod ?? true,
+      showAdvDis:     options.showAdvDis ?? false,
+      advantage:      options.advantage ?? false,
+      disadvantage:   options.disadvantage ?? false,
+      onConfirm:      options.onConfirm ?? (() => {})
+    };
+  }
 
-        onConfirm: () => {}
+  static DEFAULT_OPTIONS = {
+    id: "weapon-modifier",
+    classes: ["cyberpunk"],
+    tag: "form",
+    position: { width: 500, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    form: {
+      handler: ModifiersDialog._onSubmitForm,
+      closeOnSubmit: false,
+      submitOnChange: false
+    },
+    actions: {
+      reload: ModifiersDialog._onReload
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/modifiers.hbs" }
+  };
+
+  get title() { return localize("AttackModifiers"); }
+
+  static async _onReload(event, _target) {
+    event?.preventDefault?.();
+    const weapon = this._cfg.weapon;
+    if (!weapon) return;
+    await weapon.update({ "system.shotsLeft": weapon.system.shots });
+    ui.notifications.info(localize("Reloaded"));
+    weapon.system.shotsLeft = weapon.system.shots;
+    const shotsInput = this.element.querySelector('input.number[readonly]');
+    if (shotsInput) shotsInput.value = weapon.system.shots;
+  }
+
+  static async _onSubmitForm(event, form, formData) {
+    const data = formData.object;
+    const fired = await this._cfg.onConfirm(data);
+    if (fired !== false && this._cfg.weapon) {
+      const { registerAction } = await import("../action-tracker.js");
+      await registerAction(this.actor, `weapon attack (${this._cfg.weapon.name})`);
+    }
+    if (fired !== false) this.close({ animate: false });
+  }
+
+  async _prepareContext(_options) {
+    const groups = JSON.parse(JSON.stringify(this._cfg.modifierGroups || []));
+
+    if (this._cfg.extraMod) {
+      const already = groups.some(g => g.some(m => m.dataPath === "extraMod"));
+      if (!already) {
+        groups.push([{
+          localKey: "ExtraModifiers",
+          dataPath: "extraMod",
+          defaultValue: 0
+        }]);
+      }
+    }
+
+    const defaultValues = {};
+    groups.forEach(group => {
+      group.forEach(mod => {
+        mod.fieldPath = `fields/${mod.choices ? "select" : typeof mod.defaultValue}`;
+        setByPath(defaultValues, mod.dataPath,
+          mod.defaultValue !== undefined ? mod.defaultValue : "");
       });
-    }
-  
-    /* -------------------------------------------- */
-  
-    /**
-     * Return a reference to the target attribute
-     * @type {String}
-     */
-    get attribute() {
-        return this.options.name;
-    }
-  
-    /* -------------------------------------------- */
-  
-    /** @override */
-    getData() {
-      const groups = JSON.parse(JSON.stringify(this.options.modifierGroups || []));
+    });
 
-      if (this.options.extraMod) {
-        const already = groups.some(g =>
-          g.some(m => m.dataPath === "extraMod"));
-        if (!already) {
-          groups.push([{
-            localKey: "ExtraModifiers",
-            dataPath: "extraMod",
-            defaultValue: 0
-          }]);
+    return {
+      modifierGroups: groups,
+      targetTokens: this._cfg.targetTokens,
+      defaultValues,
+      isRanged: this._cfg.weapon?.isRanged?.() ?? false,
+      shotsLeft: this._cfg.weapon?.system.shotsLeft ?? 0,
+      showAdvDis: this._cfg.showAdvDis,
+      advantage: this._cfg.advantage,
+      disadvantage: this._cfg.disadvantage
+    };
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    // Mutual exclusion between Advantage / Disadvantage checkboxes
+    this.element.querySelectorAll('input.adv, input.dis').forEach(el => {
+      el.addEventListener('change', () => {
+        if (el.classList.contains('adv') && el.checked) {
+          this.element.querySelectorAll('input.dis').forEach(d => d.checked = false);
         }
-      }
-
-      const defaultValues = {};
-      groups.forEach(group => {
-        group.forEach(mod => {
-          // path towards modifier's field template
-          mod.fieldPath = `fields/${mod.choices ? "select" : typeof mod.defaultValue}`;
-          setByPath(defaultValues, mod.dataPath,
-            mod.defaultValue !== undefined ? mod.defaultValue : "");
-        });
+        if (el.classList.contains('dis') && el.checked) {
+          this.element.querySelectorAll('input.adv').forEach(a => a.checked = false);
+        }
       });
-
-      return {
-        modifierGroups: groups,
-        targetTokens: this.options.targetTokens,
-        defaultValues,
-        isRanged: this.options.weapon?.isRanged?.() ?? false,
-        shotsLeft: this.options.weapon?.system.shotsLeft ?? 0,
-        showAdvDis: this.options.showAdvDis,
-        advantage: this.options.advantage,
-        disadvantage: this.options.disadvantage
-      };
-    }
-
-    /** @override */
-    activateListeners(html) {
-      super.activateListeners(html);
-
-      // RELOAD
-      html.find(".reload").on("click", async (ev) => {
-        ev.preventDefault();
-        const weapon = this.options.weapon;
-        if (!weapon) return;
-
-        await weapon.update({ "system.shotsLeft": weapon.system.shots });
-        ui.notifications.info(localize("Reloaded"));
-
-        const shots = weapon.system.shots;
-        this.options.weapon.system.shotsLeft = shots;
-
-        html.find('input.number[readonly]').val(shots);
-      });
-
-      // Advantage/Disadvantage
-      html.find('input.adv, input.dis').on("change", ev => {
-        const $el = $(ev.currentTarget);
-        if ($el.hasClass("adv") && $el.prop("checked")) html.find("input.dis").prop("checked", false);
-        if ($el.hasClass("dis") && $el.prop("checked")) html.find("input.adv").prop("checked", false);
-      });
-
-    }
-  
-    /** @override */
-    async _updateObject(event, formData) {
-      this.object = formData;
-      const fired = await this.options.onConfirm(this.object);
-
-      // Register weapon attack action AFTER executing
-      if (fired !== false && this.options.weapon) {
-        const { registerAction } = await import("../action-tracker.js");
-        await registerAction(this.actor, `weapon attack (${this.options.weapon.name})`);
-      }
-
-      if (fired !== false) this.close();
-    }
- }
+    });
+  }
+}

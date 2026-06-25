@@ -1,202 +1,144 @@
 import { availability, toolBonusProperties, isAttributeProperty } from "../lookups.js";
-import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
 import { prepareEffectTabContext } from "./embedded-helpers.js";
 
 /**
- * Tool Item Sheet with custom card design and tabs
- * @extends {CyberpunkItemSheet}
+ * Tool Item Sheet with custom card design and tabs.
+ * @extends {CyberpunkItemSheetV2}
  */
-export class CyberpunkToolSheet extends CyberpunkItemSheet {
+export class CyberpunkToolSheet extends CyberpunkItemSheetV2 {
 
-    /** @type {string} */
-    _activeTab = "description";
+  static DEFAULT_OPTIONS = {
+    classes: ["tool-sheet"],
+    dragDrop: [{ dropSelector: "[data-drop-target]" }]
+  };
 
-    /** @override */
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["cyberpunk", "sheet", "item", "tool-sheet"],
-            template: "systems/cyberpunk/templates/item/tool-sheet.hbs",
-            dragDrop: [{ dropSelector: "[data-drop-target]" }]
-        });
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/item/tool-sheet.hbs" }
+  };
+
+  async _prepareContext(options) {
+    const ctx = await super._prepareContext(options);
+
+    ctx.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: ctx.system.availability === value
+    }));
+    const selectedAvail = availability[ctx.system.availability] || "Common";
+    ctx.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
+
+    prepareEffectTabContext(ctx, this.document.system.bonuses || []);
+
+    return ctx;
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    if (this._isLocked) return;
+
+    const html = $(this.element);
+    const item = this.document;
+
+    const addPropertyBonus = async filterFn => {
+      const bonuses = [...(item.system.bonuses || [])];
+      const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
+      const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
+      if (!firstAvailable) {
+        ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+        return;
+      }
+      bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
+      await item.update({ "system.bonuses": bonuses });
+    };
+    html.find('.add-attribute').on('click', ev => { ev.preventDefault(); addPropertyBonus(isAttributeProperty); });
+    html.find('.add-property').on('click', ev => { ev.preventDefault(); addPropertyBonus(k => !isAttributeProperty(k)); });
+
+    html.find('.add-skill').on('click', async ev => {
+      ev.preventDefault();
+      const bonuses = [...(item.system.bonuses || [])];
+      bonuses.push({ type: "skill", skillUuid: "", skillName: "", op: "+", value: 0 });
+      await item.update({ "system.bonuses": bonuses });
+    });
+
+    html.find('.remove-bonus').on('click', async ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const index = parseInt(ev.currentTarget.dataset.index);
+      const bonuses = [...(item.system.bonuses || [])];
+      bonuses.splice(index, 1);
+      await item.update({ "system.bonuses": bonuses });
+    });
+
+    html.find('.bonus-property-select').on('change', async ev => {
+      const index = parseInt(ev.currentTarget.dataset.index);
+      const newProperty = ev.currentTarget.value;
+      const bonuses = [...(item.system.bonuses || [])];
+      if (bonuses.some((b, i) => i !== index && b.type === "property" && b.property === newProperty)) {
+        ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+        this.render();
+        return;
+      }
+      bonuses[index] = { ...bonuses[index], property: newProperty };
+      await item.update({ "system.bonuses": bonuses });
+    });
+
+    html.find('.bonus-value-input').on('change blur', async ev => {
+      const index = parseInt(ev.currentTarget.dataset.index);
+      const value = parseInt(ev.currentTarget.value) || 0;
+      const bonuses = [...(item.system.bonuses || [])];
+      if (bonuses[index] && bonuses[index].value !== value) {
+        bonuses[index] = { ...bonuses[index], value };
+        await item.update({ "system.bonuses": bonuses });
+      }
+    });
+
+    html.find('.bonus-op-select').on('change', async ev => {
+      const index = parseInt(ev.currentTarget.dataset.index);
+      const op = ev.currentTarget.value;
+      const bonuses = [...(item.system.bonuses || [])];
+      if (bonuses[index] && bonuses[index].op !== op) {
+        bonuses[index] = { ...bonuses[index], op };
+        await item.update({ "system.bonuses": bonuses });
+      }
+    });
+  }
+
+  async _onDrop(event) {
+    event.preventDefault();
+    if (this._isLocked) return;
+
+    let data;
+    try { data = JSON.parse(event.dataTransfer.getData('text/plain')); } catch { return; }
+    if (data.type !== "Item") return;
+
+    const item = await Item.implementation.fromDropData(data);
+    if (!item) return;
+
+    if (item.type !== "skill") {
+      ui.notifications.warn(game.i18n.localize("CYBERPUNK.OnlySkillsCanBeAdded"));
+      return;
     }
 
-    /** @override */
-    getData() {
-        const data = super.getData();
-        data.activeTab = this._activeTab;
-
-        // --- Availability dropdown ---
-        data.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: data.system.availability === value
-        }));
-        const selectedAvail = availability[data.system.availability] || "Common";
-        data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
-
-        // --- Bonuses --- (shared shape with cyberware / outfit / drug)
-        prepareEffectTabContext(data, this.item.system.bonuses || []);
-
-        return data;
+    const bonuses = [...(this.document.system.bonuses || [])];
+    const isDuplicate = bonuses.some(b =>
+      b.type === "skill" && b.skillUuid && (
+        b.skillUuid === item.uuid ||
+        b.skillName.toLowerCase() === item.name.toLowerCase()
+      )
+    );
+    if (isDuplicate) {
+      ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+      return;
     }
 
-    /** @override */
-    activateListeners(html) {
-        super.activateListeners(html);
-
-        // Tab switching
-        html.find('.tab-header').click(ev => {
-            ev.preventDefault();
-            const tab = ev.currentTarget.dataset.tab;
-            if (tab && tab !== this._activeTab) {
-                this._activeTab = tab;
-                this.render(false);
-            }
-        });
-
-        // Click skill name to open its sheet
-        html.find('.skill-name[data-uuid]').click(async ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            const uuid = ev.currentTarget.dataset.uuid;
-            if (uuid) {
-                const item = await fromUuid(uuid);
-                if (item) item.sheet.render(true);
-            }
-        });
-
-        if (this._isLocked) return;
-
-        // Add attribute / property bonus — same data shape (`type: "property"`),
-        // filtered to stats.* vs everything-else by which button was clicked.
-        const addPropertyBonus = async (filterFn) => {
-            const bonuses = [...(this.item.system.bonuses || [])];
-            const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
-            const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
-            if (!firstAvailable) {
-                ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
-                return;
-            }
-            bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
-            await this.item.update({ "system.bonuses": bonuses });
-        };
-        html.find('.add-attribute').click(ev => {
-            ev.preventDefault();
-            addPropertyBonus(isAttributeProperty);
-        });
-        html.find('.add-property').click(ev => {
-            ev.preventDefault();
-            addPropertyBonus(k => !isAttributeProperty(k));
-        });
-
-        // Add skill bonus (empty slot)
-        html.find('.add-skill').click(async ev => {
-            ev.preventDefault();
-            const bonuses = [...(this.item.system.bonuses || [])];
-            bonuses.push({ type: "skill", skillUuid: "", skillName: "", op: "+", value: 0 });
-            await this.item.update({ "system.bonuses": bonuses });
-        });
-
-        // Remove bonus
-        html.find('.remove-bonus').click(async ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const bonuses = [...(this.item.system.bonuses || [])];
-            bonuses.splice(index, 1);
-            await this.item.update({ "system.bonuses": bonuses });
-        });
-
-        // Property dropdown change
-        html.find('.bonus-property-select').change(async ev => {
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const newProperty = ev.currentTarget.value;
-            const bonuses = [...(this.item.system.bonuses || [])];
-            // Check for duplicate
-            if (bonuses.some((b, i) => i !== index && b.type === "property" && b.property === newProperty)) {
-                ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
-                this.render(false);
-                return;
-            }
-            bonuses[index] = { ...bonuses[index], property: newProperty };
-            await this.item.update({ "system.bonuses": bonuses });
-        });
-
-        // Bonus value change - save on change or blur
-        html.find('.bonus-value-input').on('change blur', async ev => {
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const value = parseInt(ev.currentTarget.value) || 0;
-            const bonuses = [...(this.item.system.bonuses || [])];
-            if (bonuses[index] && bonuses[index].value !== value) {
-                bonuses[index] = { ...bonuses[index], value };
-                await this.item.update({ "system.bonuses": bonuses });
-            }
-        });
-
-        // Bonus op change (+ / × / =)
-        html.find('.bonus-op-select').change(async ev => {
-            const index = parseInt(ev.currentTarget.dataset.index);
-            const op = ev.currentTarget.value;
-            const bonuses = [...(this.item.system.bonuses || [])];
-            if (bonuses[index] && bonuses[index].op !== op) {
-                bonuses[index] = { ...bonuses[index], op };
-                await this.item.update({ "system.bonuses": bonuses });
-            }
-        });
+    const emptyIndex = bonuses.findIndex(b => b.type === "skill" && !b.skillUuid);
+    if (emptyIndex >= 0) {
+      bonuses[emptyIndex] = { ...bonuses[emptyIndex], skillUuid: item.uuid, skillName: item.name };
+    } else {
+      bonuses.push({ type: "skill", skillUuid: item.uuid, skillName: item.name, op: "+", value: 0 });
     }
 
-    /** @override */
-    async _onDrop(event) {
-        event.preventDefault();
-
-        // Only allow drops when unlocked
-        if (this._isLocked) return;
-
-        let data;
-        try {
-            data = JSON.parse(event.dataTransfer.getData('text/plain'));
-        } catch (err) {
-            return;
-        }
-
-        if (data.type !== "Item") return;
-
-        const item = await Item.implementation.fromDropData(data);
-        if (!item) return;
-
-        // Only accept skill items
-        if (item.type !== "skill") {
-            ui.notifications.warn(game.i18n.localize("CYBERPUNK.OnlySkillsCanBeAdded"));
-            return;
-        }
-
-        const bonuses = [...(this.item.system.bonuses || [])];
-
-        // Check duplicate: no existing bonus with same skillUuid or skillName
-        const isDuplicate = bonuses.some(b =>
-            b.type === "skill" && b.skillUuid && (
-                b.skillUuid === item.uuid ||
-                b.skillName.toLowerCase() === item.name.toLowerCase()
-            )
-        );
-        if (isDuplicate) {
-            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
-            return;
-        }
-
-        // Look for first empty skill slot
-        const emptyIndex = bonuses.findIndex(b => b.type === "skill" && !b.skillUuid);
-        if (emptyIndex >= 0) {
-            bonuses[emptyIndex] = {
-                ...bonuses[emptyIndex],
-                skillUuid: item.uuid,
-                skillName: item.name
-            };
-        } else {
-            // Append new filled skill bonus
-            bonuses.push({ type: "skill", skillUuid: item.uuid, skillName: item.name, op: "+", value: 0 });
-        }
-
-        await this.item.update({ "system.bonuses": bonuses });
-    }
+    await this.document.update({ "system.bonuses": bonuses });
+  }
 }

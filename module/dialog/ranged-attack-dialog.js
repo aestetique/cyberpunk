@@ -1,49 +1,76 @@
 import { fireModes } from "../lookups.js";
 import { RangeSelectionDialog } from "./range-selection-dialog.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Ranged Attack Dialog — select fire mode before opening attack modifiers.
  * Shows available fire modes based on weapon ROF and ammo status.
+ * @extends {ApplicationV2}
  */
-export class RangedAttackDialog extends Application {
+export class RangedAttackDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /**
-   * @param {Actor} actor        The owning actor
-   * @param {Item}  weapon       The weapon item to fire
-   * @param {Array} targetTokens Array of target token data
+   * @param {Actor} actor
+   * @param {Item}  weapon
+   * @param {Array} targetTokens
    */
   constructor(actor, weapon, targetTokens = []) {
-    super();
+    super({});
     this.actor = actor;
     this.weapon = weapon;
     this.targetTokens = targetTokens;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "ranged-attack-dialog",
-      classes: ["cyberpunk", "ranged-attack-dialog"],
-      template: "systems/cyberpunk/templates/dialog/ranged-attack.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "ranged-attack-dialog",
+    classes: ["cyberpunk", "ranged-attack-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog: RangedAttackDialog._onCloseDialog,
+      pickFireMode: RangedAttackDialog._onPickFireMode,
+      reload: RangedAttackDialog._onReload
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/ranged-attack.hbs" }
+  };
+
+  static _onCloseDialog(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
   }
 
-  /** @override */
-  getData() {
+  static _onPickFireMode(event, target) {
+    event?.preventDefault?.();
+    const mode = target?.dataset?.mode;
+    if (!mode) return;
+    new RangeSelectionDialog(
+      this.actor,
+      this.weapon,
+      fireModes[mode],
+      this.targetTokens
+    ).render(true);
+    this.close({ animate: false });
+  }
+
+  static async _onReload(event, _target) {
+    event?.preventDefault?.();
+    if (typeof this.weapon._reloadFromAttached === "function") {
+      await this.weapon._reloadFromAttached();
+    }
+    this.close({ animate: false });
+  }
+
+  async _prepareContext(_options) {
     const wd = this.weapon.weaponData;
     const rof = Number(wd.rof) || 1;
-    // Use the resource abstraction so Exotic weapons (charges) work too.
     const ammoLeft = (typeof this.weapon._getAmmoLeft === "function")
       ? this.weapon._getAmmoLeft()
       : (Number(wd.shotsLeft) || 0);
     const shots = Number(wd.shots) || 0;
-    // Reload makes sense only when there's an ammo pile AND the magazine
-    // isn't already full. Exotic has no pile concept → never reloadable.
     const isRanged = (typeof this.weapon._getWeaponType === "function")
       ? this.weapon._getWeaponType() === "Ranged"
       : true;
@@ -61,10 +88,6 @@ export class RangedAttackDialog extends Application {
     };
   }
 
-  /**
-   * Whether this weapon has an attached ammo pile with at least one round in it.
-   * Used to drive showReload (along with the "not full" check).
-   */
   _hasCompatibleAmmo() {
     if (typeof this.weapon._getAttachedAmmo === "function") {
       const ammo = this.weapon._getAttachedAmmo();
@@ -73,45 +96,11 @@ export class RangedAttackDialog extends Application {
     return false;
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Fire mode buttons
-    html.find('.fire-mode-btn[data-mode]').click(ev => {
-      const mode = ev.currentTarget.dataset.mode;
-      this._openModifiersWithMode(mode);
-    });
-
-    // Reload button — refill from attached ammo pile (no dialog).
-    html.find('.reload-btn').click(async () => {
-      if (typeof this.weapon._reloadFromAttached === "function") {
-        await this.weapon._reloadFromAttached();
-      }
-      this.close();
-    });
-  }
-
-  /**
-   * Open the RangeSelectionDialog with a pre-selected fire mode
-   * @param {string} fireMode - The fire mode key (fullAuto, threeRoundBurst, singleShot)
-   */
-  _openModifiersWithMode(fireMode) {
-    new RangeSelectionDialog(
-      this.actor,
-      this.weapon,
-      fireModes[fireMode],
-      this.targetTokens
-    ).render(true);
-    this.close();
   }
 }

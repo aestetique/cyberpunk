@@ -1,4 +1,4 @@
-import { localize, toTitleCase, bindHoverTooltips } from "../utils.js";
+import { localize, toTitleCase, bindHoverTooltips, commitPendingEdits } from "../utils.js";
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js";
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildDroneSkillsList, buildCoverToggles } from "./gear-data.js";
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js";
@@ -32,37 +32,122 @@ function formatHitRange(loc) {
   return `Hit on ${start}-${end === 10 ? "10" : end}`;
 }
 
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const ActorSheetV2Base = foundry.applications.sheets.ActorSheetV2;
+
 /**
  * Drone Actor Sheet — slim layout with 5 attributes (INT/REF/TECH/MA/LUCK)
  * and 5 info fields (WALK/RUN/LEAP/WEIGHT/PRICE). Reuses the character-sheet
  * CSS classes so the visual style matches; no tabs, no inventory surfaces yet.
  *
- * @extends {ActorSheet}
+ * @extends {ActorSheetV2}
  */
-export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
+export class CyberpunkDroneSheet extends HandlebarsApplicationMixin(ActorSheetV2Base) {
 
   /** @type {boolean} */
   _isLocked = true;
+  _isMinimized = false;
 
   /** Per-actor remembered sheet heights so a re-render restores the user's resized height. */
   static _sheetHeights = new Map();
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["cyberpunk", "sheet", "actor", "drone-sheet"],
-      template: "systems/cyberpunk/templates/actor/drone-sheet.hbs",
-      width: 600,
-      height: 360,
+  static DEFAULT_OPTIONS = {
+    classes: ["cyberpunk", "sheet", "actor", "drone-sheet"],
+    position: { width: 670, height: 360 },
+    window: {
+      frame: true,
+      positioned: true,
       resizable: true,
-      dragDrop: [{ dragSelector: ".gear-row[data-item-id]", dropSelector: null }]
-    });
+      minimizable: true,
+      controls: []
+    },
+    form: { submitOnChange: true, closeOnSubmit: false },
+    dragDrop: [{ dragSelector: ".gear-row[data-item-id]", dropSelector: null }],
+    actions: {
+      lockToggle:     CyberpunkDroneSheet._onLockToggle,
+      closeSheet:     CyberpunkDroneSheet._onCloseSheet,
+      copyUuid:       CyberpunkDroneSheet._onCopyUuid,
+      configureSheet: CyberpunkDroneSheet._onConfigureSheet,
+      configureToken: CyberpunkDroneSheet._onConfigureToken
+    }
+  };
+
+  static PARTS = {
+    body: {
+      template: "systems/cyberpunk/templates/actor/drone-sheet.hbs",
+      scrollable: [".gear-container"]
+    }
+  };
+
+  /** Convenience getter (V2 stores the document on `document`). */
+  get actor() { return this.document; }
+  get title() { return this.document.name; }
+  get minimized() { return this._isMinimized; }
+
+  /** Override V2's hardcoded ".draggable" selector to our gear rows. */
+  get _dragDrop() {
+    if (!this.__customDragDrop) {
+      this.__customDragDrop = new foundry.applications.ux.DragDrop.implementation({
+        dragSelector: ".gear-row[data-item-id]",
+        permissions: {
+          dragstart: this._canDragStart.bind(this),
+          drop:      this._canDragDrop.bind(this)
+        },
+        callbacks: {
+          dragstart: this._onDragStart.bind(this),
+          dragover:  this._onDragOver.bind(this),
+          drop:      this._onDrop.bind(this)
+        }
+      });
+    }
+    return this.__customDragDrop;
+  }
+
+  /** Static action handlers */
+  static async _onLockToggle(event, _target) {
+    event?.preventDefault?.();
+    commitPendingEdits(this.element);
+    this._isLocked = !this._isLocked;
+    this.render();
+  }
+
+  static _onCloseSheet(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
+  }
+
+  static _onCopyUuid(event, _target) {
+    event?.preventDefault?.();
+    game.clipboard.copyPlainText(this.document.uuid);
+    ui.notifications.info(`Copied UUID: ${this.document.uuid}`);
+  }
+
+  static _onConfigureSheet(event, _target) {
+    event?.preventDefault?.();
+    const SheetConfig = foundry.applications.apps?.DocumentSheetConfig ?? DocumentSheetConfig;
+    new SheetConfig({ document: this.document }).render({ force: true });
+  }
+
+  static _onConfigureToken(event, _target) {
+    event?.preventDefault?.();
+    if (this.document.token?.sheet) {
+      this.document.token.sheet.render({ force: true });
+      return;
+    }
+    new CONFIG.Token.prototypeSheetClass({
+      prototype: this.document.prototypeToken,
+      position: {
+        left: Math.max(this.position.left - 560 - 10, 10),
+        top: this.position.top
+      }
+    }).render({ force: true });
   }
 
   /** Toggle the lock state and re-render */
   toggleLock() {
+    commitPendingEdits(this.element);
     this._isLocked = !this._isLocked;
-    this.render(false);
+    this.render();
   }
 
   /** @override — remember user-resized height for next open */
@@ -73,68 +158,125 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
     return super.setPosition(position);
   }
 
-  /** @override — restore remembered height on first render; reapply minimized state on re-render */
-  async _render(force = false, options = {}) {
-    // Save scroll position before re-render so toggle/reload/charge clicks don't snap to top.
-    if (this.rendered && this.element?.length) {
-      const gearContainer = this.element[0].querySelector(".gear-container");
-      if (gearContainer) this._gearScrollTop = gearContainer.scrollTop;
-    }
+  /** No-op shim — V14 Draggable.resizeMouseUp still calls this.app._onResize. */
+  _onResize(_event) {}
 
-    if (!this.rendered) {
+  /** @override — restore remembered height on first render */
+  _configureRenderOptions(options) {
+    super._configureRenderOptions(options);
+    if (options.isFirstRender) {
       const rememberedHeight = CyberpunkDroneSheet._sheetHeights.get(this.actor.id);
-      if (rememberedHeight) options.height = rememberedHeight;
-      else options.height = this.constructor.defaultOptions.height;
-    }
-
-    const result = await super._render(force, options);
-
-    // Restore scroll position after the fresh DOM is in place.
-    if (this.element?.length && this._gearScrollTop) {
-      const gearContainer = this.element[0].querySelector(".gear-container");
-      if (gearContainer) gearContainer.scrollTop = this._gearScrollTop;
-    }
-
-    // Foundry's chrome rebuild can leave behind multiple `.window-resizable-handle`
-    // elements across re-renders. We hide them via SCSS, but keep the DOM clean by
-    // collapsing to a single handle (the most recently added) after each render.
-    if (this.element?.length) {
-      const handles = this.element[0].querySelectorAll(":scope > .window-resizable-handle");
-      for (let i = 0; i < handles.length - 1; i++) handles[i].remove();
-    }
-
-    // Re-apply minimized styling to the freshly-rendered DOM if we're currently minimized.
-    if (this._isMinimized && this.element?.length) {
-      const sheetContent = this.element.find(".sheet-content")[0];
-      const sheetSections = this.element.find(".sheet-sections")[0];
-      const sheetResize = this.element.find(".sheet-resize")[0];
-      const addItemFab = this.element.find(".add-item-fab")[0];
-      const sheetFrame = this.element.find(".sheet-frame")[0];
-      const characterSheet = this.element.find(".character-sheet")[0];
-      if (sheetContent) sheetContent.style.display = "none";
-      if (sheetSections) sheetSections.style.display = "none";
-      if (sheetResize) sheetResize.style.display = "none";
-      if (addItemFab) addItemFab.style.display = "none";
-      if (sheetFrame) {
-        sheetFrame.style.minHeight = "0";
-        sheetFrame.style.width = "400px";
-        sheetFrame.style.height = "46px";
-      }
-      if (characterSheet) {
-        characterSheet.style.width = "400px";
-        characterSheet.style.minHeight = "46px";
+      if (rememberedHeight) {
+        options.position = { ...(options.position ?? {}), height: rememberedHeight };
       }
     }
+  }
 
-    return result;
+  /** Custom minimize matching character-sheet pattern. */
+  async minimize() {
+    if (this._isMinimized || !this.rendered) return;
+    const root = this.element;
+    if (!root) return;
+    const sheetFrame = root.querySelector(".sheet-frame");
+    const characterSheet = root.querySelector(".character-sheet");
+    const sheetContent = root.querySelector(".sheet-content");
+    const sheetSections = root.querySelector(".sheet-sections");
+    const sheetResize = root.querySelector(".sheet-resize");
+    const addItemFab = root.querySelector(".add-item-fab");
+
+    this._originalWidth = sheetFrame?.offsetWidth ?? this.position.width;
+    this._originalHeight = sheetFrame?.offsetHeight ?? this.position.height;
+    this._originalFoundryWidth = this.position.width;
+    this._originalFoundryHeight = this.position.height;
+
+    if (sheetContent) sheetContent.style.display = "none";
+    if (sheetSections) sheetSections.style.display = "none";
+    if (sheetResize) sheetResize.style.display = "none";
+    if (addItemFab) addItemFab.style.display = "none";
+    if (sheetFrame) sheetFrame.style.minHeight = "0";
+    if (characterSheet) characterSheet.style.minHeight = "0";
+    root.style.minHeight = "0";
+
+    const minWidth = 400;
+    if (sheetFrame) {
+      sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
+      sheetFrame.style.width = `${minWidth}px`;
+      sheetFrame.style.height = "46px";
+    }
+    root.style.transition = "width 250ms ease, height 250ms ease";
+    root.style.width = `${minWidth}px`;
+    root.style.height = "46px";
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    if (characterSheet) {
+      characterSheet.style.width = `${minWidth}px`;
+      characterSheet.style.minHeight = "46px";
+    }
+    this.setPosition({ width: minWidth, height: 46 });
+    if (sheetFrame) sheetFrame.style.transition = "";
+    root.style.transition = "";
+    this._isMinimized = true;
+  }
+
+  /** Custom maximize matching character-sheet pattern. */
+  async maximize() {
+    if (!this._isMinimized) return;
+    const root = this.element;
+    if (!root) return;
+    const sheetFrame = root.querySelector(".sheet-frame");
+    const characterSheet = root.querySelector(".character-sheet");
+    const sheetContent = root.querySelector(".sheet-content");
+    const sheetSections = root.querySelector(".sheet-sections");
+    const sheetResize = root.querySelector(".sheet-resize");
+    const addItemFab = root.querySelector(".add-item-fab");
+
+    if (sheetFrame) {
+      sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
+      sheetFrame.style.width = `${this._originalWidth}px`;
+      sheetFrame.style.height = `${this._originalHeight}px`;
+    }
+    root.style.transition = "width 250ms ease, height 250ms ease";
+    root.style.width = `${this._originalFoundryWidth}px`;
+    root.style.height = `${this._originalFoundryHeight}px`;
+
+    if (characterSheet) {
+      characterSheet.style.width = "";
+      characterSheet.style.minHeight = "";
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    if (sheetFrame) {
+      sheetFrame.style.transition = "";
+      sheetFrame.style.width = "";
+      sheetFrame.style.height = "";
+      sheetFrame.style.minHeight = "";
+    }
+    root.style.transition = "";
+    root.style.width = "";
+    root.style.height = "";
+    root.style.minHeight = "";
+    if (sheetContent) sheetContent.style.display = "";
+    if (sheetSections) sheetSections.style.display = "";
+    if (sheetResize) sheetResize.style.display = "";
+    if (addItemFab) addItemFab.style.display = "";
+    this.setPosition({
+      width: this._originalFoundryWidth,
+      height: this._originalFoundryHeight
+    });
+    this._isMinimized = false;
   }
 
   /** @override */
-  async getData(options) {
-    const sheetData = super.getData(options);
-    const actor = this.actor;
+  async _prepareContext(options) {
+    const sheetData = await super._prepareContext(options);
+    const actor = this.document;
     const system = actor.system;
 
+    sheetData.actor = actor;
+    sheetData.editable = this.isEditable;
+    sheetData.cssClass = this.isEditable ? "editable" : "locked";
     sheetData.system = system;
     sheetData.isLocked = this._isLocked;
 
@@ -153,10 +295,10 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
     sheetData.shapeOptions = shapeChoices.map(c => ({ ...c, selected: c.value === currentShape }));
     sheetData.shapeLabel = shapeChoices.find(c => c.value === currentShape)?.label || "6 Hit Locations";
 
-    // ----- Stat buttons (5) -----
+    // ----- Stat buttons (6) -----
 
     const statLabel = (key) => {
-      const overrides = { ma: "move" };
+      const overrides = { bt: "body", ma: "move" };
       return overrides[key] || game.i18n.localize(`CYBERPUNK.${toTitleCase(key)}`);
     };
     const statFullName = (key) => game.i18n.localize(`CYBERPUNK.${toTitleCase(key)}Full`);
@@ -165,6 +307,7 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       int:  "Sensor processing, awareness, pattern recognition.",
       ref:  "Servo response speed and combat initiative.",
       tech: "Aptitude with tools and machinery.",
+      bt:   "Chassis sturdiness. Determines carrying capacity and Body Type Modifier.",
       ma:   "Locomotion speed. Determines walk, run, and leap distances.",
       luck: "How the universe smiles upon this drone. Spend Luck to adjust important die rolls."
     };
@@ -180,6 +323,7 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       const total = key === "luck" ? (s.effective ?? s.total ?? base) : (s.total ?? base);
       let calc = parts.length > 1 ? `${parts.join(" ")} = ${total}` : `Base ${base}`;
       if (key === "ma") calc += ` | Run ${s.run ?? 0} | Leap ${s.leap ?? 0}`;
+      if (key === "bt") calc += ` | Carry ${s.carry ?? 0}kg | Lift ${s.lift ?? 0}kg | BTM ${s.modifier ?? 0}`;
       return calc;
     };
 
@@ -187,11 +331,12 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       int:  "@stats.int.total",
       ref:  "@stats.ref.total",
       tech: "@stats.tech.total",
+      bt:   "@stats.bt.total",
       ma:   "@stats.ma.total",
       luck: "@stats.luck.effective"
     };
 
-    sheetData.statButtons = ["int", "ref", "tech", "ma", "luck"].map(key => {
+    sheetData.statButtons = ["int", "ref", "tech", "bt", "ma", "luck"].map(key => {
       const s = stats[key] || {};
       const total = key === "luck"
         ? (s.effective ?? s.total ?? s.base ?? 0)
@@ -209,11 +354,13 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       };
     });
 
-    // ----- Info blocks (5) -----
+    // ----- Info blocks (6) -----
 
     const walk = ma.total ?? 0;
     const run = ma.run ?? 0;
     const leap = ma.leap ?? 0;
+    const bt = stats.bt || {};
+    const carry = bt.carry ?? 0;
     const weight = info.weight ?? 50;
     const price = info.price ?? 1000;
 
@@ -278,6 +425,12 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
         tokenPath: "@stats.ma.leap"
       },
       {
+        key: "carry", label: "Carry", displayValue: `${carry} kg`, editable: false,
+        flavor: "Maximum weight that can be carried without penalty.",
+        calc: `BT ${bt.total ?? 0} × 10 = ${carry} kg`,
+        tokenPath: "@stats.bt.carry"
+      },
+      {
         key: "weight", label: "Weight", displayValue: `${weight} kg`,
         rawValue: weight, path: "system.info.weight", editable: true,
         flavor: "Drone's mass.",
@@ -317,8 +470,9 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const html = $(this.element);
 
     // Shared weapons/ordnance gear-row handlers
     bindWeaponAndOrdnanceHandlers(html, this);
@@ -338,19 +492,18 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
     html.find(".portrait-frame").click(ev => {
       ev.preventDefault();
       if (this._isLocked) {
-        new ImagePopout(this.actor.img, {
-          title: this.actor.name,
+        new foundry.applications.apps.ImagePopout({
+          src: this.actor.img,
+          window: { title: this.actor.name },
           uuid: this.actor.uuid
-        }).render(true);
+        }).render({ force: true });
       } else {
-        const fp = new FilePicker({
+        new foundry.applications.apps.FilePicker.implementation({
           type: "image",
           current: this.actor.img,
           callback: (path) => this.actor.update({ img: path }),
-          top: this.position.top + 40,
-          left: this.position.left + 10
-        });
-        fp.render(true);
+          position: { top: this.position.top + 40, left: this.position.left + 10 }
+        }).render({ force: true });
       }
     });
 
@@ -377,15 +530,12 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       const skillId = ev.currentTarget.dataset.skillId;
       const skill = this.actor.items.get(skillId);
       if (!skill) return;
-      new Dialog({
-        title: localize("ItemDeleteConfirmTitle"),
+      foundry.applications.api.DialogV2.confirm({
+        window: { title: localize("ItemDeleteConfirmTitle") },
         content: `<p>${localize("ItemDeleteConfirmText", { itemName: skill.name })}</p>`,
-        buttons: {
-          yes: { label: localize("Yes"), callback: () => skill.delete() },
-          no:  { label: localize("No") }
-        },
-        default: "no"
-      }).render(true);
+        yes: { label: localize("Yes"), callback: () => skill.delete() },
+        no:  { label: localize("No"), default: true }
+      });
     });
 
     // Skill base level input (unlocked mode)
@@ -413,132 +563,28 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       }).render(true);
     });
 
-    // Lock / Unlock toggle
-    html.find(".lock-toggle").click(ev => {
-      ev.preventDefault();
-      this.toggleLock();
-    });
-
-    // Header controls
-    html.find('[data-action="copyUuid"]').click(ev => {
-      ev.preventDefault();
-      const uuid = this.actor.uuid;
-      game.clipboard.copyPlainText(uuid);
-      ui.notifications.info(`Copied UUID: ${uuid}`);
-    });
-    html.find('[data-action="configureSheet"]').click(ev => {
-      ev.preventDefault();
-      this._onConfigureSheet(ev);
-    });
-    html.find('[data-action="configureToken"]').click(ev => {
-      ev.preventDefault();
-      this._onConfigureToken(ev);
-    });
-    html.find('[data-action="closeSheet"]').click(ev => {
-      ev.preventDefault();
-      this.close();
-    });
+    // Header chrome / actions wired declaratively via DEFAULT_OPTIONS.actions.
 
     // ----- Custom Window Dragging / Resize / Minimize -----
-    // Mirrors the character sheet — Foundry's default chrome is hidden, so we wire
-    // dragging on .sheet-header, resizing on .sheet-resize, and minimize on header dblclick.
-    const sheetHeader = html[0].querySelector(".sheet-header");
+    const sheetHeader = this.element.querySelector(".sheet-header");
     if (sheetHeader) {
-      const appElement = html.closest(".app");
-      if (appElement.length) {
-        this._customDraggable = new foundry.applications.ux.Draggable.implementation(
-          this, appElement, sheetHeader, this.options.resizable
-        );
+      this._customDraggable = new foundry.applications.ux.Draggable.implementation(
+        this, this.element, sheetHeader, this.options.window?.resizable
+      );
 
-        const resizeHandle = html[0].querySelector(".sheet-resize");
-        if (resizeHandle) {
-          resizeHandle.addEventListener("mousedown", (ev) => {
-            ev.preventDefault();
-            this._customDraggable._onResizeMouseDown(ev);
-          });
-        }
+      const resizeHandle = this.element.querySelector(".sheet-resize");
+      if (resizeHandle) {
+        resizeHandle.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          this._customDraggable._onResizeMouseDown(ev);
+        });
       }
 
-      // Double-click header to minimize / maximize
+      // Double-click header to minimize / maximize via our overrides.
       sheetHeader.addEventListener("dblclick", (ev) => {
         if (ev.target.closest(".lock-toggle, .header-control")) return;
-
-        const sheetFrame = html[0].querySelector(".sheet-frame");
-        const characterSheet = html[0].querySelector(".character-sheet");
-        const appEl = html.closest(".app")[0];
-        const sheetContent = html[0].querySelector(".sheet-content");
-        const sheetSections = html[0].querySelector(".sheet-sections");
-        const sheetResize = html[0].querySelector(".sheet-resize");
-        const addItemFab = html[0].querySelector(".add-item-fab");
-
-        if (this._isMinimized) {
-          // Maximize
-          sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
-          appEl.style.transition = "width 250ms ease, height 250ms ease";
-
-          sheetFrame.style.width = this._originalWidth + "px";
-          sheetFrame.style.height = this._originalHeight + "px";
-          appEl.style.width = this._originalFoundryWidth + "px";
-          appEl.style.height = this._originalFoundryHeight + "px";
-
-          characterSheet.style.width = "";
-          characterSheet.style.minHeight = "";
-
-          setTimeout(() => {
-            sheetFrame.style.transition = "";
-            sheetFrame.style.width = "";
-            sheetFrame.style.height = "";
-            sheetFrame.style.minHeight = "";
-            appEl.style.transition = "";
-            appEl.style.width = "";
-            appEl.style.height = "";
-            appEl.style.minHeight = "";
-            if (sheetContent) sheetContent.style.display = "";
-            if (sheetSections) sheetSections.style.display = "";
-            if (sheetResize) sheetResize.style.display = "";
-            if (addItemFab) addItemFab.style.display = "";
-            this.setPosition({
-              width: this._originalFoundryWidth,
-              height: this._originalFoundryHeight
-            });
-          }, 250);
-
-          this._isMinimized = false;
-        } else {
-          // Minimize
-          this._originalWidth = sheetFrame.offsetWidth;
-          this._originalHeight = sheetFrame.offsetHeight;
-          this._originalFoundryWidth = this.position.width;
-          this._originalFoundryHeight = this.position.height;
-
-          if (sheetContent) sheetContent.style.display = "none";
-          if (sheetSections) sheetSections.style.display = "none";
-          if (sheetResize) sheetResize.style.display = "none";
-          if (addItemFab) addItemFab.style.display = "none";
-
-          sheetFrame.style.minHeight = "0";
-          characterSheet.style.minHeight = "0";
-          appEl.style.minHeight = "0";
-
-          const minWidth = 400;
-          sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
-          appEl.style.transition = "width 250ms ease, height 250ms ease";
-
-          sheetFrame.style.width = minWidth + "px";
-          sheetFrame.style.height = "46px";
-          appEl.style.width = minWidth + "px";
-          appEl.style.height = "46px";
-
-          setTimeout(() => {
-            characterSheet.style.width = minWidth + "px";
-            characterSheet.style.minHeight = "46px";
-            this.setPosition({ width: minWidth, height: 46 });
-            sheetFrame.style.transition = "";
-            appEl.style.transition = "";
-          }, 250);
-
-          this._isMinimized = true;
-        }
+        if (this._isMinimized) this.maximize();
+        else this.minimize();
       });
     }
 
@@ -564,7 +610,7 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
       });
     });
 
-    if (!this.options.editable) return;
+    if (!this.isEditable) return;
 
     // Stat roll — open the same dialog the character uses
     html.find(".stat-roll").click(ev => {
@@ -587,13 +633,13 @@ export class CyberpunkDroneSheet extends foundry.appv1.sheets.ActorSheet {
    * characters / other drones. Falls through to the default clone behaviour
    * for skills, role, or same-actor drops.
    */
-  async _onDropItem(event, data) {
-    const item = await Item.implementation.fromDropData(data);
-    if (item && shouldTransfer(item, this.actor)) {
+  async _onDropItem(event, item) {
+    if (!item) return;
+    if (shouldTransfer(item, this.actor)) {
       event.preventDefault();
       await transferItem(item, this.actor);
       return;
     }
-    return super._onDropItem(event, data);
+    return super._onDropItem(event, item);
   }
 }

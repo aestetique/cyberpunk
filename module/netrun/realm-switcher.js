@@ -1,49 +1,45 @@
 import { localize } from "../utils.js";
 import { isNetIcon } from "./realm.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Netrunning Realm Switcher — single-row floating panel that lets the
- * netrunner jump between their meat token and NET icon. Each button
- * SELECTS the corresponding token (releasing whatever else was selected)
- * and pans the canvas to it.
- *
- * Why this exists: with the realm-aware vision filter, NET icons aren't
- * rendered on the meatspace canvas for anyone — including the owner —
- * because cyberspace is a different realm visually. This panel is the
- * "click to jump to my other manifestation" UI that replaces "click on
- * the invisible token in space."
- *
- * Buttons are toggleable (gray default, green when selected), mirroring
- * the gray/green styles we use across the system. State follows the
- * current canvas selection — selecting tokens via Foundry's normal
- * controls updates the panel too.
+ * netrunner jump between their meat token and NET icon.
+ * @extends {ApplicationV2}
  */
-export class RealmSwitcher extends Application {
+export class RealmSwitcher extends HandlebarsApplicationMixin(ApplicationV2) {
 
-    /** @override */
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            id: "realm-switcher-dialog",
-            classes: ["cyberpunk", "realm-switcher-dialog"],
-            template: "systems/cyberpunk/templates/dialog/realm-switcher.hbs",
-            width: 300,
-            height: "auto",
-            popOut: true,
-            minimizable: true,
-            resizable: false
-        });
+    static DEFAULT_OPTIONS = {
+        id: "realm-switcher-dialog",
+        classes: ["cyberpunk", "realm-switcher-dialog"],
+        position: { width: 300, height: "auto" },
+        window: { frame: true, positioned: true, resizable: false, minimizable: true, controls: [] },
+        actions: {
+            closeDialog: RealmSwitcher._onCloseDialog,
+            jumpToToken: RealmSwitcher._onJumpToToken
+        }
+    };
+
+    static PARTS = {
+        body: { template: "systems/cyberpunk/templates/dialog/realm-switcher.hbs" }
+    };
+
+    get title() { return localize("Netrunning"); }
+
+    static _onCloseDialog(event, _target) {
+        event?.preventDefault?.();
+        this.close({ animate: false });
     }
 
-    /** @override */
-    get title() {
-        return localize("Netrunning");
+    static _onJumpToToken(event, target) {
+        event?.preventDefault?.();
+        if (target.classList.contains("disabled")) return;
+        this._jumpToToken(target.dataset.tokenId);
+        // _jumpToToken's `placeable.control` fires `controlToken` hooks
+        // synchronously; our _syncSelection runs from those.
     }
 
-    /**
-     * Resolve the actor we're switching for. Players: their assigned
-     * character. GM: assigned character if set, else first owned actor
-     * with a token on the active scene.
-     */
     _getActor() {
         const assigned = game.user?.character;
         if (assigned) return assigned;
@@ -52,7 +48,6 @@ export class RealmSwitcher extends Application {
         return token?.actor ?? null;
     }
 
-    /** First non-NET token on the active scene belonging to `actor`. */
     _findMeatToken(actor) {
         if (!actor || !canvas?.scene) return null;
         return canvas.scene.tokens.find(t =>
@@ -60,7 +55,6 @@ export class RealmSwitcher extends Application {
         ) || null;
     }
 
-    /** NET icon for `actor` on the active scene, if any. */
     _findNetIcon(actor) {
         if (!actor || !canvas?.scene) return null;
         return canvas.scene.tokens.find(t =>
@@ -68,8 +62,7 @@ export class RealmSwitcher extends Application {
         ) || null;
     }
 
-    /** @override */
-    getData() {
+    async _prepareContext(_options) {
         const actor = this._getActor();
         const meat = this._findMeatToken(actor);
         const net  = this._findNetIcon(actor);
@@ -81,7 +74,6 @@ export class RealmSwitcher extends Application {
         };
     }
 
-    /** Select + center on a token by id. No-op if it's gone. */
     _jumpToToken(tokenId) {
         const placeable = canvas?.tokens?.get?.(tokenId);
         if (!placeable) return;
@@ -93,49 +85,33 @@ export class RealmSwitcher extends Application {
     /**
      * Fast path for selection changes — toggle the `.selected` class on the
      * existing buttons based on the current `canvas.tokens.controlled` set.
-     * No re-render, so no race with Foundry's async render pipeline, and the
-     * "release others → control new" double `controlToken` event handles
-     * cleanly because we just read live state each time.
+     * No re-render, so no race with the async render pipeline.
      */
     _syncSelection() {
-        if (!this.element?.length) return;
+        const root = this.element;
+        if (!root) return;
         const controlledIds = new Set((canvas?.tokens?.controlled || []).map(t => t.id));
-        this.element.find(".realm-btn").each(function () {
-            const tokenId = this.dataset.tokenId;
+        root.querySelectorAll(".realm-btn").forEach(btn => {
+            const tokenId = btn.dataset.tokenId;
             if (!tokenId) return;
-            this.classList.toggle("selected", controlledIds.has(tokenId));
+            btn.classList.toggle("selected", controlledIds.has(tokenId));
         });
     }
 
-    /** @override */
-    activateListeners(html) {
-        super.activateListeners(html);
+    _onRender(context, options) {
+        super._onRender(context, options);
 
-        // Draggable header (shared dialog pattern)
-        const header = html.find(".reload-header")[0];
+        const header = this.element.querySelector(".reload-header");
         if (header) {
-            new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+            new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
         }
-        html.find(".header-control.close").click(() => this.close());
 
-        html.find(".realm-btn").click(ev => {
-            if (ev.currentTarget.classList.contains("disabled")) return;
-            this._jumpToToken(ev.currentTarget.dataset.tokenId);
-            // _jumpToToken's `placeable.control` fires `controlToken` hooks
-            // synchronously; our _syncSelection runs from those and the
-            // green/gray will already be correct by the time this returns.
-        });
-
-        // Initial state sync on render.
         this._syncSelection();
 
-        // Live updates. Selection changes use the fast class-toggle path;
-        // token create / delete change the DOM structure (a button enabling
-        // or vanishing), so those need a full re-render.
         if (!this._hooksBound) {
             this._hooksBound = true;
             this._onControlToken = () => this._syncSelection();
-            this._onStructureChange = () => this.render(false);
+            this._onStructureChange = () => this.render();
             Hooks.on("controlToken", this._onControlToken);
             Hooks.on("createToken",  this._onStructureChange);
             Hooks.on("deleteToken",  this._onStructureChange);
@@ -143,7 +119,6 @@ export class RealmSwitcher extends Application {
         }
     }
 
-    /** @override */
     async close(options = {}) {
         if (this._hooksBound) {
             Hooks.off("controlToken", this._onControlToken);

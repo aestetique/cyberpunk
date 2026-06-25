@@ -1,7 +1,7 @@
-<form class="item-card outfit-card has-stats {{#unless isLocked}}unlocked{{/unless}}" autocomplete="off">
+<div class="item-card outfit-card has-stats {{#unless isLocked}}unlocked{{/unless}}">
   {{!-- Header (38px) --}}
   <header class="sheet-header">
-    <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+    <button class="lock-toggle" type="button" data-action="lockToggle" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
       <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
     </button>
 
@@ -20,7 +20,7 @@
     {{!-- Item Trivia (460×80px) --}}
     <div class="item-trivia">
       {{!-- Portrait (80×80px) --}}
-      <div class="item-portrait">
+      <div class="item-portrait" data-action="portraitClick">
         <img src="{{item.img}}" alt="{{item.name}}">
       </div>
 
@@ -86,17 +86,17 @@
 
     {{!-- Tabs Line --}}
     <div class="tabs-line">
-      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-tab="description">
+      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-action="tabSwitch" data-tab="description">
         <span class="tab-text">{{localize "CYBERPUNK.Description"}}</span>
       </a>
-      <a class="tab-header {{#if (eq activeTab 'armor')}}active{{/if}}" data-tab="armor">
+      <a class="tab-header {{#if (eq activeTab 'armor')}}active{{/if}}" data-action="tabSwitch" data-tab="armor">
         <span class="tab-text">{{localize "CYBERPUNK.Armor"}}</span>
       </a>
-      <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-tab="effect">
+      <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-action="tabSwitch" data-tab="effect">
         <span class="tab-text">{{localize "CYBERPUNK.Effect"}}</span>
       </a>
       {{#if showWeaponTab}}
-        <a class="tab-header {{#if (eq activeTab 'weapon')}}active{{/if}}" data-tab="weapon">
+        <a class="tab-header {{#if (eq activeTab 'weapon')}}active{{/if}}" data-action="tabSwitch" data-tab="weapon">
           <span class="tab-text">{{localize "CYBERPUNK.Weapon"}}</span>
         </a>
       {{/if}}
@@ -161,7 +161,7 @@
             {{#if isLocked}}
               <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
             {{else}}
-              <img class="checkbox-img checkbox-toggle" data-field="system.isWeapon"
+              <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isWeapon"
                    src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isWeapon}}checked{{else}}unchecked{{/if}}.svg">
             {{/if}}
             <label class="dual-separator">{{localize "CYBERPUNK.EV"}}</label>
@@ -232,4 +232,4 @@
       {{/if}}
     </div>
   </div>
-</form>
+</div>

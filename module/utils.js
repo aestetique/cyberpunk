@@ -254,6 +254,25 @@ export function buildHitLocationIndex(hitLocations) {
 }
 
 /**
+ * Commit any in-flight edit before a sheet re-renders. If a field inside
+ * `rootElement` is currently focused, blur it synchronously — that fires
+ * the field's change/blur listener (which dispatches its actor.update on
+ * the next microtask). Without this, clicking the lock toggle while a
+ * field is focused tears down the DOM before blur can fire, so the edit
+ * silently disappears.
+ *
+ * Use case: every lock-toggle handler should call this before flipping
+ * `_isLocked` and re-rendering, so the typed value is preserved across
+ * the unlock → type → lock flow.
+ */
+export function commitPendingEdits(rootElement) {
+    const active = document.activeElement;
+    if (!active || typeof active.blur !== "function") return;
+    if (rootElement && typeof rootElement.contains === "function" && !rootElement.contains(active)) return;
+    active.blur();
+}
+
+/**
  * Bind cursor-following hover tooltips to elements matching `selector`.
  * Reads data-flavor / data-tooltip-name / data-calc / data-token-path from the element
  * (with text-content fallbacks for the name) and renders a floating .cyberpunk-tooltip div.

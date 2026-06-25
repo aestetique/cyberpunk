@@ -2,60 +2,47 @@
 // Character Sheet Layout
 // ============================================
 
-// Borderless window styling - hide Foundry's default chrome
-// Applies to both the character sheet and the drone sheet (same outer-window treatment).
+// Shared Foundry chrome reset for all three actor sheets (character / drone / shop).
+// Mixin lives in _resets.scss; everything below this block is actor-sheet specific.
 .cyberpunk.character-sheet,
 .cyberpunk.drone-sheet,
 .cyberpunk.shop-sheet {
-  // Hide the outer Foundry window styling
-  &.app {
-    background: transparent;
-    box-shadow: none;
-    border: none;
-  }
+  @include sheet-chrome-reset;
 
-  // Hide Foundry's default window header
-  > .window-header {
-    display: none;
-  }
-
-  // Make window content fill properly with no padding
-  > .window-content {
-    padding: 0;
-    overflow: visible;
-    background: transparent;
-    border-radius: 0;
-    margin: 0;
-  }
-
-  // Hide Foundry's default resize handle - we position our own
-  > .window-resizable-handle {
-    display: none;
-  }
-
-  // Global reset for Foundry button styles within character sheet
-  button, .tab-btn, a {
+  // .tab-btn isn't covered by the mixin's `button, a` selector — kill its focus halo here.
+  .tab-btn {
     --button-focus-outline-color: transparent;
-    &:focus {
-      box-shadow: none;
-      outline: none;
-    }
-  }
-
-  // Remove Foundry's default image border styling
-  img {
-    border: none;
-  }
-
-  // Remove Foundry's default h1 styling (red underline)
-  h1 {
-    border: none;
-    border-bottom: none;
+    &:focus { box-shadow: none; outline: none; }
   }
 
   // Make content's height adjusting to the height of user-resized charlist
   .window-content, .editable {
     height: 100%;
+  }
+
+  // Propagate the form height down to .character-sheet — V2 adds a wrapper
+  // `<section.window-content>` and a `<div data-application-part="body">`
+  // between the form and our template root. Both need to be flex column
+  // and flex:1 so .character-sheet's `height: 100%` actually has something
+  // to be 100% of.
+  > .window-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  > .window-content > [data-application-part="body"] {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  > .window-content > [data-application-part="body"] > .editable,
+  > .window-content > [data-application-part="body"] > .locked {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -94,6 +81,7 @@
   .lock-toggle {
     width: 16px;
     height: 16px;
+    min-height: 16px; // V14 forces min-height: var(--button-size) (~28px) on every <button>
     padding: 0;
     border: none;
     background: transparent;
@@ -148,7 +136,7 @@
 .sheet-content {
   flex: 1;
   min-height: 0; // Allow shrinking below content size
-  padding: 0 20px;
+  padding: 0 8px 0 20px;
   display: flex;
   gap: 20px;
   overflow: hidden; // Children handle their own scrolling
@@ -478,8 +466,8 @@
   overflow: visible;
 }
 
-// Character Identity (66px)
-.character-identity {
+// Sheet Identity (66px) — shared across character/drone/shop actor sheets.
+.sheet-identity {
   height: 66px;
   display: flex;
   flex-direction: row;
@@ -829,7 +817,7 @@ input.stat-value.stat-input {
   width: 620px;
   height: 50px;
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -981,9 +969,36 @@ input.info-value.info-input {
     height: 100%;
   }
 
+  // === Unified tab + scroll model ===========================================
+  // The .tab is the visibility wrapper; it does NOT scroll. The inner
+  // *-container is the single scroll owner per tab, so the scrollbar sits
+  // INSIDE the section-block area (matches Sveta's original design intent at
+  // _character-sheet.scss:2036 — "single scrollbar shared by every section").
+  // Each known *-container in this section overrides its own overflow so
+  // the rule applies regardless of which partial owns the tab content.
+  //
+  // V14's tab-hide rule lives in `@layer blocks.ui` (foundry2.css:5781) which
+  // is weaker than unlayered styles — so we hide inactive tabs ourselves.
+  .tab[data-tab]:not(.active) {
+    display: none;
+  }
+
   .tab {
     min-height: 260px;
     max-height: 900px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  // Inner scroll owners — exactly one per visible tab. Each container is
+  // already display:flex column with `flex:1; min-height:0` elsewhere; we just
+  // re-assert overflow-y:auto on the canonical names so future partials follow
+  // the same pattern.
+  .tab > .gear-container,
+  .tab > .cyberware-container {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -1006,36 +1021,7 @@ input.info-value.info-input {
   row-gap: 8px;
 }
 
-.tab-header {
-  position: sticky;
-  top: 0;
-  width: 100%;
-  height: 36px;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--sheet-gilt);
-  background-color: var(--chat-back);
-  box-shadow: 0 7px 10px 0 var(--chat-back);
-  // Dominate any incidental stacking from descendant rows so scrolled rows stay BEHIND
-  // the sticky header, not on top of it.
-  z-index: 10;
-}
-
-.tab-title {
-  font-family: var(--font-blender);
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 36px;
-  color: #B9B29D;
-  text-transform: uppercase;
-}
-
-.tab-badge {
-  width: 16px;
-  height: 16px;
-}
+// .tab-header / .tab-title / .tab-badge moved to _tabs.scss (shared with item cards)
 
 .humanity-header-right {
   display: flex;
@@ -1069,10 +1055,12 @@ input.info-value.info-input {
 }
 
 .skills-content {
-  flex: 1;
-  min-height: 0; // Allow shrinking below content size
+  // Sized to content (rows × 36px) — letting flex:1 take over here makes
+  // the inner columns stretch and shrinks the 36px row heights below their
+  // declared size. The .skills-container (overflow-y:auto) handles scrolling.
   display: flex;
   column-gap: 10px;
+  align-items: flex-start;
 }
 
 .skills-column {
@@ -1085,15 +1073,18 @@ input.info-value.info-input {
 .skill-row {
   width: 100%;
   height: 36px;
+  flex-shrink: 0; // Enforce the declared row height; never compress
   padding: 0 8px;
   display: flex;
   align-items: center;
   column-gap: 8px;
   border-bottom: 1px dashed #26282F;
 
-  // Virtual skills (from chipware) - compensate for missing plus button and IP input
+  // Virtual skills (from chipware) - compensate for missing plus button and IP input.
+  // Right padding = column-gap(8) + plus(16) + column-gap(8) + ip(16) + normal padding-right(8)
+  // = 56px, so .skill-value lines up horizontally with the non-virtual rows.
   &.virtual-skill {
-    padding: 0 62px 0 8px;
+    padding: 0 56px 0 8px;
   }
 }
 
@@ -1185,6 +1176,7 @@ input.skill-value.skill-level-input {
 .skill-plus {
   width: 16px;
   height: 16px;
+  min-height: 16px; // V14's button min-height: var(--button-size) (~28px) override
   padding: 0;
   border: none;
   background: transparent;
@@ -1246,6 +1238,7 @@ input.skill-value.skill-level-input {
 .skill-delete {
   width: 16px;
   height: 16px;
+  min-height: 16px; // V14's button min-height: var(--button-size) (~28px) override
   padding: 0;
   border: none;
   background: transparent;
@@ -1316,7 +1309,8 @@ input.skill-value.skill-level-input {
   overflow-y: auto;
 }
 
-.gear-block {
+.section-block {
+  width: 610px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1353,6 +1347,7 @@ input.skill-value.skill-level-input {
 .gear-row {
   width: 100%;
   height: 48px;
+  flex-shrink: 0; // Enforce the declared row height; never compress
   padding: 0 11px 0 8px;
   display: flex;
   align-items: center;
@@ -1427,25 +1422,26 @@ input.skill-value.skill-level-input {
   text-overflow: ellipsis;
 }
 
-// Weight: same style as price
+// Weight: same style as price. justify-content: flex-end pins the number+icon
+// pair to the column's right edge so the badges line up across rows even when
+// the number's character count varies.
 .gear-weight {
-  width: 50px;
+  width: 60px;
   height: 24px;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
   padding-right: 8px;
 
   .price-value {
-    width: 100%;
     font-family: var(--font-blender);
     font-weight: 300; // Book
     font-size: 16px;
     line-height: 24px;
     color: #FFFFFF;
-    text-align: right;
   }
 
   img {
@@ -1455,24 +1451,24 @@ input.skill-value.skill-level-input {
   }
 }
 
-// Price: 24px tall, row with 4px gap, Blender Pro Book 16px, line-height 24px, align-right
+// Price: 24px tall, row with 4px gap, Blender Pro Book 16px, line-height 24px.
+// flex-end keeps the eurodollar badge at the same X across rows.
 .gear-price {
   height: 24px;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
   padding-right: 8px;
 
   .price-value {
-    width: 100%;
     font-family: var(--font-blender);
     font-weight: 300; // Book
     font-size: 16px;
     line-height: 24px;
     color: #FFFFFF;
-    text-align: right;
   }
 
   img {
@@ -1575,6 +1571,8 @@ input.skill-value.skill-level-input {
 .gear-delete {
   width: 16px;
   height: 16px;
+  min-height: 16px; // V14's button min-height: var(--button-size) (~28px) override
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: transparent;
@@ -1611,7 +1609,7 @@ input.skill-value.skill-level-input {
 }
 
 .cyberware-block {
-  // Inherits from .gear-block
+  // Inherits from .section-block
 }
 
 .cyberware-row {
@@ -1754,7 +1752,7 @@ input.skill-value.skill-level-input {
 // State Tab
 // ============================================
 
-.tab.state .gear-block {
+.tab.state .section-block {
   gap: 8px;
 }
 
@@ -1910,90 +1908,46 @@ input.skill-value.skill-level-input {
   }
 }
 
-// Drone Shape selector — mirrors .role-display visually so it sits in the same slot
-// where the character sheet shows the role name.
-.shape-display {
-  height: 22px;
-  padding: 2px 4px 2px 5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  .shape-prefix,
-  .shape-label,
-  .shape-select {
-    font-family: var(--font-refinery);
-    font-weight: 500;
-    font-size: 16px;
-    line-height: 16px;
-    color: var(--chat-text);
-    letter-spacing: 0.05em;
-  }
-
-  .shape-prefix {
-    color: var(--sheet-gilt);
-  }
-
-  .shape-select {
-    // min-width sized to the longest option ("6 Hit Locations") so the value
-    // doesn't get truncated to "6 Hit Lo…" in unlocked mode.
-    min-width: 160px;
-    background: transparent;
-    border: none;
-    outline: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-    height: 18px;
-    cursor: pointer;
-    -moz-appearance: none;
-    -webkit-appearance: none;
-    appearance: none;
-
-    &:focus {
-      outline: none;
-      box-shadow: none;
-    }
-
-    option {
-      background: var(--chat-back);
-      color: var(--chat-text);
-    }
-  }
-}
+// .shape-display (drone shape selector) moved to _drone-sheet.scss.
 
 // ============================================
-// Drone Sheet — width overrides
-// Reuses character-sheet visuals but slimmer:
-// 5 stats × 60 + 4 gaps × 10 = 340 px wide rows.
+// Drone & Shop Sheets — width overrides
+// Reuse character-sheet visuals but slimmer:
+// 6 stats × 60 + 5 gaps × 10 = 410 px wide rows; .sheet-details widened to 440 px.
 // No tab selector, no wounds/humanity block, no tabs, no inventory area.
 // ============================================
 .character-sheet.drone-sheet,
 .character-sheet.shop-sheet {
-  width: 600px;
-  // Resize floor — user can't drag the drone shorter than this. Bypassed during
-  // minimize via inline `min-height: 0` (cleared on maximize), same as character.
+  width: 670px;
   min-height: 390px;
 
   .sheet-frame {
-    width: 600px;
+    width: 670px;
     min-height: 390px;
-    position: relative;  // anchor for .add-item-fab
-  }
-
-  // Drones have no tabs — always show the FAB, parked just above the resize handle.
-  .add-item-fab {
-    display: block;
-    bottom: 24px;
+    position: relative;
   }
 
   .sheet-details {
-    width: 340px;
+    width: 440px;
   }
 
   .attributes-row,
   .info-row {
-    width: 340px;
+    width: 440px;
+  }
+
+  .sheet-sections {
+    width: 660px;
+  }
+
+  .section-block {
+    width: 624px;
+  }
+
+  // Drones / shop have no tabs — always show the FAB, parked just above the resize handle.
+  .add-item-fab {
+    display: block;
+    bottom: 24px;
   }
 
   // No portrait action buttons / armor block on drones — collapse the sidebar height
@@ -2039,7 +1993,7 @@ input.skill-value.skill-level-input {
   }
 
   // Sections size to their content; the .gear-container handles scrolling.
-  .sheet-sections .gear-block {
+  .sheet-sections .section-block {
     flex: 0 0 auto;
   }
   .sheet-sections .gear-content {
@@ -2048,175 +2002,15 @@ input.skill-value.skill-level-input {
   }
 
   // Toggle-row blocks (Cover, Conditions) need extra breathing room between header and toggles,
-  // matching the character sheet's State tab spacing (.tab.state .gear-block { gap: 8px }).
-  .sheet-sections .gear-block:has(.cover-row),
-  .sheet-sections .gear-block:has(.conditions-row) {
+  // matching the character sheet's State tab spacing (.tab.state .section-block { gap: 8px }).
+  .sheet-sections .section-block:has(.cover-row),
+  .sheet-sections .section-block:has(.conditions-row) {
     gap: 8px;
-  }
-
-  // Keep zone rows at their full 48px height even when the sheet is shorter than content
-  // (the gear-content scrolls instead of squeezing rows). Tighter right-padding
-  // (0 instead of 11px) brings the disable button flush to the row's right edge.
-  .gear-row.zone-row {
-    flex-shrink: 0;
-    padding: 0 0 0 8px;
-  }
-
-  // Uniform zone-field column — same width / margins for SP, SDP, and Disables-at,
-  // so the three trios line up vertically across rows.
-  .zone-field {
-    width: 90px;
-    align-items: center;     // center the field-top horizontally inside the column
-
-    // Lock the field-top row to a fixed height matching the gear-name's baseline,
-    // regardless of whether it contains a span (locked) or an input (unlocked).
-    // Stops the field-bottom label (SP / SDP / Disables at) from jumping vertically
-    // when toggling lock state, and keeps the top row aligned with "Hit on X" subtext.
-    .field-top {
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-    }
-  }
-
-  // Disabled-state visual on a zone row — greyed icon + dimmed text.
-  .gear-row.zone-row.disabled {
-    .gear-icon img { filter: grayscale(1) brightness(0.6); }
-    .gear-name,
-    .gear-context,
-    .field-top,
-    .field-bottom { color: #444856; }
-  }
-
-  // input.zone-input / .zone-paired-readonly are now defined at the .character-sheet
-  // scope below so they're available on both drone and character sheets (quantity
-  // editors, etc.). Drone-only is the `.zone-paired-row .zone-paired-sep` rule
-  // which lives further down.
-
-  // Force-clickable disable button regardless of the row's .disabled class
-  // (defends against any inherited pointer-events: none on the row).
-  .gear-action-btn.zone-disable-btn {
-    pointer-events: auto;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
-
-    img { pointer-events: none; }
-  }
-
-  // Marker class on the .field-top when it wraps the "current / max" pair.
-  // Sizing/alignment already comes from the .field-top base rule above.
-  .zone-paired-row {
-    .zone-paired-sep {
-      width: 20px;
-      text-align: center;
-      font-family: var(--font-blender);
-      font-weight: 300;
-      font-size: 16px;
-      line-height: 16px;
-      color: #808090;
-    }
-  }
-
-  // .zone-paired-readonly is defined at the .character-sheet scope below.
-
-  // Drone Skills block — stripped two-column list (name + total only).
-  .drone-skills-block {
-    .drone-skills-content {
-      display: flex;
-      column-gap: 16px;
-      padding: 0 8px;
-    }
-    .drone-skills-column {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .drone-skill-row {
-      height: 28px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 4px;
-      border-bottom: 1px dashed #26282F;
-
-      .skill-name {
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        cursor: pointer;
-      }
-    }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Shop sheet additions. Frame / sidebar / sheet-sections all ride on the
-// drone-sheet rules above (`.character-sheet.drone-sheet, .character-sheet.shop-sheet`).
-// Tabs / tab-header / divider styling rides on the .item-card rules, extended
-// to also match .character-sheet.shop-sheet. Only the genuinely new piece —
-// the GM-only inline settings button next to the gilt "Shop" label — needs
-// its own rule here.
-// ---------------------------------------------------------------------------
-.character-sheet.shop-sheet {
-  // Tab + divider + content stack — mirror the item-card's .item-content gap
-  // (12px) so the spacing between tabs / divider / gear list feels the same.
-  // Divider runs the full window width edge-to-edge; tabs sit 20px-inset.
-  .sheet-sections {
-    gap: 12px;
-  }
-  .sheet-sections .tabs-line {
-    width: 100%;
-    padding: 0 20px;
-    box-sizing: border-box;
-  }
-  .sheet-sections .divider {
-    width: 100%;
-    margin: 0;
-  }
-
-  .shop-settings-btn {
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.15s;
-    box-shadow: none;
-
-    img { width: 100%; height: 100%; }
-    &:hover { opacity: 1; }
-  }
-
-  // Category status icons under the identity row. Two rows of four 70×60
-  // SVGs; `space-between` parks the outer icons against the sheet-details
-  // edges so the row's even gaps add up to the full 340px width. Read-only —
-  // no hover / cursor.
-  .shop-categories {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  .shop-categories-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .shop-category-icon {
-    width: 70px;
-    height: 60px;
-    border: none;
-    flex: 0 0 auto;
-  }
-}
+// Drone-specific rules live in _drone-sheet.scss.
+// Shop-specific rules live in _shop-sheet.scss.
 
 // Shared inline numeric input + readonly span used wherever a value flips between
 // locked (span) and unlocked (input). Same geometry both ways so the digit holds

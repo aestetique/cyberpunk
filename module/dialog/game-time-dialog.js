@@ -1,5 +1,7 @@
 import { localize } from "../utils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -13,10 +15,6 @@ const INCREMENTS = [
     { label: "SECOND",  ms: 1000 }
 ];
 
-/**
- * Format a ms-epoch timestamp into the full dialog display.
- * e.g. "Feb 7, 2045, Wednesday, 18:38:42"
- */
 export function formatGameTimeFull(timestamp) {
     const d = new Date(timestamp);
     const month = MONTHS[d.getUTCMonth()];
@@ -29,10 +27,6 @@ export function formatGameTimeFull(timestamp) {
     return `${month} ${day}, ${year}, ${weekday}, ${h}:${m}:${s}`;
 }
 
-/**
- * Format a ms-epoch timestamp for chat display.
- * e.g. "Feb 7, 2045, 18:38"
- */
 export function formatGameTimeShort(timestamp) {
     const d = new Date(timestamp);
     const month = MONTHS[d.getUTCMonth()];
@@ -43,49 +37,86 @@ export function formatGameTimeShort(timestamp) {
     return `${month} ${day}, ${year}, ${h}:${m}`;
 }
 
-/**
- * Parse the campaignStartDate setting string into a ms-epoch number.
- */
 export function parseCampaignStartDate(str) {
-    // Expected format: "2045-01-01 00:00:00"
     const parsed = Date.parse(str.replace(" ", "T") + "Z");
     return isNaN(parsed) ? Date.UTC(2045, 0, 1) : parsed;
 }
 
-/**
- * Get the current in-game timestamp (ms epoch).
- */
 export function getCurrentGameTime() {
     const startStr = game.settings.get("cyberpunk", "campaignStartDate");
     const offset = game.settings.get("cyberpunk", "gameTimeOffset");
     return parseCampaignStartDate(startStr) + offset;
 }
 
-export class GameTimeDialog extends Application {
+export class GameTimeDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     constructor() {
-        super();
-        this._selectedIncrement = 6; // Default: 6 Hours
+        super({});
+        this._selectedIncrement = 6;
         this._dropdownOpen = false;
     }
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            id: "game-time-dialog",
-            classes: ["cyberpunk", "game-time-dialog"],
-            template: "systems/cyberpunk/templates/dialog/game-time.hbs",
-            width: 300,
-            height: "auto",
-            popOut: true,
-            minimizable: true,
-            resizable: false
-        });
+    static DEFAULT_OPTIONS = {
+        id: "game-time-dialog",
+        classes: ["cyberpunk", "game-time-dialog"],
+        position: { width: 300, height: "auto" },
+        window: { frame: true, positioned: true, resizable: false, minimizable: true, controls: [] },
+        actions: {
+            closeDialog:    GameTimeDialog._onCloseDialog,
+            toggleDropdown: GameTimeDialog._onToggleDropdown,
+            pickIncrement:  GameTimeDialog._onPickIncrement,
+            timePlus:       GameTimeDialog._onTimePlus,
+            timeMinus:      GameTimeDialog._onTimeMinus
+        }
+    };
+
+    static PARTS = {
+        body: { template: "systems/cyberpunk/templates/dialog/game-time.hbs" }
+    };
+
+    get title() { return localize("GameTime"); }
+
+    static _onCloseDialog(event, _target) {
+        event?.preventDefault?.();
+        this.close({ animate: false });
     }
 
-    get title() {
-        return localize("GameTime");
+    static _onToggleDropdown(event, _target) {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        this._dropdownOpen = !this._dropdownOpen;
+        this.element.querySelector('.range-dropdown-list')?.classList.toggle('open', this._dropdownOpen);
+        this.element.querySelector('.range-dropdown-btn')?.classList.toggle('open', this._dropdownOpen);
     }
 
-    getData() {
+    static _onPickIncrement(event, target) {
+        event?.preventDefault?.();
+        this._selectedIncrement = Number(target.dataset.index);
+        this._dropdownOpen = false;
+        this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+        this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
+        const labelEl = this.element.querySelector('.range-label');
+        if (labelEl) labelEl.textContent = INCREMENTS[this._selectedIncrement].label;
+        this.element.querySelectorAll('.range-option').forEach(el => el.classList.remove('selected'));
+        target.classList.add('selected');
+    }
+
+    static async _onTimePlus(event, _target) {
+        event?.preventDefault?.();
+        const delta = INCREMENTS[this._selectedIncrement].ms;
+        const offset = game.settings.get("cyberpunk", "gameTimeOffset");
+        await game.settings.set("cyberpunk", "gameTimeOffset", offset + delta);
+        this.render();
+    }
+
+    static async _onTimeMinus(event, _target) {
+        event?.preventDefault?.();
+        const delta = INCREMENTS[this._selectedIncrement].ms;
+        const offset = game.settings.get("cyberpunk", "gameTimeOffset");
+        await game.settings.set("cyberpunk", "gameTimeOffset", offset - delta);
+        this.render();
+    }
+
+    async _prepareContext(_options) {
         const currentTime = getCurrentGameTime();
         return {
             displayTime: formatGameTimeFull(currentTime),
@@ -98,63 +129,23 @@ export class GameTimeDialog extends Application {
         };
     }
 
-    activateListeners(html) {
-        super.activateListeners(html);
-
-        // Draggable header (standard pattern)
-        const header = html.find('.reload-header')[0];
+    _onRender(context, options) {
+        super._onRender(context, options);
+        const header = this.element.querySelector('.reload-header');
         if (header) {
-            new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+            new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
         }
-
-        // Close button
-        html.find('.header-control.close').click(() => this.close());
-
-        // Dropdown toggle
-        html.find('.range-dropdown-btn').click(ev => {
-            ev.stopPropagation();
-            this._dropdownOpen = !this._dropdownOpen;
-            html.find('.range-dropdown-list').toggleClass('open', this._dropdownOpen);
-            html.find('.range-dropdown-btn').toggleClass('open', this._dropdownOpen);
-        });
-
-        // Dropdown option selection
-        html.find('.range-option').click(ev => {
-            this._selectedIncrement = Number(ev.currentTarget.dataset.index);
-            this._dropdownOpen = false;
-            html.find('.range-dropdown-list').removeClass('open');
-            html.find('.range-dropdown-btn').removeClass('open');
-            html.find('.range-label').text(INCREMENTS[this._selectedIncrement].label);
-            html.find('.range-option').removeClass('selected');
-            ev.currentTarget.classList.add('selected');
-        });
-
-        // Close dropdown on outside click
+        $(document).off('click.gameTimeDropdown');
         $(document).on('click.gameTimeDropdown', (ev) => {
             if (!$(ev.target).closest('.range-dropdown').length) {
                 this._dropdownOpen = false;
-                html.find('.range-dropdown-list').removeClass('open');
-                html.find('.range-dropdown-btn').removeClass('open');
+                this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+                this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
             }
-        });
-
-        // Plus / minus buttons
-        html.find('.game-time-minus').click(async () => {
-            const delta = INCREMENTS[this._selectedIncrement].ms;
-            const offset = game.settings.get("cyberpunk", "gameTimeOffset");
-            await game.settings.set("cyberpunk", "gameTimeOffset", offset - delta);
-            this.render(false);
-        });
-
-        html.find('.game-time-plus').click(async () => {
-            const delta = INCREMENTS[this._selectedIncrement].ms;
-            const offset = game.settings.get("cyberpunk", "gameTimeOffset");
-            await game.settings.set("cyberpunk", "gameTimeOffset", offset + delta);
-            this.render(false);
         });
     }
 
-    close(options = {}) {
+    async close(options = {}) {
         $(document).off('click.gameTimeDropdown');
         return super.close(options);
     }

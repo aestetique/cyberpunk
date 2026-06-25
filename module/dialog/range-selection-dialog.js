@@ -1,65 +1,110 @@
 import { fireModes, ranges } from "../lookups.js";
 import { localize, getHiddenLocationsForTargets, resolveTargetActor } from "../utils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Range Selection Dialog — select range band before opening attack modifiers.
- * Auto-calculates distance to target if available.
+ * @extends {ApplicationV2}
  */
-export class RangeSelectionDialog extends Application {
+export class RangeSelectionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-  /**
-   * @param {Actor} actor        The owning actor
-   * @param {Item}  weapon       The weapon item to fire
-   * @param {string} fireMode    The selected fire mode (from fireModes lookup)
-   * @param {Array} targetTokens Array of target token data
-   */
   constructor(actor, weapon, fireMode, targetTokens = []) {
-    super();
+    super({});
     this.actor = actor;
     this.weapon = weapon;
     this.fireMode = fireMode;
     this.targetTokens = targetTokens;
     this._dropdownOpen = false;
-
-    // Condition toggles
-    this._conditions = {
-      prepared: false,
-      ambush: false,
-      distracted: false,
-      ricochet: false
-    };
-
-    // Luck spending
+    this._conditions = { prepared: false, ambush: false, distracted: false, ricochet: false };
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ?? actor.system.stats.luck?.total ?? 0;
-
-    // Location targeting (single shot only)
     this._selectedLocation = null;
-
-    // Auto-calculate distance and select range
     this._calculatedDistance = this._calculateDistanceToTarget();
     this._selectedRange = this._getAutoRangeFromDistance() || ranges.close;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "range-selection-dialog",
-      classes: ["cyberpunk", "range-selection-dialog"],
-      template: "systems/cyberpunk/templates/dialog/range-selection.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "range-selection-dialog",
+    classes: ["cyberpunk", "range-selection-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:     RangeSelectionDialog._onCloseDialog,
+      toggleDropdown:  RangeSelectionDialog._onToggleDropdown,
+      pickRange:       RangeSelectionDialog._onPickRange,
+      toggleCondition: RangeSelectionDialog._onToggleCondition,
+      pickLocation:    RangeSelectionDialog._onPickLocation,
+      luckPlus:        RangeSelectionDialog._onLuckPlus,
+      luckMinus:       RangeSelectionDialog._onLuckMinus,
+      roll:            RangeSelectionDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/range-selection.hbs" }
+  };
+
+  static _onCloseDialog(event, _target) { event?.preventDefault?.(); this.close({ animate: false }); }
+
+  static _onToggleDropdown(event, _target) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    this._dropdownOpen = !this._dropdownOpen;
+    this.element.querySelector('.range-dropdown-list')?.classList.toggle('open', this._dropdownOpen);
+    this.element.querySelector('.range-dropdown-btn')?.classList.toggle('open', this._dropdownOpen);
   }
 
-  /** @override */
-  getData() {
-    const weaponRange = this.weapon.weaponData.range || 50;
+  static _onPickRange(event, target) {
+    event?.preventDefault?.();
+    const rangeKey = target.dataset.range;
+    this._selectedRange = rangeKey;
+    this._dropdownOpen = false;
+    const label = target.textContent.trim();
+    const labelEl = this.element.querySelector('.range-dropdown-btn .range-label');
+    if (labelEl) labelEl.textContent = label;
+    this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+    this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
+    this.element.querySelectorAll('.range-option').forEach(el => el.classList.remove('selected'));
+    target.classList.add('selected');
+  }
 
-    // Build range options with calculated distances
+  static _onToggleCondition(event, target) {
+    event?.preventDefault?.();
+    const condition = target?.dataset?.condition;
+    if (!condition) return;
+    this._conditions[condition] = !this._conditions[condition];
+    target.classList.toggle('selected', this._conditions[condition]);
+  }
+
+  static _onPickLocation(event, target) {
+    event?.preventDefault?.();
+    if (target.classList.contains('no-zone')) return;
+    const location = target.dataset.location;
+    if (this._selectedLocation === location) {
+      this._selectedLocation = null;
+      target.classList.remove('selected');
+    } else {
+      this.element.querySelectorAll('.location-btn').forEach(b => b.classList.remove('selected'));
+      this._selectedLocation = location;
+      target.classList.add('selected');
+    }
+  }
+
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend < this._availableLuck) { this._luckToSpend++; this._updateLuckDisplay(); }
+  }
+
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend > 0) { this._luckToSpend--; this._updateLuckDisplay(); }
+  }
+
+  static _onRoll(event, _target) { event?.preventDefault?.(); this._executeRoll(); }
+
+  async _prepareContext(_options) {
+    const weaponRange = this.weapon.weaponData.range || 50;
     const rangeOptions = [
       { key: ranges.pointBlank, distance: 1, label: localize("RangePointBlankLabel") },
       { key: ranges.close, distance: Math.round(weaponRange / 4), label: localize("RangeCloseLabel", { range: Math.round(weaponRange / 4) }) },
@@ -67,80 +112,65 @@ export class RangeSelectionDialog extends Application {
       { key: ranges.long, distance: weaponRange, label: localize("RangeLongLabel", { range: weaponRange }) },
       { key: ranges.extreme, distance: weaponRange * 2, label: localize("RangeExtremeLabel", { range: weaponRange * 2 }) }
     ];
-
-    // Mark the selected range
-    rangeOptions.forEach(opt => {
-      opt.selected = opt.key === this._selectedRange;
-    });
-
-    // Get label for currently selected range
+    rangeOptions.forEach(opt => { opt.selected = opt.key === this._selectedRange; });
     const selectedRangeOption = rangeOptions.find(opt => opt.key === this._selectedRange);
     const selectedRangeLabel = selectedRangeOption?.label || "";
-
-    // Get fire mode label
     const fireModeLabel = this._getFireModeLabel();
-
-    // Check if weapon is exotic
     const isExotic = this.weapon.weaponData.weaponType === "Exotic";
 
     return {
       fireModeLabel,
       rangeOptions,
       selectedRangeLabel,
-      // Luck data
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
       canIncreaseLuck: this._luckToSpend < this._availableLuck,
       canDecreaseLuck: this._luckToSpend > 0,
       hasAnyLuck: this._availableLuck > 0,
-      // Location targeting (single shot only)
       isSingleShot: this.fireMode === fireModes.singleShot,
       hiddenLocations: getHiddenLocationsForTargets(this.targetTokens),
-      // Exotic weapon display
       isExotic,
       weaponName: this.weapon.name
     };
   }
 
-  /**
-   * Get localized label for the current fire mode
-   */
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
+    if (header) {
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
+    }
+    $(document).off('click.rangeDropdown');
+    $(document).on('click.rangeDropdown', (ev) => {
+      if (!$(ev.target).closest('.range-dropdown').length) {
+        this._dropdownOpen = false;
+        this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+        this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
+      }
+    });
+  }
+
   _getFireModeLabel() {
     switch (this.fireMode) {
-      case fireModes.fullAuto:
-        return localize("FullAutoLabel");
-      case fireModes.threeRoundBurst:
-        return localize("ThreeRoundBurstLabel");
-      case fireModes.singleShot:
-        return localize("SingleShotLabel");
-      default:
-        return this.fireMode;
+      case fireModes.fullAuto: return localize("FullAutoLabel");
+      case fireModes.threeRoundBurst: return localize("ThreeRoundBurstLabel");
+      case fireModes.singleShot: return localize("SingleShotLabel");
+      default: return this.fireMode;
     }
   }
 
-  /**
-   * Calculate distance from actor's token to first targeted token
-   * @returns {number|null} Distance in meters, or null if cannot calculate
-   */
   _calculateDistanceToTarget() {
-    // Get actor's token
     const actorToken = this.actor.getActiveTokens()?.[0];
     if (!actorToken) return null;
-
-    // Get first target token
     if (!this.targetTokens.length) return null;
     const targetId = this.targetTokens[0].id;
     const targetToken = canvas.tokens?.get(targetId);
     if (!targetToken) return null;
-
-    // Calculate distance using Foundry's grid measurement
     try {
-      const gridDistance = canvas.grid.measureDistance(
+      const gridDistance = canvas.grid.measurePath([
         { x: actorToken.center.x, y: actorToken.center.y },
-        { x: targetToken.center.x, y: targetToken.center.y },
-        { gridSpaces: false }
-      );
-      // Round to nearest integer
+        { x: targetToken.center.x, y: targetToken.center.y }
+      ]).distance;
       return Math.round(gridDistance);
     } catch (e) {
       console.warn("Could not calculate distance to target:", e);
@@ -148,16 +178,10 @@ export class RangeSelectionDialog extends Application {
     }
   }
 
-  /**
-   * Determine appropriate range band from distance
-   * @returns {string|null} Range key, or null if cannot determine
-   */
   _getAutoRangeFromDistance() {
     if (this._calculatedDistance === null) return null;
-
     const weaponRange = this.weapon.weaponData.range || 50;
     const dist = this._calculatedDistance;
-
     if (dist <= 1) return ranges.pointBlank;
     if (dist <= weaponRange / 4) return ranges.close;
     if (dist <= weaponRange / 2) return ranges.medium;
@@ -165,148 +189,34 @@ export class RangeSelectionDialog extends Application {
     return ranges.extreme;
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
-    if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
-    }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Range dropdown toggle
-    html.find('.range-dropdown-btn').click(ev => {
-      ev.stopPropagation();
-      this._dropdownOpen = !this._dropdownOpen;
-      html.find('.range-dropdown-list').toggleClass('open', this._dropdownOpen);
-      html.find('.range-dropdown-btn').toggleClass('open', this._dropdownOpen);
-    });
-
-    // Range option selection
-    html.find('.range-option').click(ev => {
-      const rangeKey = ev.currentTarget.dataset.range;
-      this._selectedRange = rangeKey;
-      this._dropdownOpen = false;
-
-      // Update display
-      const label = ev.currentTarget.textContent.trim();
-      html.find('.range-dropdown-btn .range-label').text(label);
-      html.find('.range-dropdown-list').removeClass('open');
-      html.find('.range-dropdown-btn').removeClass('open');
-
-      // Update visual selection in dropdown
-      html.find('.range-option').removeClass('selected');
-      ev.currentTarget.classList.add('selected');
-    });
-
-    // Close dropdown when clicking outside
-    $(document).on('click.rangeDropdown', (ev) => {
-      if (!$(ev.target).closest('.range-dropdown').length) {
-        this._dropdownOpen = false;
-        html.find('.range-dropdown-list').removeClass('open');
-        html.find('.range-dropdown-btn').removeClass('open');
-      }
-    });
-
-    // Condition button toggles
-    html.find('.condition-btn').click(ev => {
-      const btn = ev.currentTarget;
-      const condition = btn.dataset.condition;
-      this._conditions[condition] = !this._conditions[condition];
-      btn.classList.toggle('selected', this._conditions[condition]);
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(ev => {
-      if (this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(ev => {
-      if (this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Location button selection (single shot only)
-    html.find('.location-btn').click(ev => {
-      const btn = ev.currentTarget;
-      if (btn.classList.contains('no-zone')) return;
-      const location = btn.dataset.location;
-
-      // Toggle selection - clicking same location deselects it
-      if (this._selectedLocation === location) {
-        this._selectedLocation = null;
-        btn.classList.remove('selected');
-      } else {
-        // Deselect previous
-        html.find('.location-btn').removeClass('selected');
-        // Select new
-        this._selectedLocation = location;
-        btn.classList.add('selected');
-      }
-    });
-
-    // Roll button - execute roll directly
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
-    });
-  }
-
-  /**
-   * Update the luck display and button states
-   * @param {jQuery} html - The dialog HTML element
-   */
-  _updateLuckDisplay(html) {
-    html.find('.luck-value').text(this._luckToSpend);
-
+  _updateLuckDisplay() {
+    const luckVal = this.element.querySelector('.luck-value');
+    if (luckVal) luckVal.textContent = this._luckToSpend;
     const minusDisabled = this._luckToSpend <= 0;
     const plusDisabled = this._luckToSpend >= this._availableLuck;
-
-    html.find('.luck-minus-btn').toggleClass('disabled', minusDisabled);
-    html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
-
-    // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+    const minusBtn = this.element.querySelector('.luck-minus-btn');
+    const plusBtn = this.element.querySelector('.luck-plus-btn');
+    minusBtn?.classList.toggle('disabled', minusDisabled);
+    plusBtn?.classList.toggle('disabled', plusDisabled);
+    minusBtn?.querySelector('img')?.setAttribute('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+    plusBtn?.querySelector('img')?.setAttribute('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
-  /**
-   * Execute roll directly with selected options
-   */
   async _executeRoll() {
     const fireOptions = {
       fireMode: this.fireMode,
       range: this._selectedRange,
-      // Conditions
       ambush: this._conditions.ambush,
       ricochet: this._conditions.ricochet,
-      // Prepared, Distracted, and Luck via extraMod
-      // Note: Location targeting -4 is applied by _rangedModifiers when targetArea is set
       extraMod: (this._conditions.prepared ? 2 : 0)
               + (this._conditions.distracted ? -2 : 0)
               + this._luckToSpend,
-      // Defaults for unused modifiers
-      aimRounds: 0,
-      blinded: false,
-      dualWield: false,
-      fastDraw: false,
-      hipfire: false,
-      running: false,
-      turningToFace: false,
+      aimRounds: 0, blinded: false, dualWield: false, fastDraw: false,
+      hipfire: false, running: false, turningToFace: false,
       targetArea: this._selectedLocation || "",
       targetActor: resolveTargetActor(this.targetTokens?.[0])
     };
 
-    // Spend luck if any was used
     if (this._luckToSpend > 0) {
       const currentSpent = this.actor.system.stats.luck.spent || 0;
       const currentSpentAt = this.actor.system.stats.luck.spentAt;
@@ -316,17 +226,13 @@ export class RangeSelectionDialog extends Application {
       });
     }
 
-    this.close();
+    this.close({ animate: false });
     this.weapon._resolveAttack(fireOptions, this.targetTokens);
-
-    // Register ranged attack action AFTER executing
     const { registerAction } = await import("../action-tracker.js");
     await registerAction(this.actor, `ranged attack (${this.weapon.name})`);
   }
 
-  /** @override */
-  close(options) {
-    // Clean up document click handler
+  async close(options) {
     $(document).off('click.rangeDropdown');
     return super.close(options);
   }

@@ -1,6 +1,6 @@
 {{!-- Dialog content for when a ranged weapon is fired --}}
-{{!-- By this point, fire mode and range should be selected, and possibly target --}}
-<form class="cyberpunk weapon-modifiers">
+{{!-- V2 root is the <form>; we wrap inside a content div for layout --}}
+<div class="cyberpunk weapon-modifiers">
     {{#each modifierGroups as |group|}}
         <div class="field-list">
             {{#each group}}
@@ -52,10 +52,10 @@
 
     <div class="flexrow" style="justify-content: flex-end; gap: 8px;">
     {{#if isRanged}}
-        <button type="button" class="reload">{{loc "Reload"}}</button>
+        <button type="button" class="reload" data-action="reload">{{loc "Reload"}}</button>
     {{/if}}
     <button type="submit" name="submit" class="fire" value="1" autofocus>
         {{loc "OK"}}
     </button>
     </div>
-</form>
+</div>

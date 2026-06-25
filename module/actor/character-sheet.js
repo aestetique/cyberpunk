@@ -1,5 +1,5 @@
 import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, weaponEffects, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
-import { localize, tabBeautifying, toTitleCase, bindHoverTooltips } from "../utils.js"
+import { localize, tabBeautifying, toTitleCase, bindHoverTooltips, commitPendingEdits } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
@@ -102,11 +102,14 @@ function _humanityNextBracketCalc(flavour, value) {
   return localize("HumanityLossPanel.Next", { label: _humanityBracketLabel(flavour, next), min: next.min });
 }
 
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const ActorSheetV2Base = foundry.applications.sheets.ActorSheetV2;
+
 /**
  * Character sheet for Cyberpunk 2020 actors.
- * @extends {ActorSheet}
+ * @extends {ActorSheetV2}
  */
-export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
+export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2Base) {
 
   /**
    * Lock state for the sheet (locked = view mode, unlocked = edit mode)
@@ -153,102 +156,296 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
    */
   static _sheetHeights = new Map();
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["cyberpunk", "sheet", "actor", "character-sheet"],
-      template: "systems/cyberpunk/templates/actor/character-sheet.hbs",
-      width: 930,
-      height: 624,
+  static DEFAULT_OPTIONS = {
+    classes: ["cyberpunk", "sheet", "actor", "character-sheet"],
+    position: { width: 930, height: 624 },
+    window: {
+      frame: true,
+      positioned: true,
       resizable: true,
-      tabs: [{ navSelector: ".tab-selector", contentSelector: ".sheet-details", initial: "skills" }],
-      dragDrop: [{dragSelector: ".gear-row[data-item-id]:not(.cyberware-option.detached)", dropSelector: null}]
+      // Enable minimizable so V2 minimize()/maximize() actually run when the
+      // ordnance placement flow asks every app to minimize. V14 short-circuits
+      // minimize() when this is false (foundry.mjs:31349).
+      minimizable: true,
+      controls: []
+    },
+    form: { submitOnChange: true, closeOnSubmit: false },
+    dragDrop: [{ dragSelector: ".gear-row[data-item-id]:not(.cyberware-option.detached)", dropSelector: null }],
+    actions: {
+      lockToggle:     CyberpunkCharacterSheet._onLockToggle,
+      closeSheet:     CyberpunkCharacterSheet._onCloseSheet,
+      copyUuid:       CyberpunkCharacterSheet._onCopyUuid,
+      configureSheet: CyberpunkCharacterSheet._onConfigureSheet,
+      configureToken: CyberpunkCharacterSheet._onConfigureToken,
+      tabSwitch:      CyberpunkCharacterSheet._onTabSwitch
+    }
+  };
+
+  static PARTS = {
+    body: {
+      template: "systems/cyberpunk/templates/actor/character-sheet.hbs",
+      // Inner .gear-container is the actual scroll owner per tab — V2's
+      // _preSyncPartState uses querySelector so we name each one explicitly.
+      // Each tab's inner *-container is the single scroll owner (see SCSS
+      // "Unified tab + scroll model" comment). V2 _preSyncPartState uses
+      // querySelector so each tab is listed with its specific container.
+      scrollable: [
+        ".tab.skills .gear-container",
+        ".tab.gear .gear-container",
+        ".tab.cyber .cyberware-container",
+        ".tab.net .cyberware-container",
+        ".tab.state .gear-container"
+      ]
+    }
+  };
+
+  /** Active main tab. Initial: skills. */
+  _activeTab = "skills";
+
+  /** Drag-drop instances (re-bound each render). */
+  #dragDrops = [];
+
+  /** Convenience getter for the actor (V2 stores it on `document`). */
+  get actor() { return this.document; }
+
+  get title() { return this.document.name; }
+
+  /**
+   * Override V2 ActorSheetV2's default ".draggable" selector with our gear-row selector.
+   */
+  get _dragDrop() {
+    if (!this.__customDragDrop) {
+      this.__customDragDrop = new foundry.applications.ux.DragDrop.implementation({
+        dragSelector: ".gear-row[data-item-id]:not(.cyberware-option.detached)",
+        permissions: {
+          dragstart: this._canDragStart.bind(this),
+          drop: this._canDragDrop.bind(this)
+        },
+        callbacks: {
+          dragstart: this._onDragStart.bind(this),
+          dragover: this._onDragOver.bind(this),
+          drop: this._onDrop.bind(this)
+        }
+      });
+    }
+    return this.__customDragDrop;
+  }
+
+  /** Action: toggle lock mode */
+  static async _onLockToggle(event, _target) {
+    event?.preventDefault?.();
+    commitPendingEdits(this.element);
+    this._isLocked = !this._isLocked;
+    this.render();
+  }
+
+  /** Action: close. animate:false skips V14's 1000ms transition wait
+   *  (foundry.mjs:30874) — without a CSS transition on max-height the wait
+   *  is dead time.
+   */
+  static _onCloseSheet(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
+  }
+
+  /** Action: copy UUID */
+  static _onCopyUuid(event, _target) {
+    event?.preventDefault?.();
+    game.clipboard.copyPlainText(this.document.uuid);
+    ui.notifications.info(localize("CopiedUUID", { uuid: this.document.uuid }));
+  }
+
+  /** Action: open Sheet config */
+  static _onConfigureSheet(event, _target) {
+    event?.preventDefault?.();
+    const SheetConfig = foundry.applications.apps?.DocumentSheetConfig
+                     ?? foundry.applications.apps?.DocumentSheetConfig
+                     ?? DocumentSheetConfig;
+    new SheetConfig({ document: this.document }).render({ force: true });
+  }
+
+  /** Action: open Token config — live token if the sheet came from one,
+   *  otherwise the actor's Prototype Token. Matches V14's ActorSheetV2
+   *  pattern at foundry.mjs:124011 / 124027.
+   */
+  static _onConfigureToken(event, _target) {
+    event?.preventDefault?.();
+    // Live token (only present when sheet was opened from a placed token)
+    if (this.document.token?.sheet) {
+      this.document.token.sheet.render({ force: true });
+      return;
+    }
+    // Otherwise open the Prototype Token config via the V14 sheet class
+    new CONFIG.Token.prototypeSheetClass({
+      prototype: this.document.prototypeToken,
+      position: {
+        left: Math.max(this.position.left - 560 - 10, 10),
+        top: this.position.top
+      }
+    }).render({ force: true });
+  }
+
+  /** Action: switch the main tab without re-rendering — toggle classes. */
+  static _onTabSwitch(event, target) {
+    event?.preventDefault?.();
+    const tab = target?.dataset?.tab;
+    if (!tab || tab === this._activeTab) return;
+    this._activeTab = tab;
+    const root = this.element;
+    root.querySelectorAll(".tab-selector [data-tab]").forEach(el => {
+      el.classList.toggle("active", el.dataset.tab === tab);
+    });
+    root.querySelectorAll(".sheet-details .tab").forEach(el => {
+      el.classList.toggle("active", el.classList.contains(tab));
     });
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Override setPosition to remember the sheet height
+   * Remember resize height per actor — V2 setPosition has the same signature.
    * @override
    */
   setPosition(position = {}) {
-    // If height is being set (from resize), remember it
     if (position.height) {
       CyberpunkCharacterSheet._sheetHeights.set(this.actor.id, position.height);
     }
     return super.setPosition(position);
   }
 
+  /**
+   * Custom minimize — collapses to our 400×46 header bar while clearing the
+   * inner `.character-sheet`'s `min-height: 634px` (which would otherwise
+   * pin the form open). Replaces V14's default minimize because that one
+   * just sets `style.maxHeight` on the form, which loses to our inner
+   * min-height constraint.
+   * @override
+   */
+  async minimize() {
+    if (this._isMinimized || !this.rendered) return;
+    const root = this.element;
+    if (!root) return;
+    const sheetFrame = root.querySelector('.sheet-frame');
+    const characterSheet = root.querySelector('.character-sheet');
+    const tabSelector = root.querySelector('.tab-selector');
+    const sheetContent = root.querySelector('.sheet-content');
+    const sheetResize = root.querySelector('.sheet-resize');
+
+    this._originalWidth = sheetFrame?.offsetWidth ?? this.position.width;
+    this._originalHeight = sheetFrame?.offsetHeight ?? this.position.height;
+    this._originalFoundryWidth = this.position.width;
+    this._originalFoundryHeight = this.position.height;
+
+    if (tabSelector) tabSelector.style.display = 'none';
+    if (sheetContent) sheetContent.style.display = 'none';
+    if (sheetResize) sheetResize.style.display = 'none';
+
+    if (sheetFrame) sheetFrame.style.minHeight = '0';
+    if (characterSheet) characterSheet.style.minHeight = '0';
+    root.style.minHeight = '0';
+
+    const minWidth = 400;
+    if (sheetFrame) {
+      sheetFrame.style.transition = 'width 250ms ease, height 250ms ease';
+      sheetFrame.style.width = `${minWidth}px`;
+      sheetFrame.style.height = '46px';
+    }
+    root.style.transition = 'width 250ms ease, height 250ms ease';
+    root.style.width = `${minWidth}px`;
+    root.style.height = '46px';
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    if (characterSheet) {
+      characterSheet.style.width = `${minWidth}px`;
+      characterSheet.style.minHeight = '46px';
+    }
+    this.setPosition({ width: minWidth, height: 46 });
+    if (sheetFrame) sheetFrame.style.transition = '';
+    root.style.transition = '';
+
+    this._isMinimized = true;
+  }
+
+  /**
+   * Custom maximize — restores dimensions saved by minimize().
+   * @override
+   */
+  async maximize() {
+    if (!this._isMinimized) return;
+    const root = this.element;
+    if (!root) return;
+    const sheetFrame = root.querySelector('.sheet-frame');
+    const characterSheet = root.querySelector('.character-sheet');
+    const tabSelector = root.querySelector('.tab-selector');
+    const sheetContent = root.querySelector('.sheet-content');
+    const sheetResize = root.querySelector('.sheet-resize');
+
+    if (sheetFrame) {
+      sheetFrame.style.transition = 'width 250ms ease, height 250ms ease';
+      sheetFrame.style.width = `${this._originalWidth}px`;
+      sheetFrame.style.height = `${this._originalHeight}px`;
+    }
+    root.style.transition = 'width 250ms ease, height 250ms ease';
+    root.style.width = `${this._originalFoundryWidth}px`;
+    root.style.height = `${this._originalFoundryHeight}px`;
+
+    if (characterSheet) {
+      characterSheet.style.width = '';
+      characterSheet.style.minHeight = '';
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    if (sheetFrame) {
+      sheetFrame.style.transition = '';
+      sheetFrame.style.width = '';
+      sheetFrame.style.height = '';
+      sheetFrame.style.minHeight = '';
+    }
+    root.style.transition = '';
+    root.style.width = '';
+    root.style.height = '';
+    root.style.minHeight = '';
+    if (tabSelector) tabSelector.style.display = '';
+    if (sheetContent) sheetContent.style.display = '';
+    if (sheetResize) sheetResize.style.display = '';
+
+    this.setPosition({
+      width: this._originalFoundryWidth,
+      height: this._originalFoundryHeight
+    });
+
+    this._isMinimized = false;
+  }
+
+  /** V2 reports minimized state via this getter; mirror our flag. */
+  get minimized() {
+    return this._isMinimized;
+  }
+
+  /**
+   * V1's Application defined `_onResize` and Draggable's `_onResizeMouseUp`
+   * still calls `this.app._onResize(event)` after the user releases the
+   * resize handle. V2's ApplicationV2 dropped the method, so we add a no-op
+   * shim — V2 already commits the new size during pointermove via setPosition.
+   */
+  _onResize(_event) {}
+
   /* -------------------------------------------- */
 
   /**
-   * Override _render to preserve scroll positions across re-renders
-   * Scroll is SAVED in click handlers (before update), RESTORED here (after render)
+   * On first render, restore the remembered sheet height before V2 positions us.
    * @override
    */
-  async _render(force = false, options = {}) {
-    // Save scroll positions BEFORE re-render from the correct elements (.tab, not inner containers)
-    if (this.rendered && this.element?.length) {
-      const gearTab = this.element.find('.tab.gear')[0];
-      const cyberTab = this.element.find('.tab.cyber')[0];
-      const stateTab = this.element.find('.tab.state')[0];
-      if (gearTab) this._gearScrollTop = gearTab.scrollTop;
-      if (cyberTab) this._cyberwareScrollTop = cyberTab.scrollTop;
-      if (stateTab) this._stateScrollTop = stateTab.scrollTop;
-    }
-
-    // On first render, use remembered height or default minimum
-    if (!this.rendered) {
+  _configureRenderOptions(options) {
+    super._configureRenderOptions(options);
+    if (options.isFirstRender) {
       const rememberedHeight = CyberpunkCharacterSheet._sheetHeights.get(this.actor.id);
       if (rememberedHeight) {
-        options.height = rememberedHeight;
-      } else {
-        // First time opening - use minimum height
-        options.height = this.constructor.defaultOptions.height;
+        options.position = { ...(options.position ?? {}), height: rememberedHeight };
       }
     }
-
-    const result = await super._render(force, options);
-
-    // Restore scroll positions AFTER render completes
-    if (this.element?.length) {
-      const gearTab = this.element.find('.tab.gear')[0];
-      const cyberTab = this.element.find('.tab.cyber')[0];
-      if (gearTab && this._gearScrollTop) {
-        gearTab.scrollTop = this._gearScrollTop;
-      }
-      if (cyberTab && this._cyberwareScrollTop) {
-        cyberTab.scrollTop = this._cyberwareScrollTop;
-      }
-      const stateTab = this.element.find('.tab.state')[0];
-      if (stateTab && this._stateScrollTop) {
-        stateTab.scrollTop = this._stateScrollTop;
-      }
-    }
-
-    // If the sheet is minimized, re-apply minimized styling to the fresh DOM elements
-    if (this._isMinimized && this.element?.length) {
-      const tabSelector = this.element.find('.tab-selector')[0];
-      const sheetContent = this.element.find('.sheet-content')[0];
-      const sheetResize = this.element.find('.sheet-resize')[0];
-      const sheetFrame = this.element.find('.sheet-frame')[0];
-      const characterSheet = this.element.find('.character-sheet')[0];
-      if (tabSelector) tabSelector.style.display = 'none';
-      if (sheetContent) sheetContent.style.display = 'none';
-      if (sheetResize) sheetResize.style.display = 'none';
-      if (sheetFrame) {
-        sheetFrame.style.minHeight = '0';
-        sheetFrame.style.width = '400px';
-        sheetFrame.style.height = '46px';
-      }
-      if (characterSheet) {
-        characterSheet.style.width = '400px';
-        characterSheet.style.minHeight = '46px';
-      }
-    }
-
-    return result;
   }
 
   /* -------------------------------------------- */
@@ -257,15 +454,20 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
    * Toggle the lock state of the sheet
    */
   toggleLock() {
+    commitPendingEdits(this.element);
     this._isLocked = !this._isLocked;
-    this.render(false);
+    this.render();
   }
 
   /* -------------------------------------------- */
 
   /** @override */
-  async getData(options) {
-    const sheetData = super.getData(options);
+  async _prepareContext(options) {
+    const sheetData = await super._prepareContext(options);
+    sheetData.actor = this.document;
+    sheetData.editable = this.isEditable;
+    sheetData.cssClass = this.isEditable ? "editable" : "locked";
+    sheetData.activeTab = this._activeTab;
     const actor = this.actor;
     const system = actor.system;
 
@@ -662,18 +864,20 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
 
       // Armor location tooltip data
       const locFullNames = { Head: 'Head', Torso: 'Torso', lArm: 'Left Arm', rArm: 'Right Arm', lLeg: 'Left Leg', rLeg: 'Right Leg' };
-      // Body-armor pass excludes shields and options — shields layer across
-      // every location below, options layer through their parent armor.
-      const equippedArmor = this.actor.items.filter(i =>
-        i.type === "armor"
-        && i.system.equipped
-        && i.system.armorType !== "shield"
-        && i.system.armorType !== "option"
-      );
-      const equippedCyberarmor = this.actor.items.filter(i => i.type === "cyberware" && i.system.isArmor && i.system.equipped);
-      const equippedShields = this.actor.items.filter(i =>
-        i.type === "armor" && i.system.equipped && i.system.armorType === "shield"
-      );
+      // Single pass over actor.itemTypes.armor (Foundry's free per-type cache)
+      // — splits equipped armor into body / shield buckets and skips options.
+      // Shields layer across every location; options layer through their parent armor.
+      const equippedArmor = [];
+      const equippedShields = [];
+      for (const a of this.actor.itemTypes.armor) {
+        if (!a.system.equipped) continue;
+        const t = a.system.armorType;
+        if (t === "option") continue;
+        if (t === "shield") equippedShields.push(a);
+        else equippedArmor.push(a);
+      }
+      const equippedCyberarmor = this.actor.itemTypes.cyberware
+        .filter(i => i.system.isArmor && i.system.equipped);
       const activeCover = system.activeCover;
 
       for (const loc of ['Head', 'Torso', 'lArm', 'rArm', 'lLeg', 'rLeg']) {
@@ -736,9 +940,8 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
     this._buildNetwareDisplay(sheetData);
 
     // Interface skill
-    const allSkills = this.actor.items.filter(i => i.type === "skill");
     const interfaceName = game.i18n.localize("CYBERPUNK.SkillInterface");
-    let interfaceItem = allSkills.find(i => i.name === interfaceName);
+    let interfaceItem = this.actor.itemTypes.skill.find(i => i.name === interfaceName);
 
     let interfaceValue = 0;
     let interfaceItemId = null;
@@ -916,7 +1119,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   _buildSkillDisplay(sheetData, roleItem = null) {
-    const skills = this.actor.items.filter(i => i.type === "skill");
+    const skills = this.actor.itemTypes.skill;
 
     // Stat label mapping
     const statLabels = {
@@ -947,10 +1150,8 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
     // Virtual skills: skill bonuses on equipped chipware that target a skill
     // the character doesn't own. Display the chip-granted value through the
     // same resolver as everything else so additive boosters can layer on top.
-    const equippedChipware = this.actor.items.contents.filter(i =>
-      i.type === "cyberware" &&
-      i.system.cyberwareType === "chipware" &&
-      i.system.equipped
+    const equippedChipware = this.actor.itemTypes.cyberware.filter(i =>
+      i.system.cyberwareType === "chipware" && i.system.equipped
     );
     const seenVirtual = new Set();
     const virtualSkillsData = [];
@@ -1083,10 +1284,10 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   async _syncCombatSense() {
-    const combatSenseLevel =
-      this.actor.items.find(item => item.type === 'skill' && item.name.includes('Combat'))?.system.level
-      ?? this.actor.items.find(item => item.type === 'skill' && item.name.includes('Боя'))?.system.level
-      ?? 0;
+    const combatSense = this.actor.itemTypes.skill.find(
+      i => i.name.includes('Combat') || i.name.includes('Боя')
+    );
+    const combatSenseLevel = combatSense?.system.level ?? 0;
     await this.actor.update({ "system.CombatSenseMod": Number(combatSenseLevel) });
   }
 
@@ -1659,7 +1860,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       const attached = attachmentMap.get(item.id) || [];
       for (const opt of attached) {
         const optSys = opt.system;
-        preparedItem.usedSlots += (optSys.takesSpace || 1);
+        preparedItem.usedSlots += (optSys.takesSpace ?? 1);
         preparedItem.attachedOptions.push({
           id: opt.id,
           img: opt.img,
@@ -1672,7 +1873,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
           humanityLoss: optSys.humanityLoss || 0,
           humanityCost: optSys.humanityCost || '',
           humanityRolled: optSys.humanityRolled || false,
-          takesSpace: optSys.takesSpace || 1,
+          takesSpace: optSys.takesSpace ?? 1,
           equipped: optSys.equipped ?? true
         });
       }
@@ -1711,7 +1912,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
         humanityLoss: optSys.humanityLoss || 0,
         humanityCost: optSys.humanityCost || '',
         humanityRolled: optSys.humanityRolled || false,
-        takesSpace: optSys.takesSpace || 1,
+        takesSpace: optSys.takesSpace ?? 1,
         equipped: optSys.equipped ?? true
       };
 
@@ -1800,14 +2001,14 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
 
       const preparedOptions = attached.map(opt => {
         const optSys = opt.system;
-        usedSlots += (optSys.takesSpace || 1);
+        usedSlots += (optSys.takesSpace ?? 1);
         const hasStateSwitch = optSys.netwareType === 'program' &&
           (optSys.programSubtype === 'booster' || optSys.programSubtype === 'defender');
         return {
           id: opt.id, img: opt.img, name: opt.name,
           context: buildContext(opt),
           price: optSys.cost || 0,
-          takesSpace: optSys.takesSpace || 1,
+          takesSpace: optSys.takesSpace ?? 1,
           parentId: deck.id,
           hasStateSwitch,
           programState: optSys.programState || 'inactive',
@@ -1835,7 +2036,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
         id: opt.id, img: opt.img, name: opt.name,
         context: buildContext(opt),
         price: optSys.cost || 0,
-        takesSpace: optSys.takesSpace || 1,
+        takesSpace: optSys.takesSpace ?? 1,
         hasStateSwitch,
         programState: optSys.programState || 'inactive',
       });
@@ -1887,121 +2088,64 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(context, options) {
+    super._onRender(context, options);
+
+    // jQuery wrapper of root for the V1-style listener block below.
+    // Active-tab classes are baked into the template via {{activeTab}}, and
+    // scroll positions are auto-preserved by V2 via PARTS.body.scrollable —
+    // so no manual class toggle / scroll restore needed here.
+    const html = $(this.element);
+
+    // ----- Re-apply minimized styling after re-render -----
+    if (this._isMinimized) {
+      const root = this.element;
+      const tabSelector = root.querySelector('.tab-selector');
+      const sheetContent = root.querySelector('.sheet-content');
+      const sheetResize = root.querySelector('.sheet-resize');
+      const sheetFrame = root.querySelector('.sheet-frame');
+      const characterSheet = root.querySelector('.character-sheet');
+      if (tabSelector) tabSelector.style.display = 'none';
+      if (sheetContent) sheetContent.style.display = 'none';
+      if (sheetResize) sheetResize.style.display = 'none';
+      if (sheetFrame) {
+        sheetFrame.style.minHeight = '0';
+        sheetFrame.style.width = '400px';
+        sheetFrame.style.height = '46px';
+      }
+      if (characterSheet) {
+        characterSheet.style.width = '400px';
+        characterSheet.style.minHeight = '46px';
+      }
+    }
+
+    // (V2 ActorSheetV2 auto-binds DragDrop from DEFAULT_OPTIONS.dragDrop —
+    //  see _onDropItem below for our overridden drop dispatch.)
 
     // ----- Custom Window Dragging -----
     // Set up draggable for our custom header since we're hiding Foundry's default window chrome
-    // Must recreate each render since DOM elements change
-    const sheetHeader = html[0].querySelector('.sheet-header');
+    const sheetHeader = this.element.querySelector('.sheet-header');
     if (sheetHeader) {
-      // Get the app element (parent of html content)
-      const appElement = html.closest('.app');
-      if (appElement.length) {
-        // Create new Draggable instance each time (DOM elements are new after re-render)
-        this._customDraggable = new foundry.applications.ux.Draggable.implementation(this, appElement, sheetHeader, this.options.resizable);
+      const appElement = this.element; // V2: the root form IS the app element
+      // Create new Draggable instance each time (DOM elements are new after re-render)
+      this._customDraggable = new foundry.applications.ux.Draggable.implementation(this, appElement, sheetHeader, this.options.window?.resizable);
 
-        // Hook up our custom resize handle
-        const resizeHandle = html[0].querySelector('.sheet-resize');
-        if (resizeHandle) {
-          resizeHandle.addEventListener('mousedown', (ev) => {
-            ev.preventDefault();
-            this._customDraggable._onResizeMouseDown(ev);
-          });
-        }
+      // Hook up our custom resize handle
+      const resizeHandle = this.element.querySelector('.sheet-resize');
+      if (resizeHandle) {
+        resizeHandle.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+          this._customDraggable._onResizeMouseDown(ev);
+        });
       }
 
-      // Double-click header to minimize/maximize
+      // Double-click header to minimize/maximize — delegates to the
+      // overridden minimize()/maximize() methods so the V14 placement flow
+      // (which calls app.minimize() on every visible app) hits the same path.
       sheetHeader.addEventListener('dblclick', (ev) => {
-        // Don't minimize if clicking on a control button
         if (ev.target.closest('.lock-toggle, .header-control')) return;
-
-        const sheetFrame = html[0].querySelector('.sheet-frame');
-        const characterSheet = html[0].querySelector('.character-sheet');
-        const appElement = html.closest('.app')[0];
-        const tabSelector = html[0].querySelector('.tab-selector');
-        const sheetContent = html[0].querySelector('.sheet-content');
-        const sheetResize = html[0].querySelector('.sheet-resize');
-
-        if (this._isMinimized) {
-          // Maximize - restore original dimensions
-          // Enable transitions on both elements
-          sheetFrame.style.transition = 'width 250ms ease, height 250ms ease';
-          appElement.style.transition = 'width 250ms ease, height 250ms ease';
-
-          // Animate back to original size
-          sheetFrame.style.width = this._originalWidth + 'px';
-          sheetFrame.style.height = this._originalHeight + 'px';
-          appElement.style.width = this._originalFoundryWidth + 'px';
-          appElement.style.height = this._originalFoundryHeight + 'px';
-
-          // Clear character-sheet constraints so content can expand
-          characterSheet.style.width = '';
-          characterSheet.style.minHeight = '';
-
-          // Update Foundry position and clear inline styles after animation
-          setTimeout(() => {
-            sheetFrame.style.transition = '';
-            sheetFrame.style.width = '';
-            sheetFrame.style.height = '';
-            sheetFrame.style.minHeight = '';
-            appElement.style.transition = '';
-            appElement.style.width = '';
-            appElement.style.height = '';
-            appElement.style.minHeight = '';
-            tabSelector.style.display = '';
-            sheetContent.style.display = '';
-            sheetResize.style.display = '';
-
-            // Restore Foundry position
-            this.setPosition({
-              width: this._originalFoundryWidth,
-              height: this._originalFoundryHeight
-            });
-          }, 250);
-
-          this._isMinimized = false;
-        } else {
-          // Minimize - save current dimensions
-          this._originalWidth = sheetFrame.offsetWidth;
-          this._originalHeight = sheetFrame.offsetHeight;
-          this._originalFoundryWidth = this.position.width;
-          this._originalFoundryHeight = this.position.height;
-
-          // Hide content
-          tabSelector.style.display = 'none';
-          sheetContent.style.display = 'none';
-          sheetResize.style.display = 'none';
-
-          // Allow shrinking by removing min-height constraints
-          sheetFrame.style.minHeight = '0';
-          characterSheet.style.minHeight = '0';
-          appElement.style.minHeight = '0';
-
-          const minWidth = 400;
-
-          // Enable transitions on both elements
-          sheetFrame.style.transition = 'width 250ms ease, height 250ms ease';
-          appElement.style.transition = 'width 250ms ease, height 250ms ease';
-
-          // Animate to minimized size
-          sheetFrame.style.width = minWidth + 'px';
-          sheetFrame.style.height = '46px';
-          appElement.style.width = minWidth + 'px';
-          appElement.style.height = '46px';
-
-          setTimeout(() => {
-            // After animation, set final constraints
-            characterSheet.style.width = minWidth + 'px';
-            characterSheet.style.minHeight = '46px';
-
-            this.setPosition({ width: minWidth, height: 46 });
-            sheetFrame.style.transition = '';
-            appElement.style.transition = '';
-          }, 250);
-
-          this._isMinimized = true;
-        }
+        if (this._isMinimized) this.maximize();
+        else this.minimize();
       });
     }
 
@@ -2013,54 +2157,17 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
     function deleteItemDialog(ev) {
       ev.stopPropagation();
       let item = getEventItem(this, ev);
-      let confirmDialog = new Dialog({
-        title: localize("ItemDeleteConfirmTitle"),
+      foundry.applications.api.DialogV2.confirm({
+        window: { title: localize("ItemDeleteConfirmTitle") },
         content: `<p>${localize("ItemDeleteConfirmText", {itemName: item.name})}</p>`,
-        buttons: {
-          yes: {
-            label: localize("Yes"),
-            callback: () => item.delete()
-          },
-          no: { label: localize("No") },
-        },
-        default:"no"
+        yes: { label: localize("Yes"), callback: () => item.delete() },
+        no:  { label: localize("No"), default: true }
       });
-      confirmDialog.render(true);
     }
 
     // ----- Header Controls -----
-
-    // Lock/Unlock toggle
-    html.find('.lock-toggle').click(ev => {
-      ev.preventDefault();
-      this.toggleLock();
-    });
-
-    // Copy UUID
-    html.find('[data-action="copyUuid"]').click(ev => {
-      ev.preventDefault();
-      const uuid = this.actor.uuid;
-      game.clipboard.copyPlainText(uuid);
-      ui.notifications.info(`Copied UUID: ${uuid}`);
-    });
-
-    // Configure Sheet
-    html.find('[data-action="configureSheet"]').click(ev => {
-      ev.preventDefault();
-      this._onConfigureSheet(ev);
-    });
-
-    // Configure Token
-    html.find('[data-action="configureToken"]').click(ev => {
-      ev.preventDefault();
-      this._onConfigureToken(ev);
-    });
-
-    // Close Sheet
-    html.find('[data-action="closeSheet"]').click(ev => {
-      ev.preventDefault();
-      this.close();
-    });
+    // (V2 action delegation handles lock-toggle / copyUuid / configureSheet /
+    //  configureToken / closeSheet via DEFAULT_OPTIONS.actions — no manual binds.)
 
     // Add Item floating button (Gear & Cyberware tabs)
     html.find('.add-item-fab').click(ev => {
@@ -2074,23 +2181,18 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
     html.find('.portrait-frame').click(ev => {
       ev.preventDefault();
       if (this._isLocked) {
-        // Show full-screen image popup
-        new ImagePopout(this.actor.img, {
-          title: this.actor.name,
+        new foundry.applications.apps.ImagePopout({
+          src: this.actor.img,
+          window: { title: this.actor.name },
           uuid: this.actor.uuid
-        }).render(true);
+        }).render({ force: true });
       } else {
-        // Open FilePicker to change image
-        const fp = new FilePicker({
+        new foundry.applications.apps.FilePicker.implementation({
           type: "image",
           current: this.actor.img,
-          callback: (path) => {
-            this.actor.update({ img: path });
-          },
-          top: this.position.top + 40,
-          left: this.position.left + 10
-        });
-        fp.render(true);
+          callback: (path) => { this.actor.update({ img: path }); },
+          position: { top: this.position.top + 40, left: this.position.left + 10 }
+        }).render({ force: true });
       }
     });
 
@@ -2131,7 +2233,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
     });
 
     // If not editable, do nothing further
-    if (!this.options.editable) return;
+    if (!this.isEditable) return;
 
     // ----- Existing Listeners (preserved from original) -----
 
@@ -2367,8 +2469,10 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       toggleClear();
       this._restoreSkillCaret = ev.currentTarget.selectionStart ?? val.length;
       foundry.utils.setProperty(this.actor.system, "transient.skillFilter", val);
+      // Debounce render so fast typing doesn't queue one render per keystroke
+      // (each re-runs _prepareContext + rebuilds the full skill DOM).
       clearTimeout(searchTypingTimer);
-      searchTypingTimer = setTimeout(() => this.render(false), 120);
+      searchTypingTimer = setTimeout(() => this.render(false), 300);
     });
 
     html.on('pointerdown mousedown', '[data-action="clear-skill-search"]', (ev) => {
@@ -2509,21 +2613,18 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       const skill = this.actor.items.get(skillId);
       if (!skill) return;
 
-      new Dialog({
-        title: localize("ItemDeleteConfirmTitle"),
+      foundry.applications.api.DialogV2.confirm({
+        window: { title: localize("ItemDeleteConfirmTitle") },
         content: `<p>${localize("ItemDeleteConfirmText", {itemName: skill.name})}</p>`,
-        buttons: {
-          yes: {
-            label: localize("Yes"),
-            callback: async () => {
-              await skill.delete();
-              await this._syncCombatSense();
-            }
-          },
-          no: { label: localize("No") }
+        yes: {
+          label: localize("Yes"),
+          callback: async () => {
+            await skill.delete();
+            await this._syncCombatSense();
+          }
         },
-        default: "no"
-      }).render(true);
+        no: { label: localize("No"), default: true }
+      });
     });
 
     // Hover tooltips (follow cursor)
@@ -2956,9 +3057,9 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
         // Validate: check available slots
         const usedSlots = this.actor.items
           .filter(i => i.type === 'cyberware' && i.getFlag('cyberpunk', 'attachedTo') === baseItem.id)
-          .reduce((sum, i) => sum + (i.system.takesSpace || 1), 0);
+          .reduce((sum, i) => sum + (i.system.takesSpace ?? 1), 0);
         const availableSlots = baseItem.system.hasSlots || 0;
-        const neededSlots = optionItem.system.takesSpace || 1;
+        const neededSlots = optionItem.system.takesSpace ?? 1;
 
         if (usedSlots + neededSlots > availableSlots) {
           ui.notifications.warn(localize("NotEnoughSlots", { available: availableSlots - usedSlots, needed: neededSlots }));
@@ -3273,9 +3374,9 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
         // Validate: check available slots
         const usedSlots = this.actor.items
           .filter(i => i.type === 'netware' && i.getFlag('cyberpunk', 'attachedTo') === deckItem.id)
-          .reduce((sum, i) => sum + (i.system.takesSpace || 1), 0);
+          .reduce((sum, i) => sum + (i.system.takesSpace ?? 1), 0);
         const availableSlots = deckItem.system.slots || 0;
-        const neededSlots = optionItem.system.takesSpace || 1;
+        const neededSlots = optionItem.system.takesSpace ?? 1;
 
         if (usedSlots + neededSlots > availableSlots) {
           ui.notifications.warn(`Not enough slots. Available: ${availableSlots - usedSlots}, needed: ${neededSlots}.`);
@@ -3324,7 +3425,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       ev.preventDefault();
       const currentPath = this.actor.system.icon || "";
 
-      const fp = new FilePicker({
+      new foundry.applications.apps.FilePicker.implementation({
         type: "image",
         current: currentPath,
         callback: (path) => {
@@ -3332,11 +3433,8 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
           html.find(".netrun-icon-frame img").attr("src", path);
           html.find('input[name="system.icon"]').val(path);
         },
-        top: this.position.top + 40,
-        left: this.position.left + 10
-      });
-
-      fp.render(true);
+        position: { top: this.position.top + 40, left: this.position.left + 10 }
+      }).render({ force: true });
     });
 
     tabBeautifying(html[0]);
@@ -3473,13 +3571,11 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   /**
-   * Overridden Drag&Drop processing
+   * Overridden Drag&Drop processing.
+   * V2 signature: (event, item) — item is already resolved to an Item document.
    */
-  async _onDropItem(event, data) {
+  async _onDropItem(event, item) {
     event.preventDefault();
-
-    // Get dropped item first to check its type
-    const item = await Item.implementation.fromDropData(data);
     if (!item) return;
 
     // Cross-character transfer: gear items (weapon / armor / cyberware / netware /
@@ -3641,10 +3737,7 @@ export class CyberpunkCharacterSheet extends foundry.appv1.sheets.ActorSheet {
       return this.actor.createEmbeddedDocuments("Item", [newData]);
     }
 
-    const dropTarget = event.target.closest("[data-drop-target]");
-    if (!dropTarget) return super._onDropItem(event, data);
-
-    return super._onDropItem(event, data);
+    return super._onDropItem(event, item);
   }
 
   /* -------------------------------------------- */

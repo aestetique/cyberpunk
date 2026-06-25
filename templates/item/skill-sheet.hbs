@@ -1,7 +1,7 @@
-<form class="item-card skill-card {{#unless isLocked}}unlocked{{/unless}}" autocomplete="off">
+<div class="item-card skill-card {{#unless isLocked}}unlocked{{/unless}}">
   {{!-- Header (38px) --}}
   <header class="sheet-header">
-    <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+    <button class="lock-toggle" type="button" data-action="lockToggle" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
       <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
     </button>
 
@@ -20,7 +20,7 @@
     {{!-- Item Trivia (460×80px) --}}
     <div class="item-trivia">
       {{!-- Portrait (80×80px) --}}
-      <div class="item-portrait">
+      <div class="item-portrait" data-action="portraitClick">
         <img src="{{item.img}}" alt="{{item.name}}">
       </div>
 
@@ -38,14 +38,14 @@
 
     {{!-- Tabs Line --}}
     <div class="tabs-line">
-      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-tab="description">
+      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-action="tabSwitch" data-tab="description">
         <span class="tab-text">{{localize "CYBERPUNK.Description"}}</span>
       </a>
-      <a class="tab-header {{#if (eq activeTab 'details')}}active{{/if}}" data-tab="details">
+      <a class="tab-header {{#if (eq activeTab 'details')}}active{{/if}}" data-action="tabSwitch" data-tab="details">
         <span class="tab-text">{{localize "CYBERPUNK.Details"}}</span>
       </a>
       {{#if isMartial}}
-        <a class="tab-header {{#if (eq activeTab 'martial')}}active{{/if}}" data-tab="martial">
+        <a class="tab-header {{#if (eq activeTab 'martial')}}active{{/if}}" data-action="tabSwitch" data-tab="martial">
           <span class="tab-text">{{localize "CYBERPUNK.Martial"}}</span>
         </a>
       {{/if}}
@@ -65,4 +65,4 @@
       {{/if}}
     </div>
   </div>
-</form>
+</div>

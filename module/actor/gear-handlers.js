@@ -16,28 +16,28 @@ function weaponTypeOf(item) {
  * Show the standard "out of charges/ammo" mini-dialog.
  */
 function showEmptyChargesDialog(item, messageKey = "OutOfCharges") {
-    const dialog = new Dialog({
-        title: item.name,
+    const dialog = new foundry.applications.api.DialogV2({
+        window: { title: item.name },
+        classes: ["cyberpunk", "ranged-attack-dialog"],
+        position: { width: 300 },
         content: `
             <div class="ranged-attack-wrapper">
               <header class="reload-header">
                 <span class="reload-title">${item.name}</span>
-                <a class="header-control close"><i class="fas fa-times"></i></a>
+                <a class="header-control close" data-empty-dialog-close><i class="fas fa-times"></i></a>
               </header>
               <div class="reload-empty">${game.i18n.localize("CYBERPUNK." + messageKey)}</div>
             </div>
         `,
-        buttons: {},
-        render: html => {
-            html.find('.header-control.close').click(() => dialog.close());
-            const header = html.find('.reload-header')[0];
-            if (header) new foundry.applications.ux.Draggable.implementation(dialog, html, header, false);
-        }
-    }, {
-        width: 300,
-        classes: ["cyberpunk", "ranged-attack-dialog"]
+        buttons: []
     });
-    dialog.render(true);
+    dialog.render({ force: true }).then(() => {
+        const root = dialog.element;
+        if (!root) return;
+        root.querySelector('[data-empty-dialog-close]')?.addEventListener('click', () => dialog.close({ animate: false }));
+        const header = root.querySelector('.reload-header');
+        if (header) new foundry.applications.ux.Draggable.implementation(dialog, root, header, false);
+    });
 }
 
 /**
@@ -61,18 +61,12 @@ export function bindWeaponAndOrdnanceHandlers(html, sheet) {
         const item = actor.items.get(itemId);
         if (!item) return;
 
-        new Dialog({
-            title: localize("ItemDeleteConfirmTitle"),
+        foundry.applications.api.DialogV2.confirm({
+            window: { title: localize("ItemDeleteConfirmTitle") },
             content: `<p>${localize("ItemDeleteConfirmText", { itemName: item.name })}</p>`,
-            buttons: {
-                yes: {
-                    label: localize("Yes"),
-                    callback: () => item.delete()
-                },
-                no: { label: localize("No") }
-            },
-            default: "no"
-        }).render(true);
+            yes: { label: localize("Yes"), callback: () => item.delete() },
+            no:  { label: localize("No"), default: true }
+        });
     });
 
     // Reload — refill from attached ammo pile (no dialog).

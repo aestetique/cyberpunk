@@ -1,0 +1,154 @@
+// ============================================
+// Drone Sheet — drone-specific rules
+// ============================================
+// Width / frame / sidebar / sheet-sections layout is shared with the shop sheet
+// and lives in _character-sheet.scss under the combined `.drone-sheet, .shop-sheet`
+// selector. This file owns everything that only applies to drones: structure
+// zones, the disable-zone button, and the drone-skills block.
+
+// Drone Shape selector — mirrors .role-display visually so it sits in the same
+// slot where the character sheet shows the role name.
+.shape-display {
+  height: 22px;
+  padding: 2px 4px 2px 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .shape-prefix,
+  .shape-label,
+  .shape-select {
+    font-family: var(--font-refinery);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 16px;
+    color: var(--chat-text);
+    letter-spacing: 0.05em;
+  }
+
+  .shape-prefix {
+    color: var(--sheet-gilt);
+  }
+
+  .shape-select {
+    // min-width sized to the longest option ("6 Hit Locations") so the value
+    // doesn't get truncated to "6 Hit Lo…" in unlocked mode.
+    min-width: 160px;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    height: 18px;
+    cursor: pointer;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    option {
+      background: var(--chat-back);
+      color: var(--chat-text);
+    }
+  }
+}
+
+.character-sheet.drone-sheet {
+  // Keep zone rows at their full 48px height even when the sheet is shorter than content
+  // (the gear-content scrolls instead of squeezing rows). Tighter right-padding
+  // (0 instead of 11px) brings the disable button flush to the row's right edge.
+  .gear-row.zone-row {
+    flex-shrink: 0;
+    padding: 0 0 0 8px;
+  }
+
+  // Uniform zone-field column — same width / margins for SP, SDP, and Disables-at,
+  // so the three trios line up vertically across rows.
+  .zone-field {
+    width: 90px;
+    align-items: center;     // center the field-top horizontally inside the column
+
+    // Lock the field-top row to a fixed height matching the gear-name's baseline,
+    // regardless of whether it contains a span (locked) or an input (unlocked).
+    // Stops the field-bottom label (SP / SDP / Disables at) from jumping vertically
+    // when toggling lock state, and keeps the top row aligned with "Hit on X" subtext.
+    .field-top {
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+  }
+
+  // Disabled-state visual on a zone row — greyed icon + dimmed text.
+  .gear-row.zone-row.disabled {
+    .gear-icon img { filter: grayscale(1) brightness(0.6); }
+    .gear-name,
+    .gear-context,
+    .field-top,
+    .field-bottom { color: #444856; }
+  }
+
+  // Force-clickable disable button regardless of the row's .disabled class
+  // (defends against any inherited pointer-events: none on the row).
+  .gear-action-btn.zone-disable-btn {
+    pointer-events: auto;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+
+    img { pointer-events: none; }
+  }
+
+  // Marker class on the .field-top when it wraps the "current / max" pair.
+  // Sizing/alignment already comes from the .field-top base rule above.
+  .zone-paired-row {
+    .zone-paired-sep {
+      width: 20px;
+      text-align: center;
+      font-family: var(--font-blender);
+      font-weight: 300;
+      font-size: 16px;
+      line-height: 16px;
+      color: #808090;
+    }
+  }
+
+  // Drone Skills block — stripped two-column list (name + total only).
+  .drone-skills-block {
+    .drone-skills-content {
+      display: flex;
+      column-gap: 16px;
+      padding: 0 8px;
+    }
+    .drone-skills-column {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .drone-skill-row {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 4px;
+      border-bottom: 1px dashed #26282F;
+
+      .skill-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+    }
+  }
+}

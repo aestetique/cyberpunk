@@ -9,8 +9,8 @@ import { clamp } from "../utils.js";
  *     .number-input-display > input.number-input-value
  *     button.number-input-plus-btn > img
  *
- * Usage in a dialog's activateListeners(html):
- *   this._difficultyInput = new NumberInput(html, '.difficulty-input-wrap', {
+ * Usage in a dialog's _onRender(context, options):
+ *   this._difficultyInput = new NumberInput($(this.element), '.difficulty-input-wrap', {
  *     min: 10, max: 40, step: 5, value: 15,
  *     onChange: (v) => { this._difficulty = v; }
  *   });

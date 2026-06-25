@@ -1,7 +1,7 @@
 <div class="move-items-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{loc titleKey}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{!-- Quantity section bar --}}
@@ -12,19 +12,19 @@
 
   {{!-- Quantity stepper (luck-style) --}}
   <div class="luck-controls">
-    <button type="button" class="luck-btn qty-minus-btn{{#unless canDecrease}} disabled{{/unless}}">
+    <button type="button" class="luck-btn qty-minus-btn{{#unless canDecrease}} disabled{{/unless}}" data-action="qtyMinus">
       <img src="systems/cyberpunk/img/chat/{{#if canDecrease}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <input type="number" class="qty-input luck-value" value="{{quantity}}" min="1" max="{{maxQuantity}}">
     </div>
-    <button type="button" class="luck-btn qty-plus-btn{{#unless canIncrease}} disabled{{/unless}}">
+    <button type="button" class="luck-btn qty-plus-btn{{#unless canIncrease}} disabled{{/unless}}" data-action="qtyPlus">
       <img src="systems/cyberpunk/img/chat/{{#if canIncrease}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
 
   {{!-- Move button --}}
-  <button type="button" class="reload-apply-btn move-btn">
+  <button type="button" class="reload-apply-btn move-btn" data-action="confirm">
     {{loc buttonKey}}
   </button>
 </div>

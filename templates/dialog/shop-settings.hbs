@@ -1,7 +1,7 @@
 <div class="shop-settings-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{localize "CYBERPUNK.ShopSettings"}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{!-- Open For — single row of two tab toggles (Buy Tab / Sell Tab) --}}
@@ -10,7 +10,7 @@
   </div>
   <div class="conditions-grid">
     {{#each tabs}}
-      <button type="button" class="condition-btn tab-toggle{{#if on}} selected{{/if}}" data-key="{{key}}">
+      <button type="button" class="condition-btn tab-toggle{{#if on}} selected{{/if}}" data-action="toggleTab" data-key="{{key}}">
         {{label}}
       </button>
     {{/each}}
@@ -21,13 +21,13 @@
     <span class="fire-mode-label">{{localize "CYBERPUNK.BuyTabPricesPct"}}</span>
   </div>
   <div class="luck-controls">
-    <button type="button" class="luck-btn pct-minus-btn{{#unless buyCanDecrease}} disabled{{/unless}}" data-target="buy">
+    <button type="button" class="luck-btn pct-minus-btn{{#unless buyCanDecrease}} disabled{{/unless}}" data-action="pctMinus" data-target="buy">
       <img src="systems/cyberpunk/img/chat/{{#if buyCanDecrease}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <input type="number" class="pct-input luck-value" data-target="buy" value="{{buyPct}}" min="1" max="200">
     </div>
-    <button type="button" class="luck-btn pct-plus-btn{{#unless buyCanIncrease}} disabled{{/unless}}" data-target="buy">
+    <button type="button" class="luck-btn pct-plus-btn{{#unless buyCanIncrease}} disabled{{/unless}}" data-action="pctPlus" data-target="buy">
       <img src="systems/cyberpunk/img/chat/{{#if buyCanIncrease}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
@@ -37,13 +37,13 @@
     <span class="fire-mode-label">{{localize "CYBERPUNK.SellTabPricesPct"}}</span>
   </div>
   <div class="luck-controls">
-    <button type="button" class="luck-btn pct-minus-btn{{#unless sellCanDecrease}} disabled{{/unless}}" data-target="sell">
+    <button type="button" class="luck-btn pct-minus-btn{{#unless sellCanDecrease}} disabled{{/unless}}" data-action="pctMinus" data-target="sell">
       <img src="systems/cyberpunk/img/chat/{{#if sellCanDecrease}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <input type="number" class="pct-input luck-value" data-target="sell" value="{{sellPct}}" min="1" max="200">
     </div>
-    <button type="button" class="luck-btn pct-plus-btn{{#unless sellCanIncrease}} disabled{{/unless}}" data-target="sell">
+    <button type="button" class="luck-btn pct-plus-btn{{#unless sellCanIncrease}} disabled{{/unless}}" data-action="pctPlus" data-target="sell">
       <img src="systems/cyberpunk/img/chat/{{#if sellCanIncrease}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
@@ -55,7 +55,7 @@
   {{#each catRows}}
     <div class="conditions-grid">
       {{#each this}}
-        <button type="button" class="condition-btn category-toggle{{#if on}} selected{{/if}}" data-key="{{key}}">
+        <button type="button" class="condition-btn category-toggle{{#if on}} selected{{/if}}" data-action="toggleCategory" data-key="{{key}}">
           {{label}}
         </button>
       {{/each}}

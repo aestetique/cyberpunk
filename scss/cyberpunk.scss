@@ -315,14 +315,17 @@ details[open] summary ~ * {
 }
 
 @import "_fields";
-@import "interactivityHints";
-@import "statsrow";
-@import "woundtracker";
+@import "interactivity-hints";
+@import "stats-row";
+@import "wound-tracker";
 @import "skills";
-@import "itemSheets";
+@import "item-sheets";
 @import "gear";
 @import "cards";
+@import "tabs";
 @import "character-sheet";
+@import "drone-sheet";
+@import "shop-sheet";
 @import "item-card-base";
 @import "role-sheet";
 @import "skill-sheet";

@@ -349,8 +349,6 @@ export class CyberpunkItem extends Item {
   _getMinBodyPenalty() {
     const minBody = this.weaponData.minimumBody || 0;
     if (!minBody || !this.actor) return { accuracyPenalty: 0, rofMultiplier: 1 };
-    // Drones have no BODY stat — they're mechanical weapon mounts with no recoil mismatch.
-    if (this.actor.type === "drone") return { accuracyPenalty: 0, rofMultiplier: 1 };
     const body = this.actor.system.stats?.bt?.total || 0;
     const deficit = minBody - body;
     if (deficit <= 0) return { accuracyPenalty: 0, rofMultiplier: 1 };
@@ -1022,9 +1020,20 @@ export class CyberpunkItem extends Item {
           const dx = Math.cos(angle) * scatterDistance * pxPerMeter;
           const dy = Math.sin(angle) * scatterDistance * pxPerMeter;
 
-          const templateDoc = canvas.scene.templates.get(attackMods.templateId);
-          if (templateDoc) {
-              await templateDoc.update({ x: templateDoc.x + dx, y: templateDoc.y + dy });
+          // V14 stores templates as Regions; the position is on shapes[0],
+          // not on the document. Update the shape array. V13 still uses the
+          // old MeasuredTemplate document with top-level x/y.
+          const region = canvas.scene.regions?.get(attackMods.templateId);
+          if (region) {
+              const shape = region.shapes[0];
+              const newShapes = region.toObject().shapes;
+              newShapes[0] = { ...newShapes[0], x: (shape.x ?? 0) + dx, y: (shape.y ?? 0) + dy };
+              await region.update({ shapes: newShapes });
+          } else {
+              const templateDoc = canvas.scene.templates?.get(attackMods.templateId);
+              if (templateDoc) {
+                  await templateDoc.update({ x: templateDoc.x + dx, y: templateDoc.y + dy });
+              }
           }
       }
 
@@ -1117,16 +1126,41 @@ export class CyberpunkItem extends Item {
    */
   async _spawnSmokeDarkness(templateId) {
       if (!canvas?.scene || !templateId) return;
-      const tmpl = canvas.scene.templates.get(templateId);
-      if (!tmpl) return;
-      // Only circle templates have a single "radius" that translates cleanly
-      // into an ambient-light radius. Cone/beam smoke is a future enhancement.
-      if (tmpl.t !== "circle") return;
-      const radius = Number(tmpl.distance) || 0;
-      if (radius <= 0) return;
-      const lightData = {
-          x: tmpl.x,
-          y: tmpl.y,
+
+      // Resolve circle position + radius (in grid units) from either V14
+      // Regions or V13 MeasuredTemplates.
+      let x, y, radius;
+
+      // V14: read the Region's shape directly. We don't go through
+      // canvas.scene.templates because V14's synthetic MeasuredTemplate
+      // compat layer (BaseRegion → _fromRegion) computes `distance` against
+      // BaseScene.defaultGrid (hardcoded size:100) instead of the actual
+      // scene grid — so `tmpl.distance` is off when scene.grid.size != 100.
+      const region = canvas.scene.regions?.get(templateId);
+      if (region) {
+          const shape = region.shapes[0];
+          if (shape?.type !== "circle") return;
+          const grid = canvas.scene.grid;
+          const distancePx = grid.size / grid.distance; // pixels per grid unit
+          x = shape.x;
+          y = shape.y;
+          radius = Number(shape.radius) / distancePx;
+      } else {
+          const tmpl = canvas.scene.templates?.get(templateId);
+          if (!tmpl) return;
+          // Only circle templates have a single "radius" that translates
+          // cleanly into an ambient-light radius. Cone/beam smoke is a
+          // future enhancement.
+          if (tmpl.t !== "circle") return;
+          x = tmpl.x;
+          y = tmpl.y;
+          radius = Number(tmpl.distance) || 0;
+      }
+
+      if (!radius || radius <= 0) return;
+
+      await canvas.scene.createEmbeddedDocuments("AmbientLight", [{
+          x, y,
           rotation: 0,
           walls: false,
           config: {
@@ -1137,8 +1171,7 @@ export class CyberpunkItem extends Item {
               alpha: 0.5,
               animation: { type: "none", speed: 5, intensity: 5 }
           }
-      };
-      await canvas.scene.createEmbeddedDocuments("AmbientLight", [lightData]);
+      }]);
   }
 
   // Back-compat alias — TAH and dialogs may still call _fireOrdnance directly.
@@ -1295,11 +1328,9 @@ export class CyberpunkItem extends Item {
                   break;
           }
       }
-      // Drones have no BT stat (template.json drone.stats only defines int/ref/tech/ma/luck),
-      // so guard the BODY-derived bonus or the access throws and the chat card never posts.
-      const btTotal = this.actor.system.stats?.bt?.total;
+      const btTotal = this.actor.system.stats?.bt?.total ?? 0;
       let damageRoll = await new Roll(damageFormula, {
-          strengthBonus: btTotal !== undefined ? meleeDamageBonus(btTotal) : 0,
+          strengthBonus: meleeDamageBonus(btTotal),
           martialDamageBonus
       }).evaluate();
 

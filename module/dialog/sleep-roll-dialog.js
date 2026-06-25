@@ -1,89 +1,100 @@
 import { localize } from "../utils.js";
 
-// Stay Awake: fatigue makes it harder, stress/insomnia makes it easier
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 const STAY_AWAKE_FATIGUE_PENALTIES = { 2: -1, 3: -2, 4: -4, 5: -8 };
 const STAY_AWAKE_STRESS_BONUSES = { 2: 2, 3: 4, 4: 6 };
-
-// Fall Asleep: stress makes it harder, fatigue makes it easier
 const FALL_ASLEEP_STRESS_PENALTIES = { 2: -2, 3: -4, 4: -6 };
 const FALL_ASLEEP_FATIGUE_BONUSES = { 2: 1, 3: 2, 4: 4, 5: 8 };
 
 /**
  * Sleep Roll Dialog — roll to Stay Awake or Fall Asleep.
- * Stay Awake: 1d10 + INT vs INT DV, fatigue penalties.
- * Fall Asleep: 1d10 + INT vs INT DV, stress penalties (only when Insomnia).
+ * @extends {ApplicationV2}
  */
-export class SleepRollDialog extends Application {
+export class SleepRollDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-  /**
-   * @param {Actor} actor  The owning actor
-   * @param {string} mode  "stayAwake" or "fallAsleep"
-   */
   constructor(actor, mode) {
-    super();
+    super({});
     this.actor = actor;
     this.mode = mode;
-
-    // Condition toggles
-    this._conditions = {
-      prepared: false,
-      distracted: false
-    };
-
-    // Luck spending
+    this._conditions = { prepared: false, distracted: false };
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ??
                           actor.system.stats.luck?.total ?? 0;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "sleep-roll-dialog",
-      classes: ["cyberpunk", "skill-roll-dialog"],
-      template: "systems/cyberpunk/templates/dialog/sleep-roll.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "sleep-roll-dialog",
+    classes: ["cyberpunk", "skill-roll-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:    SleepRollDialog._onCloseDialog,
+      toggleCondition: SleepRollDialog._onToggleCondition,
+      luckPlus:       SleepRollDialog._onLuckPlus,
+      luckMinus:      SleepRollDialog._onLuckMinus,
+      roll:           SleepRollDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/sleep-roll.hbs" }
+  };
+
+  get title() { return this.mode === "stayAwake" ? localize("StayAwake") : localize("FallAsleep"); }
+
+  static _onCloseDialog(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
   }
 
-  /** @override */
-  get title() {
-    return this.mode === "stayAwake" ? localize("StayAwake") : localize("FallAsleep");
+  static _onToggleCondition(event, target) {
+    event?.preventDefault?.();
+    const condition = target?.dataset?.condition;
+    if (!condition) return;
+    this._conditions[condition] = !this._conditions[condition];
+    target.classList.toggle('selected', this._conditions[condition]);
   }
 
-  /**
-   * Get the combined situational modifier based on mode.
-   * Each roll has penalties from one condition and bonuses from the opposite.
-   */
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend < this._availableLuck) {
+      this._luckToSpend++;
+      this._updateLuckDisplay();
+    }
+  }
+
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend > 0) {
+      this._luckToSpend--;
+      this._updateLuckDisplay();
+    }
+  }
+
+  static _onRoll(event, _target) {
+    event?.preventDefault?.();
+    this._executeRoll();
+  }
+
   _getSituationalMod() {
     const fatigueLevel = this.actor.getFatigueLevel();
     const stressLevel = this.actor.getStressLevel();
-
     if (this.mode === "stayAwake") {
-      // Fatigue makes it harder, stress makes it easier
       return (STAY_AWAKE_FATIGUE_PENALTIES[fatigueLevel] || 0) +
              (STAY_AWAKE_STRESS_BONUSES[stressLevel] || 0);
     } else {
-      // Stress makes it harder, fatigue makes it easier
       return (FALL_ASLEEP_STRESS_PENALTIES[stressLevel] || 0) +
              (FALL_ASLEEP_FATIGUE_BONUSES[fatigueLevel] || 0);
     }
   }
 
-  /** @override */
-  getData() {
+  async _prepareContext(_options) {
     const isStayAwake = this.mode === "stayAwake";
-    const title = isStayAwake ? localize("StayAwake") : localize("FallAsleep");
-    const chatIcon = isStayAwake ? "awake" : "sleep";
-    const dv = this.actor.system.stats.int.total;
     return {
-      title,
-      chatIcon,
-      dv,
+      title: isStayAwake ? localize("StayAwake") : localize("FallAsleep"),
+      chatIcon: isStayAwake ? "awake" : "sleep",
+      dv: this.actor.system.stats.int.total,
       conditions: this._conditions,
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
@@ -93,80 +104,35 @@ export class SleepRollDialog extends Application {
     };
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Condition button toggles
-    html.find('.condition-btn').click(ev => {
-      const btn = ev.currentTarget;
-      const condition = btn.dataset.condition;
-      this._conditions[condition] = !this._conditions[condition];
-      btn.classList.toggle('selected', this._conditions[condition]);
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(() => {
-      if (this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(() => {
-      if (this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
-    });
   }
 
-  /**
-   * Update the luck display and button states
-   * @param {jQuery} html - The dialog HTML element
-   */
-  _updateLuckDisplay(html) {
-    html.find('.luck-value').text(this._luckToSpend);
-
+  _updateLuckDisplay() {
+    const luckVal = this.element.querySelector('.luck-value');
+    if (luckVal) luckVal.textContent = this._luckToSpend;
     const minusDisabled = this._luckToSpend <= 0;
     const plusDisabled = this._luckToSpend >= this._availableLuck;
-
-    html.find('.luck-minus-btn').toggleClass('disabled', minusDisabled);
-    html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
-
-    // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src',
+    const minusBtn = this.element.querySelector('.luck-minus-btn');
+    const plusBtn = this.element.querySelector('.luck-plus-btn');
+    minusBtn?.classList.toggle('disabled', minusDisabled);
+    plusBtn?.classList.toggle('disabled', plusDisabled);
+    minusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src',
+    plusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
-  /**
-   * Execute roll with selected options
-   */
   async _executeRoll() {
-    // Calculate condition modifiers
     const conditionMod = (this._conditions.prepared ? 2 : 0) +
                          (this._conditions.distracted ? -2 : 0);
     const situationalMod = this._getSituationalMod();
     const extraMod = conditionMod + this._luckToSpend + situationalMod;
 
-    // Spend luck if any was used
     if (this._luckToSpend > 0) {
       const currentSpent = this.actor.system.stats.luck.spent || 0;
       const currentSpentAt = this.actor.system.stats.luck.spentAt;
@@ -176,9 +142,7 @@ export class SleepRollDialog extends Application {
       });
     }
 
-    this.close();
-
-    // Perform the roll via actor method
+    this.close({ animate: false });
     await this.actor.rollSleepCheck(this.mode, extraMod);
   }
 }

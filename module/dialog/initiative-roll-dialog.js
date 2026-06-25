@@ -1,56 +1,79 @@
 import { localize } from "../utils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Initiative Roll Dialog — select Fast Draw and Luck before rolling initiative.
+ * @extends {ApplicationV2}
  */
-export class InitiativeRollDialog extends Application {
+export class InitiativeRollDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-  /**
-   * @param {Actor} actor        The owning actor
-   * @param {Combatant} combatant The combatant in combat
-   * @param {Combat} combat      The combat encounter
-   * @param {Function} callback  Callback to execute the roll with options
-   */
   constructor(actor, combatant, combat, callback) {
-    super();
+    super({});
     this.actor = actor;
     this.combatant = combatant;
     this.combat = combat;
     this.callback = callback;
-
-    // Condition toggles
     this._fastDraw = false;
-
-    // Luck spending
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ??
                           actor.system.stats.luck?.total ?? 0;
-
-    // Track if roll was executed (vs cancelled)
     this._rolled = false;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "initiative-roll-dialog",
-      classes: ["cyberpunk", "initiative-roll-dialog"],
-      template: "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "initiative-roll-dialog",
+    classes: ["cyberpunk", "initiative-roll-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:   InitiativeRollDialog._onCloseDialog,
+      toggleFastDraw: InitiativeRollDialog._onToggleFastDraw,
+      luckPlus:      InitiativeRollDialog._onLuckPlus,
+      luckMinus:     InitiativeRollDialog._onLuckMinus,
+      roll:          InitiativeRollDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/initiative-roll.hbs" }
+  };
+
+  get title() { return localize("InitiativeRoll"); }
+
+  static _onCloseDialog(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
   }
 
-  /** @override */
-  get title() {
-    return localize("InitiativeRoll");
+  static _onToggleFastDraw(event, target) {
+    event?.preventDefault?.();
+    this._fastDraw = !this._fastDraw;
+    target.classList.toggle('selected', this._fastDraw);
   }
 
-  /** @override */
-  getData() {
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend < this._availableLuck) {
+      this._luckToSpend++;
+      this._updateLuckDisplay();
+    }
+  }
+
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend > 0) {
+      this._luckToSpend--;
+      this._updateLuckDisplay();
+    }
+  }
+
+  static _onRoll(event, _target) {
+    event?.preventDefault?.();
+    this._executeRoll();
+  }
+
+  async _prepareContext(_options) {
     return {
       title: localize("InitiativeRoll"),
       fastDraw: this._fastDraw,
@@ -62,77 +85,34 @@ export class InitiativeRollDialog extends Application {
     };
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Fast Draw toggle button
-    html.find('.condition-btn[data-condition="fast-draw"]').click(ev => {
-      this._fastDraw = !this._fastDraw;
-      ev.currentTarget.classList.toggle('selected', this._fastDraw);
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(() => {
-      if (this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(() => {
-      if (this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
-    });
   }
 
-  /**
-   * Update the luck display and button states
-   * @param {jQuery} html - The dialog HTML element
-   */
-  _updateLuckDisplay(html) {
-    html.find('.luck-value').text(this._luckToSpend);
+  _updateLuckDisplay() {
+    const luckVal = this.element.querySelector('.luck-value');
+    if (luckVal) luckVal.textContent = this._luckToSpend;
 
     const minusDisabled = this._luckToSpend <= 0;
     const plusDisabled = this._luckToSpend >= this._availableLuck;
-
-    html.find('.luck-minus-btn').toggleClass('disabled', minusDisabled);
-    html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
-
-    // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src',
+    const minusBtn = this.element.querySelector('.luck-minus-btn');
+    const plusBtn = this.element.querySelector('.luck-plus-btn');
+    minusBtn?.classList.toggle('disabled', minusDisabled);
+    plusBtn?.classList.toggle('disabled', plusDisabled);
+    minusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src',
+    plusBtn?.querySelector('img')?.setAttribute('src',
       `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
-  /**
-   * Execute roll with selected options
-   */
   async _executeRoll() {
-    // Apply Fast Draw condition if selected
     if (this._fastDraw) {
       await this.actor.toggleStatusEffect("fast-draw", { active: true });
     }
-
-    // Spend luck if any was used
     if (this._luckToSpend > 0) {
       const currentSpent = this.actor.system.stats.luck.spent || 0;
       const currentSpentAt = this.actor.system.stats.luck.spentAt;
@@ -141,38 +121,22 @@ export class InitiativeRollDialog extends Application {
         "system.stats.luck.spentAt": currentSpentAt || Date.now()
       });
     }
-
     this._rolled = true;
-    this.close();
-
-    // Execute the callback with roll modifiers
+    this.close({ animate: false });
     if (this.callback) {
-      this.callback({
-        luckMod: this._luckToSpend
-      });
+      this.callback({ luckMod: this._luckToSpend });
     }
   }
 
-  /**
-   * Static method to show the dialog and return a Promise
-   * @param {Actor} actor
-   * @param {Combatant} combatant
-   * @param {Combat} combat
-   * @returns {Promise<{luckMod: number}|null>} Resolves with modifiers, or null if cancelled
-   */
   static async show(actor, combatant, combat) {
     return new Promise((resolve) => {
       const dialog = new InitiativeRollDialog(actor, combatant, combat, (modifiers) => {
         resolve(modifiers);
       });
       dialog.render(true);
-
-      // Override close to handle cancellation
       const originalClose = dialog.close.bind(dialog);
       dialog.close = async (options) => {
-        if (!dialog._rolled) {
-          resolve(null); // Cancelled
-        }
+        if (!dialog._rolled) resolve(null);
         return originalClose(options);
       };
     });

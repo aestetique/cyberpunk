@@ -3,46 +3,18 @@
 // Shared styles for all item cards (skill, role, etc.)
 // ============================================
 
-// Mixin for hiding Foundry's default window chrome
+// Item-sheet chrome reset = shared sheet-chrome-reset + item-sheet-specific bits.
+// The base reset lives in _resets.scss.
 @mixin item-sheet-chrome-reset {
-  &.app {
-    background: transparent;
-    box-shadow: none;
-    border: none;
+  // V2 frame:false root form needs explicit z-index so it sits above the canvas
+  // (the .application class normally provides this, but frame:false skips it).
+  // Item-sheet specific — not needed by actor sheets, which all use frame:true.
+  &.sheet:not(.application) {
+    z-index: var(--z-index-window, 100);
+    pointer-events: auto;
   }
 
-  > .window-header {
-    display: none;
-  }
-
-  > .window-content {
-    padding: 0;
-    overflow: visible;
-    background: transparent;
-    border-radius: 0;
-    margin: 0;
-  }
-
-  > .window-resizable-handle {
-    display: none;
-  }
-
-  button, a {
-    --button-focus-outline-color: transparent;
-    &:focus {
-      box-shadow: none;
-      outline: none;
-    }
-  }
-
-  img {
-    border: none;
-  }
-
-  h1, h2 {
-    border: none;
-    border-bottom: none;
-  }
+  @include sheet-chrome-reset;
 }
 
 // ============================================
@@ -451,6 +423,8 @@
   }
 
   .stat-value {
+    height: 24px;
+    padding: 6px;
     color: var(--Chat-Text, #FFF);
     font-family: var(--font-blender);
     font-size: 12px;
@@ -802,7 +776,7 @@
   input.stat-value {
     display: flex;
     width: 70px;
-    padding: 8px;
+    padding: 6px;
     align-items: center;
     border-radius: 4px;
     background: var(--Chat-Front, #26282F);
@@ -831,7 +805,7 @@
   select.stat-value {
     display: flex;
     width: 70px;
-    padding: 8px;
+    padding: 6px;
     padding-right: 16px;
     align-items: center;
     border-radius: 4px;

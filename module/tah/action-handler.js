@@ -125,7 +125,7 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
          * Build stat calc string matching the sheet's buildStatCalc().
          */
         _buildStatCalc(actor, key) {
-            const s = actor.system.stats[key];
+            const s = actor.system?.stats?.[key];
             if (!s) return "";
             const base = s.base ?? 0;
             const parts = [`Base ${base}`];
@@ -151,6 +151,9 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
          * Attribute stat checks (INT, REF, TECH, etc.)
          */
         _buildAttributeActions(actor) {
+            // Drone/shop actors don't carry a stats block. Skip silently —
+            // selecting one of these would otherwise crash the HUD builder.
+            if (!actor?.system?.stats) return;
             const actions = STAT_KEYS.map(stat => {
                 const total = actor.system.stats[stat]?.total ?? 0;
                 const name = game.i18n.localize(STAT_LABELS[stat]);
@@ -179,7 +182,7 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                 .map(skill => {
                     const level = skill.system.value || 0;
                     const stat = skill.system.stat || "";
-                    const statTotal = actor.system.stats[stat]?.total ?? 0;
+                    const statTotal = actor.system?.stats?.[stat]?.total ?? 0;
                     const total = level + statTotal;
                     const flavor = skill.system.flavor || "";
                     const statLabel = stat ? stat.toUpperCase() : "";

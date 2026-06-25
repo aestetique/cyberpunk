@@ -795,6 +795,7 @@
 				"int":  { "base": 5, "tempMod": 0, "total": 5 },
 				"ref":  { "base": 5, "tempMod": 0, "total": 5 },
 				"tech": { "base": 5, "tempMod": 0, "total": 5 },
+				"bt":   { "base": 5, "tempMod": 0, "total": 5, "carry": 50, "lift": 200, "modifier": 0 },
 				"ma":   { "base": 5, "tempMod": 0, "total": 5, "run": 15, "leap": 3 },
 				"luck": { "base": 5, "tempMod": 0, "total": 5, "spent": 0, "spentAt": null, "effective": 5 }
 			},
@@ -811,6 +812,7 @@
 			"activeCover": null
 		},
 		"shop": {
+			"description": "",
 			"gear": {
 				"eurobucks": 0
 			},
@@ -973,6 +975,7 @@
 			"humanityLoss": 0,
 			"humanityRolled": false,
 			"isOption": false,
+			"empShielding": false,
 			"hasSlots": 0,
 			"takesSpace": 1,
 			"structure": {

@@ -1,20 +1,19 @@
 import { localize } from "../utils.js";
 import { processFormulaRoll } from "../dice.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Stress Roll Dialog — select stress severity and roll to add stress points.
+ * @extends {ApplicationV2}
  */
-export class StressRollDialog extends Application {
+export class StressRollDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-  /**
-   * @param {Actor} actor  The actor receiving stress
-   */
+  /** @param {Actor} actor */
   constructor(actor) {
-    super();
+    super({});
     this.actor = actor;
     this._dropdownOpen = false;
-
-    // Default selection: first option
     this._selectedSeverity = {
       key: "minorNuisance",
       formula: "1",
@@ -22,27 +21,61 @@ export class StressRollDialog extends Application {
     };
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "stress-roll-dialog",
-      classes: ["cyberpunk", "stress-roll-dialog"],
-      template: "systems/cyberpunk/templates/dialog/stress-roll.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "stress-roll-dialog",
+    classes: ["cyberpunk", "stress-roll-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:    StressRollDialog._onCloseDialog,
+      toggleDropdown: StressRollDialog._onToggleDropdown,
+      pickSeverity:   StressRollDialog._onPickSeverity,
+      roll:           StressRollDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/stress-roll.hbs" }
+  };
+
+  get title() { return localize("StressRoll"); }
+
+  static _onCloseDialog(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
   }
 
-  /** @override */
-  get title() {
-    return localize("StressRoll");
+  static _onToggleDropdown(event, _target) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    this._dropdownOpen = !this._dropdownOpen;
+    this.element.querySelector('.range-dropdown-list')?.classList.toggle('open', this._dropdownOpen);
+    this.element.querySelector('.range-dropdown-btn')?.classList.toggle('open', this._dropdownOpen);
   }
 
-  /** @override */
-  getData() {
+  static _onPickSeverity(event, target) {
+    event?.preventDefault?.();
+    const key = target?.dataset?.severity;
+    const formula = target?.dataset?.formula;
+    const label = target?.textContent.trim();
+
+    this._selectedSeverity = { key, formula, label };
+    this._dropdownOpen = false;
+
+    const labelEl = this.element.querySelector('.range-dropdown-btn .range-label');
+    if (labelEl) labelEl.textContent = label;
+    this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+    this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
+    this.element.querySelectorAll('.range-option').forEach(el => el.classList.remove('selected'));
+    target.classList.add('selected');
+  }
+
+  static _onRoll(event, _target) {
+    event?.preventDefault?.();
+    this._executeRoll();
+  }
+
+  async _prepareContext(_options) {
     const severityOptions = [
       { key: "minorNuisance",  formula: "1",   label: localize("SeverityMinorNuisance") },
       { key: "nuisance",       formula: "1d2", label: localize("SeverityNuisance") },
@@ -52,87 +85,38 @@ export class StressRollDialog extends Application {
       { key: "veryDisturbing", formula: "3d6", label: localize("SeverityVeryDisturbing") },
       { key: "lifeShattering", formula: "4d6", label: localize("SeverityLifeShattering") }
     ];
-
-    severityOptions.forEach(opt => {
-      opt.selected = opt.key === this._selectedSeverity.key;
-    });
-
+    severityOptions.forEach(opt => { opt.selected = opt.key === this._selectedSeverity.key; });
     return {
       severityOptions,
       selectedSeverityLabel: this._selectedSeverity.label
     };
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Severity dropdown toggle
-    html.find('.range-dropdown-btn').click(ev => {
-      ev.stopPropagation();
-      this._dropdownOpen = !this._dropdownOpen;
-      html.find('.range-dropdown-list').toggleClass('open', this._dropdownOpen);
-      html.find('.range-dropdown-btn').toggleClass('open', this._dropdownOpen);
-    });
-
-    // Severity option selection
-    html.find('.range-option').click(ev => {
-      const key = ev.currentTarget.dataset.severity;
-      const formula = ev.currentTarget.dataset.formula;
-      const label = ev.currentTarget.textContent.trim();
-
-      this._selectedSeverity = { key, formula, label };
-      this._dropdownOpen = false;
-
-      // Update display
-      html.find('.range-dropdown-btn .range-label').text(label);
-      html.find('.range-dropdown-list').removeClass('open');
-      html.find('.range-dropdown-btn').removeClass('open');
-
-      // Update visual selection
-      html.find('.range-option').removeClass('selected');
-      ev.currentTarget.classList.add('selected');
-    });
-
     // Close dropdown when clicking outside
+    $(document).off('click.stressRollDropdown');
     $(document).on('click.stressRollDropdown', (ev) => {
       if (!$(ev.target).closest('.range-dropdown').length) {
         this._dropdownOpen = false;
-        html.find('.range-dropdown-list').removeClass('open');
-        html.find('.range-dropdown-btn').removeClass('open');
+        this.element.querySelector('.range-dropdown-list')?.classList.remove('open');
+        this.element.querySelector('.range-dropdown-btn')?.classList.remove('open');
       }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
     });
   }
 
-  /**
-   * Execute the stress roll, update actor, and post chat message.
-   */
   async _executeRoll() {
     const formula = this._selectedSeverity.formula;
     const roll = new Roll(formula);
     await roll.evaluate();
 
-    // Add result to current stress
     const currentStress = this.actor.system.stress || 0;
-    await this.actor.update({
-      "system.stress": currentStress + roll.total
-    });
+    await this.actor.update({ "system.stress": currentStress + roll.total });
 
-    // Build chat message using formula-roll pattern
     const templateData = processFormulaRoll(roll);
     const content = await foundry.applications.handlebars.renderTemplate(
       "systems/cyberpunk/templates/chat/stress-roll.hbs",
@@ -140,16 +124,15 @@ export class StressRollDialog extends Application {
     );
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      content: content,
+      content,
       rolls: [roll],
       sound: CONFIG.sounds.dice
     });
 
-    this.close();
+    this.close({ animate: false });
   }
 
-  /** @override */
-  close(options) {
+  async close(options) {
     $(document).off('click.stressRollDropdown');
     return super.close(options);
   }

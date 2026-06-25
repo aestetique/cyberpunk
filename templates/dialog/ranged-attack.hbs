@@ -1,29 +1,29 @@
 <div class="ranged-attack-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{weaponName}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{#if showFullAuto}}
-    <button type="button" class="fire-mode-btn" data-mode="fullAuto">
+    <button type="button" class="fire-mode-btn" data-action="pickFireMode" data-mode="fullAuto">
       {{localize "CYBERPUNK.FullAuto"}}
     </button>
   {{/if}}
 
   {{#if showBurst}}
-    <button type="button" class="fire-mode-btn" data-mode="threeRoundBurst">
+    <button type="button" class="fire-mode-btn" data-action="pickFireMode" data-mode="threeRoundBurst">
       {{localize "CYBERPUNK.ThreeRoundBurst"}}
     </button>
   {{/if}}
 
   {{#if showTwoRoundBurst}}
-    <button type="button" class="fire-mode-btn" data-mode="twoRoundBurst">
+    <button type="button" class="fire-mode-btn" data-action="pickFireMode" data-mode="twoRoundBurst">
       {{localize "CYBERPUNK.TwoRoundBurst"}}
     </button>
   {{/if}}
 
   {{#if showSingleShot}}
-    <button type="button" class="fire-mode-btn" data-mode="singleShot">
+    <button type="button" class="fire-mode-btn" data-action="pickFireMode" data-mode="singleShot">
       {{localize "CYBERPUNK.SingleShot"}}
     </button>
   {{else}}
@@ -31,7 +31,7 @@
   {{/if}}
 
   {{#if showReload}}
-    <button type="button" class="fire-mode-btn reload-btn">
+    <button type="button" class="fire-mode-btn reload-btn" data-action="reload">
       {{localize "CYBERPUNK.Reload"}}
     </button>
   {{/if}}

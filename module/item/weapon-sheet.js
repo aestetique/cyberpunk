@@ -1,347 +1,274 @@
 import {
-    availability, concealability, reliability,
-    weaponTypes, getWeaponClasses,
-    rangedClasses, martialClasses, ordnanceClasses, exoticClasses, ammoClasses,
-    meleeDamageTypes, weaponEffects, ammoTypes,
-    ordnanceTemplateTypes,
-    getAttackSkillsForWeapon,
-    getRangedClassesForSkill,
-    resolveWeaponDiscriminator
+  availability, concealability, reliability,
+  weaponTypes, getWeaponClasses,
+  meleeDamageTypes, weaponEffects, ammoTypes,
+  ordnanceTemplateTypes,
+  getAttackSkillsForWeapon,
+  getRangedClassesForSkill,
+  resolveWeaponDiscriminator
 } from "../lookups.js";
 import { calibers as CALIBERS, getValidAmmoTypesForCaliber, getDamageForCaliber } from "../calibers.js";
-import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
 
 /**
- * Sensible defaults for the dynamic fields when the user switches weaponType.
- * Ordnance/Ammo extend the lookups.js default set (which only covers Martial/
- * Ranged/Exotic — the three types cyberware can also embed).
+ * Sensible defaults when the user switches weaponType.
  */
 const DEFAULT_CLASS_BY_TYPE = {
-    Martial:  "Melee",
-    Ranged:   "Pistol",
-    Exotic:   "Exotic",
-    Ordnance: "Grenade",
-    Ammo:     "Pistol"
+  Martial:  "Melee",
+  Ranged:   "Pistol",
+  Exotic:   "Exotic",
+  Ordnance: "Grenade",
+  Ammo:     "Pistol"
 };
 
 /**
- * Weapon Item Sheet with a single layout that branches by weaponType.
- * @extends {CyberpunkItemSheet}
+ * Weapon Item Sheet — single layout branched by weaponType.
+ * @extends {CyberpunkItemSheetV2}
  */
-export class CyberpunkWeaponSheet extends CyberpunkItemSheet {
+export class CyberpunkWeaponSheet extends CyberpunkItemSheetV2 {
 
-    /** @type {string} */
-    _activeTab = "description";
+  static DEFAULT_OPTIONS = {
+    classes: ["weapon-sheet"]
+  };
 
-    /** @override */
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["cyberpunk", "sheet", "item", "weapon-sheet"],
-            template: "systems/cyberpunk/templates/item/weapon-sheet.hbs"
-        });
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/item/weapon-sheet.hbs" }
+  };
+
+  _resolveDiscriminator(sys) {
+    return resolveWeaponDiscriminator(sys, DEFAULT_CLASS_BY_TYPE);
+  }
+
+  async _prepareContext(options) {
+    const ctx = await super._prepareContext(options);
+
+    const d = this._resolveDiscriminator(ctx.system);
+    const wt = d.weaponType;
+    const wc = d.weaponClass;
+    ctx.weaponType  = wt;
+    ctx.weaponClass = wc;
+    ctx.isMartial  = wt === "Martial";
+    ctx.isRanged   = wt === "Ranged";
+    ctx.isExotic   = wt === "Exotic";
+    ctx.isOrdnance = wt === "Ordnance";
+    ctx.isAmmo     = wt === "Ammo";
+    ctx.showHeaderTriviaRows = !ctx.isAmmo;
+
+    ctx.weaponTypeOptions = Object.entries(weaponTypes).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: wt === value
+    }));
+    ctx.selectedWeaponTypeLabel = game.i18n.localize(`CYBERPUNK.${weaponTypes[wt] || "WeaponTypeMartial"}`);
+
+    const classEnum = getWeaponClasses(wt) || {};
+    let classKeys = Object.keys(classEnum);
+    if (wt === "Ranged") {
+      const allowed = getRangedClassesForSkill(ctx.system.attackSkill);
+      if (allowed.length) classKeys = allowed;
+    }
+    ctx.weaponClassOptions = classKeys.map(value => ({
+      value,
+      label: classEnum[value] ? game.i18n.localize(`CYBERPUNK.${classEnum[value]}`) : value,
+      selected: wc === value
+    }));
+    ctx.selectedWeaponClassLabel = classEnum[wc]
+      ? game.i18n.localize(`CYBERPUNK.${classEnum[wc]}`)
+      : wc;
+
+    ctx.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: ctx.system.availability === value
+    }));
+    const selectedAvail = availability[ctx.system.availability] || "Common";
+    ctx.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
+
+    if (!ctx.isAmmo) {
+      ctx.concealabilityOptions = Object.entries(concealability).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: ctx.system.concealability === value
+      }));
+      const selectedConceal = concealability[ctx.system.concealability] || "ConcealPocket";
+      ctx.selectedConcealabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedConceal}`);
+
+      ctx.reliabilityOptions = Object.entries(reliability).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: ctx.system.reliability === value
+      }));
+      const selectedRel = reliability[ctx.system.reliability] || "Standard";
+      ctx.selectedReliabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedRel}`);
     }
 
-    /** Normalise weaponType + weaponClass, falling through legacy values. */
-    _resolveDiscriminator(sys) {
-        return resolveWeaponDiscriminator(sys, DEFAULT_CLASS_BY_TYPE);
+    if (!ctx.isAmmo) {
+      const skillsList = getAttackSkillsForWeapon(wt, wc);
+      const currentSkill = ctx.system.attackSkill || skillsList[0] || "";
+      ctx.attackSkillOptions = skillsList.map(name => ({
+        value: name,
+        label: game.i18n.has(`CYBERPUNK.Skill${name}`)
+          ? game.i18n.localize(`CYBERPUNK.Skill${name}`)
+          : name,
+        selected: currentSkill === name
+      }));
+      ctx.selectedAttackSkillLabel = currentSkill
+        ? (game.i18n.has(`CYBERPUNK.Skill${currentSkill}`)
+            ? game.i18n.localize(`CYBERPUNK.Skill${currentSkill}`)
+            : currentSkill)
+        : "";
     }
 
-    /** @override */
-    getData() {
-        const data = super.getData();
-        data.activeTab = this._activeTab;
+    if (ctx.isMartial) {
+      ctx.damageTypeOptions = Object.entries(meleeDamageTypes).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: ctx.system.damageType === value
+      }));
+      const selectedDT = meleeDamageTypes[ctx.system.damageType] || "DmgBlunt";
+      ctx.selectedDamageTypeLabel = game.i18n.localize(`CYBERPUNK.${selectedDT}`);
+    }
 
-        const d = this._resolveDiscriminator(data.system);
-        const wt = d.weaponType;
-        const wc = d.weaponClass;
-        data.weaponType  = wt;
-        data.weaponClass = wc;
-        data.isMartial  = wt === "Martial";
-        data.isRanged   = wt === "Ranged";
-        data.isExotic   = wt === "Exotic";
-        data.isOrdnance = wt === "Ordnance";
-        data.isAmmo     = wt === "Ammo";
-        data.showHeaderTriviaRows = !data.isAmmo;
+    if (ctx.isMartial || ctx.isExotic || ctx.isOrdnance || ctx.isAmmo) {
+      const effectKeys = Object.keys(weaponEffects);
+      const currentEffect = ctx.system.effect || effectKeys[0];
+      ctx.effectOptions = Object.entries(weaponEffects).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: currentEffect === value
+      }));
+      const selectedEff = weaponEffects[currentEffect] || weaponEffects[effectKeys[0]];
+      ctx.selectedEffectLabel = game.i18n.localize(`CYBERPUNK.${selectedEff}`);
+    }
 
-        // ----- WeaponType (discriminator) dropdown -----
-        data.weaponTypeOptions = Object.entries(weaponTypes).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: wt === value
+    if (ctx.isExotic || ctx.isOrdnance || ctx.isAmmo) {
+      const fallbackToCircle = !ctx.isExotic && !ctx.system.templateType;
+      const baseOptions = Object.entries(ordnanceTemplateTypes).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: ctx.system.templateType === value || (fallbackToCircle && value === "circle")
+      }));
+      if (ctx.isExotic) {
+        ctx.templateOptions = [
+          { value: "", label: game.i18n.localize("CYBERPUNK.TemplateNone"), selected: !ctx.system.templateType },
+          ...baseOptions
+        ];
+      } else {
+        ctx.templateOptions = baseOptions;
+      }
+      const selKey = ordnanceTemplateTypes[ctx.system.templateType];
+      ctx.selectedTemplateLabel = selKey
+        ? game.i18n.localize(`CYBERPUNK.${selKey}`)
+        : (ctx.isExotic ? game.i18n.localize("CYBERPUNK.TemplateNone") : game.i18n.localize("CYBERPUNK.TemplateCircle"));
+      const tplKind = ctx.system.templateType || "circle";
+      ctx.radiusLabel = (tplKind === "circle")
+        ? game.i18n.localize("CYBERPUNK.RadiusM")
+        : game.i18n.localize("CYBERPUNK.WidthM");
+    }
+
+    if (ctx.isRanged || ctx.isAmmo) {
+      ctx.caliberOptions = Object.entries(CALIBERS).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: ctx.system.caliber === value
+      }));
+      const selCal = CALIBERS[ctx.system.caliber];
+      ctx.selectedCaliberLabel = selCal ? game.i18n.localize(`CYBERPUNK.${selCal}`) : "";
+    }
+
+    ctx.showAmmoAoe = ctx.isAmmo && ctx.system.ammoType === "grenade";
+
+    const calDmg = getDamageForCaliber(ctx.system.caliber);
+    ctx.calibersDamage = calDmg;
+    ctx.damageLocked = !!calDmg && (ctx.isRanged || (ctx.isAmmo && ctx.system.ammoType !== "grenade"));
+
+    if (ctx.isAmmo) {
+      const validTypes = new Set(getValidAmmoTypesForCaliber(ctx.system.caliber));
+      ctx.ammoTypeOptions = Object.entries(ammoTypes)
+        .filter(([slug]) => validTypes.has(slug))
+        .map(([value, labelKey]) => ({
+          value,
+          label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+          selected: ctx.system.ammoType === value
         }));
-        data.selectedWeaponTypeLabel = game.i18n.localize(`CYBERPUNK.${weaponTypes[wt] || "WeaponTypeMartial"}`);
-
-        // ----- WeaponClass (Subtype) dropdown -----
-        // For Ranged: the available options are narrowed by the selected attack
-        // skill (Handgun → Pistol; Rifle → AssaultRifle/SniperRifle/Shotgun; etc).
-        // For other types: full class enum is still offered (sheets that hide the
-        // dropdown — Martial/Exotic/Ordnance — simply ignore this).
-        const classEnum = getWeaponClasses(wt) || {};
-        let classKeys = Object.keys(classEnum);
-        if (wt === "Ranged") {
-            const allowed = getRangedClassesForSkill(data.system.attackSkill);
-            if (allowed.length) classKeys = allowed;
-        }
-        data.weaponClassOptions = classKeys.map(value => ({
-            value,
-            label: classEnum[value] ? game.i18n.localize(`CYBERPUNK.${classEnum[value]}`) : value,
-            selected: wc === value
-        }));
-        data.selectedWeaponClassLabel = classEnum[wc]
-            ? game.i18n.localize(`CYBERPUNK.${classEnum[wc]}`)
-            : wc;
-
-        // ----- Availability -----
-        data.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: data.system.availability === value
-        }));
-        const selectedAvail = availability[data.system.availability] || "Common";
-        data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
-
-        // ----- Concealability + Reliability (non-Ammo only) -----
-        // Ammo doesn't render either dropdown; skip the option-array build to
-        // save a hundred-odd localize() calls per render.
-        if (!data.isAmmo) {
-            data.concealabilityOptions = Object.entries(concealability).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: data.system.concealability === value
-            }));
-            const selectedConceal = concealability[data.system.concealability] || "ConcealPocket";
-            data.selectedConcealabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedConceal}`);
-
-            data.reliabilityOptions = Object.entries(reliability).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: data.system.reliability === value
-            }));
-            const selectedRel = reliability[data.system.reliability] || "Standard";
-            data.selectedReliabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedRel}`);
-        }
-
-        // ----- Attack Skill (non-Ammo) -----
-        if (!data.isAmmo) {
-            const skillsList = getAttackSkillsForWeapon(wt, wc);
-            const currentSkill = data.system.attackSkill || skillsList[0] || "";
-            data.attackSkillOptions = skillsList.map(name => ({
-                value: name,
-                label: game.i18n.has(`CYBERPUNK.Skill${name}`)
-                    ? game.i18n.localize(`CYBERPUNK.Skill${name}`)
-                    : name,
-                selected: currentSkill === name
-            }));
-            data.selectedAttackSkillLabel = currentSkill
-                ? (game.i18n.has(`CYBERPUNK.Skill${currentSkill}`)
-                    ? game.i18n.localize(`CYBERPUNK.Skill${currentSkill}`)
-                    : currentSkill)
-                : "";
-        }
-
-        // ----- Damage Type (Martial only) -----
-        if (data.isMartial) {
-            data.damageTypeOptions = Object.entries(meleeDamageTypes).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: data.system.damageType === value
-            }));
-            const selectedDT = meleeDamageTypes[data.system.damageType] || "DmgBlunt";
-            data.selectedDamageTypeLabel = game.i18n.localize(`CYBERPUNK.${selectedDT}`);
-        }
-
-        // ----- Effect (Martial / Exotic / Ordnance / Ammo) -----
-        if (data.isMartial || data.isExotic || data.isOrdnance || data.isAmmo) {
-            const effectKeys = Object.keys(weaponEffects);
-            const currentEffect = data.system.effect || effectKeys[0];
-            data.effectOptions = Object.entries(weaponEffects).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: currentEffect === value
-            }));
-            const selectedEff = weaponEffects[currentEffect] || weaponEffects[effectKeys[0]];
-            data.selectedEffectLabel = game.i18n.localize(`CYBERPUNK.${selectedEff}`);
-        }
-
-        // ----- Template (Exotic / Ordnance / Ammo) -----
-        if (data.isExotic || data.isOrdnance || data.isAmmo) {
-            // Exotic alone supports "None" — that flips it from AoE back to a
-            // standard fire-mode weapon. Ordnance and grenade Ammo always have
-            // a template shape.
-            // For non-Exotic (Ordnance / grenade Ammo) the shape list has no
-            // "None" entry, so an empty templateType would leave the <select>
-            // with no selected option — the browser would visually highlight
-            // "Circle" while the underlying data stays "". Fall back to
-            // selecting "circle" in that case, matching the runtime default
-            // used in ordnance-attack-dialog.js.
-            const fallbackToCircle = !data.isExotic && !data.system.templateType;
-            const baseOptions = Object.entries(ordnanceTemplateTypes).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: data.system.templateType === value || (fallbackToCircle && value === "circle")
-            }));
-            if (data.isExotic) {
-                data.templateOptions = [
-                    {
-                        value: "",
-                        label: game.i18n.localize("CYBERPUNK.TemplateNone"),
-                        selected: !data.system.templateType
-                    },
-                    ...baseOptions
-                ];
-            } else {
-                data.templateOptions = baseOptions;
-            }
-            const selKey = ordnanceTemplateTypes[data.system.templateType];
-            data.selectedTemplateLabel = selKey
-                ? game.i18n.localize(`CYBERPUNK.${selKey}`)
-                : (data.isExotic ? game.i18n.localize("CYBERPUNK.TemplateNone") : game.i18n.localize("CYBERPUNK.TemplateCircle"));
-            // Label switches with templateType: Radius, m for circles; Width, m for cones/beams.
-            const tplKind = data.system.templateType || "circle";
-            data.radiusLabel = (tplKind === "circle")
-                ? game.i18n.localize("CYBERPUNK.RadiusM")
-                : game.i18n.localize("CYBERPUNK.WidthM");
-        }
-
-        // ----- Caliber (Ranged + Ammo) -----
-        // Both cards show the full caliber set. Compatibility is enforced at attach time
-        // by exact caliber match (see isAmmoCompatibleWith in lookups.js).
-        if (data.isRanged || data.isAmmo) {
-            data.caliberOptions = Object.entries(CALIBERS).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: data.system.caliber === value
-            }));
-            const selCal = CALIBERS[data.system.caliber];
-            data.selectedCaliberLabel = selCal ? game.i18n.localize(`CYBERPUNK.${selCal}`) : "";
-        }
-
-        // ----- Ammo AoE rows visible only when ammoType is Grenade -----
-        data.showAmmoAoe = data.isAmmo && data.system.ammoType === "grenade";
-
-        // ----- Damage locking by caliber -----
-        // Ranged weapons: damage is always the caliber's damage (locked, no override).
-        // Ammo (non-grenade): damage is the caliber's damage (locked, no override).
-        // Ammo (grenade): damage is pre-filled with the caliber's damage but editable —
-        //                 grenade payloads can carry effect-specific damage.
-        // Unknown caliber → fall back to whatever's stored (no lock, no prefill).
-        const calDmg = getDamageForCaliber(data.system.caliber);
-        data.calibersDamage = calDmg;
-        data.damageLocked = !!calDmg && (data.isRanged || (data.isAmmo && data.system.ammoType !== "grenade"));
-
-        // ----- Ammo Type (Ammo only) — filtered to those valid for the caliber -----
-        if (data.isAmmo) {
-            const validTypes = new Set(getValidAmmoTypesForCaliber(data.system.caliber));
-            data.ammoTypeOptions = Object.entries(ammoTypes)
-                .filter(([slug]) => validTypes.has(slug))
-                .map(([value, labelKey]) => ({
-                    value,
-                    label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                    selected: data.system.ammoType === value
-                }));
-            const selAT = ammoTypes[data.system.ammoType] || "AmmoStandard";
-            data.selectedAmmoTypeLabel = game.i18n.localize(`CYBERPUNK.${selAT}`);
-        }
-
-        return data;
+      const selAT = ammoTypes[ctx.system.ammoType] || "AmmoStandard";
+      ctx.selectedAmmoTypeLabel = game.i18n.localize(`CYBERPUNK.${selAT}`);
     }
 
-    /** @override */
-    activateListeners(html) {
-        super.activateListeners(html);
+    return ctx;
+  }
 
-        // Tab switching
-        html.find('.tab-header').click(ev => {
-            ev.preventDefault();
-            const tab = ev.currentTarget.dataset.tab;
-            if (tab && tab !== this._activeTab) {
-                this._activeTab = tab;
-                this.render(false);
-            }
-        });
+  _onRender(context, options) {
+    super._onRender(context, options);
+    if (this._isLocked) return;
 
-        if (this._isLocked) return;
+    const html = $(this.element);
+    const item = this.document;
 
-        // WeaponType change → reset weaponClass + clear attackSkill (so the
-        // sheet picks the new type's first canonical skill on next render).
-        html.find('select[name="system.weaponType"]').change(async ev => {
-            const newType = ev.currentTarget.value;
-            const updates = { "system.weaponType": newType };
-            // Pick a sensible default skill so the Ranged class dropdown isn't empty.
-            const defaultSkill = getAttackSkillsForWeapon(newType)[0] || "";
-            updates["system.attackSkill"] = defaultSkill;
-            // For Ranged: default class is the first allowed by the default skill.
-            // For other types: keep the type's default class (ignored by sheets
-            // that don't render the dropdown).
-            if (newType === "Ranged") {
-                const allowed = getRangedClassesForSkill(defaultSkill);
-                updates["system.weaponClass"] = allowed[0] || "Pistol";
-            } else {
-                updates["system.weaponClass"] = DEFAULT_CLASS_BY_TYPE[newType] || "";
-            }
-            // Switching INTO Ranged stamps the caliber's damage (if any).
-            if (newType === "Ranged") {
-                const dmg = getDamageForCaliber(this.item.system.caliber);
-                if (dmg) updates["system.damage"] = dmg;
-            }
-            await this.item.update(updates);
-        });
+    html.find('select[name="system.weaponType"]').on('change', async ev => {
+      const newType = ev.currentTarget.value;
+      const updates = { "system.weaponType": newType };
+      const defaultSkill = getAttackSkillsForWeapon(newType)[0] || "";
+      updates["system.attackSkill"] = defaultSkill;
+      if (newType === "Ranged") {
+        const allowed = getRangedClassesForSkill(defaultSkill);
+        updates["system.weaponClass"] = allowed[0] || "Pistol";
+      } else {
+        updates["system.weaponClass"] = DEFAULT_CLASS_BY_TYPE[newType] || "";
+      }
+      if (newType === "Ranged") {
+        const dmg = getDamageForCaliber(item.system.caliber);
+        if (dmg) updates["system.damage"] = dmg;
+      }
+      await item.update(updates);
+    });
 
-        // weaponClass (Subtype) change — just write the new class; skill stays.
-        html.find('select[name="system.weaponClass"]').change(async ev => {
-            await this.item.update({ "system.weaponClass": ev.currentTarget.value });
-        });
+    html.find('select[name="system.weaponClass"]').on('change', async ev => {
+      await item.update({ "system.weaponClass": ev.currentTarget.value });
+    });
 
-        // attackSkill change — for Ranged, narrow the weaponClass to the new
-        // skill's allowed set. If the current class is no longer valid, reset to
-        // the first allowed.
-        html.find('select[name="system.attackSkill"]').change(async ev => {
-            const newSkill = ev.currentTarget.value;
-            const updates = { "system.attackSkill": newSkill };
-            if (this.item.system.weaponType === "Ranged") {
-                const allowed = getRangedClassesForSkill(newSkill);
-                if (allowed.length && !allowed.includes(this.item.system.weaponClass)) {
-                    updates["system.weaponClass"] = allowed[0];
-                }
-            }
-            await this.item.update(updates);
-        });
+    html.find('select[name="system.attackSkill"]').on('change', async ev => {
+      const newSkill = ev.currentTarget.value;
+      const updates = { "system.attackSkill": newSkill };
+      if (item.system.weaponType === "Ranged") {
+        const allowed = getRangedClassesForSkill(newSkill);
+        if (allowed.length && !allowed.includes(item.system.weaponClass)) {
+          updates["system.weaponClass"] = allowed[0];
+        }
+      }
+      await item.update(updates);
+    });
 
-        // Caliber change — keep ammoType valid (Ammo) and re-stamp the
-        // locked damage from the new caliber (Ranged + non-grenade Ammo).
-        html.find('select[name="system.caliber"]').change(async ev => {
-            const newCal = ev.currentTarget.value;
-            const sys = this.item.system;
-            const wt = sys.weaponType;
-            const updates = { "system.caliber": newCal };
-            const dmg = getDamageForCaliber(newCal);
-            if (wt === "Ammo") {
-                const valid = new Set(getValidAmmoTypesForCaliber(newCal));
-                let nextAmmoType = sys.ammoType;
-                if (!nextAmmoType || !valid.has(nextAmmoType)) {
-                    nextAmmoType = valid.has("standard")
-                        ? "standard"
-                        : [...valid][0] || "armorPiercing";
-                    updates["system.ammoType"] = nextAmmoType;
-                }
-                if (dmg && nextAmmoType !== "grenade") updates["system.damage"] = dmg;
-                else if (dmg && nextAmmoType === "grenade" && !sys.damage) updates["system.damage"] = dmg;
-            } else if (wt === "Ranged" && dmg) {
-                updates["system.damage"] = dmg;
-            }
-            await this.item.update(updates);
-        });
+    html.find('select[name="system.caliber"]').on('change', async ev => {
+      const newCal = ev.currentTarget.value;
+      const sys = item.system;
+      const wt = sys.weaponType;
+      const updates = { "system.caliber": newCal };
+      const dmg = getDamageForCaliber(newCal);
+      if (wt === "Ammo") {
+        const valid = new Set(getValidAmmoTypesForCaliber(newCal));
+        let nextAmmoType = sys.ammoType;
+        if (!nextAmmoType || !valid.has(nextAmmoType)) {
+          nextAmmoType = valid.has("standard") ? "standard" : [...valid][0] || "armorPiercing";
+          updates["system.ammoType"] = nextAmmoType;
+        }
+        if (dmg && nextAmmoType !== "grenade") updates["system.damage"] = dmg;
+        else if (dmg && nextAmmoType === "grenade" && !sys.damage) updates["system.damage"] = dmg;
+      } else if (wt === "Ranged" && dmg) {
+        updates["system.damage"] = dmg;
+      }
+      await item.update(updates);
+    });
 
-        // AmmoType change — re-lock damage when moving back into a non-grenade mode.
-        html.find('select[name="system.ammoType"]').change(async ev => {
-            if (this.item.system.weaponType !== "Ammo") return;
-            const newAt = ev.currentTarget.value;
-            const dmg = getDamageForCaliber(this.item.system.caliber);
-            if (!dmg) return;
-            const updates = { "system.ammoType": newAt };
-            if (newAt !== "grenade") updates["system.damage"] = dmg;
-            else if (!this.item.system.damage) updates["system.damage"] = dmg;
-            await this.item.update(updates);
-        });
-    }
+    html.find('select[name="system.ammoType"]').on('change', async ev => {
+      if (item.system.weaponType !== "Ammo") return;
+      const newAt = ev.currentTarget.value;
+      const dmg = getDamageForCaliber(item.system.caliber);
+      if (!dmg) return;
+      const updates = { "system.ammoType": newAt };
+      if (newAt !== "grenade") updates["system.damage"] = dmg;
+      else if (!item.system.damage) updates["system.damage"] = dmg;
+      await item.update(updates);
+    });
+  }
 }

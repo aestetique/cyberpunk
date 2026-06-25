@@ -68,7 +68,7 @@
         <label class="variable-label">{{localize "CYBERPUNK.Skill"}}</label>
         {{#if this.hasFilled}}
           <div class="skill-drop filled">
-            <span class="skill-name" data-uuid="{{this.skillUuid}}">{{this.skillName}}</span>
+            <span class="skill-name" data-action="openSkill" data-uuid="{{this.skillUuid}}">{{this.skillName}}</span>
           </div>
         {{else}}
           <div class="skill-drop empty" data-drop-target="skill-bonus">

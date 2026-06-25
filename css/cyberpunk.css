@@ -1843,12 +1843,49 @@ div.statderive .value.rightborder {
   color: var(--chat-gray);
 }
 
-.cyberpunk.character-sheet.app,
+.tab-header {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--sheet-gilt);
+  background-color: var(--chat-back);
+  box-shadow: 0 7px 10px 0 var(--chat-back);
+  z-index: 10;
+}
+
+.tab-title {
+  font-family: var(--font-blender);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 36px;
+  color: #B9B29D;
+  text-transform: uppercase;
+}
+
+.tab-badge {
+  width: 16px;
+  height: 16px;
+}
+
+.cyberpunk.character-sheet.app, .cyberpunk.character-sheet.application,
 .cyberpunk.drone-sheet.app,
-.cyberpunk.shop-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.drone-sheet.application,
+.cyberpunk.shop-sheet.app,
+.cyberpunk.shop-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.character-sheet > .window-header,
 .cyberpunk.drone-sheet > .window-header,
@@ -1858,32 +1895,33 @@ div.statderive .value.rightborder {
 .cyberpunk.character-sheet > .window-content,
 .cyberpunk.drone-sheet > .window-content,
 .cyberpunk.shop-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 .cyberpunk.character-sheet > .window-resizable-handle,
+.cyberpunk.character-sheet > .window-resize-handle,
 .cyberpunk.drone-sheet > .window-resizable-handle,
-.cyberpunk.shop-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.drone-sheet > .window-resize-handle,
+.cyberpunk.shop-sheet > .window-resizable-handle,
+.cyberpunk.shop-sheet > .window-resize-handle {
+  display: none !important;
 }
-.cyberpunk.character-sheet button, .cyberpunk.character-sheet .tab-btn, .cyberpunk.character-sheet a,
+.cyberpunk.character-sheet button, .cyberpunk.character-sheet a,
 .cyberpunk.drone-sheet button,
-.cyberpunk.drone-sheet .tab-btn,
 .cyberpunk.drone-sheet a,
 .cyberpunk.shop-sheet button,
-.cyberpunk.shop-sheet .tab-btn,
 .cyberpunk.shop-sheet a {
   --button-focus-outline-color: transparent;
 }
-.cyberpunk.character-sheet button:focus, .cyberpunk.character-sheet .tab-btn:focus, .cyberpunk.character-sheet a:focus,
+.cyberpunk.character-sheet button:focus, .cyberpunk.character-sheet a:focus,
 .cyberpunk.drone-sheet button:focus,
-.cyberpunk.drone-sheet .tab-btn:focus,
 .cyberpunk.drone-sheet a:focus,
 .cyberpunk.shop-sheet button:focus,
-.cyberpunk.shop-sheet .tab-btn:focus,
 .cyberpunk.shop-sheet a:focus {
   box-shadow: none;
   outline: none;
@@ -1893,11 +1931,24 @@ div.statderive .value.rightborder {
 .cyberpunk.shop-sheet img {
   border: none;
 }
-.cyberpunk.character-sheet h1,
+.cyberpunk.character-sheet h1, .cyberpunk.character-sheet h2,
 .cyberpunk.drone-sheet h1,
-.cyberpunk.shop-sheet h1 {
+.cyberpunk.drone-sheet h2,
+.cyberpunk.shop-sheet h1,
+.cyberpunk.shop-sheet h2 {
   border: none;
   border-bottom: none;
+}
+.cyberpunk.character-sheet .tab-btn,
+.cyberpunk.drone-sheet .tab-btn,
+.cyberpunk.shop-sheet .tab-btn {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.character-sheet .tab-btn:focus,
+.cyberpunk.drone-sheet .tab-btn:focus,
+.cyberpunk.shop-sheet .tab-btn:focus {
+  box-shadow: none;
+  outline: none;
 }
 .cyberpunk.character-sheet .window-content, .cyberpunk.character-sheet .editable,
 .cyberpunk.drone-sheet .window-content,
@@ -1905,6 +1956,31 @@ div.statderive .value.rightborder {
 .cyberpunk.shop-sheet .window-content,
 .cyberpunk.shop-sheet .editable {
   height: 100%;
+}
+.cyberpunk.character-sheet > .window-content,
+.cyberpunk.drone-sheet > .window-content,
+.cyberpunk.shop-sheet > .window-content {
+  display: flex;
+  flex-direction: column;
+}
+.cyberpunk.character-sheet > .window-content > [data-application-part=body],
+.cyberpunk.drone-sheet > .window-content > [data-application-part=body],
+.cyberpunk.shop-sheet > .window-content > [data-application-part=body] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cyberpunk.character-sheet > .window-content > [data-application-part=body] > .editable,
+.cyberpunk.character-sheet > .window-content > [data-application-part=body] > .locked,
+.cyberpunk.drone-sheet > .window-content > [data-application-part=body] > .editable,
+.cyberpunk.drone-sheet > .window-content > [data-application-part=body] > .locked,
+.cyberpunk.shop-sheet > .window-content > [data-application-part=body] > .editable,
+.cyberpunk.shop-sheet > .window-content > [data-application-part=body] > .locked {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .character-sheet {
@@ -1940,6 +2016,7 @@ div.statderive .value.rightborder {
 .sheet-header .lock-toggle {
   width: 16px;
   height: 16px;
+  min-height: 16px;
   padding: 0;
   border: none;
   background: transparent;
@@ -1993,7 +2070,7 @@ div.statderive .value.rightborder {
 .sheet-content {
   flex: 1;
   min-height: 0;
-  padding: 0 20px;
+  padding: 0 8px 0 20px;
   display: flex;
   gap: 20px;
   overflow: hidden;
@@ -2296,7 +2373,7 @@ div.statderive .value.rightborder {
   overflow: visible;
 }
 
-.character-identity {
+.sheet-identity {
   height: 66px;
   display: flex;
   flex-direction: row;
@@ -2592,7 +2669,7 @@ input.stat-value.stat-input::-webkit-outer-spin-button, input.stat-value.stat-in
   width: 620px;
   height: 50px;
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -2723,9 +2800,20 @@ input.info-value.info-input[readonly] {
 .character-sheet .locked {
   height: 100%;
 }
+.character-sheet .tab[data-tab]:not(.active) {
+  display: none;
+}
 .character-sheet .tab {
   min-height: 260px;
   max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.character-sheet .tab > .gear-container,
+.character-sheet .tab > .cyberware-container {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -2740,35 +2828,6 @@ input.info-value.info-input[readonly] {
   display: flex;
   flex-direction: column;
   row-gap: 8px;
-}
-
-.tab-header {
-  position: sticky;
-  top: 0;
-  width: 100%;
-  height: 36px;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--sheet-gilt);
-  background-color: var(--chat-back);
-  box-shadow: 0 7px 10px 0 var(--chat-back);
-  z-index: 10;
-}
-
-.tab-title {
-  font-family: var(--font-blender);
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 36px;
-  color: #B9B29D;
-  text-transform: uppercase;
-}
-
-.tab-badge {
-  width: 16px;
-  height: 16px;
 }
 
 .humanity-header-right {
@@ -2807,10 +2866,9 @@ input.info-value.info-input[readonly] {
 }
 
 .skills-content {
-  flex: 1;
-  min-height: 0;
   display: flex;
   column-gap: 10px;
+  align-items: flex-start;
 }
 
 .skills-column {
@@ -2823,6 +2881,7 @@ input.info-value.info-input[readonly] {
 .skill-row {
   width: 100%;
   height: 36px;
+  flex-shrink: 0;
   padding: 0 8px;
   display: flex;
   align-items: center;
@@ -2830,7 +2889,7 @@ input.info-value.info-input[readonly] {
   border-bottom: 1px dashed #26282F;
 }
 .skill-row.virtual-skill {
-  padding: 0 62px 0 8px;
+  padding: 0 56px 0 8px;
 }
 
 .skill-type-icon {
@@ -2915,6 +2974,7 @@ input.skill-value.skill-level-input:focus {
 .skill-plus {
   width: 16px;
   height: 16px;
+  min-height: 16px;
   padding: 0;
   border: none;
   background: transparent;
@@ -2972,6 +3032,7 @@ input.skill-value.skill-level-input:focus {
 .skill-delete {
   width: 16px;
   height: 16px;
+  min-height: 16px;
   padding: 0;
   border: none;
   background: transparent;
@@ -3033,7 +3094,8 @@ input.skill-value.skill-level-input:focus {
   overflow-y: auto;
 }
 
-.gear-block {
+.section-block {
+  width: 610px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -3068,6 +3130,7 @@ input.skill-value.skill-level-input:focus {
 .gear-row {
   width: 100%;
   height: 48px;
+  flex-shrink: 0;
   padding: 0 11px 0 8px;
   display: flex;
   align-items: center;
@@ -3135,23 +3198,22 @@ input.skill-value.skill-level-input:focus {
 }
 
 .gear-weight {
-  width: 50px;
+  width: 60px;
   height: 24px;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
   padding-right: 8px;
 }
 .gear-weight .price-value {
-  width: 100%;
   font-family: var(--font-blender);
   font-weight: 300;
   font-size: 16px;
   line-height: 24px;
   color: #FFFFFF;
-  text-align: right;
 }
 .gear-weight img {
   width: 16px;
@@ -3164,18 +3226,17 @@ input.skill-value.skill-level-input:focus {
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
   padding-right: 8px;
 }
 .gear-price .price-value {
-  width: 100%;
   font-family: var(--font-blender);
   font-weight: 300;
   font-size: 16px;
   line-height: 24px;
   color: #FFFFFF;
-  text-align: right;
 }
 .gear-price img {
   width: 16px;
@@ -3264,6 +3325,8 @@ input.skill-value.skill-level-input:focus {
 .gear-delete {
   width: 16px;
   height: 16px;
+  min-height: 16px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: transparent;
@@ -3399,7 +3462,7 @@ input.skill-value.skill-level-input:focus {
   box-shadow: none;
 }
 
-.tab.state .gear-block {
+.tab.state .section-block {
   gap: 8px;
 }
 
@@ -3543,74 +3606,39 @@ input.skill-value.skill-level-input:focus {
   color: #B9B29D;
 }
 
-.shape-display {
-  height: 22px;
-  padding: 2px 4px 2px 5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.shape-display .shape-prefix,
-.shape-display .shape-label,
-.shape-display .shape-select {
-  font-family: var(--font-refinery);
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 16px;
-  color: var(--chat-text);
-  letter-spacing: 0.05em;
-}
-.shape-display .shape-prefix {
-  color: var(--sheet-gilt);
-}
-.shape-display .shape-select {
-  min-width: 160px;
-  background: transparent;
-  border: none;
-  outline: none;
-  box-shadow: none;
-  padding: 0;
-  margin: 0;
-  height: 18px;
-  cursor: pointer;
-  -moz-appearance: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.shape-display .shape-select:focus {
-  outline: none;
-  box-shadow: none;
-}
-.shape-display .shape-select option {
-  background: var(--chat-back);
-  color: var(--chat-text);
-}
-
 .character-sheet.drone-sheet,
 .character-sheet.shop-sheet {
-  width: 600px;
+  width: 670px;
   min-height: 390px;
 }
 .character-sheet.drone-sheet .sheet-frame,
 .character-sheet.shop-sheet .sheet-frame {
-  width: 600px;
+  width: 670px;
   min-height: 390px;
   position: relative;
 }
-.character-sheet.drone-sheet .add-item-fab,
-.character-sheet.shop-sheet .add-item-fab {
-  display: block;
-  bottom: 24px;
-}
 .character-sheet.drone-sheet .sheet-details,
 .character-sheet.shop-sheet .sheet-details {
-  width: 340px;
+  width: 440px;
 }
 .character-sheet.drone-sheet .attributes-row,
 .character-sheet.drone-sheet .info-row,
 .character-sheet.shop-sheet .attributes-row,
 .character-sheet.shop-sheet .info-row {
-  width: 340px;
+  width: 440px;
+}
+.character-sheet.drone-sheet .sheet-sections,
+.character-sheet.shop-sheet .sheet-sections {
+  width: 660px;
+}
+.character-sheet.drone-sheet .section-block,
+.character-sheet.shop-sheet .section-block {
+  width: 624px;
+}
+.character-sheet.drone-sheet .add-item-fab,
+.character-sheet.shop-sheet .add-item-fab {
+  display: block;
+  bottom: 24px;
 }
 .character-sheet.drone-sheet .portrait-section,
 .character-sheet.shop-sheet .portrait-section {
@@ -3644,8 +3672,8 @@ input.skill-value.skill-level-input:focus {
   overflow-y: auto;
   overflow-x: hidden;
 }
-.character-sheet.drone-sheet .sheet-sections .gear-block,
-.character-sheet.shop-sheet .sheet-sections .gear-block {
+.character-sheet.drone-sheet .sheet-sections .section-block,
+.character-sheet.shop-sheet .sheet-sections .section-block {
   flex: 0 0 auto;
 }
 .character-sheet.drone-sheet .sheet-sections .gear-content,
@@ -3653,143 +3681,11 @@ input.skill-value.skill-level-input:focus {
   flex: 0 0 auto;
   overflow: visible;
 }
-.character-sheet.drone-sheet .sheet-sections .gear-block:has(.cover-row),
-.character-sheet.drone-sheet .sheet-sections .gear-block:has(.conditions-row),
-.character-sheet.shop-sheet .sheet-sections .gear-block:has(.cover-row),
-.character-sheet.shop-sheet .sheet-sections .gear-block:has(.conditions-row) {
+.character-sheet.drone-sheet .sheet-sections .section-block:has(.cover-row),
+.character-sheet.drone-sheet .sheet-sections .section-block:has(.conditions-row),
+.character-sheet.shop-sheet .sheet-sections .section-block:has(.cover-row),
+.character-sheet.shop-sheet .sheet-sections .section-block:has(.conditions-row) {
   gap: 8px;
-}
-.character-sheet.drone-sheet .gear-row.zone-row,
-.character-sheet.shop-sheet .gear-row.zone-row {
-  flex-shrink: 0;
-  padding: 0 0 0 8px;
-}
-.character-sheet.drone-sheet .zone-field,
-.character-sheet.shop-sheet .zone-field {
-  width: 90px;
-  align-items: center;
-}
-.character-sheet.drone-sheet .zone-field .field-top,
-.character-sheet.shop-sheet .zone-field .field-top {
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-}
-.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-icon img,
-.character-sheet.shop-sheet .gear-row.zone-row.disabled .gear-icon img {
-  filter: grayscale(1) brightness(0.6);
-}
-.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-name,
-.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-context,
-.character-sheet.drone-sheet .gear-row.zone-row.disabled .field-top,
-.character-sheet.drone-sheet .gear-row.zone-row.disabled .field-bottom,
-.character-sheet.shop-sheet .gear-row.zone-row.disabled .gear-name,
-.character-sheet.shop-sheet .gear-row.zone-row.disabled .gear-context,
-.character-sheet.shop-sheet .gear-row.zone-row.disabled .field-top,
-.character-sheet.shop-sheet .gear-row.zone-row.disabled .field-bottom {
-  color: #444856;
-}
-.character-sheet.drone-sheet .gear-action-btn.zone-disable-btn,
-.character-sheet.shop-sheet .gear-action-btn.zone-disable-btn {
-  pointer-events: auto;
-  cursor: pointer;
-  position: relative;
-  z-index: 1;
-}
-.character-sheet.drone-sheet .gear-action-btn.zone-disable-btn img,
-.character-sheet.shop-sheet .gear-action-btn.zone-disable-btn img {
-  pointer-events: none;
-}
-.character-sheet.drone-sheet .zone-paired-row .zone-paired-sep,
-.character-sheet.shop-sheet .zone-paired-row .zone-paired-sep {
-  width: 20px;
-  text-align: center;
-  font-family: var(--font-blender);
-  font-weight: 300;
-  font-size: 16px;
-  line-height: 16px;
-  color: #808090;
-}
-.character-sheet.drone-sheet .drone-skills-block .drone-skills-content,
-.character-sheet.shop-sheet .drone-skills-block .drone-skills-content {
-  display: flex;
-  column-gap: 16px;
-  padding: 0 8px;
-}
-.character-sheet.drone-sheet .drone-skills-block .drone-skills-column,
-.character-sheet.shop-sheet .drone-skills-block .drone-skills-column {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.character-sheet.drone-sheet .drone-skills-block .drone-skill-row,
-.character-sheet.shop-sheet .drone-skills-block .drone-skill-row {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 4px;
-  border-bottom: 1px dashed #26282F;
-}
-.character-sheet.drone-sheet .drone-skills-block .drone-skill-row .skill-name,
-.character-sheet.shop-sheet .drone-skills-block .drone-skill-row .skill-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.character-sheet.shop-sheet .sheet-sections {
-  gap: 12px;
-}
-.character-sheet.shop-sheet .sheet-sections .tabs-line {
-  width: 100%;
-  padding: 0 20px;
-  box-sizing: border-box;
-}
-.character-sheet.shop-sheet .sheet-sections .divider {
-  width: 100%;
-  margin: 0;
-}
-.character-sheet.shop-sheet .shop-settings-btn {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-  box-shadow: none;
-}
-.character-sheet.shop-sheet .shop-settings-btn img {
-  width: 100%;
-  height: 100%;
-}
-.character-sheet.shop-sheet .shop-settings-btn:hover {
-  opacity: 1;
-}
-.character-sheet.shop-sheet .shop-categories {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-.character-sheet.shop-sheet .shop-categories-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.character-sheet.shop-sheet .shop-category-icon {
-  width: 70px;
-  height: 60px;
-  border: none;
-  flex: 0 0 auto;
 }
 
 .character-sheet input.zone-input {
@@ -3846,6 +3742,272 @@ input.skill-value.skill-level-input:focus {
 .unlocked .character-sheet input.zone-input {
   background: #26282F;
   border-radius: 2px;
+}
+
+.shape-display {
+  height: 22px;
+  padding: 2px 4px 2px 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shape-display .shape-prefix,
+.shape-display .shape-label,
+.shape-display .shape-select {
+  font-family: var(--font-refinery);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 16px;
+  color: var(--chat-text);
+  letter-spacing: 0.05em;
+}
+.shape-display .shape-prefix {
+  color: var(--sheet-gilt);
+}
+.shape-display .shape-select {
+  min-width: 160px;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  height: 18px;
+  cursor: pointer;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.shape-display .shape-select:focus {
+  outline: none;
+  box-shadow: none;
+}
+.shape-display .shape-select option {
+  background: var(--chat-back);
+  color: var(--chat-text);
+}
+
+.character-sheet.drone-sheet .gear-row.zone-row {
+  flex-shrink: 0;
+  padding: 0 0 0 8px;
+}
+.character-sheet.drone-sheet .zone-field {
+  width: 90px;
+  align-items: center;
+}
+.character-sheet.drone-sheet .zone-field .field-top {
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-icon img {
+  filter: grayscale(1) brightness(0.6);
+}
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-name,
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .gear-context,
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .field-top,
+.character-sheet.drone-sheet .gear-row.zone-row.disabled .field-bottom {
+  color: #444856;
+}
+.character-sheet.drone-sheet .gear-action-btn.zone-disable-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+.character-sheet.drone-sheet .gear-action-btn.zone-disable-btn img {
+  pointer-events: none;
+}
+.character-sheet.drone-sheet .zone-paired-row .zone-paired-sep {
+  width: 20px;
+  text-align: center;
+  font-family: var(--font-blender);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 16px;
+  color: #808090;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skills-content {
+  display: flex;
+  column-gap: 16px;
+  padding: 0 8px;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skills-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skill-row {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  border-bottom: 1px dashed #26282F;
+}
+.character-sheet.drone-sheet .drone-skills-block .drone-skill-row .skill-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.character-sheet.shop-sheet .sheet-sections {
+  gap: 12px;
+}
+.character-sheet.shop-sheet .sheet-sections .tabs-line {
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+.character-sheet.shop-sheet .sheet-sections .divider {
+  width: 100%;
+  margin: 0;
+}
+.character-sheet.shop-sheet .shop-settings-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  box-shadow: none;
+}
+.character-sheet.shop-sheet .shop-settings-btn img {
+  width: 100%;
+  height: 100%;
+}
+.character-sheet.shop-sheet .shop-settings-btn:hover {
+  opacity: 1;
+}
+.character-sheet.shop-sheet .sheet-identity {
+  height: auto;
+}
+.character-sheet.shop-sheet .identity-left {
+  gap: 8px;
+}
+.character-sheet.shop-sheet .sheet-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 14px;
+}
+.character-sheet.shop-sheet .shop-subtext {
+  height: 22px;
+  padding: 2px 4px 2px 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.character-sheet.shop-sheet .shop-subtext .shop-label,
+.character-sheet.shop-sheet .shop-subtext .shop-funds-label {
+  font-family: var(--font-refinery);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  color: var(--sheet-gilt);
+}
+.character-sheet.shop-sheet .shop-subtext .shop-funds-value,
+.character-sheet.shop-sheet .shop-subtext input.shop-funds-input {
+  box-sizing: border-box;
+  width: 80px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-refinery);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 18px;
+  letter-spacing: 0.05em;
+  color: var(--chat-text);
+  text-align: left;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+.character-sheet.shop-sheet .shop-subtext input.shop-funds-input {
+  -moz-appearance: textfield;
+}
+.character-sheet.shop-sheet .shop-subtext input.shop-funds-input::-webkit-outer-spin-button, .character-sheet.shop-sheet .shop-subtext input.shop-funds-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.character-sheet.shop-sheet .shop-subtext input.shop-funds-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.unlocked .character-sheet.shop-sheet .shop-subtext input.shop-funds-input {
+  background: #26282F;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.unlocked .character-sheet.shop-sheet .shop-subtext input.shop-funds-input:hover {
+  background: #2E3038;
+}
+.unlocked .character-sheet.shop-sheet .shop-subtext input.shop-funds-input:focus {
+  background: #34373F;
+}
+.character-sheet.shop-sheet .shop-description {
+  align-self: stretch;
+  min-height: 136px;
+}
+.character-sheet.shop-sheet .shop-description-text {
+  box-sizing: border-box;
+  padding: 4px;
+  height: 136px;
+  font-family: var(--font-blender);
+  font-weight: 400;
+  user-select: text;
+  cursor: text;
+  font-size: 18px;
+  line-height: 32px;
+  letter-spacing: 0.05em;
+  color: #444856;
+  font-variant: small-caps;
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.character-sheet.shop-sheet .shop-description-text p {
+  margin: 0;
+}
+.character-sheet.shop-sheet .shop-description-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  margin: 0;
+  font-family: var(--font-blender);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 32px;
+  letter-spacing: 0.05em;
+  color: #444856;
+  font-variant: small-caps;
+  font-style: italic;
+  background: #26282F;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  height: 136px;
+  min-height: 136px;
+}
+.character-sheet.shop-sheet .shop-description-input:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .item-card {
@@ -4192,6 +4354,8 @@ input.skill-value.skill-level-input:focus {
   height: 24px;
 }
 .item-card .item-stats .stat-value {
+  height: 24px;
+  padding: 6px;
   color: var(--Chat-Text, #FFF);
   font-family: var(--font-blender);
   font-size: 12px;
@@ -4493,7 +4657,7 @@ input.skill-value.skill-level-input:focus {
 .item-card.unlocked .item-stats input.stat-value {
   display: flex;
   width: 70px;
-  padding: 8px;
+  padding: 6px;
   align-items: center;
   border-radius: 4px;
   background: var(--Chat-Front, #26282F);
@@ -4518,7 +4682,7 @@ input.skill-value.skill-level-input:focus {
 .item-card.unlocked .item-stats select.stat-value {
   display: flex;
   width: 70px;
-  padding: 8px;
+  padding: 6px;
   padding-right: 16px;
   align-items: center;
   border-radius: 4px;
@@ -4720,23 +4884,36 @@ input.skill-value.skill-level-input:focus {
   margin: 0;
 }
 
-.cyberpunk.role-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.role-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.role-sheet.app, .cyberpunk.role-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.role-sheet > .window-header {
   display: none;
 }
 .cyberpunk.role-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.role-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.role-sheet > .window-resizable-handle,
+.cyberpunk.role-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.role-sheet button, .cyberpunk.role-sheet a {
   --button-focus-outline-color: transparent;
@@ -4925,23 +5102,36 @@ input.skill-value.skill-level-input:focus {
   color: #808090;
 }
 
-.cyberpunk.skill-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.skill-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.skill-sheet.app, .cyberpunk.skill-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.skill-sheet > .window-header {
   display: none;
 }
 .cyberpunk.skill-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.skill-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.skill-sheet > .window-resizable-handle,
+.cyberpunk.skill-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.skill-sheet button, .cyberpunk.skill-sheet a {
   --button-focus-outline-color: transparent;
@@ -4962,23 +5152,36 @@ input.skill-value.skill-level-input:focus {
   height: 400px;
 }
 
-.cyberpunk.commodity-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.commodity-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.commodity-sheet.app, .cyberpunk.commodity-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.commodity-sheet > .window-header {
   display: none;
 }
 .cyberpunk.commodity-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.commodity-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.commodity-sheet > .window-resizable-handle,
+.cyberpunk.commodity-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.commodity-sheet button, .cyberpunk.commodity-sheet a {
   --button-focus-outline-color: transparent;
@@ -4999,23 +5202,36 @@ input.skill-value.skill-level-input:focus {
   height: 400px;
 }
 
-.cyberpunk.outfit-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.outfit-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.outfit-sheet.app, .cyberpunk.outfit-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.outfit-sheet > .window-header {
   display: none;
 }
 .cyberpunk.outfit-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.outfit-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.outfit-sheet > .window-resizable-handle,
+.cyberpunk.outfit-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.outfit-sheet button, .cyberpunk.outfit-sheet a {
   --button-focus-outline-color: transparent;
@@ -5065,52 +5281,235 @@ input.skill-value.skill-level-input:focus {
 .app.window-app.move-items-dialog,
 .app.window-app.shop-settings-dialog,
 .app.window-app.toolbox-dialog,
-.app.window-app.realm-switcher-dialog {
-  background: var(--chat-back, #1A1A1A);
-  border: 2px solid var(--chat-stroke, #252730);
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+.app.window-app.realm-switcher-dialog,
+.application.reload-dialog,
+.application.ranged-attack-dialog,
+.application.range-selection-dialog,
+.application.melee-attack-dialog,
+.application.skill-roll-dialog,
+.application.defence-roll-dialog,
+.application.initiative-roll-dialog,
+.application.medical-help-dialog,
+.application.heal-dialog,
+.application.stress-roll-dialog,
+.application.fright-roll-dialog,
+.application.create-item-dialog,
+.application.game-time-dialog,
+.application.move-items-dialog,
+.application.shop-settings-dialog,
+.application.toolbox-dialog,
+.application.punch-dialog,
+.application.unarmed-attack-dialog,
+.application.sleep-roll-dialog,
+.application.ordnance-attack-dialog,
+.application.realm-switcher-dialog {
+  background: var(--chat-back, #1A1A1A) !important;
+  border: 2px solid var(--chat-stroke, #252730) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
-.app.window-app.reload-dialog .window-header,
-.app.window-app.ranged-attack-dialog .window-header,
-.app.window-app.range-selection-dialog .window-header,
-.app.window-app.melee-attack-dialog .window-header,
-.app.window-app.skill-roll-dialog .window-header,
-.app.window-app.defence-roll-dialog .window-header,
-.app.window-app.initiative-roll-dialog .window-header,
-.app.window-app.medical-help-dialog .window-header,
-.app.window-app.heal-dialog .window-header,
-.app.window-app.stress-roll-dialog .window-header,
-.app.window-app.fright-roll-dialog .window-header,
-.app.window-app.create-item-dialog .window-header,
-.app.window-app.game-time-dialog .window-header,
-.app.window-app.move-items-dialog .window-header,
-.app.window-app.shop-settings-dialog .window-header,
-.app.window-app.toolbox-dialog .window-header,
-.app.window-app.realm-switcher-dialog .window-header {
+.app.window-app.reload-dialog > .window-header,
+.app.window-app.ranged-attack-dialog > .window-header,
+.app.window-app.range-selection-dialog > .window-header,
+.app.window-app.melee-attack-dialog > .window-header,
+.app.window-app.skill-roll-dialog > .window-header,
+.app.window-app.defence-roll-dialog > .window-header,
+.app.window-app.initiative-roll-dialog > .window-header,
+.app.window-app.medical-help-dialog > .window-header,
+.app.window-app.heal-dialog > .window-header,
+.app.window-app.stress-roll-dialog > .window-header,
+.app.window-app.fright-roll-dialog > .window-header,
+.app.window-app.create-item-dialog > .window-header,
+.app.window-app.game-time-dialog > .window-header,
+.app.window-app.move-items-dialog > .window-header,
+.app.window-app.shop-settings-dialog > .window-header,
+.app.window-app.toolbox-dialog > .window-header,
+.app.window-app.realm-switcher-dialog > .window-header,
+.application.reload-dialog > .window-header,
+.application.ranged-attack-dialog > .window-header,
+.application.range-selection-dialog > .window-header,
+.application.melee-attack-dialog > .window-header,
+.application.skill-roll-dialog > .window-header,
+.application.defence-roll-dialog > .window-header,
+.application.initiative-roll-dialog > .window-header,
+.application.medical-help-dialog > .window-header,
+.application.heal-dialog > .window-header,
+.application.stress-roll-dialog > .window-header,
+.application.fright-roll-dialog > .window-header,
+.application.create-item-dialog > .window-header,
+.application.game-time-dialog > .window-header,
+.application.move-items-dialog > .window-header,
+.application.shop-settings-dialog > .window-header,
+.application.toolbox-dialog > .window-header,
+.application.punch-dialog > .window-header,
+.application.unarmed-attack-dialog > .window-header,
+.application.sleep-roll-dialog > .window-header,
+.application.ordnance-attack-dialog > .window-header,
+.application.realm-switcher-dialog > .window-header {
   display: none;
 }
-.app.window-app.reload-dialog .window-content,
-.app.window-app.ranged-attack-dialog .window-content,
-.app.window-app.range-selection-dialog .window-content,
-.app.window-app.melee-attack-dialog .window-content,
-.app.window-app.skill-roll-dialog .window-content,
-.app.window-app.defence-roll-dialog .window-content,
-.app.window-app.initiative-roll-dialog .window-content,
-.app.window-app.medical-help-dialog .window-content,
-.app.window-app.heal-dialog .window-content,
-.app.window-app.stress-roll-dialog .window-content,
-.app.window-app.fright-roll-dialog .window-content,
-.app.window-app.create-item-dialog .window-content,
-.app.window-app.game-time-dialog .window-content,
-.app.window-app.move-items-dialog .window-content,
-.app.window-app.shop-settings-dialog .window-content,
-.app.window-app.toolbox-dialog .window-content,
-.app.window-app.realm-switcher-dialog .window-content {
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  overflow: visible;
+.app.window-app.reload-dialog > .window-content,
+.app.window-app.ranged-attack-dialog > .window-content,
+.app.window-app.range-selection-dialog > .window-content,
+.app.window-app.melee-attack-dialog > .window-content,
+.app.window-app.skill-roll-dialog > .window-content,
+.app.window-app.defence-roll-dialog > .window-content,
+.app.window-app.initiative-roll-dialog > .window-content,
+.app.window-app.medical-help-dialog > .window-content,
+.app.window-app.heal-dialog > .window-content,
+.app.window-app.stress-roll-dialog > .window-content,
+.app.window-app.fright-roll-dialog > .window-content,
+.app.window-app.create-item-dialog > .window-content,
+.app.window-app.game-time-dialog > .window-content,
+.app.window-app.move-items-dialog > .window-content,
+.app.window-app.shop-settings-dialog > .window-content,
+.app.window-app.toolbox-dialog > .window-content,
+.app.window-app.realm-switcher-dialog > .window-content,
+.application.reload-dialog > .window-content,
+.application.ranged-attack-dialog > .window-content,
+.application.range-selection-dialog > .window-content,
+.application.melee-attack-dialog > .window-content,
+.application.skill-roll-dialog > .window-content,
+.application.defence-roll-dialog > .window-content,
+.application.initiative-roll-dialog > .window-content,
+.application.medical-help-dialog > .window-content,
+.application.heal-dialog > .window-content,
+.application.stress-roll-dialog > .window-content,
+.application.fright-roll-dialog > .window-content,
+.application.create-item-dialog > .window-content,
+.application.game-time-dialog > .window-content,
+.application.move-items-dialog > .window-content,
+.application.shop-settings-dialog > .window-content,
+.application.toolbox-dialog > .window-content,
+.application.punch-dialog > .window-content,
+.application.unarmed-attack-dialog > .window-content,
+.application.sleep-roll-dialog > .window-content,
+.application.ordnance-attack-dialog > .window-content,
+.application.realm-switcher-dialog > .window-content {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.app.window-app.reload-dialog button,
+.app.window-app.ranged-attack-dialog button,
+.app.window-app.range-selection-dialog button,
+.app.window-app.melee-attack-dialog button,
+.app.window-app.skill-roll-dialog button,
+.app.window-app.defence-roll-dialog button,
+.app.window-app.initiative-roll-dialog button,
+.app.window-app.medical-help-dialog button,
+.app.window-app.heal-dialog button,
+.app.window-app.stress-roll-dialog button,
+.app.window-app.fright-roll-dialog button,
+.app.window-app.create-item-dialog button,
+.app.window-app.game-time-dialog button,
+.app.window-app.move-items-dialog button,
+.app.window-app.shop-settings-dialog button,
+.app.window-app.toolbox-dialog button,
+.app.window-app.realm-switcher-dialog button,
+.application.reload-dialog button,
+.application.ranged-attack-dialog button,
+.application.range-selection-dialog button,
+.application.melee-attack-dialog button,
+.application.skill-roll-dialog button,
+.application.defence-roll-dialog button,
+.application.initiative-roll-dialog button,
+.application.medical-help-dialog button,
+.application.heal-dialog button,
+.application.stress-roll-dialog button,
+.application.fright-roll-dialog button,
+.application.create-item-dialog button,
+.application.game-time-dialog button,
+.application.move-items-dialog button,
+.application.shop-settings-dialog button,
+.application.toolbox-dialog button,
+.application.punch-dialog button,
+.application.unarmed-attack-dialog button,
+.application.sleep-roll-dialog button,
+.application.ordnance-attack-dialog button,
+.application.realm-switcher-dialog button {
+  --button-focus-outline-color: transparent;
+}
+.app.window-app.reload-dialog button:focus, .app.window-app.reload-dialog button:focus-visible,
+.app.window-app.ranged-attack-dialog button:focus,
+.app.window-app.ranged-attack-dialog button:focus-visible,
+.app.window-app.range-selection-dialog button:focus,
+.app.window-app.range-selection-dialog button:focus-visible,
+.app.window-app.melee-attack-dialog button:focus,
+.app.window-app.melee-attack-dialog button:focus-visible,
+.app.window-app.skill-roll-dialog button:focus,
+.app.window-app.skill-roll-dialog button:focus-visible,
+.app.window-app.defence-roll-dialog button:focus,
+.app.window-app.defence-roll-dialog button:focus-visible,
+.app.window-app.initiative-roll-dialog button:focus,
+.app.window-app.initiative-roll-dialog button:focus-visible,
+.app.window-app.medical-help-dialog button:focus,
+.app.window-app.medical-help-dialog button:focus-visible,
+.app.window-app.heal-dialog button:focus,
+.app.window-app.heal-dialog button:focus-visible,
+.app.window-app.stress-roll-dialog button:focus,
+.app.window-app.stress-roll-dialog button:focus-visible,
+.app.window-app.fright-roll-dialog button:focus,
+.app.window-app.fright-roll-dialog button:focus-visible,
+.app.window-app.create-item-dialog button:focus,
+.app.window-app.create-item-dialog button:focus-visible,
+.app.window-app.game-time-dialog button:focus,
+.app.window-app.game-time-dialog button:focus-visible,
+.app.window-app.move-items-dialog button:focus,
+.app.window-app.move-items-dialog button:focus-visible,
+.app.window-app.shop-settings-dialog button:focus,
+.app.window-app.shop-settings-dialog button:focus-visible,
+.app.window-app.toolbox-dialog button:focus,
+.app.window-app.toolbox-dialog button:focus-visible,
+.app.window-app.realm-switcher-dialog button:focus,
+.app.window-app.realm-switcher-dialog button:focus-visible,
+.application.reload-dialog button:focus,
+.application.reload-dialog button:focus-visible,
+.application.ranged-attack-dialog button:focus,
+.application.ranged-attack-dialog button:focus-visible,
+.application.range-selection-dialog button:focus,
+.application.range-selection-dialog button:focus-visible,
+.application.melee-attack-dialog button:focus,
+.application.melee-attack-dialog button:focus-visible,
+.application.skill-roll-dialog button:focus,
+.application.skill-roll-dialog button:focus-visible,
+.application.defence-roll-dialog button:focus,
+.application.defence-roll-dialog button:focus-visible,
+.application.initiative-roll-dialog button:focus,
+.application.initiative-roll-dialog button:focus-visible,
+.application.medical-help-dialog button:focus,
+.application.medical-help-dialog button:focus-visible,
+.application.heal-dialog button:focus,
+.application.heal-dialog button:focus-visible,
+.application.stress-roll-dialog button:focus,
+.application.stress-roll-dialog button:focus-visible,
+.application.fright-roll-dialog button:focus,
+.application.fright-roll-dialog button:focus-visible,
+.application.create-item-dialog button:focus,
+.application.create-item-dialog button:focus-visible,
+.application.game-time-dialog button:focus,
+.application.game-time-dialog button:focus-visible,
+.application.move-items-dialog button:focus,
+.application.move-items-dialog button:focus-visible,
+.application.shop-settings-dialog button:focus,
+.application.shop-settings-dialog button:focus-visible,
+.application.toolbox-dialog button:focus,
+.application.toolbox-dialog button:focus-visible,
+.application.punch-dialog button:focus,
+.application.punch-dialog button:focus-visible,
+.application.unarmed-attack-dialog button:focus,
+.application.unarmed-attack-dialog button:focus-visible,
+.application.sleep-roll-dialog button:focus,
+.application.sleep-roll-dialog button:focus-visible,
+.application.ordnance-attack-dialog button:focus,
+.application.ordnance-attack-dialog button:focus-visible,
+.application.realm-switcher-dialog button:focus,
+.application.realm-switcher-dialog button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .reload-dialog-wrapper,
@@ -7132,23 +7531,36 @@ input.skill-value.skill-level-input:focus {
   display: none !important;
 }
 
-.cyberpunk.weapon-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.weapon-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.weapon-sheet.app, .cyberpunk.weapon-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.weapon-sheet > .window-header {
   display: none;
 }
 .cyberpunk.weapon-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.weapon-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.weapon-sheet > .window-resizable-handle,
+.cyberpunk.weapon-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.weapon-sheet button, .cyberpunk.weapon-sheet a {
   --button-focus-outline-color: transparent;
@@ -7175,23 +7587,36 @@ input.skill-value.skill-level-input:focus {
   background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
 }
 
-.cyberpunk.tool-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.tool-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.tool-sheet.app, .cyberpunk.tool-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.tool-sheet > .window-header {
   display: none;
 }
 .cyberpunk.tool-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.tool-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.tool-sheet > .window-resizable-handle,
+.cyberpunk.tool-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.tool-sheet button, .cyberpunk.tool-sheet a {
   --button-focus-outline-color: transparent;
@@ -7212,23 +7637,36 @@ input.skill-value.skill-level-input:focus {
   min-height: 400px;
 }
 
-.cyberpunk.drug-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.drug-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.drug-sheet.app, .cyberpunk.drug-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.drug-sheet > .window-header {
   display: none;
 }
 .cyberpunk.drug-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.drug-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.drug-sheet > .window-resizable-handle,
+.cyberpunk.drug-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.drug-sheet button, .cyberpunk.drug-sheet a {
   --button-focus-outline-color: transparent;
@@ -7249,23 +7687,36 @@ input.skill-value.skill-level-input:focus {
   min-height: 400px;
 }
 
-.cyberpunk.netware-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.netware-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.netware-sheet.app, .cyberpunk.netware-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.netware-sheet > .window-header {
   display: none;
 }
 .cyberpunk.netware-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.netware-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.netware-sheet > .window-resizable-handle,
+.cyberpunk.netware-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.netware-sheet button, .cyberpunk.netware-sheet a {
   --button-focus-outline-color: transparent;
@@ -7285,31 +7736,37 @@ input.skill-value.skill-level-input:focus {
 .netware-card {
   min-height: 400px;
 }
-.netware-card .cyber-divider {
-  width: 100%;
-  height: 1px;
-  flex-shrink: 0;
-  margin: 8px 0;
-  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
-}
 
-.cyberpunk.cyberware-sheet.app {
-  background: transparent;
-  box-shadow: none;
-  border: none;
+.cyberpunk.cyberware-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.cyberware-sheet.app, .cyberpunk.cyberware-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
 }
 .cyberpunk.cyberware-sheet > .window-header {
   display: none;
 }
 .cyberpunk.cyberware-sheet > .window-content {
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-.cyberpunk.cyberware-sheet > .window-resizable-handle {
-  display: none;
+.cyberpunk.cyberware-sheet > .window-resizable-handle,
+.cyberpunk.cyberware-sheet > .window-resize-handle {
+  display: none !important;
 }
 .cyberpunk.cyberware-sheet button, .cyberpunk.cyberware-sheet a {
   --button-focus-outline-color: transparent;
@@ -7324,6 +7781,10 @@ input.skill-value.skill-level-input:focus {
 .cyberpunk.cyberware-sheet h1, .cyberpunk.cyberware-sheet h2 {
   border: none;
   border-bottom: none;
+}
+
+.cyberware-card {
+  min-height: 400px;
 }
 
 .cyberware-card .humanity-field,
@@ -7344,7 +7805,7 @@ input.skill-value.skill-level-input:focus {
 .cyberware-card .humanity-formula,
 .outfit-card .humanity-formula {
   display: flex;
-  width: 58px;
+  width: 60px;
   height: 26px;
   padding: 5px 8px;
   align-items: center;
@@ -7358,7 +7819,7 @@ input.skill-value.skill-level-input:focus {
 }
 .cyberware-card .humanity-formula-input,
 .outfit-card .humanity-formula-input {
-  width: 58px;
+  width: 60px;
   height: 26px;
   padding: 5px 8px;
   border-radius: 4px;
@@ -7438,14 +7899,6 @@ input.skill-value.skill-level-input:focus {
 .cyberware-card .humanity-result.rolled,
 .outfit-card .humanity-result.rolled {
   color: var(--Chat-Text, #FFF);
-}
-.cyberware-card .cyber-divider,
-.outfit-card .cyber-divider {
-  width: 100%;
-  height: 1px;
-  flex-shrink: 0;
-  margin: 8px 0;
-  background: linear-gradient(90deg, rgba(185, 178, 157, 0) 0%, rgba(185, 178, 157, 0.5) 50%, rgba(185, 178, 157, 0) 100%);
 }
 .cyberware-card .checkbox-field,
 .outfit-card .checkbox-field {
@@ -7589,6 +8042,7 @@ input.skill-value.skill-level-input:focus {
 }
 .cyberware-card .sp-of,
 .outfit-card .sp-of {
+  padding: 0 4px;
   color: var(--Sheet-Key, #B9B29D);
   font-family: var(--font-blender);
   font-size: 14px;

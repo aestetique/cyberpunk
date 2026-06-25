@@ -1,0 +1,185 @@
+// ============================================
+// Shop Sheet — shop-specific rules
+// ============================================
+// Width / frame / sidebar / sheet-sections layout is shared with the drone sheet
+// and lives in _character-sheet.scss under the combined `.drone-sheet, .shop-sheet`
+// selector. This file owns the shop's own pieces: tabs/divider, settings button,
+// identity-line subtext (funds), and the flavour-style description block.
+
+.character-sheet.shop-sheet {
+  // Tab + divider + content stack — mirror the item-card's .item-content gap
+  // (12px) so the spacing between tabs / divider / gear list feels the same.
+  // Divider runs the full window width edge-to-edge; tabs sit 20px-inset.
+  .sheet-sections {
+    gap: 12px;
+  }
+  .sheet-sections .tabs-line {
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+  .sheet-sections .divider {
+    width: 100%;
+    margin: 0;
+  }
+
+  .shop-settings-btn {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+    box-shadow: none;
+
+    img { width: 100%; height: 100%; }
+    &:hover { opacity: 1; }
+  }
+
+  // 8 px breathing room between the actor name and the funds/description
+  // subtext, shop-only. .sheet-identity drops its fixed 66 px height so
+  // the two stacked rows + gap fit naturally.
+  .sheet-identity {
+    height: auto;
+  }
+  .identity-left {
+    gap: 8px;
+  }
+
+  // sheet-details becomes a flex column so we can space identity → description
+  // by gap. 14 px right inset replaces the previous .shop-description padding —
+  // now the whole right column shares the same inset.
+  .sheet-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 14px;
+  }
+
+  // Subtext line under the actor name: "Shop [⚙] Available funds: <value>".
+  // Self-contained layout — drone's .shape-display is gone from the template,
+  // so we provide the 22 px row + Refinery typography directly.
+  .shop-subtext {
+    height: 22px;
+    padding: 2px 4px 2px 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .shop-label,
+    .shop-funds-label {
+      font-family: var(--font-refinery);
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 16px;
+      letter-spacing: 0.05em;
+      color: var(--sheet-gilt);
+    }
+
+    .shop-funds-value,
+    input.shop-funds-input {
+      box-sizing: border-box;
+      width: 80px;
+      height: 18px;
+      padding: 0;
+      margin: 0;
+      font-family: var(--font-refinery);
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 18px;
+      letter-spacing: 0.05em;
+      color: var(--chat-text);
+      text-align: left;
+      background: transparent;
+      border: none;
+      outline: none;
+      box-shadow: none;
+    }
+
+    input.shop-funds-input {
+      -moz-appearance: textfield;
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      &:focus { outline: none; box-shadow: none; }
+    }
+  }
+
+  // Unlocked funds input highlight. Scoped under .shop-sheet so the rule
+  // out-specifies the .shop-subtext base above (transparent / no border).
+  .unlocked & .shop-subtext input.shop-funds-input {
+    background: #26282F;
+    border-radius: 4px;
+    transition: background 0.15s;
+
+    &:hover { background: #2E3038; }
+    &:focus { background: #34373F; }
+  }
+
+  // Shop description block — no own padding (inherits the 14 px right inset
+  // from .sheet-details). Fixed 136 px height (4 lines × 32 + 8 padding) in
+  // both locked and unlocked modes so toggling the lock doesn't push the
+  // gear list below up or down.
+  .shop-description {
+    align-self: stretch;
+    min-height: 136px;
+  }
+
+  // Locked + non-GM rendering — italic gilt-gray small-caps body. Clamped to
+  // 4 lines (32 × 4 = 128 px visible), with "..." overflow for longer text.
+  // Horizontal padding (4 px) matches the unlocked textarea so the text body
+  // sits in the same place across lock / unlock.
+  .shop-description-text {
+    box-sizing: border-box;
+    padding: 4px;
+    height: 136px;
+    font-family: var(--font-blender);
+    font-weight: 400;
+    user-select: text;
+    cursor: text;
+    font-size: 18px;
+    line-height: 32px;
+    letter-spacing: 0.05em;
+    color: #444856;
+    font-variant: small-caps;
+    font-style: italic;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  // Unlocked editor — inherits the locked typography so the text sits in the
+  // same place; only the tinted padded box (Chat-Front fill, 4 px radius)
+  // appears around it. Mirrors the .skill-level-input pattern.
+  .shop-description-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px;
+    margin: 0;
+    font-family: var(--font-blender);
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 32px;
+    letter-spacing: 0.05em;
+    color: #444856;
+    font-variant: small-caps;
+    font-style: italic;
+    background: #26282F;
+    border: none;
+    border-radius: 4px;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+    height: 136px;
+    min-height: 136px;
+
+    &:focus { outline: none; box-shadow: none; }
+  }
+}

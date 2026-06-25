@@ -1,70 +1,130 @@
 import { localize, getHiddenLocationsForTargets, resolveTargetActor } from "../utils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Melee Attack Dialog — streamlined dialog for melee weapon strikes.
- * Shows a Strike section with a Coup De Grace / Knockout toggle,
- * Conditions, Location targeting, and Luck controls.
+ * @extends {ApplicationV2}
  */
-export class MeleeAttackDialog extends Application {
+export class MeleeAttackDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
-  /**
-   * @param {Actor} actor        The owning actor
-   * @param {Item}  weapon       The weapon item
-   * @param {Array} targetTokens Array of target token data
-   */
   constructor(actor, weapon, targetTokens = []) {
-    super();
+    super({});
     this.actor = actor;
     this.weapon = weapon;
     this.targetTokens = targetTokens;
-
-    // Execute toggle (Coup De Grace / Knockout)
     this._executeSelected = false;
-
-    // Condition toggles
-    this._conditions = {
-      prepared: false,
-      ambush: false,
-      distracted: false,
-      indirect: false
-    };
-
-    // Location targeting
+    this._conditions = { prepared: false, ambush: false, distracted: false, indirect: false };
     this._selectedLocation = null;
-
-    // Luck spending
     this._luckToSpend = 0;
     this._availableLuck = actor.system.stats.luck?.effective ?? actor.system.stats.luck?.total ?? 0;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "melee-attack-dialog",
-      classes: ["cyberpunk", "melee-attack-dialog"],
-      template: "systems/cyberpunk/templates/dialog/melee-attack.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
-      minimizable: false,
-      resizable: false
-    });
+  static DEFAULT_OPTIONS = {
+    id: "melee-attack-dialog",
+    classes: ["cyberpunk", "melee-attack-dialog"],
+    position: { width: 300, height: "auto" },
+    window: { frame: true, positioned: true, resizable: false, minimizable: false, controls: [] },
+    actions: {
+      closeDialog:     MeleeAttackDialog._onCloseDialog,
+      toggleExecute:   MeleeAttackDialog._onToggleExecute,
+      toggleCondition: MeleeAttackDialog._onToggleCondition,
+      pickLocation:    MeleeAttackDialog._onPickLocation,
+      luckPlus:        MeleeAttackDialog._onLuckPlus,
+      luckMinus:       MeleeAttackDialog._onLuckMinus,
+      roll:            MeleeAttackDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/melee-attack.hbs" }
+  };
+
+  static _onCloseDialog(event, _target) { event?.preventDefault?.(); this.close({ animate: false }); }
+
+  static _onToggleExecute(event, target) {
+    event?.preventDefault?.();
+    this._executeSelected = !this._executeSelected;
+    target.classList.toggle('selected', this._executeSelected);
+    if (this._executeSelected) {
+      this._luckToSpend = 0;
+      this._updateLuckDisplay();
+      this.element.querySelector('.luck-controls')?.classList.add('disabled');
+      for (const key of Object.keys(this._conditions)) this._conditions[key] = false;
+      this.element.querySelectorAll('.condition-btn').forEach(b => b.classList.remove('selected'));
+      this.element.querySelectorAll('.conditions-grid:not(.conditions-grid--single)').forEach(g => g.classList.add('disabled'));
+      this._selectedLocation = null;
+      this.element.querySelectorAll('.location-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        const loc = btn.dataset.location;
+        const img = btn.querySelector('img');
+        if (img) img.setAttribute('src', `systems/cyberpunk/img/chat/${loc}-disabled.svg`);
+      });
+      this.element.querySelector('.location-grid')?.classList.add('disabled');
+    } else {
+      this.element.querySelector('.luck-controls')?.classList.toggle('disabled', this._availableLuck <= 0);
+      this._updateLuckDisplay();
+      this.element.querySelectorAll('.conditions-grid:not(.conditions-grid--single)').forEach(g => g.classList.remove('disabled'));
+      this.element.querySelector('.location-grid')?.classList.remove('disabled');
+      this.element.querySelectorAll('.location-btn').forEach(btn => {
+        const loc = btn.dataset.location;
+        const img = btn.querySelector('img');
+        if (img) img.setAttribute('src', `systems/cyberpunk/img/chat/${loc}.svg`);
+      });
+    }
   }
 
-  /** @override */
-  getData() {
+  static _onToggleCondition(event, target) {
+    event?.preventDefault?.();
+    if (this._executeSelected) return;
+    const condition = target?.dataset?.condition;
+    if (!condition) return;
+    this._conditions[condition] = !this._conditions[condition];
+    target.classList.toggle('selected', this._conditions[condition]);
+  }
+
+  static _onPickLocation(event, target) {
+    event?.preventDefault?.();
+    if (this._executeSelected) return;
+    if (target.classList.contains('no-zone')) return;
+    const location = target.dataset.location;
+    if (this._selectedLocation === location) {
+      this._selectedLocation = null;
+      target.classList.remove('selected');
+    } else {
+      this.element.querySelectorAll('.location-btn').forEach(b => b.classList.remove('selected'));
+      this._selectedLocation = location;
+      target.classList.add('selected');
+    }
+  }
+
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (!this._executeSelected && this._luckToSpend < this._availableLuck) {
+      this._luckToSpend++;
+      this._updateLuckDisplay();
+    }
+  }
+
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (!this._executeSelected && this._luckToSpend > 0) {
+      this._luckToSpend--;
+      this._updateLuckDisplay();
+    }
+  }
+
+  static _onRoll(event, _target) { event?.preventDefault?.(); this._executeRoll(); }
+
+  async _prepareContext(_options) {
     const damageType = this.weapon.weaponData.damageType || "blunt";
     const isEdged = ["edged", "spike", "monoblade"].includes(damageType);
-    const executeLabel = isEdged ? localize("CoupDeGrace") : localize("Knockout");
-    const executeCondition = isEdged ? "coupDeGrace" : "knockout";
-
     return {
       weaponName: this.weapon.name,
-      executeLabel,
-      executeCondition,
+      executeLabel: isEdged ? localize("CoupDeGrace") : localize("Knockout"),
+      executeCondition: isEdged ? "coupDeGrace" : "knockout",
       executeSelected: this._executeSelected,
       hiddenLocations: getHiddenLocationsForTargets(this.targetTokens),
-      // Luck data
       luckToSpend: this._luckToSpend,
       availableLuck: this._availableLuck,
       canIncreaseLuck: this._luckToSpend < this._availableLuck && !this._executeSelected,
@@ -74,167 +134,53 @@ export class MeleeAttackDialog extends Application {
     };
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Execute toggle button (Coup De Grace / Knockout)
-    html.find('.execute-btn').click(ev => {
-      this._executeSelected = !this._executeSelected;
-      ev.currentTarget.classList.toggle('selected', this._executeSelected);
-
-      if (this._executeSelected) {
-        // Reset all selections and disable controls
-        this._luckToSpend = 0;
-        this._updateLuckDisplay(html);
-        html.find('.luck-controls').addClass('disabled');
-
-        // Reset and disable conditions
-        for (const key of Object.keys(this._conditions)) {
-          this._conditions[key] = false;
-        }
-        html.find('.condition-btn').removeClass('selected');
-        html.find('.conditions-grid:not(.conditions-grid--single)').addClass('disabled');
-
-        // Reset and disable location
-        this._selectedLocation = null;
-        html.find('.location-btn').removeClass('selected');
-        html.find('.location-grid').addClass('disabled');
-        html.find('.location-btn').each((i, btn) => {
-          const loc = btn.dataset.location;
-          $(btn).find('img').attr('src', `systems/cyberpunk/img/chat/${loc}-disabled.svg`);
-        });
-      } else {
-        // Re-enable all controls
-        html.find('.luck-controls').toggleClass('disabled', this._availableLuck <= 0);
-        this._updateLuckDisplay(html);
-        html.find('.conditions-grid:not(.conditions-grid--single)').removeClass('disabled');
-        html.find('.location-grid').removeClass('disabled');
-        html.find('.location-btn').each((i, btn) => {
-          const loc = btn.dataset.location;
-          $(btn).find('img').attr('src', `systems/cyberpunk/img/chat/${loc}.svg`);
-        });
-      }
-    });
-
-    // Condition button toggles
-    html.find('.condition-btn').click(ev => {
-      if (this._executeSelected) return;
-      const btn = ev.currentTarget;
-      const condition = btn.dataset.condition;
-      this._conditions[condition] = !this._conditions[condition];
-      btn.classList.toggle('selected', this._conditions[condition]);
-    });
-
-    // Location button selection
-    html.find('.location-btn').click(ev => {
-      if (this._executeSelected) return;
-      const btn = ev.currentTarget;
-      if (btn.classList.contains('no-zone')) return;
-      const location = btn.dataset.location;
-
-      // Toggle selection - clicking same location deselects it
-      if (this._selectedLocation === location) {
-        this._selectedLocation = null;
-        btn.classList.remove('selected');
-      } else {
-        // Deselect previous
-        html.find('.location-btn').removeClass('selected');
-        // Select new
-        this._selectedLocation = location;
-        btn.classList.add('selected');
-      }
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(() => {
-      if (!this._executeSelected && this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(() => {
-      if (!this._executeSelected && this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
-    });
   }
 
-  /**
-   * Update the luck display and button states
-   * @param {jQuery} html - The dialog HTML element
-   */
-  _updateLuckDisplay(html) {
-    html.find('.luck-value').text(this._luckToSpend);
-
+  _updateLuckDisplay() {
+    const luckVal = this.element.querySelector('.luck-value');
+    if (luckVal) luckVal.textContent = this._luckToSpend;
     const minusDisabled = this._executeSelected || this._luckToSpend <= 0;
     const plusDisabled = this._executeSelected || this._luckToSpend >= this._availableLuck;
-
-    html.find('.luck-minus-btn').toggleClass('disabled', minusDisabled);
-    html.find('.luck-plus-btn').toggleClass('disabled', plusDisabled);
-
-    // Swap icons based on disabled state
-    html.find('.luck-minus-btn img').attr('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
-    html.find('.luck-plus-btn img').attr('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
+    const minusBtn = this.element.querySelector('.luck-minus-btn');
+    const plusBtn = this.element.querySelector('.luck-plus-btn');
+    minusBtn?.classList.toggle('disabled', minusDisabled);
+    plusBtn?.classList.toggle('disabled', plusDisabled);
+    minusBtn?.querySelector('img')?.setAttribute('src', `systems/cyberpunk/img/chat/${minusDisabled ? 'minus-disabled' : 'minus'}.svg`);
+    plusBtn?.querySelector('img')?.setAttribute('src', `systems/cyberpunk/img/chat/${plusDisabled ? 'plus-disabled' : 'plus'}.svg`);
   }
 
-  /**
-   * Execute the melee action — either an execute (CdG/Knockout) or a normal strike
-   */
   async _executeRoll() {
     const damageType = this.weapon.weaponData.damageType || "blunt";
     const isEdged = ["edged", "spike", "monoblade"].includes(damageType);
 
     if (this._executeSelected) {
-      // === EXECUTE PATH (Coup De Grace / Knockout) ===
       const conditionId = isEdged ? "coupDeGrace" : "knockout";
       const effectLabel = isEdged ? localize("CoupDeGrace") : localize("Knockout");
       const effectIcon = isEdged ? "dead" : "unconscious";
-
       const templateData = {
         weaponName: this.weapon.name,
         weaponImage: this.weapon.img,
         weaponType: this.weapon.getWeaponLineType(),
-        effectLabel,
-        effectIcon,
-        conditionId
+        effectLabel, effectIcon, conditionId
       };
-
       const content = await foundry.applications.handlebars.renderTemplate(
         "systems/cyberpunk/templates/chat/melee-execute.hbs",
         templateData
       );
-
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
         content
       });
-
-      // Register melee execute action AFTER executing
       const { registerAction } = await import("../action-tracker.js");
       await registerAction(this.actor, `melee execute (${this.weapon.name})`);
-
-      this.close();
+      this.close({ animate: false });
     } else {
-      // === NORMAL STRIKE PATH ===
-      // Spend luck if any was used
       if (this._luckToSpend > 0) {
         const currentSpent = this.actor.system.stats.luck.spent || 0;
         const currentSpentAt = this.actor.system.stats.luck.spentAt;
@@ -243,7 +189,6 @@ export class MeleeAttackDialog extends Application {
           "system.stats.luck.spentAt": currentSpentAt || Date.now()
         });
       }
-
       const attackMods = {
         extraMod: (this._conditions.prepared ? 2 : 0)
                 + (this._conditions.ambush ? 5 : 0)
@@ -255,11 +200,8 @@ export class MeleeAttackDialog extends Application {
         targetArea: this._selectedLocation || "",
         targetActor: resolveTargetActor(this.targetTokens?.[0])
       };
-
-      this.close();
+      this.close({ animate: false });
       this.weapon._resolveAttack(attackMods, this.targetTokens);
-
-      // Register melee attack action AFTER executing
       const { registerAction } = await import("../action-tracker.js");
       await registerAction(this.actor, `melee attack (${this.weapon.name})`);
     }

@@ -1,6 +1,6 @@
 import { availability } from "../lookups.js";
 import { localize } from "../utils.js";
-import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
 import {
   prepareEffectTabContext,
   prepareWeaponTabContext,
@@ -11,63 +11,42 @@ import {
 
 /**
  * Outfit (Armor) Item Sheet with custom card design and tabs.
- *
- * Armor type values:
- *   - "soft" / "hard"  full coverage armor that can accept option inserts
- *   - "option"        attachment armor (insert, plate, plug). Its SP layers
- *                     onto the parent it's attached to via the actor flag
- *                     flags.cyberpunk.attachedTo (set from the actor's gear
- *                     panel, mirroring cyberware options). No slot/space
- *                     accounting — any number of options can attach.
- *
- * Optional Weapon tab (`system.isWeapon`) mirrors cyberware's embedded weapon
- * block: it lives at system.weapon and uses the shared tab-weapon partial.
- *
- * @extends {CyberpunkItemSheet}
+ * @extends {CyberpunkItemSheetV2}
  */
-export class CyberpunkOutfitSheet extends CyberpunkItemSheet {
+export class CyberpunkOutfitSheet extends CyberpunkItemSheetV2 {
 
-  /** @type {string} */
-  _activeTab = "description";
+  static DEFAULT_OPTIONS = {
+    classes: ["outfit-sheet"],
+    dragDrop: [{ dropSelector: "[data-drop-target]" }]
+  };
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["cyberpunk", "sheet", "item", "outfit-sheet"],
-      template: "systems/cyberpunk/templates/item/outfit-sheet.hbs",
-      dragDrop: [{ dropSelector: "[data-drop-target]" }]
-    });
-  }
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/item/outfit-sheet.hbs" }
+  };
 
-  /** @override */
-  getData() {
-    const data = super.getData();
-    const sys = data.system;
-    data.activeTab = this._activeTab;
+  async _prepareContext(options) {
+    const ctx = await super._prepareContext(options);
+    const sys = ctx.system;
 
-    // ----- Capability flags -----
-    data.isOption = sys.armorType === "option";
-    data.isShield = sys.armorType === "shield";
-    data.isWeapon = !!sys.isWeapon;
-    data.showWeaponTab = data.isWeapon;
+    ctx.isOption = sys.armorType === "option";
+    ctx.isShield = sys.armorType === "shield";
+    ctx.isWeapon = !!sys.isWeapon;
+    ctx.showWeaponTab = ctx.isWeapon;
 
-    // If the active tab vanished (e.g. user unchecked Is Weapon), bounce back.
-    if (this._activeTab === "weapon" && !data.showWeaponTab) {
+    if (this._activeTab === "weapon" && !ctx.showWeaponTab) {
       this._activeTab = "armor";
-      data.activeTab = "armor";
+      ctx.activeTab = "armor";
     }
 
-    // ----- Availability dropdown -----
-    data.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
+    ctx.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
       value,
       label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
       selected: sys.availability === value
     }));
     const selectedAvail = availability[sys.availability] || "Common";
-    data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
+    ctx.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
 
-    // ----- Armor Type dropdown -----
-    data.armorTypeOptions = [
+    ctx.armorTypeOptions = [
       { value: "soft",   label: game.i18n.localize("CYBERPUNK.SoftArmor"),       selected: sys.armorType === "soft" },
       { value: "hard",   label: game.i18n.localize("CYBERPUNK.HardArmor"),       selected: sys.armorType === "hard" },
       { value: "shield", label: game.i18n.localize("CYBERPUNK.ArmorTypeShield"), selected: sys.armorType === "shield" },
@@ -77,17 +56,14 @@ export class CyberpunkOutfitSheet extends CyberpunkItemSheet {
                             : sys.armorType === "shield" ? "ArmorTypeShield"
                             : sys.armorType === "option" ? "ArmorTypeOption"
                                                          : "SoftArmor";
-    data.selectedArmorTypeLabel = game.i18n.localize(`CYBERPUNK.${armorTypeLabelKey}`);
+    ctx.selectedArmorTypeLabel = game.i18n.localize(`CYBERPUNK.${armorTypeLabelKey}`);
 
-    // ----- SP frame contents -----
-    // Shields render a single centred "Shield" block (stored at system.shield);
-    // every other armor type renders the 6-zone grid stored at system.coverage.
-    if (data.isShield) {
+    if (ctx.isShield) {
       const sh = sys.shield || { stoppingPower: 0, ablation: 0 };
       const maxSP = Number(sh.stoppingPower) || 0;
       const ablation = Number(sh.ablation) || 0;
       const currentSP = Math.max(0, maxSP - ablation);
-      data.shieldBlock = {
+      ctx.shieldBlock = {
         key: "shield",
         label: game.i18n.localize("CYBERPUNK.Shield"),
         currentSP,
@@ -103,7 +79,7 @@ export class CyberpunkOutfitSheet extends CyberpunkItemSheet {
         { key: "Torso", label: localize("Torso") },
         { key: "rLeg",  label: localize("rLeg")  }
       ];
-      data.coverageRows = [
+      ctx.coverageRows = [
         locationOrder.slice(0, 3),
         locationOrder.slice(3, 6)
       ].map(row => row.map(loc => {
@@ -121,97 +97,49 @@ export class CyberpunkOutfitSheet extends CyberpunkItemSheet {
       }));
     }
 
-    // ----- Effect tab context (always present) -----
-    prepareEffectTabContext(data, sys.bonuses);
+    prepareEffectTabContext(ctx, sys.bonuses);
+    if (ctx.showWeaponTab) prepareWeaponTabContext(ctx, sys.weapon);
 
-    // ----- Weapon tab context (only when isWeapon) -----
-    if (data.showWeaponTab) {
-      prepareWeaponTabContext(data, sys.weapon);
-    }
-
-    return data;
+    return ctx;
   }
 
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Tab switching
-    html.find('.tab-header').click(ev => {
-      ev.preventDefault();
-      const tab = ev.currentTarget.dataset.tab;
-      if (tab && tab !== this._activeTab) {
-        this._activeTab = tab;
-        this.render(false);
-      }
-    });
-
-    // Skill bonus row → open the skill sheet on click
-    html.find('.skill-name[data-uuid]').click(async ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const uuid = ev.currentTarget.dataset.uuid;
-      if (uuid) {
-        const item = await fromUuid(uuid);
-        if (item) item.sheet.render(true);
-      }
-    });
-
+  _onRender(context, options) {
+    super._onRender(context, options);
     if (this._isLocked) return;
 
-    // Generic boolean toggle (same pattern as cyberware-sheet's checkbox-toggle).
-    html.find('.checkbox-toggle').click(async ev => {
-      ev.preventDefault();
-      const field = ev.currentTarget.dataset.field;
-      if (!field) return;
-      const current = foundry.utils.getProperty(this.item, field);
-      await this.item.update({ [field]: !current });
-    });
+    const html = $(this.element);
+    const item = this.document;
 
-    // Current SP input — convert to ablation on change.
-    // Shields write to system.shield.ablation; everything else writes to the
-    // zone-keyed system.coverage.<key>.ablation.
-    html.find('.sp-current-input').change(async ev => {
+    html.find('.sp-current-input').on('change', async ev => {
       const input = ev.currentTarget;
       const key = input.dataset.key;
       const maxSP = Number(input.dataset.max) || 0;
       const newCurrent = Math.max(0, Math.min(maxSP, Number(input.value) || 0));
       const ablation = maxSP - newCurrent;
-      const path = key === "shield"
-        ? "system.shield.ablation"
-        : `system.coverage.${key}.ablation`;
-      await this.item.update({ [path]: ablation });
+      const path = key === "shield" ? "system.shield.ablation" : `system.coverage.${key}.ablation`;
+      await item.update({ [path]: ablation });
     });
 
-    // Effect-tab listeners (shared)
-    bindEffectTabListeners(html, this.item, { isLocked: this._isLocked });
-
-    // Weapon-tab listeners (shared) — safe to bind even when tab hidden
-    bindWeaponTabListeners(html, this.item, { isLocked: this._isLocked });
+    bindEffectTabListeners(html, item, { isLocked: this._isLocked });
+    bindWeaponTabListeners(html, item, { isLocked: this._isLocked });
   }
 
-  /** @override */
   async _onDrop(event) {
     event.preventDefault();
     event.stopPropagation();
     if (this._isLocked) return;
 
     let data;
-    try {
-      data = JSON.parse(event.dataTransfer.getData('text/plain'));
-    } catch (err) {
-      return;
-    }
-
+    try { data = JSON.parse(event.dataTransfer.getData('text/plain')); } catch { return; }
     if (data.type !== "Item") return;
+
     const item = await Item.implementation.fromDropData(data);
     if (!item) return;
 
-    // Only skill items can be added (as Effect-tab bonuses).
     if (item.type !== "skill") {
       ui.notifications.warn(game.i18n.localize("CYBERPUNK.OnlySkillsCanBeAdded"));
       return;
     }
-    await handleSkillDropForBonus(this.item, item);
+    await handleSkillDropForBonus(this.document, item);
   }
 }

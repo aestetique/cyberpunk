@@ -1,9 +1,9 @@
-<form class="{{cssClass}}{{#unless isLocked}} unlocked{{/unless}}" autocomplete="off">
+<div class="{{cssClass}}{{#unless isLocked}} unlocked{{/unless}}">
   <div class="character-sheet drone-sheet">
     <div class="sheet-frame">
       {{!-- Header (38px) --}}
       <header class="sheet-header">
-        <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+        <button class="lock-toggle" type="button" data-action="lockToggle" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
           <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
         </button>
         <span class="actor-name">{{actor.name}}</span>
@@ -34,7 +34,7 @@
 
         {{!-- Details --}}
         <div class="sheet-details">
-          <div class="character-identity">
+          <div class="sheet-identity">
             <div class="identity-left">
               <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#if isLocked}}readonly{{/if}}>
               <div class="shape-display" data-tooltip-name="Shape" data-flavor="Drone shape — determines hit location count.">
@@ -92,7 +92,7 @@
       {{!-- Full-width sections beneath the trivia row --}}
       <div class="sheet-sections">
         <div class="gear-container">
-        <div class="gear-block">
+        <div class="section-block">
           <header class="tab-header">
             <span class="tab-title">STRUCTURE</span>
             <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-armor.svg" alt="">
@@ -164,7 +164,7 @@
         {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems}}
         {{> "systems/cyberpunk/templates/actor/parts/drone-skills-block.hbs" hasSkills=hasSkills skillsLeft=skillsLeft skillsRight=skillsRight isUnlocked=isUnlocked}}
 
-        <div class="gear-block">
+        <div class="section-block">
           <header class="tab-header">
             <span class="tab-title">COVER</span>
             <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-cover.svg" alt="">
@@ -186,4 +186,4 @@
       </div>
     </div>
   </div>
-</form>
+</div>

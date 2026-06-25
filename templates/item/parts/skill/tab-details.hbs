@@ -92,7 +92,7 @@
     {{#if isLocked}}
       <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isMartial}}checked{{else}}unchecked{{/if}}.svg">
     {{else}}
-      <img class="checkbox-img checkbox-toggle" data-field="system.isMartial"
+      <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isMartial"
            src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isMartial}}checked{{else}}unchecked{{/if}}.svg">
     {{/if}}
   </div>

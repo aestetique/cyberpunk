@@ -1,7 +1,7 @@
 <div class="skill-roll-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{title}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{!-- Difficulty section bar --}}
@@ -33,10 +33,10 @@
 
   {{!-- Condition buttons - 1 row, 2 buttons --}}
   <div class="conditions-grid">
-    <button type="button" class="condition-btn" data-condition="prepared">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="prepared">
       {{localize "CYBERPUNK.ConditionPrepared"}}
     </button>
-    <button type="button" class="condition-btn" data-condition="distracted">
+    <button type="button" class="condition-btn" data-action="toggleCondition" data-condition="distracted">
       {{localize "CYBERPUNK.ConditionDistracted"}}
     </button>
   </div>
@@ -49,19 +49,19 @@
 
   {{!-- Luck controls --}}
   <div class="luck-controls{{#unless hasAnyLuck}} disabled{{/unless}}">
-    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}" data-action="luckMinus">
       <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="luck-value">{{luckToSpend}}</span>
     </div>
-    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}" data-action="luckPlus">
       <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
 
   {{!-- Roll button --}}
-  <button type="button" class="reload-apply-btn roll-btn">
+  <button type="button" class="reload-apply-btn roll-btn" data-action="roll">
     {{localize "CYBERPUNK.Roll"}}
   </button>
 </div>

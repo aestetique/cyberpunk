@@ -1,7 +1,8 @@
-<form class="item-card role-card {{#unless isLocked}}unlocked{{/unless}}" autocomplete="off">
+{{!-- V2 root is the form; wrap content in our card div --}}
+<div class="item-card role-card {{#unless isLocked}}unlocked{{/unless}}">
   {{!-- Header (38px) --}}
   <header class="sheet-header">
-    <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+    <button class="lock-toggle" type="button" data-action="lockToggle" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
       <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
     </button>
 
@@ -20,7 +21,7 @@
     {{!-- Item Trivia (460×80px) --}}
     <div class="item-trivia">
       {{!-- Portrait (80×80px) --}}
-      <div class="item-portrait">
+      <div class="item-portrait" data-action="portraitClick">
         <img src="{{item.img}}" alt="{{item.name}}">
       </div>
 
@@ -38,10 +39,10 @@
 
     {{!-- Tabs Line --}}
     <div class="tabs-line">
-      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-tab="description">
+      <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-action="tabSwitch" data-tab="description">
         <span class="tab-text">Description</span>
       </a>
-      <a class="tab-header {{#if (eq activeTab 'skills')}}active{{/if}}" data-tab="skills">
+      <a class="tab-header {{#if (eq activeTab 'skills')}}active{{/if}}" data-action="tabSwitch" data-tab="skills">
         <span class="tab-text">Skills</span>
       </a>
     </div>
@@ -78,9 +79,9 @@
           <label class="variable-label">Special Skill</label>
           {{#if hasSpecialSkill}}
             <div class="skill-drop filled" data-drop-target="special-skill">
-              <span class="skill-name" data-uuid="{{system.specialSkill.uuid}}">{{system.specialSkill.name}}</span>
+              <span class="skill-name" data-action="openSkill" data-uuid="{{system.specialSkill.uuid}}">{{system.specialSkill.name}}</span>
               {{#unless isLocked}}
-                <button type="button" class="remove-special-skill" title="Remove Skill">
+                <button type="button" class="remove-special-skill" data-action="removeSpecialSkill" title="Remove Skill">
                   <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
                 </button>
               {{/unless}}
@@ -99,9 +100,9 @@
             <div class="career-skills-grid">
               {{#each careerSkillsList as |skill index|}}
                 <div class="career-skill-item">
-                  <span class="skill-name" data-uuid="{{skill.uuid}}">{{skill.name}}</span>
+                  <span class="skill-name" data-action="openSkill" data-uuid="{{skill.uuid}}">{{skill.name}}</span>
                   {{#unless ../isLocked}}
-                    <button type="button" class="remove-career-skill" data-index="{{index}}" title="Remove Skill">
+                    <button type="button" class="remove-career-skill" data-action="removeCareerSkill" data-index="{{index}}" title="Remove Skill">
                       <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
                     </button>
                   {{/unless}}
@@ -115,4 +116,4 @@
       {{/if}}
     </div>
   </div>
-</form>
+</div>

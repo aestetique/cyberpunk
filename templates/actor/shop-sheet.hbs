@@ -1,11 +1,11 @@
-<form class="{{cssClass}}{{#unless isLocked}} unlocked{{/unless}}" autocomplete="off">
+<div class="{{cssClass}}{{#unless isLocked}} unlocked{{/unless}}" autocomplete="off">
   <div class="character-sheet shop-sheet">
     <div class="sheet-frame">
 
       {{!-- Header --}}
       <header class="sheet-header">
         {{#if isGM}}
-        <button class="lock-toggle" type="button" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+        <button class="lock-toggle" type="button" data-action="lockToggle" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
           <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
         </button>
         {{/if}}
@@ -39,43 +39,41 @@
         </aside>
 
         <div class="sheet-details">
-          <div class="character-identity">
+          <div class="sheet-identity">
             <div class="identity-left">
               <input type="text" class="character-name" name="name" value="{{actor.name}}" {{#unless isUnlocked}}readonly{{/unless}}>
-              <div class="shape-display">
-                <span class="shape-prefix">{{localize "CYBERPUNK.Shop"}}</span>
+              {{!-- Subtext line.
+                   GM: "Shop  [⚙]  Available funds: <number>"
+                   non-GM: "Available funds: <number>" only --}}
+              <div class="shop-subtext">
                 {{#if isGM}}
-                <button class="shop-settings-btn" type="button" title="{{localize "CYBERPUNK.ShopSettings"}}">
-                  <img src="systems/cyberpunk/img/chat/settings.svg" alt="">
-                </button>
+                  <span class="shop-label">{{localize "CYBERPUNK.Shop"}}</span>
+                  <button class="shop-settings-btn" type="button" title="{{localize "CYBERPUNK.ShopSettings"}}">
+                    <img src="systems/cyberpunk/img/chat/settings.svg" alt="">
+                  </button>
                 {{/if}}
-              </div>
-            </div>
-
-            {{!-- Till — same info-block style as Career on the character
-                 sheet. Always visible, always editable. --}}
-            <div class="identity-points">
-              <div class="info-block shop-till">
-                <span class="info-name">{{localize "CYBERPUNK.Funds"}}</span>
-                <input type="number" class="info-value info-input shop-eurobucks-input" value="{{shopBalance}}" min="0" {{#unless isGM}}readonly{{/unless}}>
+                <span class="shop-funds-label">{{localize "CYBERPUNK.AvailableFunds"}}</span>
+                {{#if isUnlocked}}
+                  <input type="number" class="shop-funds-input shop-eurobucks-input" value="{{shopBalance}}" min="0">
+                {{else}}
+                  <span class="shop-funds-value">{{shopBalance}}</span>
+                {{/if}}
               </div>
             </div>
           </div>
 
-          {{!-- Two rows of 4 category status icons. Read-only: tells players
-               at a glance which wares the shop deals in. Toggled via the
-               Shop Settings dialog, not by clicking the icons here. --}}
-          <div class="shop-categories">
-            {{#each categoryIconRows as |row|}}
-              <div class="shop-categories-row">
-                {{#each row as |cat|}}
-                  <img class="shop-category-icon"
-                       src="systems/cyberpunk/img/ui/shop-{{cat.key}}-{{#if cat.on}}on{{else}}off{{/if}}.svg"
-                       alt="{{cat.label}}"
-                       title="{{cat.label}}">
+          {{!-- Shop description (flavour text). Locked / non-GM render line-by-line
+               as <p> paragraphs; GM + unlocked gets a textarea. --}}
+          <div class="shop-description">
+            {{#if isUnlocked}}
+              <textarea class="shop-description-input" name="system.description" maxlength="240" placeholder="{{localize "CYBERPUNK.ShopDescriptionPlaceholder"}}">{{description}}</textarea>
+            {{else}}
+              <div class="shop-description-text">
+                {{#each descriptionLines}}
+                  <p>{{this}}</p>
                 {{/each}}
               </div>
-            {{/each}}
+            {{/if}}
           </div>
         </div>
       </section>
@@ -110,7 +108,7 @@
           {{/if}}
 
           {{#each categories as |cat|}}
-            <div class="gear-block">
+            <div class="section-block">
               <header class="tab-header">
                 <span class="tab-title">{{cat.title}}</span>
                 <img class="tab-badge" src="systems/cyberpunk/img/ui/{{cat.badge}}.svg" alt="">
@@ -209,4 +207,4 @@
       </div>
     </div>
   </div>
-</form>
+</div>

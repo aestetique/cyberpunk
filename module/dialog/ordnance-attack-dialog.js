@@ -1,11 +1,14 @@
 import { fireModes, ranges } from "../lookups.js";
 import { localize } from "../utils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Ordnance Attack Dialog — select range band, conditions, and luck before firing ordnance.
  * Modeled on RangeSelectionDialog but without location targeting or fire mode selection.
+ * @extends {ApplicationV2}
  */
-export class OrdnanceAttackDialog extends Application {
+export class OrdnanceAttackDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /**
    * @param {Actor} actor        The owning actor
@@ -13,7 +16,7 @@ export class OrdnanceAttackDialog extends Application {
    * @param {Array} targetTokens Array of target token data
    */
   constructor(actor, ordnance, targetTokens = []) {
-    super();
+    super({});
     this.actor = actor;
     this.ordnance = ordnance;
     this.targetTokens = targetTokens;
@@ -65,22 +68,83 @@ export class OrdnanceAttackDialog extends Application {
     this._extremeRange = this._effectiveRange * 2;
   }
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "ordnance-attack-dialog",
-      classes: ["cyberpunk", "range-selection-dialog"],
-      template: "systems/cyberpunk/templates/dialog/ordnance-attack.hbs",
-      width: 300,
-      height: "auto",
-      popOut: true,
+  static DEFAULT_OPTIONS = {
+    id: "ordnance-attack-dialog",
+    classes: ["cyberpunk", "range-selection-dialog"],
+    position: { width: 300, height: "auto" },
+    window: {
+      frame: true,
+      positioned: true,
+      resizable: false,
       minimizable: false,
-      resizable: false
-    });
+      controls: []
+    },
+    actions: {
+      closeDialog: OrdnanceAttackDialog._onCloseDialog,
+      toggleCondition: OrdnanceAttackDialog._onToggleCondition,
+      luckPlus: OrdnanceAttackDialog._onLuckPlus,
+      luckMinus: OrdnanceAttackDialog._onLuckMinus,
+      dicePlus: OrdnanceAttackDialog._onDicePlus,
+      diceMinus: OrdnanceAttackDialog._onDiceMinus,
+      roll: OrdnanceAttackDialog._onRoll
+    }
+  };
+
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/dialog/ordnance-attack.hbs" }
+  };
+
+  static _onCloseDialog(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
   }
 
-  /** @override */
-  getData() {
+  static _onToggleCondition(event, target) {
+    event?.preventDefault?.();
+    const condition = target?.dataset?.condition;
+    if (!condition) return;
+    this._conditions[condition] = !this._conditions[condition];
+    target.classList.toggle("selected", this._conditions[condition]);
+  }
+
+  static _onLuckPlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend < this._availableLuck) {
+      this._luckToSpend++;
+      this._updateLuckDisplay($(this.element));
+    }
+  }
+
+  static _onLuckMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._luckToSpend > 0) {
+      this._luckToSpend--;
+      this._updateLuckDisplay($(this.element));
+    }
+  }
+
+  static _onDicePlus(event, _target) {
+    event?.preventDefault?.();
+    if (this._chargesToSpend < this._maxCharges) {
+      this._chargesToSpend++;
+      this._updateDiceDisplay($(this.element));
+    }
+  }
+
+  static _onDiceMinus(event, _target) {
+    event?.preventDefault?.();
+    if (this._chargesToSpend > 1) {
+      this._chargesToSpend--;
+      this._updateDiceDisplay($(this.element));
+    }
+  }
+
+  static _onRoll(event, _target) {
+    event?.preventDefault?.();
+    this._executeRoll();
+  }
+
+  async _prepareContext(options) {
     const data = {
       ordnanceName: this.ordnance.name,
       // Luck data
@@ -118,61 +182,16 @@ export class OrdnanceAttackDialog extends Application {
   }
 
   /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(context, options) {
+    super._onRender(context, options);
 
-    // Make header draggable
-    const header = html.find('.reload-header')[0];
+    // Make header draggable. V2 root form IS the app element.
+    const header = this.element.querySelector('.reload-header');
     if (header) {
-      new foundry.applications.ux.Draggable.implementation(this, html, header, false);
+      new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
     }
-
-    // Close button
-    html.find('.header-control.close').click(() => this.close());
-
-    // Condition button toggles
-    html.find('.condition-btn').click(ev => {
-      const btn = ev.currentTarget;
-      const condition = btn.dataset.condition;
-      this._conditions[condition] = !this._conditions[condition];
-      btn.classList.toggle('selected', this._conditions[condition]);
-    });
-
-    // Luck plus button
-    html.find('.luck-plus-btn').click(ev => {
-      if (this._luckToSpend < this._availableLuck) {
-        this._luckToSpend++;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Luck minus button
-    html.find('.luck-minus-btn').click(ev => {
-      if (this._luckToSpend > 0) {
-        this._luckToSpend--;
-        this._updateLuckDisplay(html);
-      }
-    });
-
-    // Laser damage dice controls (charges to spend)
-    html.find('.dice-plus-btn').click(() => {
-      if (this._chargesToSpend < this._maxCharges) {
-        this._chargesToSpend++;
-        this._updateDiceDisplay(html);
-      }
-    });
-
-    html.find('.dice-minus-btn').click(() => {
-      if (this._chargesToSpend > 1) {
-        this._chargesToSpend--;
-        this._updateDiceDisplay(html);
-      }
-    });
-
-    // Roll button
-    html.find('.roll-btn').click(() => {
-      this._executeRoll();
-    });
+    // All other interactivity (close / condition toggles / luck / dice / roll)
+    // is wired declaratively via DEFAULT_OPTIONS.actions.
   }
 
   /**
@@ -217,8 +236,14 @@ export class OrdnanceAttackDialog extends Application {
     // Close dialog first
     this.close();
 
-    // Minimize all open application windows
-    Object.values(ui.windows).forEach(w => w.minimize());
+    // Close all open application windows so they don't block the canvas
+    // during template placement. V1 apps live in ui.windows; V2 apps (which
+    // our character/item sheets are now) live in foundry.applications.instances.
+    // animate:false skips V14's 1000ms close-transition wait.
+    Object.values(ui.windows).forEach(w => w.close?.());
+    for (const app of foundry.applications.instances.values()) {
+      if (app.rendered && app.hasFrame) app.close({ animate: false });
+    }
 
     // Place template on the canvas — if cancelled, abort without spending luck
     let placedPos;
@@ -236,14 +261,14 @@ export class OrdnanceAttackDialog extends Application {
       // Beam/Cone: fixed trajectory, always Close
       range = ranges.close;
     } else {
-      // Circle: measure distance from actor to template center
+      // Circle: measure distance from actor to template center.
+      // V14 removed canvas.grid.measureDistance; use measurePath().distance.
       const actorToken = this.actor.getActiveTokens()?.[0];
       if (actorToken) {
-        const dist = canvas.grid.measureDistance(
+        const dist = canvas.grid.measurePath([
           { x: actorToken.center.x, y: actorToken.center.y },
-          { x: placedPos.x, y: placedPos.y },
-          { gridSpaces: false }
-        );
+          { x: placedPos.x, y: placedPos.y }
+        ]).distance;
         actualDistance = Math.round(dist);
         range = this._getRangeFromDistance(actualDistance);
       } else {
@@ -291,14 +316,119 @@ export class OrdnanceAttackDialog extends Application {
   }
 
   /**
-   * Place a MeasuredTemplate on the canvas for the ordnance's area of effect.
-   * @returns {Promise} Resolves when placed, rejects if cancelled
+   * Place an area template (Region in V14, MeasuredTemplate in V13) on the
+   * canvas for the ordnance's area of effect.
+   * @returns {Promise<{x:number,y:number,templateId:string}>} Resolves with the
+   *   placed position + region/template id, rejects with Error("cancelled")
+   *   if the user dismisses placement.
    */
   async _placeTemplate() {
+    // V14: canvas.regions.placeRegion is the public preview+commit helper.
+    // V13: fall back to the old MeasuredTemplate flow.
+    if (canvas.regions?.placeRegion) {
+      return this._placeRegionV14();
+    }
+    return this._placeTemplateV13();
+  }
+
+  /**
+   * V14 Region-based placement. Modeled after dnd5e's TemplatePlacement
+   * (module/canvas/template-placement.mjs) — uses RegionLayer#placeRegions
+   * with `create: false` + `preConfirm` callback to capture placement data,
+   * then creates the Region document directly via createEmbeddedDocuments.
+   *
+   * @returns {Promise<{x:number,y:number,templateId:string}>}
+   */
+  async _placeRegionV14() {
+    const sys = this.ordnance.system;
+    const templateType = sys.templateType || "circle";
+
+    // Grid-units → pixels conversion (matches dnd5e's `gridMultiplier`).
+    const gridMultiplier = canvas.scene.grid.size / canvas.scene.grid.distance;
+
+    let shape;
+    switch (templateType) {
+      case "circle":
+        shape = {
+          type: "circle",
+          x: 0, y: 0, rotation: 0,
+          radius: (sys.radius || 5) * gridMultiplier
+        };
+        break;
+      case "cone": {
+        // Compute the spread half-angle from "radius at range" → full cone angle.
+        const w = sys.radius || 5;
+        const r = sys.range || 50;
+        const angle = 2 * Math.atan2(w / 2, r) * (180 / Math.PI);
+        shape = {
+          type: "cone",
+          x: 0, y: 0, rotation: 0,
+          radius: r * gridMultiplier,
+          angle
+        };
+        break;
+      }
+      case "beam":
+        shape = {
+          type: "line",
+          x: 0, y: 0, rotation: 0,
+          length: (sys.range || 50) * gridMultiplier,
+          width: (sys.radius || 2) * gridMultiplier
+        };
+        break;
+    }
+
+    // Capture the user-placed shape data via preConfirm; placeRegions itself
+    // doesn't auto-commit when `create: false`.
+    const placements = [];
+    await canvas.regions.placeRegions([{
+      name: RegionDocument.implementation.defaultName({ parent: canvas.scene }),
+      color: game.user.color.css ?? game.user.color,
+      displayMeasurements: true,
+      highlightMode: "coverage",
+      shapes: [shape]
+    }], {
+      create: false,
+      preConfirm: ({ document }) => {
+        const obj = document.toObject();
+        placements.push(obj.shapes.at(-1));
+      }
+    });
+
+    if (!placements.length) throw new Error("cancelled");
+
+    const placedShape = placements[0];
+
+    // Now create the actual Region. Tag with flags.core.MeasuredTemplate so
+    // V14's synthetic Scene#templates collection includes it — keeps existing
+    // canvas.scene.templates.get(id) lookups in item.js working without a
+    // parallel V14 branch.
+    const [region] = await canvas.scene.createEmbeddedDocuments("Region", [{
+      name: `${this.ordnance.name} [${game.user.name}]`,
+      color: game.user.color.css ?? game.user.color,
+      shapes: [placedShape],
+      visibility: CONST.REGION_VISIBILITY.ALWAYS,
+      highlightMode: "coverage",
+      displayMeasurements: true,
+      flags: { core: { MeasuredTemplate: true } }
+    }]);
+
+    return {
+      x: placedShape.x ?? 0,
+      y: placedShape.y ?? 0,
+      templateId: region.id
+    };
+  }
+
+  /**
+   * V13 MeasuredTemplate-based placement (legacy path). Identical to the
+   * pre-V14 behaviour; kept verbatim while we support both releases.
+   * @returns {Promise<{x:number,y:number,templateId:string}>}
+   */
+  async _placeTemplateV13() {
     const system = this.ordnance.system;
     const templateType = system.templateType || "circle";
 
-    // Build Foundry template data based on ordnance type
     const templateData = {
       user: game.user.id,
       fillColor: game.user.color,
@@ -326,19 +456,17 @@ export class OrdnanceAttackDialog extends Application {
         break;
     }
 
-    // Create preview template
-    const doc = new MeasuredTemplateDocument(templateData, { parent: canvas.scene });
+    const cls = CONFIG.MeasuredTemplate.documentClass;
+    const doc = new cls(templateData, { parent: canvas.scene });
     const template = new CONFIG.MeasuredTemplate.objectClass(doc);
-    await template.draw();
 
     const initialLayer = canvas.activeLayer;
     canvas.templates.activate();
     canvas.templates.preview.addChild(template);
+    await template.draw();
 
-    // Actor token for beam/cone direction
     const actorToken = this.actor.getActiveTokens()?.[0];
 
-    // For beam/cone, set initial position at actor's token
     if (templateType !== "circle" && actorToken) {
       doc.updateSource({ x: actorToken.center.x, y: actorToken.center.y });
       template.refresh();
@@ -348,7 +476,6 @@ export class OrdnanceAttackDialog extends Application {
       const handlers = {};
       let moveTime = 0;
 
-      // Mouse move — update position (circle) or direction (beam/cone)
       handlers.mm = (event) => {
         event.stopPropagation();
         const now = Date.now();
@@ -356,12 +483,14 @@ export class OrdnanceAttackDialog extends Application {
         moveTime = now;
 
         const pos = event.getLocalPosition(canvas.templates);
-        const snapped = canvas.grid.getSnappedPosition(pos.x, pos.y, 2);
+        const M = CONST.GRID_SNAPPING_MODES;
+        const snapped = canvas.grid.getSnappedPoint(
+          { x: pos.x, y: pos.y },
+          { mode: M.CENTER | M.VERTEX, resolution: 2 }
+        );
 
         if (templateType === "circle") {
           let x = snapped.x, y = snapped.y;
-
-          // Clamp to extreme range from actor's token
           if (actorToken) {
             const dx = x - actorToken.center.x;
             const dy = y - actorToken.center.y;
@@ -374,7 +503,6 @@ export class OrdnanceAttackDialog extends Application {
               y = actorToken.center.y + dy * scale;
             }
           }
-
           doc.updateSource({ x, y });
         } else if (actorToken) {
           const dx = pos.x - actorToken.center.x;
@@ -386,7 +514,6 @@ export class OrdnanceAttackDialog extends Application {
         template.refresh();
       };
 
-      // Left click — place template
       handlers.lc = async (event) => {
         cleanup();
         const [created] = await canvas.scene.createEmbeddedDocuments("MeasuredTemplate", [doc.toObject()]);
@@ -394,7 +521,6 @@ export class OrdnanceAttackDialog extends Application {
         resolve({ x: doc.x, y: doc.y, templateId: created.id });
       };
 
-      // Right click — cancel
       handlers.rc = (event) => {
         event.preventDefault();
         cleanup();
@@ -402,7 +528,6 @@ export class OrdnanceAttackDialog extends Application {
         reject(new Error("cancelled"));
       };
 
-      // Escape key — cancel
       handlers.esc = (event) => {
         if (event.key === "Escape") {
           cleanup();
@@ -427,8 +552,4 @@ export class OrdnanceAttackDialog extends Application {
     });
   }
 
-  /** @override */
-  close(options) {
-    return super.close(options);
-  }
 }

@@ -1,7 +1,7 @@
 <div class="fright-roll-wrapper">
   <header class="reload-header">
     <span class="reload-title">{{localize "CYBERPUNK.FrightRoll"}}</span>
-    <a class="header-control close"><i class="fas fa-times"></i></a>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
   {{!-- Severity section bar --}}
@@ -33,13 +33,13 @@
 
   {{!-- Familiarity controls --}}
   <div class="luck-controls">
-    <button type="button" class="luck-btn familiarity-minus-btn disabled">
+    <button type="button" class="luck-btn familiarity-minus-btn disabled" data-action="familiarityMinus">
       <img src="systems/cyberpunk/img/chat/minus-disabled.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="luck-value familiarity-value">0</span>
     </div>
-    <button type="button" class="luck-btn familiarity-plus-btn">
+    <button type="button" class="luck-btn familiarity-plus-btn" data-action="familiarityPlus">
       <img src="systems/cyberpunk/img/chat/plus.svg" alt="+">
     </button>
   </div>
@@ -52,19 +52,19 @@
 
   {{!-- Luck controls --}}
   <div class="luck-controls{{#unless hasAnyLuck}} disabled{{/unless}}">
-    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}" data-action="luckMinus">
       <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
     </button>
     <div class="luck-display">
       <span class="luck-value">{{luckToSpend}}</span>
     </div>
-    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}" data-action="luckPlus">
       <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
     </button>
   </div>
 
   {{!-- Roll button --}}
-  <button type="button" class="reload-apply-btn roll-btn">
+  <button type="button" class="reload-apply-btn roll-btn" data-action="roll">
     {{localize "CYBERPUNK.Roll"}}
   </button>
 </div>

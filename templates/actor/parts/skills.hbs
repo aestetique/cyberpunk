@@ -1,11 +1,12 @@
 {{!-- Skills Tab --}}
-<div class="skills-container">
-  <header class="tab-header">
-    <span class="tab-title">SKILLS</span>
-    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-skills.svg" alt="">
-  </header>
+<div class="gear-container">
+  <div class="section-block">
+    <header class="tab-header">
+      <span class="tab-title">SKILLS</span>
+      <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-skills.svg" alt="">
+    </header>
 
-  <div class="tab-content skills-content">
+    <div class="tab-content skills-content">
     <div class="skills-column">
       {{#each skillsLeft as |skill|}}
         <div class="skill-row{{#if skill.isVirtual}} virtual-skill{{/if}}" data-skill-id="{{skill.id}}" data-flavor="{{skill.flavor}}">
@@ -90,5 +91,6 @@
         </div>
       {{/each}}
     </div>
+  </div>
   </div>
 </div>

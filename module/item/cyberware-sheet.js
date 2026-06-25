@@ -1,392 +1,301 @@
 import {
-    availability,
-    cyberwareTypes, surgeryCodes, placementOptions,
-    getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor,
-    isPlacementRequired,
-    isCyberlimbBase, isCyberlimbOption,
-    isSensorBase, isSensorOption,
-    SENSOR_TYPES,
-    canAttachOptionToBase
+  availability,
+  cyberwareTypes, surgeryCodes, placementOptions,
+  getCyberwareSubtypes, canHaveOptions, canBeWeapon, canBeArmor,
+  isPlacementRequired,
+  isCyberlimbBase, isCyberlimbOption,
+  isSensorBase, isSensorOption,
+  SENSOR_TYPES
 } from "../lookups.js";
 import { localize } from "../utils.js";
-import { CyberpunkItemSheet } from "./item-sheet-base.js";
+import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
 import {
-    prepareEffectTabContext,
-    prepareWeaponTabContext,
-    bindEffectTabListeners,
-    bindWeaponTabListeners,
-    handleSkillDropForBonus
+  prepareEffectTabContext,
+  prepareWeaponTabContext,
+  bindEffectTabListeners,
+  bindWeaponTabListeners,
+  handleSkillDropForBonus
 } from "./embedded-helpers.js";
 
 /**
- * Cyberware Item Sheet with custom card design and conditional tabs
- * @extends {CyberpunkItemSheet}
+ * Cyberware Item Sheet with conditional tabs (weapon/armor).
+ * @extends {CyberpunkItemSheetV2}
  */
-export class CyberpunkCyberwareSheet extends CyberpunkItemSheet {
+export class CyberpunkCyberwareSheet extends CyberpunkItemSheetV2 {
 
-    /** @type {string} */
-    _activeTab = "description";
+  static DEFAULT_OPTIONS = {
+    classes: ["cyberware-sheet"],
+    dragDrop: [{ dropSelector: "[data-drop-target]" }],
+    actions: {
+      rollHumanity:  CyberpunkCyberwareSheet._onRollHumanity,
+      resetHumanity: CyberpunkCyberwareSheet._onResetHumanity
+    }
+  };
 
-    /** @override */
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["cyberpunk", "sheet", "item", "cyberware-sheet"],
-            template: "systems/cyberpunk/templates/item/cyberware-sheet.hbs",
-            width: 500,
-            height: 400,
-            dragDrop: [{ dropSelector: "[data-drop-target]" }]
-        });
+  static PARTS = {
+    body: { template: "systems/cyberpunk/templates/item/cyberware-sheet.hbs" }
+  };
+
+  async _prepareContext(options) {
+    const ctx = await super._prepareContext(options);
+    const sys = ctx.system;
+    const cyberType = sys.cyberwareType || "implant";
+    const cyberSubtype = sys.cyberwareSubtype || "";
+
+    ctx.cyberwareType = cyberType;
+    ctx.cyberwareSubtype = cyberSubtype;
+    ctx.isCyberlimb = cyberType === "cyberlimb";
+    ctx.isSensor = SENSOR_TYPES.has(cyberType);
+    ctx.isImplant = cyberType === "implant";
+    ctx.isChipware = cyberType === "chipware";
+    ctx.isSkillChip = cyberType === "chipware" && cyberSubtype === "skill";
+
+    ctx.isCyberlimbBase   = isCyberlimbBase(this.document);
+    ctx.isCyberlimbOption = isCyberlimbOption(this.document);
+    ctx.isSensorBase      = isSensorBase(this.document);
+    ctx.isSensorOption    = isSensorOption(this.document);
+    ctx.isBase            = ctx.isCyberlimbBase || ctx.isSensorBase;
+    ctx.isOption          = ctx.isCyberlimbOption || ctx.isSensorOption;
+
+    // EMP Shielding only renders on cyberlimb built-ins, optics options, audio options
+    // — these protect their parent from the matching microwave roll result.
+    ctx.canEmpShield = (cyberType === "cyberlimb" && cyberSubtype === "builtIn")
+                    || (cyberType === "optics"    && cyberSubtype === "option")
+                    || (cyberType === "audio"     && cyberSubtype === "option");
+
+    ctx.canHaveOptions = canHaveOptions(cyberType, cyberSubtype);
+    ctx.needsPlacement = isPlacementRequired(cyberType, cyberSubtype);
+    ctx.showStructure  = ctx.isCyberlimbBase;
+    ctx.showSdpBonus   = ctx.isCyberlimbOption;
+    ctx.showHasSlots   = ctx.isBase;
+    ctx.showTakesSpace = ctx.isOption;
+
+    if (ctx.showStructure && this.document.actor) {
+      const baseMax = sys.structure?.max ?? 0;
+      const baseDisablesAt = sys.disablesAt ?? 0;
+      const attachedOptions = this.document.actor.items.filter(i =>
+        isCyberlimbOption(i) && i.getFlag("cyberpunk", "attachedTo") === this.document.id
+      );
+      const sdpBonusTotal = attachedOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
+      ctx.sdpBonusTotal = sdpBonusTotal;
+      ctx.effectiveMaxStructure = baseMax + sdpBonusTotal;
+      ctx.effectiveDisablesAt = baseDisablesAt + sdpBonusTotal;
+      ctx.hasBonus = sdpBonusTotal > 0;
+    } else {
+      ctx.sdpBonusTotal = 0;
+      ctx.effectiveMaxStructure = sys.structure?.max ?? 0;
+      ctx.effectiveDisablesAt = sys.disablesAt ?? 0;
+      ctx.hasBonus = false;
     }
 
-    /** @override */
-    getData() {
-        const data = super.getData();
-        data.activeTab = this._activeTab;
+    ctx.canBeWeapon = canBeWeapon(cyberType, cyberSubtype);
+    ctx.canBeArmor = canBeArmor(cyberType);
+    ctx.isWeapon = sys.isWeapon && ctx.canBeWeapon;
+    ctx.isArmor = sys.isArmor && ctx.canBeArmor;
 
-        const sys = data.system;
-        const cyberType = sys.cyberwareType || "implant";
-        const cyberSubtype = sys.cyberwareSubtype || "";
+    ctx.showWeaponTab = ctx.isWeapon;
+    ctx.showArmorTab = ctx.isArmor;
 
-        // --- Type/Category Flags ---
-        data.cyberwareType = cyberType;
-        data.cyberwareSubtype = cyberSubtype;
-        data.isCyberlimb = cyberType === "cyberlimb";
-        data.isSensor = SENSOR_TYPES.has(cyberType); // optics/voice/audio
-        data.isImplant = cyberType === "implant";
-        data.isChipware = cyberType === "chipware";
-        data.isSkillChip = cyberType === "chipware" && cyberSubtype === "skill";
-
-        // --- Role flags (base vs option, derived from subtype alone) ---
-        data.isCyberlimbBase   = isCyberlimbBase(this.item);
-        data.isCyberlimbOption = isCyberlimbOption(this.item);
-        data.isSensorBase      = isSensorBase(this.item);
-        data.isSensorOption    = isSensorOption(this.item);
-        data.isBase            = data.isCyberlimbBase || data.isSensorBase;
-        data.isOption          = data.isCyberlimbOption || data.isSensorOption;
-
-        // --- Per-row visibility flags driving the details tab template ---
-        data.canHaveOptions    = canHaveOptions(cyberType, cyberSubtype);
-        data.needsPlacement    = isPlacementRequired(cyberType, cyberSubtype);
-        data.showStructure     = data.isCyberlimbBase;            // Structure + Disables-at row
-        data.showSdpBonus      = data.isCyberlimbOption;          // SDP Bonus on the option's row
-        data.showHasSlots      = data.isBase;                     // Has-Slots field on bases
-        data.showTakesSpace    = data.isOption;                   // Takes-Space field on options
-
-        // --- Effective structure (base + attached-option SDP bonuses) ---
-        if (data.showStructure && this.item.actor) {
-            const baseMax = sys.structure?.max ?? 0;
-            const baseDisablesAt = sys.disablesAt ?? 0;
-
-            // Attached options route by `flags.cyberpunk.attachedTo`. Use the
-            // shared predicate to filter — covers Hand / Feet / Finger /
-            // Built-in regardless of subtype string.
-            const attachedOptions = this.item.actor.items.filter(i =>
-                isCyberlimbOption(i) && i.getFlag("cyberpunk", "attachedTo") === this.item.id
-            );
-
-            const sdpBonusTotal = attachedOptions.reduce((sum, opt) => sum + (opt.system.sdpBonus || 0), 0);
-
-            data.sdpBonusTotal = sdpBonusTotal;
-            data.effectiveMaxStructure = baseMax + sdpBonusTotal;
-            data.effectiveDisablesAt = baseDisablesAt + sdpBonusTotal;
-            data.hasBonus = sdpBonusTotal > 0;
-        } else {
-            data.sdpBonusTotal = 0;
-            data.effectiveMaxStructure = sys.structure?.max ?? 0;
-            data.effectiveDisablesAt = sys.disablesAt ?? 0;
-            data.hasBonus = false;
-        }
-
-        // --- Weapon/Armor Capability ---
-        data.canBeWeapon = canBeWeapon(cyberType, cyberSubtype);
-        data.canBeArmor = canBeArmor(cyberType);
-        data.isWeapon = sys.isWeapon && data.canBeWeapon;
-        data.isArmor = sys.isArmor && data.canBeArmor;
-
-        // --- Tab Configuration ---
-        data.showWeaponTab = data.isWeapon;
-        data.showArmorTab = data.isArmor;
-
-        // Validate active tab - if current tab is hidden, switch to description
-        if (this._activeTab === "weapon" && !data.showWeaponTab) {
-            this._activeTab = "description";
-            data.activeTab = "description";
-        }
-        if (this._activeTab === "armor" && !data.showArmorTab) {
-            this._activeTab = "description";
-            data.activeTab = "description";
-        }
-
-        // --- Humanity Roll State ---
-        data.humanityRolled = sys.humanityRolled || false;
-        data.canRollHumanity = !data.humanityRolled && sys.humanityCost;
-
-        // --- Cyberware Type Dropdown ---
-        data.cyberwareTypeOptions = Object.entries(cyberwareTypes).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: cyberType === value
-        }));
-        const selectedTypeKey = cyberwareTypes[cyberType] || "CyberTypeImplant";
-        data.selectedTypeLabel = game.i18n.localize(`CYBERPUNK.${selectedTypeKey}`);
-
-        // --- Cyberware Subtype Dropdown ---
-        const subtypes = getCyberwareSubtypes(cyberType);
-        data.cyberwareSubtypeOptions = Object.entries(subtypes).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: sys.cyberwareSubtype === value
-        }));
-        const selectedSubKey = subtypes[sys.cyberwareSubtype];
-        data.selectedSubtypeLabel = selectedSubKey
-            ? game.i18n.localize(`CYBERPUNK.${selectedSubKey}`)
-            : "";
-
-        // --- Placement Dropdown (cyberlimb arm/leg only) ---
-        if (data.needsPlacement) {
-            data.placementOptions = Object.entries(placementOptions).map(([value, labelKey]) => ({
-                value,
-                label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-                selected: sys.placement === value
-            }));
-            const selectedPlacementKey = placementOptions[sys.placement];
-            data.selectedPlacementLabel = selectedPlacementKey
-                ? game.i18n.localize(`CYBERPUNK.${selectedPlacementKey}`)
-                : "";
-        }
-
-        // --- Surgery Code Dropdown ---
-        data.surgeryCodeOptions = Object.entries(surgeryCodes).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: sys.surgeryCode === value
-        }));
-        const selectedSurgKey = surgeryCodes[sys.surgeryCode] || "SurgHarmless";
-        data.selectedSurgeryLabel = game.i18n.localize(`CYBERPUNK.${selectedSurgKey}`);
-
-        // --- Availability Dropdown ---
-        data.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
-            value,
-            label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
-            selected: sys.availability === value
-        }));
-        const selectedAvail = availability[sys.availability] || "Common";
-        data.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
-
-        // --- Bonuses (Effect Tab) — shared with armor sheet ---
-        prepareEffectTabContext(data, sys.bonuses);
-
-        // --- Embedded Weapon Tab — shared with armor sheet ---
-        if (data.showWeaponTab) {
-            prepareWeaponTabContext(data, sys.weapon);
-        }
-
-        // --- Armor Tab Data ---
-        if (data.showArmorTab) {
-            this._prepareArmorData(data);
-        }
-
-        return data;
+    if (this._activeTab === "weapon" && !ctx.showWeaponTab) {
+      this._activeTab = "description";
+      ctx.activeTab = "description";
+    }
+    if (this._activeTab === "armor" && !ctx.showArmorTab) {
+      this._activeTab = "description";
+      ctx.activeTab = "description";
     }
 
+    ctx.humanityRolled = sys.humanityRolled || false;
+    ctx.canRollHumanity = !ctx.humanityRolled && sys.humanityCost;
 
-    /**
-     * Prepare armor tab data
-     */
-    _prepareArmorData(data) {
-        const armor = data.system.armor || {};
+    ctx.cyberwareTypeOptions = Object.entries(cyberwareTypes).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: cyberType === value
+    }));
+    const selectedTypeKey = cyberwareTypes[cyberType] || "CyberTypeImplant";
+    ctx.selectedTypeLabel = game.i18n.localize(`CYBERPUNK.${selectedTypeKey}`);
 
-        data.armorTypeOptions = [
-            { value: "soft", label: game.i18n.localize("CYBERPUNK.SoftArmor"), selected: armor.armorType === "soft" },
-            { value: "hard", label: game.i18n.localize("CYBERPUNK.HardArmor"), selected: armor.armorType === "hard" }
-        ];
-        data.selectedArmorTypeLabel = armor.armorType === "hard"
-            ? game.i18n.localize("CYBERPUNK.HardArmor")
-            : game.i18n.localize("CYBERPUNK.SoftArmor");
+    const subtypes = getCyberwareSubtypes(cyberType);
+    ctx.cyberwareSubtypeOptions = Object.entries(subtypes).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: sys.cyberwareSubtype === value
+    }));
+    const selectedSubKey = subtypes[sys.cyberwareSubtype];
+    ctx.selectedSubtypeLabel = selectedSubKey ? game.i18n.localize(`CYBERPUNK.${selectedSubKey}`) : "";
 
-        // Coverage grid (same pattern as outfit-sheet)
-        const locationOrder = [
-            { key: "lArm", label: localize("lArm") },
-            { key: "Head", label: localize("Head") },
-            { key: "rArm", label: localize("rArm") },
-            { key: "lLeg", label: localize("lLeg") },
-            { key: "Torso", label: localize("Torso") },
-            { key: "rLeg", label: localize("rLeg") }
-        ];
-
-        const coverage = armor.coverage || {};
-        data.coverageRows = [
-            locationOrder.slice(0, 3),
-            locationOrder.slice(3, 6)
-        ].map(row => row.map(loc => {
-            const cov = coverage[loc.key] || { stoppingPower: 0, ablation: 0 };
-            const maxSP = Number(cov.stoppingPower) || 0;
-            const ablation = Number(cov.ablation) || 0;
-            const currentSP = Math.max(0, maxSP - ablation);
-            return {
-                key: loc.key,
-                label: loc.label,
-                currentSP,
-                maxSP,
-                isDamaged: currentSP < maxSP
-            };
-        }));
+    if (ctx.needsPlacement) {
+      ctx.placementOptions = Object.entries(placementOptions).map(([value, labelKey]) => ({
+        value,
+        label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+        selected: sys.placement === value
+      }));
+      const selectedPlacementKey = placementOptions[sys.placement];
+      ctx.selectedPlacementLabel = selectedPlacementKey
+        ? game.i18n.localize(`CYBERPUNK.${selectedPlacementKey}`)
+        : "";
     }
 
-    /** @override */
-    activateListeners(html) {
-        super.activateListeners(html);
+    ctx.surgeryCodeOptions = Object.entries(surgeryCodes).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: sys.surgeryCode === value
+    }));
+    const selectedSurgKey = surgeryCodes[sys.surgeryCode] || "SurgHarmless";
+    ctx.selectedSurgeryLabel = game.i18n.localize(`CYBERPUNK.${selectedSurgKey}`);
 
-        // Tab switching
-        html.find('.tab-header').click(ev => {
-            ev.preventDefault();
-            const tab = ev.currentTarget.dataset.tab;
-            if (tab && tab !== this._activeTab) {
-                this._activeTab = tab;
-                this.render(false);
-            }
-        });
+    ctx.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({
+      value,
+      label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
+      selected: sys.availability === value
+    }));
+    const selectedAvail = availability[sys.availability] || "Common";
+    ctx.selectedAvailabilityLabel = game.i18n.localize(`CYBERPUNK.${selectedAvail}`);
 
-        // Click skill name to open its sheet
-        html.find('.skill-name[data-uuid]').click(async ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            const uuid = ev.currentTarget.dataset.uuid;
-            if (uuid) {
-                const item = await fromUuid(uuid);
-                if (item) item.sheet.render(true);
-            }
-        });
+    prepareEffectTabContext(ctx, sys.bonuses);
+    if (ctx.showWeaponTab) prepareWeaponTabContext(ctx, sys.weapon);
+    if (ctx.showArmorTab) this._prepareArmorData(ctx);
 
-        // Roll humanity loss (works in locked mode)
-        html.find('.humanity-roll-btn').click(async ev => {
-            ev.preventDefault();
-            const formula = this.item.system.humanityCost;
-            if (!formula || this.item.system.humanityRolled) return;
+    return ctx;
+  }
 
-            const roll = new Roll(formula);
-            await roll.evaluate();
+  _prepareArmorData(ctx) {
+    const armor = ctx.system.armor || {};
 
-            const { processFormulaRoll } = await import("../dice.js");
-            const templateData = processFormulaRoll(roll);
-            const content = await foundry.applications.handlebars.renderTemplate(
-                "systems/cyberpunk/templates/chat/humanity-roll.hbs",
-                templateData
-            );
-            const speaker = this.item.actor
-                ? ChatMessage.getSpeaker({ actor: this.item.actor })
-                : ChatMessage.getSpeaker();
-            await ChatMessage.create({
-                speaker,
-                content,
-                rolls: [roll],
-                sound: CONFIG.sounds.dice
-            });
+    ctx.armorTypeOptions = [
+      { value: "soft", label: game.i18n.localize("CYBERPUNK.SoftArmor"), selected: armor.armorType === "soft" },
+      { value: "hard", label: game.i18n.localize("CYBERPUNK.HardArmor"), selected: armor.armorType === "hard" }
+    ];
+    ctx.selectedArmorTypeLabel = armor.armorType === "hard"
+      ? game.i18n.localize("CYBERPUNK.HardArmor")
+      : game.i18n.localize("CYBERPUNK.SoftArmor");
 
-            // The updateItem hook on the actor side ratchets stored
-            // humanityDamage up to include this roll — no explicit bump here.
-            await this.item.update({
-                "system.humanityLoss": roll.total,
-                "system.humanityRolled": true
-            });
-        });
+    const locationOrder = [
+      { key: "lArm", label: localize("lArm") },
+      { key: "Head", label: localize("Head") },
+      { key: "rArm", label: localize("rArm") },
+      { key: "lLeg", label: localize("lLeg") },
+      { key: "Torso", label: localize("Torso") },
+      { key: "rLeg", label: localize("rLeg") }
+    ];
 
-        // Reset humanity roll (unlocked mode only)
-        html.find('.humanity-reset-btn').click(async ev => {
-            ev.preventDefault();
-            await this.item.update({
-                "system.humanityLoss": 0,
-                "system.humanityRolled": false
-            });
-        });
+    const coverage = armor.coverage || {};
+    ctx.coverageRows = [
+      locationOrder.slice(0, 3),
+      locationOrder.slice(3, 6)
+    ].map(row => row.map(loc => {
+      const cov = coverage[loc.key] || { stoppingPower: 0, ablation: 0 };
+      const maxSP = Number(cov.stoppingPower) || 0;
+      const ablation = Number(cov.ablation) || 0;
+      const currentSP = Math.max(0, maxSP - ablation);
+      return { key: loc.key, label: loc.label, currentSP, maxSP, isDamaged: currentSP < maxSP };
+    }));
+  }
 
-        if (this._isLocked) return;
+  _onRender(context, options) {
+    super._onRender(context, options);
 
-        // --- Checkbox toggle (standard pattern from ordnance-sheet) ---
-        html.find('.checkbox-toggle').click(async ev => {
-            ev.preventDefault();
-            const field = ev.currentTarget.dataset.field;
-            if (!field) return;
-            const current = foundry.utils.getProperty(this.item, field);
-            await this.item.update({ [field]: !current });
-        });
+    const html = $(this.element);
+    const item = this.document;
 
-        // --- Cyberware Type change → reset subtype, placement, and capability flags ---
-        html.find('select[name="system.cyberwareType"]').change(async ev => {
-            const newType = ev.currentTarget.value;
-            const subtypes = getCyberwareSubtypes(newType);
-            const firstSubtype = Object.keys(subtypes)[0] || "";
-            await this.item.update({
-                "system.cyberwareType":     newType,
-                "system.cyberwareSubtype":  firstSubtype,
-                "system.placement":         isPlacementRequired(newType, firstSubtype) ? "left" : "",
-                "system.isOption":          false,  // dead field but kept clean
-                "system.isWeapon":          false,
-                "system.isArmor":           false
-            });
-        });
+    if (this._isLocked) return;
 
-        // --- Cyberware Subtype change → re-evaluate placement + weapon capability ---
-        // For cyberlimb, switching from arm/leg ↔ hand/feet/finger/built-in
-        // changes whether the placement dropdown should appear AND whether
-        // an embedded weapon is allowed; we reset both so the sheet
-        // re-renders consistently.
-        html.find('select[name="system.cyberwareSubtype"]').change(async ev => {
-            const newSubtype = ev.currentTarget.value;
-            const cyberType = this.item.system.cyberwareType;
-            const update = { "system.cyberwareSubtype": newSubtype };
-            // Placement is only meaningful for arm/leg bases. Default new
-            // arm/leg items to placement=left so the dropdown renders with a
-            // selected value; clear for anything else.
-            if (isPlacementRequired(cyberType, newSubtype)) {
-                if (!this.item.system.placement) update["system.placement"] = "left";
-            } else {
-                update["system.placement"] = "";
-            }
-            // If the new subtype can no longer host a weapon, turn the flag off.
-            if (!canBeWeapon(cyberType, newSubtype) && this.item.system.isWeapon) {
-                update["system.isWeapon"] = false;
-            }
-            await this.item.update(update);
-        });
+    html.find('select[name="system.cyberwareType"]').on('change', async ev => {
+      const newType = ev.currentTarget.value;
+      const subtypes = getCyberwareSubtypes(newType);
+      const firstSubtype = Object.keys(subtypes)[0] || "";
+      await item.update({
+        "system.cyberwareType":    newType,
+        "system.cyberwareSubtype": firstSubtype,
+        "system.placement":        isPlacementRequired(newType, firstSubtype) ? "left" : "",
+        "system.isOption":         false,
+        "system.isWeapon":         false,
+        "system.isArmor":          false
+      });
+    });
 
-        // --- Armor current SP input ---
-        html.find('.sp-current-input').change(async ev => {
-            const input = ev.currentTarget;
-            const key = input.dataset.key;
-            const maxSP = Number(input.dataset.max) || 0;
-            const newCurrent = Math.max(0, Math.min(maxSP, Number(input.value) || 0));
-            const ablation = maxSP - newCurrent;
-            await this.item.update({ [`system.armor.coverage.${key}.ablation`]: ablation });
-        });
+    html.find('select[name="system.cyberwareSubtype"]').on('change', async ev => {
+      const newSubtype = ev.currentTarget.value;
+      const cyberType = item.system.cyberwareType;
+      const update = { "system.cyberwareSubtype": newSubtype };
+      if (isPlacementRequired(cyberType, newSubtype)) {
+        if (!item.system.placement) update["system.placement"] = "left";
+      } else {
+        update["system.placement"] = "";
+      }
+      if (!canBeWeapon(cyberType, newSubtype) && item.system.isWeapon) {
+        update["system.isWeapon"] = false;
+      }
+      await item.update(update);
+    });
 
-        // Shared Effect-tab listeners (add property/skill, remove, value/property edits)
-        bindEffectTabListeners(html, this.item, { isLocked: this._isLocked });
+    html.find('.sp-current-input').on('change', async ev => {
+      const input = ev.currentTarget;
+      const key = input.dataset.key;
+      const maxSP = Number(input.dataset.max) || 0;
+      const newCurrent = Math.max(0, Math.min(maxSP, Number(input.value) || 0));
+      const ablation = maxSP - newCurrent;
+      await item.update({ [`system.armor.coverage.${key}.ablation`]: ablation });
+    });
 
-        // Shared embedded-Weapon-tab listeners (type/class/skill/caliber changes)
-        bindWeaponTabListeners(html, this.item, { isLocked: this._isLocked });
+    bindEffectTabListeners(html, item, { isLocked: this._isLocked });
+    bindWeaponTabListeners(html, item, { isLocked: this._isLocked });
+  }
+
+  static async _onRollHumanity(event, _target) {
+    event?.preventDefault?.();
+    const formula = this.document.system.humanityCost;
+    if (!formula || this.document.system.humanityRolled) return;
+
+    const roll = new Roll(formula);
+    await roll.evaluate();
+
+    const { processFormulaRoll } = await import("../dice.js");
+    const templateData = processFormulaRoll(roll);
+    const content = await foundry.applications.handlebars.renderTemplate(
+      "systems/cyberpunk/templates/chat/humanity-roll.hbs",
+      templateData
+    );
+    const speaker = this.document.actor
+      ? ChatMessage.getSpeaker({ actor: this.document.actor })
+      : ChatMessage.getSpeaker();
+    await ChatMessage.create({
+      speaker,
+      content,
+      rolls: [roll],
+      sound: CONFIG.sounds.dice
+    });
+
+    await this.document.update({
+      "system.humanityLoss": roll.total,
+      "system.humanityRolled": true
+    });
+  }
+
+  static async _onResetHumanity(event, _target) {
+    event?.preventDefault?.();
+    await this.document.update({
+      "system.humanityLoss": 0,
+      "system.humanityRolled": false
+    });
+  }
+
+  async _onDrop(event) {
+    event.preventDefault();
+    if (this._isLocked) return;
+
+    let data;
+    try { data = JSON.parse(event.dataTransfer.getData('text/plain')); } catch { return; }
+    if (data.type !== "Item") return;
+
+    const item = await Item.implementation.fromDropData(data);
+    if (!item) return;
+
+    if (item.type !== "skill") {
+      ui.notifications.warn(game.i18n.localize("CYBERPUNK.OnlySkillsCanBeAdded"));
+      return;
     }
-
-    /** @override */
-    async _onDrop(event) {
-        event.preventDefault();
-        if (this._isLocked) return;
-
-        let data;
-        try {
-            data = JSON.parse(event.dataTransfer.getData('text/plain'));
-        } catch (err) {
-            return;
-        }
-
-        if (data.type !== "Item") return;
-        const item = await Item.implementation.fromDropData(data);
-        if (!item) return;
-
-        if (item.type !== "skill") {
-            ui.notifications.warn(game.i18n.localize("CYBERPUNK.OnlySkillsCanBeAdded"));
-            return;
-        }
-        await handleSkillDropForBonus(this.item, item);
-    }
+    await handleSkillDropForBonus(this.document, item);
+  }
 }

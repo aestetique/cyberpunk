@@ -1,11 +1,11 @@
 /**
  * Shop sheet — read-only-feeling actor that any player can buy from / sell
  * to. Visually mirrors the drone sheet (portrait + name top-left, content
- * area to the right) and the character gear tab (categorised gear-block /
+ * area to the right) and the character gear tab (categorised section-block /
  * gear-row layout). Action buttons are buy / sell badges instead of the
  * character's equip / use / quantity widgets.
  */
-import { localize } from "../utils.js";
+import { localize, commitPendingEdits } from "../utils.js";
 import { resolveWeaponDiscriminator } from "../lookups.js";
 import {
   buildWeaponContextString,
@@ -20,7 +20,7 @@ import {
 import { buyItem, sellItem, isSellable } from "./shop-trade.js";
 import { ShopSettingsDialog } from "../dialog/shop-settings-dialog.js";
 
-/** Item type → which gear-block category it lands in, with badge + label. */
+/** Item type → which section-block category it lands in, with badge + label. */
 function categorise(item) {
   const t = item.type;
   if (t === "weapon" && item.system?.weaponType === "Ammo") {
@@ -189,7 +189,13 @@ function buildFields(item) {
   return { field1: null, field2: null };
 }
 
-export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const ActorSheetV2Base = foundry.applications.sheets.ActorSheetV2;
+
+/**
+ * @extends {ActorSheetV2}
+ */
+export class CyberpunkShopSheet extends HandlebarsApplicationMixin(ActorSheetV2Base) {
 
   /** @type {"buy"|"sell"} */
   _activeTab = "buy";
@@ -200,17 +206,196 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
    * template) makes the actor name + portrait + stackable quantities editable.
    */
   _isLocked = true;
+  _isMinimized = false;
 
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["cyberpunk", "sheet", "actor", "shop-sheet"],
-      template: "systems/cyberpunk/templates/actor/shop-sheet.hbs",
-      width: 600,
-      height: 540,
+  /** Per-actor remembered sheet heights so a re-render restores the user's resized height. */
+  static _sheetHeights = new Map();
+
+  static DEFAULT_OPTIONS = {
+    classes: ["cyberpunk", "sheet", "actor", "shop-sheet"],
+    position: { width: 670, height: 540 },
+    window: {
+      frame: true,
+      positioned: true,
       resizable: true,
-      dragDrop: [{ dropSelector: null }]
+      minimizable: true,
+      controls: []
+    },
+    form: { submitOnChange: true, closeOnSubmit: false },
+    dragDrop: [{ dropSelector: null }],
+    actions: {
+      lockToggle:     CyberpunkShopSheet._onLockToggle,
+      closeSheet:     CyberpunkShopSheet._onCloseSheet,
+      copyUuid:       CyberpunkShopSheet._onCopyUuid,
+      configureSheet: CyberpunkShopSheet._onConfigureSheet,
+      configureToken: CyberpunkShopSheet._onConfigureToken
+    }
+  };
+
+  static PARTS = {
+    body: {
+      template: "systems/cyberpunk/templates/actor/shop-sheet.hbs",
+      scrollable: [".gear-container"]
+    }
+  };
+
+  /** Convenience getter (V2 stores the document on `document`). */
+  get actor() { return this.document; }
+  get title() { return this.document.name; }
+  get minimized() { return this._isMinimized; }
+
+  /** Static action handlers */
+  static async _onLockToggle(event, _target) {
+    event?.preventDefault?.();
+    commitPendingEdits(this.element);
+    this._isLocked = !this._isLocked;
+    this.render();
+  }
+
+  static _onCloseSheet(event, _target) {
+    event?.preventDefault?.();
+    this.close({ animate: false });
+  }
+
+  static _onCopyUuid(event, _target) {
+    event?.preventDefault?.();
+    game.clipboard.copyPlainText(this.document.uuid);
+    ui.notifications.info(`Copied UUID: ${this.document.uuid}`);
+  }
+
+  static _onConfigureSheet(event, _target) {
+    event?.preventDefault?.();
+    const SheetConfig = foundry.applications.apps?.DocumentSheetConfig ?? DocumentSheetConfig;
+    new SheetConfig({ document: this.document }).render({ force: true });
+  }
+
+  static _onConfigureToken(event, _target) {
+    event?.preventDefault?.();
+    if (this.document.token?.sheet) {
+      this.document.token.sheet.render({ force: true });
+      return;
+    }
+    new CONFIG.Token.prototypeSheetClass({
+      prototype: this.document.prototypeToken,
+      position: {
+        left: Math.max(this.position.left - 560 - 10, 10),
+        top: this.position.top
+      }
+    }).render({ force: true });
+  }
+
+  /** @override — remember user-resized height for next open */
+  setPosition(position = {}) {
+    if (position.height) {
+      CyberpunkShopSheet._sheetHeights.set(this.actor.id, position.height);
+    }
+    return super.setPosition(position);
+  }
+
+  /** No-op shim — V14 Draggable.resizeMouseUp still calls this.app._onResize. */
+  _onResize(_event) {}
+
+  /** @override — restore remembered height on first render; consolidate stackables once */
+  _configureRenderOptions(options) {
+    super._configureRenderOptions(options);
+    if (options.isFirstRender) {
+      const rememberedHeight = CyberpunkShopSheet._sheetHeights.get(this.actor.id);
+      if (rememberedHeight) {
+        options.position = { ...(options.position ?? {}), height: rememberedHeight };
+      }
+    }
+  }
+
+  /** Custom minimize matching drone/character-sheet pattern. */
+  async minimize() {
+    if (this._isMinimized || !this.rendered) return;
+    const root = this.element;
+    if (!root) return;
+    const sheetFrame = root.querySelector(".sheet-frame");
+    const characterSheet = root.querySelector(".character-sheet");
+    const sheetContent = root.querySelector(".sheet-content");
+    const sheetSections = root.querySelector(".sheet-sections");
+    const sheetResize = root.querySelector(".sheet-resize");
+
+    this._originalWidth = sheetFrame?.offsetWidth ?? this.position.width;
+    this._originalHeight = sheetFrame?.offsetHeight ?? this.position.height;
+    this._originalFoundryWidth = this.position.width;
+    this._originalFoundryHeight = this.position.height;
+
+    if (sheetContent) sheetContent.style.display = "none";
+    if (sheetSections) sheetSections.style.display = "none";
+    if (sheetResize) sheetResize.style.display = "none";
+    if (sheetFrame) sheetFrame.style.minHeight = "0";
+    if (characterSheet) characterSheet.style.minHeight = "0";
+    root.style.minHeight = "0";
+
+    const minWidth = 400;
+    if (sheetFrame) {
+      sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
+      sheetFrame.style.width = `${minWidth}px`;
+      sheetFrame.style.height = "46px";
+    }
+    root.style.transition = "width 250ms ease, height 250ms ease";
+    root.style.width = `${minWidth}px`;
+    root.style.height = "46px";
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    if (characterSheet) {
+      characterSheet.style.width = `${minWidth}px`;
+      characterSheet.style.minHeight = "46px";
+    }
+    this.setPosition({ width: minWidth, height: 46 });
+    if (sheetFrame) sheetFrame.style.transition = "";
+    root.style.transition = "";
+    this._isMinimized = true;
+  }
+
+  /** Custom maximize matching drone/character-sheet pattern. */
+  async maximize() {
+    if (!this._isMinimized) return;
+    const root = this.element;
+    if (!root) return;
+    const sheetFrame = root.querySelector(".sheet-frame");
+    const characterSheet = root.querySelector(".character-sheet");
+    const sheetContent = root.querySelector(".sheet-content");
+    const sheetSections = root.querySelector(".sheet-sections");
+    const sheetResize = root.querySelector(".sheet-resize");
+
+    if (sheetFrame) {
+      sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
+      sheetFrame.style.width = `${this._originalWidth}px`;
+      sheetFrame.style.height = `${this._originalHeight}px`;
+    }
+    root.style.transition = "width 250ms ease, height 250ms ease";
+    root.style.width = `${this._originalFoundryWidth}px`;
+    root.style.height = `${this._originalFoundryHeight}px`;
+
+    if (characterSheet) {
+      characterSheet.style.width = "";
+      characterSheet.style.minHeight = "";
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    if (sheetFrame) {
+      sheetFrame.style.transition = "";
+      sheetFrame.style.width = "";
+      sheetFrame.style.height = "";
+      sheetFrame.style.minHeight = "";
+    }
+    root.style.transition = "";
+    root.style.width = "";
+    root.style.height = "";
+    root.style.minHeight = "";
+    if (sheetContent) sheetContent.style.display = "";
+    if (sheetSections) sheetSections.style.display = "";
+    if (sheetResize) sheetResize.style.display = "";
+    this.setPosition({
+      width: this._originalFoundryWidth,
+      height: this._originalFoundryHeight
     });
+    this._isMinimized = false;
   }
 
   /**
@@ -248,29 +433,17 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
     if (updates.length) await this.actor.updateEmbeddedDocuments("Item", updates);
   }
 
-  /** @override */
-  async _render(force = false, options = {}) {
-    if (!this.rendered && !this._consolidatedOnOpen) {
+  /**
+   * Capture gear-container scroll on every render so the V2 PARTS.scrollable
+   * pipeline restores it after the fresh DOM lands. We also kick off the
+   * one-shot stackables consolidation here on the first render.
+   */
+  _preRender(context, options) {
+    if (!this._consolidatedOnOpen) {
       this._consolidatedOnOpen = true;
-      await this._consolidateStackables();
+      this._consolidateStackables();
     }
-
-    // Preserve the gear list's scrollTop across re-renders so Buy / Sell /
-    // Lock / tab clicks don't snap the user back to the top. Same pattern the
-    // drone sheet uses — capture before, restore after the fresh DOM lands.
-    if (this.rendered && this.element?.length) {
-      const gearContainer = this.element[0].querySelector(".gear-container");
-      if (gearContainer) this._gearScrollTop = gearContainer.scrollTop;
-    }
-
-    const result = await super._render(force, options);
-
-    if (this.element?.length && this._gearScrollTop) {
-      const gearContainer = this.element[0].querySelector(".gear-container");
-      if (gearContainer) gearContainer.scrollTop = this._gearScrollTop;
-    }
-
-    return result;
+    return super._preRender?.(context, options);
   }
 
   /**
@@ -280,10 +453,9 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
    * — the shop sells per pack, so each compendium drop = one pack of ammo.
    * Everything else falls through to Foundry's default handler.
    */
-  async _onDropItem(event, data) {
-    event.preventDefault();
-    const item = await Item.implementation.fromDropData(data);
+  async _onDropItem(event, item) {
     if (!item) return;
+    event.preventDefault();
 
     const norm = (s) => (s ?? "").toString().trim().toLowerCase();
 
@@ -328,12 +500,16 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
       return this.actor.createEmbeddedDocuments("Item", [newData]);
     }
 
-    return super._onDropItem(event, data);
+    return super._onDropItem(event, item);
   }
 
   /** @override */
-  async getData(options) {
-    const data = super.getData(options);
+  async _prepareContext(options) {
+    const data = await super._prepareContext(options);
+    data.actor = this.document;
+    data.editable = this.isEditable;
+    data.cssClass = this.isEditable ? "editable" : "locked";
+    data.system = this.document.system;
     data.isGM = game.user.isGM;
     data.isLocked = this._isLocked;
     // Only GMs can ever see / use the lock toggle, so players are effectively
@@ -375,30 +551,12 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
     const buyPct  = Math.max(1, Math.min(200, Number(settings.buyPricePct)  ?? 100));
     const sellPct = Math.max(1, Math.min(200, Number(settings.sellPricePct) ??  50));
 
-    // Category status icons — two rows of four, mirroring the settings dialog
-    // grid. Read-only signpost ("this shop sells X") that flips on/off based
-    // on `system.settings.categories.<settingKey>`. `iconKey` drives the SVG
-    // filename (shop-<iconKey>-on/off.svg); they differ only for `outfit`
-    // (setting) vs `outfits` (icon), matching the assets the user shipped.
-    const cats = settings.categories || {};
-    const isOn = (settingKey) => cats[settingKey] !== false;
-    const icon = (settingKey, iconKey, labelKey) => ({
-      key: iconKey, on: isOn(settingKey), label: localize(labelKey)
-    });
-    data.categoryIconRows = [
-      [
-        icon("weapons",     "weapons",     "Weapons"),
-        icon("outfit",      "outfits",     "Outfits"),
-        icon("cyberware",   "cyberware",   "Cyberware"),
-        icon("netware",     "netware",     "NetwareLabel")
-      ],
-      [
-        icon("tools",       "tools",       "Tools"),
-        icon("drugs",       "drugs",       "Drugs"),
-        icon("vehicles",    "vehicles",    "Vehicles"),
-        icon("commodities", "commodities", "Commodities")
-      ]
-    ];
+    // Shop description — free-form flavour text under the identity row.
+    // Locked / non-GM view renders each line as a <p> paragraph; GM + unlocked
+    // gets a <textarea> for inline editing.
+    const description = this.document.system.description || "";
+    data.description = description;
+    data.descriptionLines = description ? description.split("\n") : [];
 
     if (data.shopClosed) {
       // Both tabs off — the gear pane renders just the "shop is closed" notice.
@@ -495,34 +653,27 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    // Lock / Unlock toggle (GM-only — the button is hidden for players).
-    html.find('.lock-toggle').click(ev => {
-      ev.preventDefault();
-      this._isLocked = !this._isLocked;
-      this.render(false);
-    });
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const html = $(this.element);
 
     // Portrait click — locked / non-GM: full-screen popup. Unlocked GM:
     // FilePicker to change the shop's image. Mirrors drone sheet logic.
     html.find('.portrait-frame').click(ev => {
       ev.preventDefault();
       if (this._isLocked || !game.user.isGM) {
-        new ImagePopout(this.actor.img, {
-          title: this.actor.name,
+        new foundry.applications.apps.ImagePopout({
+          src: this.actor.img,
+          window: { title: this.actor.name },
           uuid: this.actor.uuid
-        }).render(true);
+        }).render({ force: true });
       } else {
-        const fp = new FilePicker({
+        new foundry.applications.apps.FilePicker.implementation({
           type: "image",
           current: this.actor.img,
           callback: (path) => this.actor.update({ img: path }),
-          top: this.position.top + 40,
-          left: this.position.left + 10
-        });
-        fp.render(true);
+          position: { top: this.position.top + 40, left: this.position.left + 10 }
+        }).render({ force: true });
       }
     });
 
@@ -543,103 +694,28 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
       }]);
     });
 
-    // ----- Header controls (Foundry chrome is hidden; we wire our own) -----
-    html.find('[data-action="copyUuid"]').click(ev => {
-      ev.preventDefault();
-      const uuid = this.actor.uuid;
-      game.clipboard.copyPlainText(uuid);
-      ui.notifications.info(`Copied UUID: ${uuid}`);
-    });
-    html.find('[data-action="configureSheet"]').click(ev => {
-      ev.preventDefault();
-      this._onConfigureSheet(ev);
-    });
-    html.find('[data-action="configureToken"]').click(ev => {
-      ev.preventDefault();
-      this._onConfigureToken(ev);
-    });
-    html.find('[data-action="closeSheet"]').click(ev => {
-      ev.preventDefault();
-      this.close();
-    });
+    // Header chrome / actions wired declaratively via DEFAULT_OPTIONS.actions.
 
-    // ----- Dragging / Resize / Minimize (mirrors drone-sheet wiring) -----
-    const sheetHeader = html[0].querySelector(".sheet-header");
+    // ----- Custom Window Dragging / Resize / Minimize -----
+    const sheetHeader = this.element.querySelector(".sheet-header");
     if (sheetHeader) {
-      const appElement = html.closest(".app");
-      if (appElement.length) {
-        this._customDraggable = new foundry.applications.ux.Draggable.implementation(
-          this, appElement, sheetHeader, this.options.resizable
-        );
-        const resizeHandle = html[0].querySelector(".sheet-resize");
-        if (resizeHandle) {
-          resizeHandle.addEventListener("mousedown", (ev) => {
-            ev.preventDefault();
-            this._customDraggable._onResizeMouseDown(ev);
-          });
-        }
+      this._customDraggable = new foundry.applications.ux.Draggable.implementation(
+        this, this.element, sheetHeader, this.options.window?.resizable
+      );
+
+      const resizeHandle = this.element.querySelector(".sheet-resize");
+      if (resizeHandle) {
+        resizeHandle.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          this._customDraggable._onResizeMouseDown(ev);
+        });
       }
 
+      // Double-click header to minimize / maximize via our overrides.
       sheetHeader.addEventListener("dblclick", (ev) => {
         if (ev.target.closest(".lock-toggle, .header-control")) return;
-        const sheetFrame = html[0].querySelector(".sheet-frame");
-        const characterSheet = html[0].querySelector(".character-sheet");
-        const appEl = html.closest(".app")[0];
-        const sheetContent = html[0].querySelector(".sheet-content");
-        const sheetSections = html[0].querySelector(".sheet-sections");
-        const sheetResize = html[0].querySelector(".sheet-resize");
-
-        if (this._isMinimized) {
-          sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
-          appEl.style.transition = "width 250ms ease, height 250ms ease";
-          sheetFrame.style.width = this._originalWidth + "px";
-          sheetFrame.style.height = this._originalHeight + "px";
-          appEl.style.width = this._originalFoundryWidth + "px";
-          appEl.style.height = this._originalFoundryHeight + "px";
-          characterSheet.style.width = "";
-          characterSheet.style.minHeight = "";
-          setTimeout(() => {
-            sheetFrame.style.transition = "";
-            sheetFrame.style.width = "";
-            sheetFrame.style.height = "";
-            sheetFrame.style.minHeight = "";
-            appEl.style.transition = "";
-            appEl.style.width = "";
-            appEl.style.height = "";
-            appEl.style.minHeight = "";
-            if (sheetContent)  sheetContent.style.display = "";
-            if (sheetSections) sheetSections.style.display = "";
-            if (sheetResize)   sheetResize.style.display = "";
-            this.setPosition({ width: this._originalFoundryWidth, height: this._originalFoundryHeight });
-          }, 250);
-          this._isMinimized = false;
-        } else {
-          this._originalWidth = sheetFrame.offsetWidth;
-          this._originalHeight = sheetFrame.offsetHeight;
-          this._originalFoundryWidth = this.position.width;
-          this._originalFoundryHeight = this.position.height;
-          if (sheetContent)  sheetContent.style.display = "none";
-          if (sheetSections) sheetSections.style.display = "none";
-          if (sheetResize)   sheetResize.style.display = "none";
-          sheetFrame.style.minHeight = "0";
-          characterSheet.style.minHeight = "0";
-          appEl.style.minHeight = "0";
-          const minWidth = 400;
-          sheetFrame.style.transition = "width 250ms ease, height 250ms ease";
-          appEl.style.transition = "width 250ms ease, height 250ms ease";
-          sheetFrame.style.width = minWidth + "px";
-          sheetFrame.style.height = "46px";
-          appEl.style.width = minWidth + "px";
-          appEl.style.height = "46px";
-          setTimeout(() => {
-            characterSheet.style.width = minWidth + "px";
-            characterSheet.style.minHeight = "46px";
-            this.setPosition({ width: minWidth, height: 46 });
-            sheetFrame.style.transition = "";
-            appEl.style.transition = "";
-          }, 250);
-          this._isMinimized = true;
-        }
+        if (this._isMinimized) this.maximize();
+        else this.minimize();
       });
     }
 
@@ -661,6 +737,14 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
       const current = Number(this.actor.system?.gear?.eurobucks) || 0;
       if (next !== current) await this.actor.update({ "system.gear.eurobucks": next });
       else this.render(false);
+    });
+
+    // Shop description — GM + unlocked only.
+    html.find('.shop-description-input').on('change blur', async ev => {
+      if (!game.user.isGM) return;
+      const next = ev.currentTarget.value;
+      const current = this.actor.system?.description || "";
+      if (next !== current) await this.actor.update({ "system.description": next });
     });
 
     // Buy — only fires when affordable (button has .disabled when not).
@@ -696,17 +780,18 @@ export class CyberpunkShopSheet extends foundry.appv1.sheets.ActorSheet {
     });
 
     // Delete — same source-actor lookup; native confirm dialog.
-    html.find('.gear-delete').click(async ev => {
+    html.find('.gear-delete').click(ev => {
       ev.preventDefault();
       const itemId = ev.currentTarget.dataset.itemId;
       const source = this._activeTab === "sell" ? game.user.character : this.actor;
       const item = source?.items?.get(itemId);
       if (!item) return;
-      const confirmed = await Dialog.confirm({
-        title: localize("DeleteItem"),
-        content: `<p>Delete <strong>${item.name}</strong>?</p>`
+      foundry.applications.api.DialogV2.confirm({
+        window: { title: localize("DeleteItem") },
+        content: `<p>Delete <strong>${item.name}</strong>?</p>`,
+        yes: { label: localize("Yes"), callback: () => source.deleteEmbeddedDocuments("Item", [item.id]) },
+        no:  { label: localize("No"), default: true }
       });
-      if (confirmed) await source.deleteEmbeddedDocuments("Item", [item.id]);
     });
 
     // Settings button — opens the Shop Settings dialog (price % and category

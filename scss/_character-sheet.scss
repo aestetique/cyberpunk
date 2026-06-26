@@ -269,23 +269,25 @@
   }
 }
 
-.btn-value--dim {
-  color: #444856 !important;
+// BEM-style modifiers on .btn-value / .action-btn-name. Compound selectors
+// match the nested base rules' specificity (0,2,0) and beat them by source
+// order — no need for !important.
+.btn-value.btn-value--dim {
+  color: #444856;
 }
 
-// Override .action-btn-name color for stabilize label states
-.stabilize-label--healthy {
-  color: #444856 !important;
+.action-btn-name.stabilize-label--healthy {
+  color: #444856;
   letter-spacing: 0.8px;
 }
 
-.stabilize-label--wounded {
-  color: var(--sheet-crimson) !important;
+.action-btn-name.stabilize-label--wounded {
+  color: var(--sheet-crimson);
   letter-spacing: 0.8px;
 }
 
-.stabilize-label--critical {
-  color: var(--sheet-crimson) !important;
+.action-btn-name.stabilize-label--critical {
+  color: var(--sheet-crimson);
   letter-spacing: 0.4px;
 }
 

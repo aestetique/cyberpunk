@@ -598,13 +598,12 @@ export function canAttachOptionToBase(option, base) {
     return false;
 }
 
-/** Surgery codes */
+/** Surgery codes — CP2020 standard four-letter codes. */
 export const surgeryCodes = {
-    N: "SurgHarmless",
-    M: "SurgNegligible",
-    MA: "SurgMinor",
-    CR: "SurgMajor",
-    CRP: "SurgCritical"
+    N: "SurgNegligible",
+    M: "SurgMinor",
+    MA: "SurgMajor",
+    CR: "SurgCritical"
 };
 
 /**
@@ -643,12 +642,16 @@ export function canBeWeapon(cyberwareType, cyberwareSubtype) {
 }
 
 /**
- * True if a (type, subtype) carries an embedded armor block. Currently only
- * implants (body plating et al). Kept as a 1-arg predicate for compatibility
- * with the dead `isOption`-era signature.
+ * True if a (type, subtype) can carry an embedded armor block.
+ *   - Implants always (body plating, subcutaneous plates, etc.)
+ *   - Optics Base (armored face plate over the optics)
+ *   - Cyberlimb Built-in option (armor-clad built-in fitting on a limb)
  */
-export function canBeArmor(cyberwareType) {
-    return cyberwareType === "implant";
+export function canBeArmor(cyberwareType, cyberwareSubtype) {
+    if (cyberwareType === "implant") return true;
+    if (cyberwareType === "optics" && cyberwareSubtype === "base") return true;
+    if (cyberwareType === "cyberlimb" && cyberwareSubtype === "builtIn") return true;
+    return false;
 }
 
 /**

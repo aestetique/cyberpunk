@@ -213,7 +213,7 @@
     </div>
   </div>
 
-  {{!-- Row 2: Is a Weapon (+ EMP Shielding on built-ins) --}}
+  {{!-- Row 2: Is a Weapon (+ Is Armor on built-ins) --}}
   <div class="variables-row">
     <div class="variable-field">
       <label class="variable-label">{{localize "CYBERPUNK.IsAWeapon"}}</label>
@@ -225,7 +225,22 @@
       {{/if}}
     </div>
 
-    {{#if canEmpShield}}
+    {{#if canBeArmor}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.IsArmor"}}</label>
+      {{#if isLocked}}
+        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isArmor}}checked{{else}}unchecked{{/if}}.svg">
+      {{else}}
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isArmor"
+             src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isArmor}}checked{{else}}unchecked{{/if}}.svg">
+      {{/if}}
+    </div>
+    {{/if}}
+  </div>
+
+  {{!-- Row 3: EMP Shielding (built-ins only) --}}
+  {{#if canEmpShield}}
+  <div class="variables-row">
     <div class="variable-field">
       <label class="variable-label">{{localize "CYBERPUNK.EMPShielding"}}</label>
       {{#if isLocked}}
@@ -235,8 +250,8 @@
              src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.empShielding}}checked{{else}}unchecked{{/if}}.svg">
       {{/if}}
     </div>
-    {{/if}}
   </div>
+  {{/if}}
 {{/if}}
 
 {{!-- ====================================== --}}
@@ -252,6 +267,18 @@
         <input type="number" class="variable-input" name="system.hasSlots" value="{{system.hasSlots}}" min="0">
       {{/if}}
     </div>
+
+    {{#if canBeArmor}}
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.IsArmor"}}</label>
+      {{#if isLocked}}
+        <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isArmor}}checked{{else}}unchecked{{/if}}.svg">
+      {{else}}
+        <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isArmor"
+             src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isArmor}}checked{{else}}unchecked{{/if}}.svg">
+      {{/if}}
+    </div>
+    {{/if}}
   </div>
 {{/if}}
 

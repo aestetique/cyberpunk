@@ -2,6 +2,15 @@
 // Dialog Styles (shared across all game dialogs)
 // ============================================
 
+// Body text shape used across dialog labels (ammo qty, fire mode, range, etc).
+// 9 hand-written copies before this lived inline at various indent levels.
+@mixin dialog-text {
+  font-family: var(--font-blender);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
 // Override Foundry's default Application window chrome.
 // V1 root has `.app.window-app.<class>`, V2 root has `.application.<class>`.
 // We list both so the same chrome-reset applies whichever framework owns the dialog.
@@ -156,23 +165,20 @@
     transition: background 0.15s;
 
     &:hover {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.selected {
       background: var(--chat-green, #24563D);
 
       &:hover {
-        background: lighten(#24563D, 5%);
+        background: #2C684A;
       }
     }
 
     .ammo-name,
     .ammo-qty {
-      font-family: var(--font-blender);
-      font-size: 16px;
-      font-weight: 500;
-      line-height: 24px;
+      @include dialog-text;
       color: var(--chat-text, #FFF);
       text-transform: uppercase;
     }
@@ -191,15 +197,12 @@
     cursor: pointer;
     transition: background 0.15s;
 
-    font-family: var(--font-blender);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
+    @include dialog-text;
     color: var(--chat-text, #FFF);
     text-transform: uppercase;
 
     &:hover {
-      background: lighten(#86223D, 5%);
+      background: #9A2746;
     }
   }
 
@@ -213,10 +216,7 @@
     align-self: stretch;
     border-radius: 2px;
 
-    font-family: var(--font-blender);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
+    @include dialog-text;
     color: #444856;
     text-align: center;
     text-transform: uppercase;
@@ -235,15 +235,12 @@
     cursor: pointer;
     transition: background 0.15s;
 
-    font-family: var(--font-blender);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
+    @include dialog-text;
     color: var(--chat-text, #FFF);
     text-transform: uppercase;
 
     &:hover {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
   }
 
@@ -274,10 +271,7 @@
     }
 
     .fire-mode-label {
-      font-family: var(--font-blender);
-      font-size: 16px;
-      font-weight: 500;
-      line-height: 24px;
+      @include dialog-text;
       color: var(--chat-text, #FFF);
       text-transform: uppercase;
     }
@@ -304,7 +298,7 @@
     transition: background 0.15s;
 
     &:hover {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.open {
@@ -312,10 +306,7 @@
     }
 
     .range-label {
-      font-family: var(--font-blender);
-      font-size: 16px;
-      font-weight: 500;
-      line-height: 24px;
+      @include dialog-text;
       color: var(--chat-text, #FFF);
       text-transform: uppercase;
     }
@@ -374,7 +365,7 @@
       background: var(--chat-green, #24563D);
 
       &:hover {
-        background: lighten(#24563D, 5%);
+        background: #2C684A;
       }
     }
   }
@@ -410,22 +401,19 @@
     transition: background 0.15s;
     box-shadow: none;
 
-    font-family: var(--font-blender);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
+    @include dialog-text;
     color: var(--chat-text, #FFF);
     text-transform: uppercase;
 
     &:hover {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.selected {
       background: var(--chat-green, #24563D);
 
       &:hover {
-        background: lighten(#24563D, 5%);
+        background: #2C684A;
       }
     }
   }
@@ -472,7 +460,7 @@
     }
 
     &:hover:not(.disabled) {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.disabled {
@@ -524,10 +512,7 @@
     }
 
     .dice-value {
-      font-family: var(--font-blender);
-      font-size: 16px;
-      font-weight: 500;
-      line-height: 24px;
+      @include dialog-text;
       color: var(--chat-text, #FFF);
       text-align: center;
       text-transform: uppercase;
@@ -572,7 +557,7 @@
     }
 
     &:hover:not(.disabled) {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.disabled {
@@ -666,14 +651,14 @@
     }
 
     &:hover {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.selected {
       background: var(--chat-green, #24563D);
 
       &:hover {
-        background: lighten(#24563D, 5%);
+        background: #2C684A;
       }
     }
 
@@ -721,22 +706,19 @@
     transition: background 0.15s;
     box-shadow: none;
 
-    font-family: var(--font-blender);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
+    @include dialog-text;
     color: var(--chat-text, #FFF);
     text-transform: uppercase;
 
     &:hover {
-      background: lighten(#444856, 5%);
+      background: #4F5464;
     }
 
     &.selected {
       background: #1A804D;
 
       &:hover {
-        background: lighten(#1A804D, 5%);
+        background: #1E955A;
       }
     }
   }

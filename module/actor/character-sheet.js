@@ -1,5 +1,5 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildMeleeModifierGroups, meleeDamageTypes, buildRangedModifierGroups, weaponTypes, reliability, concealability, ammoTypes, ammoAbbreviations, weaponEffects, fireModes, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
-import { localize, tabBeautifying, toTitleCase, bindHoverTooltips, commitPendingEdits } from "../utils.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildRangedModifierGroups, weaponTypes, ammoAbbreviations, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
+import { localize, tabBeautifying, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
@@ -20,7 +20,7 @@ import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext, buildWeaponContextString, buildCyberwareContext, formatBonusLabel, summariseBonuses } from "./gear-data.js"
 import { calibers as CALIBERS } from "../calibers.js"
-import { rangedClasses, martialClasses, getMartialSubtypeLabelKey, resolveWeaponDiscriminator } from "../lookups.js"
+import { resolveWeaponDiscriminator } from "../lookups.js"
 import {
   SENSOR_TYPES,
   isCyberlimbBase, isCyberlimbOption,
@@ -559,11 +559,6 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       sheetData.poisonSaveCalc = buildSaveCalc(stunThreshold, poisonSaveMod, "Poison");
       sheetData.deathSaveFlavor = "Roll 1d10 under threshold to avoid death. Threshold is 3 higher than Shock Save, decreasing with mortal wounds.";
       sheetData.deathSaveCalc = buildSaveCalc(deathThreshold, deathSaveMod, "Death");
-      const getStatLabel = (key) => {
-        const overrides = { 'bt': 'body', 'ma': 'move' };
-        return overrides[key] || game.i18n.localize(`CYBERPUNK.${key.charAt(0).toUpperCase() + key.slice(1)}`);
-      };
-
       const statFlavors = {
         int: "Problem solving ability, awareness, perception, memory, and the ability to learn quickly.",
         ref: "Combined agility, manual dexterity, and reaction speed. Affects combat initiative and ranged weapon accuracy.",
@@ -614,22 +609,8 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         return calc;
       };
 
-      const getStatFullName = (key) => {
-        const k = key.charAt(0).toUpperCase() + key.slice(1);
-        return game.i18n.localize(`CYBERPUNK.${k}Full`);
-      };
-
-      sheetData.statButtons = [
-        { key: 'int', label: getStatLabel('int'), tooltipName: getStatFullName('int'), total: stats.int?.total ?? stats.int?.base ?? 0, base: stats.int?.base ?? 0, path: 'system.stats.int.base' },
-        { key: 'ref', label: getStatLabel('ref'), tooltipName: getStatFullName('ref'), total: stats.ref?.total ?? stats.ref?.base ?? 0, base: stats.ref?.base ?? 0, path: 'system.stats.ref.base' },
-        { key: 'tech', label: getStatLabel('tech'), tooltipName: getStatFullName('tech'), total: stats.tech?.total ?? stats.tech?.base ?? 0, base: stats.tech?.base ?? 0, path: 'system.stats.tech.base' },
-        { key: 'cool', label: getStatLabel('cool'), tooltipName: getStatFullName('cool'), total: stats.cool?.total ?? stats.cool?.base ?? 0, base: stats.cool?.base ?? 0, path: 'system.stats.cool.base' },
-        { key: 'attr', label: getStatLabel('attr'), tooltipName: getStatFullName('attr'), total: stats.attr?.total ?? stats.attr?.base ?? 0, base: stats.attr?.base ?? 0, path: 'system.stats.attr.base' },
-        { key: 'bt', label: getStatLabel('bt'), tooltipName: getStatFullName('bt'), total: stats.bt?.total ?? stats.bt?.base ?? 0, base: stats.bt?.base ?? 0, path: 'system.stats.bt.base' },
-        { key: 'emp', label: getStatLabel('emp'), tooltipName: getStatFullName('emp'), total: stats.emp?.total ?? stats.emp?.base ?? 0, base: stats.emp?.base ?? 0, path: 'system.stats.emp.base' },
-        { key: 'ma', label: getStatLabel('ma'), tooltipName: getStatFullName('ma'), total: stats.ma?.total ?? stats.ma?.base ?? 0, base: stats.ma?.base ?? 0, path: 'system.stats.ma.base' },
-        { key: 'luck', label: getStatLabel('luck'), tooltipName: getStatFullName('luck'), total: stats.luck?.effective ?? stats.luck?.total ?? stats.luck?.base ?? 0, base: stats.luck?.base ?? 0, path: 'system.stats.luck.base' }
-      ];
+      sheetData.statButtons = buildStatButtons(stats,
+        ['int', 'ref', 'tech', 'cool', 'attr', 'bt', 'emp', 'ma', 'luck']);
       const statTokenPaths = {
         int: '@stats.int.total', ref: '@stats.ref.total',
         tech: '@stats.tech.total', cool: '@stats.cool.total',
@@ -1315,6 +1296,12 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     const tools = this.actor.itemTypes.tool || [];
     const drugs = this.actor.itemTypes.drug || [];
 
+    // id → item lookup maps so the per-option parent resolution below is O(1)
+    // instead of N² (the option count × the base-list .find()). Reused for
+    // cyberweapon options, cyberarmor options, and armor options.
+    const cyberById = new Map(cyberware.map(c => [c.id, c]));
+    const armorById = new Map(armor.map(a => [a.id, a]));
+
     // Base-cyberware weapons: equipped implants etc. with isWeapon=true.
     // Excludes anything that's an option (cyberlimb options + sensor options
     // surface via their parent's equipped state instead).
@@ -1329,7 +1316,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       if (!c.system.isWeapon || !isCyberOptionRow(c)) return false;
       const parentId = c.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false; // Detached options never appear in gear list
-      const parent = cyberware.find(p => p.id === parentId);
+      const parent = cyberById.get(parentId);
       return parent && parent.system.equipped;
     });
 
@@ -1346,7 +1333,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       if (!a.system.isWeapon || a.system.armorType !== 'option') return false;
       const parentId = a.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false;
-      const parent = armor.find(p => p.id === parentId);
+      const parent = armorById.get(parentId);
       return parent && parent.system.equipped;
     });
     const allArmorWeapons = [...armorWeaponsBase, ...armorWeaponsOptions];
@@ -1683,7 +1670,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       if (!c.system.isArmor || !isCyberOptRow(c)) return false;
       const parentId = c.getFlag('cyberpunk', 'attachedTo');
       if (!parentId) return false; // Detached options never appear in gear list
-      const parent = cyberware.find(p => p.id === parentId);
+      const parent = cyberById.get(parentId);
       return parent && parent.system.equipped;
     });
 
@@ -3086,6 +3073,25 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
           const newCurrentSdp = Math.min(currentSdp + optionSdpBonus, newMaxSdp);
           await baseItem.update({ "system.structure.current": newCurrentSdp });
         }
+      });
+    });
+
+    // Parent-weapon rows are drop targets for ammo. Drop logic (attach to the
+    // weapon, top up shotsLeft) is already handled in _onDropItem above; this
+    // block only paints the hover-highlight so the user sees what they're
+    // about to drop on, matching cyberware / armor / netware drop targets.
+    // We do NOT preventDefault on `drop` here — that lets the event flow
+    // through V2's DragDrop pipeline into _onDropItem unchanged.
+    html.find('.gear-row.weapon-row[data-item-id]:not(.attached-ammo)').each((_, rowEl) => {
+      rowEl.addEventListener('dragover', ev => {
+        ev.preventDefault();
+        rowEl.classList.add('drag-over');
+      });
+      rowEl.addEventListener('dragleave', () => {
+        rowEl.classList.remove('drag-over');
+      });
+      rowEl.addEventListener('drop', () => {
+        rowEl.classList.remove('drag-over');
       });
     });
 

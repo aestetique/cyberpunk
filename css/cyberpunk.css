@@ -677,8 +677,8 @@ div.statderive .value.rightborder {
   display: none;
 }
 .field.skill .chip-icon {
-  border: 0px;
-  border-radius: 0px;
+  border: 0;
+  border-radius: 0;
   background-size: cover;
   height: 1.5em;
   width: 1.5em;
@@ -2192,22 +2192,22 @@ div.statderive .value.rightborder {
   filter: none;
 }
 
-.btn-value--dim {
-  color: #444856 !important;
+.btn-value.btn-value--dim {
+  color: #444856;
 }
 
-.stabilize-label--healthy {
-  color: #444856 !important;
+.action-btn-name.stabilize-label--healthy {
+  color: #444856;
   letter-spacing: 0.8px;
 }
 
-.stabilize-label--wounded {
-  color: var(--sheet-crimson) !important;
+.action-btn-name.stabilize-label--wounded {
+  color: var(--sheet-crimson);
   letter-spacing: 0.8px;
 }
 
-.stabilize-label--critical {
-  color: var(--sheet-crimson) !important;
+.action-btn-name.stabilize-label--critical {
+  color: var(--sheet-crimson);
   letter-spacing: 0.4px;
 }
 
@@ -4884,6 +4884,175 @@ input.skill-value.skill-level-input:focus {
   margin: 0;
 }
 
+.cyberpunk.commodity-sheet.sheet:not(.application),
+.cyberpunk.cyberware-sheet.sheet:not(.application),
+.cyberpunk.drug-sheet.sheet:not(.application),
+.cyberpunk.netware-sheet.sheet:not(.application),
+.cyberpunk.outfit-sheet.sheet:not(.application),
+.cyberpunk.role-sheet.sheet:not(.application),
+.cyberpunk.skill-sheet.sheet:not(.application),
+.cyberpunk.tool-sheet.sheet:not(.application),
+.cyberpunk.weapon-sheet.sheet:not(.application) {
+  z-index: var(--z-index-window, 100);
+  pointer-events: auto;
+}
+.cyberpunk.commodity-sheet.app, .cyberpunk.commodity-sheet.application,
+.cyberpunk.cyberware-sheet.app,
+.cyberpunk.cyberware-sheet.application,
+.cyberpunk.drug-sheet.app,
+.cyberpunk.drug-sheet.application,
+.cyberpunk.netware-sheet.app,
+.cyberpunk.netware-sheet.application,
+.cyberpunk.outfit-sheet.app,
+.cyberpunk.outfit-sheet.application,
+.cyberpunk.role-sheet.app,
+.cyberpunk.role-sheet.application,
+.cyberpunk.skill-sheet.app,
+.cyberpunk.skill-sheet.application,
+.cyberpunk.tool-sheet.app,
+.cyberpunk.tool-sheet.application,
+.cyberpunk.weapon-sheet.app,
+.cyberpunk.weapon-sheet.application {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+}
+.cyberpunk.commodity-sheet > .window-header,
+.cyberpunk.cyberware-sheet > .window-header,
+.cyberpunk.drug-sheet > .window-header,
+.cyberpunk.netware-sheet > .window-header,
+.cyberpunk.outfit-sheet > .window-header,
+.cyberpunk.role-sheet > .window-header,
+.cyberpunk.skill-sheet > .window-header,
+.cyberpunk.tool-sheet > .window-header,
+.cyberpunk.weapon-sheet > .window-header {
+  display: none;
+}
+.cyberpunk.commodity-sheet > .window-content,
+.cyberpunk.cyberware-sheet > .window-content,
+.cyberpunk.drug-sheet > .window-content,
+.cyberpunk.netware-sheet > .window-content,
+.cyberpunk.outfit-sheet > .window-content,
+.cyberpunk.role-sheet > .window-content,
+.cyberpunk.skill-sheet > .window-content,
+.cyberpunk.tool-sheet > .window-content,
+.cyberpunk.weapon-sheet > .window-content {
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.cyberpunk.commodity-sheet > .window-resizable-handle,
+.cyberpunk.commodity-sheet > .window-resize-handle,
+.cyberpunk.cyberware-sheet > .window-resizable-handle,
+.cyberpunk.cyberware-sheet > .window-resize-handle,
+.cyberpunk.drug-sheet > .window-resizable-handle,
+.cyberpunk.drug-sheet > .window-resize-handle,
+.cyberpunk.netware-sheet > .window-resizable-handle,
+.cyberpunk.netware-sheet > .window-resize-handle,
+.cyberpunk.outfit-sheet > .window-resizable-handle,
+.cyberpunk.outfit-sheet > .window-resize-handle,
+.cyberpunk.role-sheet > .window-resizable-handle,
+.cyberpunk.role-sheet > .window-resize-handle,
+.cyberpunk.skill-sheet > .window-resizable-handle,
+.cyberpunk.skill-sheet > .window-resize-handle,
+.cyberpunk.tool-sheet > .window-resizable-handle,
+.cyberpunk.tool-sheet > .window-resize-handle,
+.cyberpunk.weapon-sheet > .window-resizable-handle,
+.cyberpunk.weapon-sheet > .window-resize-handle {
+  display: none !important;
+}
+.cyberpunk.commodity-sheet button, .cyberpunk.commodity-sheet a,
+.cyberpunk.cyberware-sheet button,
+.cyberpunk.cyberware-sheet a,
+.cyberpunk.drug-sheet button,
+.cyberpunk.drug-sheet a,
+.cyberpunk.netware-sheet button,
+.cyberpunk.netware-sheet a,
+.cyberpunk.outfit-sheet button,
+.cyberpunk.outfit-sheet a,
+.cyberpunk.role-sheet button,
+.cyberpunk.role-sheet a,
+.cyberpunk.skill-sheet button,
+.cyberpunk.skill-sheet a,
+.cyberpunk.tool-sheet button,
+.cyberpunk.tool-sheet a,
+.cyberpunk.weapon-sheet button,
+.cyberpunk.weapon-sheet a {
+  --button-focus-outline-color: transparent;
+}
+.cyberpunk.commodity-sheet button:focus, .cyberpunk.commodity-sheet a:focus,
+.cyberpunk.cyberware-sheet button:focus,
+.cyberpunk.cyberware-sheet a:focus,
+.cyberpunk.drug-sheet button:focus,
+.cyberpunk.drug-sheet a:focus,
+.cyberpunk.netware-sheet button:focus,
+.cyberpunk.netware-sheet a:focus,
+.cyberpunk.outfit-sheet button:focus,
+.cyberpunk.outfit-sheet a:focus,
+.cyberpunk.role-sheet button:focus,
+.cyberpunk.role-sheet a:focus,
+.cyberpunk.skill-sheet button:focus,
+.cyberpunk.skill-sheet a:focus,
+.cyberpunk.tool-sheet button:focus,
+.cyberpunk.tool-sheet a:focus,
+.cyberpunk.weapon-sheet button:focus,
+.cyberpunk.weapon-sheet a:focus {
+  box-shadow: none;
+  outline: none;
+}
+.cyberpunk.commodity-sheet img,
+.cyberpunk.cyberware-sheet img,
+.cyberpunk.drug-sheet img,
+.cyberpunk.netware-sheet img,
+.cyberpunk.outfit-sheet img,
+.cyberpunk.role-sheet img,
+.cyberpunk.skill-sheet img,
+.cyberpunk.tool-sheet img,
+.cyberpunk.weapon-sheet img {
+  border: none;
+}
+.cyberpunk.commodity-sheet h1, .cyberpunk.commodity-sheet h2,
+.cyberpunk.cyberware-sheet h1,
+.cyberpunk.cyberware-sheet h2,
+.cyberpunk.drug-sheet h1,
+.cyberpunk.drug-sheet h2,
+.cyberpunk.netware-sheet h1,
+.cyberpunk.netware-sheet h2,
+.cyberpunk.outfit-sheet h1,
+.cyberpunk.outfit-sheet h2,
+.cyberpunk.role-sheet h1,
+.cyberpunk.role-sheet h2,
+.cyberpunk.skill-sheet h1,
+.cyberpunk.skill-sheet h2,
+.cyberpunk.tool-sheet h1,
+.cyberpunk.tool-sheet h2,
+.cyberpunk.weapon-sheet h1,
+.cyberpunk.weapon-sheet h2 {
+  border: none;
+  border-bottom: none;
+}
+
+.skill-card,
+.commodity-card {
+  height: 400px;
+}
+
+.drug-card,
+.netware-card,
+.weapon-card {
+  min-height: 400px;
+}
+
 .cyberpunk.role-sheet.sheet:not(.application) {
   z-index: var(--z-index-window, 100);
   pointer-events: auto;
@@ -5100,106 +5269,6 @@ input.skill-value.skill-level-input:focus {
 
 .role-card:not(.unlocked) .career-skill-item .skill-name {
   color: #808090;
-}
-
-.cyberpunk.skill-sheet.sheet:not(.application) {
-  z-index: var(--z-index-window, 100);
-  pointer-events: auto;
-}
-.cyberpunk.skill-sheet.app, .cyberpunk.skill-sheet.application {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  overflow: visible !important;
-  min-width: 0;
-  min-height: 0;
-  max-height: none;
-  padding: 0;
-}
-.cyberpunk.skill-sheet > .window-header {
-  display: none;
-}
-.cyberpunk.skill-sheet > .window-content {
-  padding: 0 !important;
-  overflow: visible !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.cyberpunk.skill-sheet > .window-resizable-handle,
-.cyberpunk.skill-sheet > .window-resize-handle {
-  display: none !important;
-}
-.cyberpunk.skill-sheet button, .cyberpunk.skill-sheet a {
-  --button-focus-outline-color: transparent;
-}
-.cyberpunk.skill-sheet button:focus, .cyberpunk.skill-sheet a:focus {
-  box-shadow: none;
-  outline: none;
-}
-.cyberpunk.skill-sheet img {
-  border: none;
-}
-.cyberpunk.skill-sheet h1, .cyberpunk.skill-sheet h2 {
-  border: none;
-  border-bottom: none;
-}
-
-.skill-card {
-  height: 400px;
-}
-
-.cyberpunk.commodity-sheet.sheet:not(.application) {
-  z-index: var(--z-index-window, 100);
-  pointer-events: auto;
-}
-.cyberpunk.commodity-sheet.app, .cyberpunk.commodity-sheet.application {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  overflow: visible !important;
-  min-width: 0;
-  min-height: 0;
-  max-height: none;
-  padding: 0;
-}
-.cyberpunk.commodity-sheet > .window-header {
-  display: none;
-}
-.cyberpunk.commodity-sheet > .window-content {
-  padding: 0 !important;
-  overflow: visible !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.cyberpunk.commodity-sheet > .window-resizable-handle,
-.cyberpunk.commodity-sheet > .window-resize-handle {
-  display: none !important;
-}
-.cyberpunk.commodity-sheet button, .cyberpunk.commodity-sheet a {
-  --button-focus-outline-color: transparent;
-}
-.cyberpunk.commodity-sheet button:focus, .cyberpunk.commodity-sheet a:focus {
-  box-shadow: none;
-  outline: none;
-}
-.cyberpunk.commodity-sheet img {
-  border: none;
-}
-.cyberpunk.commodity-sheet h1, .cyberpunk.commodity-sheet h2 {
-  border: none;
-  border-bottom: none;
-}
-
-.commodity-card {
-  height: 400px;
 }
 
 .cyberpunk.outfit-sheet.sheet:not(.application) {
@@ -5671,7 +5740,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .reload-ammo-btn:hover,
 .toolbox-wrapper .reload-ammo-btn:hover,
 .realm-switcher-wrapper .reload-ammo-btn:hover {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .reload-ammo-btn.selected,
 .ranged-attack-wrapper .reload-ammo-btn.selected,
@@ -5707,7 +5776,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .reload-ammo-btn.selected:hover,
 .toolbox-wrapper .reload-ammo-btn.selected:hover,
 .realm-switcher-wrapper .reload-ammo-btn.selected:hover {
-  background: rgb(43.5245901639, 103.9754098361, 73.75);
+  background: #2C684A;
 }
 .reload-dialog-wrapper .reload-ammo-btn .ammo-name,
 .reload-dialog-wrapper .reload-ammo-btn .ammo-qty,
@@ -5797,7 +5866,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .reload-apply-btn:hover,
 .toolbox-wrapper .reload-apply-btn:hover,
 .realm-switcher-wrapper .reload-apply-btn:hover {
-  background: rgb(154.3392857143, 39.1607142857, 70.2589285714);
+  background: #9A2746;
 }
 .reload-dialog-wrapper .reload-empty,
 .ranged-attack-wrapper .reload-empty,
@@ -5879,7 +5948,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .fire-mode-btn:hover,
 .toolbox-wrapper .fire-mode-btn:hover,
 .realm-switcher-wrapper .fire-mode-btn:hover {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .reload-ammo-btn,
 .reload-dialog-wrapper .reload-apply-btn,
@@ -6079,7 +6148,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .range-dropdown-btn:hover,
 .toolbox-wrapper .range-dropdown-btn:hover,
 .realm-switcher-wrapper .range-dropdown-btn:hover {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .range-dropdown-btn.open,
 .ranged-attack-wrapper .range-dropdown-btn.open,
@@ -6287,7 +6356,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .range-option.selected:hover,
 .toolbox-wrapper .range-option.selected:hover,
 .realm-switcher-wrapper .range-option.selected:hover {
-  background: rgb(43.5245901639, 103.9754098361, 73.75);
+  background: #2C684A;
 }
 .reload-dialog-wrapper .conditions-grid,
 .ranged-attack-wrapper .conditions-grid,
@@ -6397,7 +6466,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .condition-btn:hover,
 .toolbox-wrapper .condition-btn:hover,
 .realm-switcher-wrapper .condition-btn:hover {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .condition-btn.selected,
 .ranged-attack-wrapper .condition-btn.selected,
@@ -6433,7 +6502,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .condition-btn.selected:hover,
 .toolbox-wrapper .condition-btn.selected:hover,
 .realm-switcher-wrapper .condition-btn.selected:hover {
-  background: rgb(43.5245901639, 103.9754098361, 73.75);
+  background: #2C684A;
 }
 .reload-dialog-wrapper .luck-controls,
 .ranged-attack-wrapper .luck-controls,
@@ -6573,7 +6642,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .luck-btn:hover:not(.disabled),
 .toolbox-wrapper .luck-btn:hover:not(.disabled),
 .realm-switcher-wrapper .luck-btn:hover:not(.disabled) {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .luck-btn.disabled,
 .ranged-attack-wrapper .luck-btn.disabled,
@@ -6880,7 +6949,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .number-input-btn:hover:not(.disabled),
 .toolbox-wrapper .number-input-btn:hover:not(.disabled),
 .realm-switcher-wrapper .number-input-btn:hover:not(.disabled) {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .number-input-btn.disabled,
 .ranged-attack-wrapper .number-input-btn.disabled,
@@ -7166,7 +7235,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .location-btn:hover,
 .toolbox-wrapper .location-btn:hover,
 .realm-switcher-wrapper .location-btn:hover {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .location-btn.selected,
 .ranged-attack-wrapper .location-btn.selected,
@@ -7202,7 +7271,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .location-btn.selected:hover,
 .toolbox-wrapper .location-btn.selected:hover,
 .realm-switcher-wrapper .location-btn.selected:hover {
-  background: rgb(43.5245901639, 103.9754098361, 73.75);
+  background: #2C684A;
 }
 .reload-dialog-wrapper .location-btn.disabled,
 .ranged-attack-wrapper .location-btn.disabled,
@@ -7366,7 +7435,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .execute-btn:hover,
 .toolbox-wrapper .execute-btn:hover,
 .realm-switcher-wrapper .execute-btn:hover {
-  background: rgb(79.2597402597, 83.9220779221, 100.2402597403);
+  background: #4F5464;
 }
 .reload-dialog-wrapper .execute-btn.selected,
 .ranged-attack-wrapper .execute-btn.selected,
@@ -7402,7 +7471,7 @@ input.skill-value.skill-level-input:focus {
 .shop-settings-wrapper .execute-btn.selected:hover,
 .toolbox-wrapper .execute-btn.selected:hover,
 .realm-switcher-wrapper .execute-btn.selected:hover {
-  background: rgb(30.3051948052, 149.1948051948, 89.75);
+  background: #1E955A;
 }
 .reload-dialog-wrapper.ranged-attack-wrapper .unarmed-actions,
 .ranged-attack-wrapper.ranged-attack-wrapper .unarmed-actions,
@@ -7531,55 +7600,6 @@ input.skill-value.skill-level-input:focus {
   display: none !important;
 }
 
-.cyberpunk.weapon-sheet.sheet:not(.application) {
-  z-index: var(--z-index-window, 100);
-  pointer-events: auto;
-}
-.cyberpunk.weapon-sheet.app, .cyberpunk.weapon-sheet.application {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  overflow: visible !important;
-  min-width: 0;
-  min-height: 0;
-  max-height: none;
-  padding: 0;
-}
-.cyberpunk.weapon-sheet > .window-header {
-  display: none;
-}
-.cyberpunk.weapon-sheet > .window-content {
-  padding: 0 !important;
-  overflow: visible !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.cyberpunk.weapon-sheet > .window-resizable-handle,
-.cyberpunk.weapon-sheet > .window-resize-handle {
-  display: none !important;
-}
-.cyberpunk.weapon-sheet button, .cyberpunk.weapon-sheet a {
-  --button-focus-outline-color: transparent;
-}
-.cyberpunk.weapon-sheet button:focus, .cyberpunk.weapon-sheet a:focus {
-  box-shadow: none;
-  outline: none;
-}
-.cyberpunk.weapon-sheet img {
-  border: none;
-}
-.cyberpunk.weapon-sheet h1, .cyberpunk.weapon-sheet h2 {
-  border: none;
-  border-bottom: none;
-}
-
-.weapon-card {
-  min-height: 400px;
-}
 .weapon-card .weapon-divider {
   width: 100%;
   height: 1px;
@@ -7634,106 +7654,6 @@ input.skill-value.skill-level-input:focus {
 }
 
 .tool-card {
-  min-height: 400px;
-}
-
-.cyberpunk.drug-sheet.sheet:not(.application) {
-  z-index: var(--z-index-window, 100);
-  pointer-events: auto;
-}
-.cyberpunk.drug-sheet.app, .cyberpunk.drug-sheet.application {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  overflow: visible !important;
-  min-width: 0;
-  min-height: 0;
-  max-height: none;
-  padding: 0;
-}
-.cyberpunk.drug-sheet > .window-header {
-  display: none;
-}
-.cyberpunk.drug-sheet > .window-content {
-  padding: 0 !important;
-  overflow: visible !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.cyberpunk.drug-sheet > .window-resizable-handle,
-.cyberpunk.drug-sheet > .window-resize-handle {
-  display: none !important;
-}
-.cyberpunk.drug-sheet button, .cyberpunk.drug-sheet a {
-  --button-focus-outline-color: transparent;
-}
-.cyberpunk.drug-sheet button:focus, .cyberpunk.drug-sheet a:focus {
-  box-shadow: none;
-  outline: none;
-}
-.cyberpunk.drug-sheet img {
-  border: none;
-}
-.cyberpunk.drug-sheet h1, .cyberpunk.drug-sheet h2 {
-  border: none;
-  border-bottom: none;
-}
-
-.drug-card {
-  min-height: 400px;
-}
-
-.cyberpunk.netware-sheet.sheet:not(.application) {
-  z-index: var(--z-index-window, 100);
-  pointer-events: auto;
-}
-.cyberpunk.netware-sheet.app, .cyberpunk.netware-sheet.application {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  overflow: visible !important;
-  min-width: 0;
-  min-height: 0;
-  max-height: none;
-  padding: 0;
-}
-.cyberpunk.netware-sheet > .window-header {
-  display: none;
-}
-.cyberpunk.netware-sheet > .window-content {
-  padding: 0 !important;
-  overflow: visible !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.cyberpunk.netware-sheet > .window-resizable-handle,
-.cyberpunk.netware-sheet > .window-resize-handle {
-  display: none !important;
-}
-.cyberpunk.netware-sheet button, .cyberpunk.netware-sheet a {
-  --button-focus-outline-color: transparent;
-}
-.cyberpunk.netware-sheet button:focus, .cyberpunk.netware-sheet a:focus {
-  box-shadow: none;
-  outline: none;
-}
-.cyberpunk.netware-sheet img {
-  border: none;
-}
-.cyberpunk.netware-sheet h1, .cyberpunk.netware-sheet h2 {
-  border: none;
-  border-bottom: none;
-}
-
-.netware-card {
   min-height: 400px;
 }
 

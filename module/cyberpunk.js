@@ -51,6 +51,47 @@ import { registerSystemSettings } from "./settings.js"
 
 Hooks.once('init', async function () {
 
+    // Defensive capture-phase pointerup guard for foundry.mjs:206768. Game's
+    // stock #onPointerUp handler reads `event.target.ownerDocument` without
+    // guarding for null. When a prior handler removes the original target from
+    // the DOM mid-click (e.g. a sheet close button that destroys the sheet
+    // between pointerdown and pointerup), ownerDocument is null and Foundry's
+    // handler throws. We intercept at capture phase — before Foundry's bubble
+    // listener — and stop propagation only when the target would trip the bug.
+    // The handler's other work (custom-cursor cleanup, canvas mouse-manager
+    // cancel) self-corrects on the next valid pointerup. Drop this once
+    // Foundry ships a null-guard upstream.
+    document.addEventListener("pointerup", (event) => {
+        if (!event.target?.ownerDocument) event.stopImmediatePropagation();
+    }, { capture: true, passive: true });
+
+    // Migrate any legacy ContextMenuEntry shape (V13 `name` / `condition`) to the
+    // V14 shape (`label` / `visible`) at render time. Foundry's stock context-menu
+    // entries are already on the new API; any remaining warnings are coming from
+    // installed modules whose `getXContextOptions` hook handlers haven't been
+    // updated. We rename keys on the menuItems array in-place just before
+    // ContextMenu.render reads them, so the deprecation warnings never trigger
+    // and the entries render normally. Drop this once the offending modules ship
+    // updates or V16 lands.
+    const CMI = foundry.applications.ux.ContextMenu.implementation;
+    const origRender = CMI.prototype.render;
+    CMI.prototype.render = function(...args) {
+        if (Array.isArray(this.menuItems)) {
+            for (const item of this.menuItems) {
+                if (!item || typeof item !== "object") continue;
+                if ("name" in item && !("label" in item)) {
+                    item.label = item.name;
+                    delete item.name;
+                }
+                if ("condition" in item && !("visible" in item)) {
+                    item.visible = item.condition;
+                    delete item.condition;
+                }
+            }
+        }
+        return origRender.apply(this, args);
+    };
+
     // Place classes in system namespace for later reference.
     game.cyberpunk = {
         documents: {

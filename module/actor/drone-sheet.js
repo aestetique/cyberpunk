@@ -1,4 +1,4 @@
-import { localize, toTitleCase, bindHoverTooltips, commitPendingEdits } from "../utils.js";
+import { localize, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons } from "../utils.js";
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js";
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildDroneSkillsList, buildCoverToggles } from "./gear-data.js";
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js";
@@ -297,12 +297,6 @@ export class CyberpunkDroneSheet extends HandlebarsApplicationMixin(ActorSheetV2
 
     // ----- Stat buttons (6) -----
 
-    const statLabel = (key) => {
-      const overrides = { bt: "body", ma: "move" };
-      return overrides[key] || game.i18n.localize(`CYBERPUNK.${toTitleCase(key)}`);
-    };
-    const statFullName = (key) => game.i18n.localize(`CYBERPUNK.${toTitleCase(key)}Full`);
-
     const statFlavors = {
       int:  "Sensor processing, awareness, pattern recognition.",
       ref:  "Servo response speed and combat initiative.",
@@ -336,23 +330,12 @@ export class CyberpunkDroneSheet extends HandlebarsApplicationMixin(ActorSheetV2
       luck: "@stats.luck.effective"
     };
 
-    sheetData.statButtons = ["int", "ref", "tech", "bt", "ma", "luck"].map(key => {
-      const s = stats[key] || {};
-      const total = key === "luck"
-        ? (s.effective ?? s.total ?? s.base ?? 0)
-        : (s.total ?? s.base ?? 0);
-      return {
-        key,
-        label: statLabel(key),
-        tooltipName: statFullName(key),
-        total,
-        base: s.base ?? 0,
-        path: `system.stats.${key}.base`,
-        flavor: statFlavors[key] || "",
-        calc: buildStatCalc(key),
-        tokenPath: statTokenPaths[key] || ""
-      };
-    });
+    sheetData.statButtons = buildStatButtons(stats, ["int", "ref", "tech", "bt", "ma", "luck"]);
+    for (const btn of sheetData.statButtons) {
+      btn.flavor = statFlavors[btn.key] || "";
+      btn.calc = buildStatCalc(btn.key);
+      btn.tokenPath = statTokenPaths[btn.key] || "";
+    }
 
     // ----- Info blocks (6) -----
 

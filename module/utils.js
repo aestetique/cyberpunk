@@ -14,6 +14,47 @@ export function interpolate(template, value) {
     return template.replace("[VAR]", value);
 }
 
+// --- Stat-button context helpers (shared by character + drone sheets) ---
+
+/** UI overrides for stat display labels — bt/ma read as body/move on sheets. */
+const STAT_LABEL_OVERRIDES = { bt: "body", ma: "move" };
+
+/** Localize a stat key for sheet display ("int" → "INT", with overrides). */
+export function getStatLabel(key) {
+    return STAT_LABEL_OVERRIDES[key] || game.i18n.localize(I18N_PREFIX + toTitleCase(key));
+}
+
+/** Localize a stat key's full name (CYBERPUNK.<Key>Full). */
+export function getStatFullName(key) {
+    return game.i18n.localize(I18N_PREFIX + toTitleCase(key) + "Full");
+}
+
+/**
+ * Build the per-key button objects (key, label, tooltipName, total, base, path)
+ * for a list of stat keys. Caller fills in sheet-specific `flavor`, `calc`, and
+ * `tokenPath` afterwards.
+ *
+ * Luck's `total` resolves through `effective ?? total ?? base ?? 0` so the
+ * Spent-Luck pipeline displays its post-spend value here; every other stat
+ * uses `total ?? base ?? 0`.
+ */
+export function buildStatButtons(stats, keys) {
+    return keys.map(key => {
+        const s = stats[key] || {};
+        const total = key === "luck"
+            ? (s.effective ?? s.total ?? s.base ?? 0)
+            : (s.total ?? s.base ?? 0);
+        return {
+            key,
+            label: getStatLabel(key),
+            tooltipName: getStatFullName(key),
+            total,
+            base: s.base ?? 0,
+            path: `system.stats.${key}.base`
+        };
+    });
+}
+
 // --- Localization ---
 
 export function localize(key, data = {}) {

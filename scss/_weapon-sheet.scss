@@ -1,28 +1,16 @@
 // ============================================
 // Weapon Sheet - specific styles
 // ============================================
+// Chrome reset + 400 px min-height are consolidated in _item-card-base.scss
+// alongside the other per-item-sheet cards. Only weapon-only visual bits
+// belong here.
 
-.cyberpunk.weapon-sheet {
-  @include item-sheet-chrome-reset;
-}
-
-.weapon-card {
-  min-height: 400px;
-
-  // ============================================
-  // Weapon Divider (gradient line between common and type-specific rows)
-  // ============================================
-  .weapon-divider {
-    width: 100%;
-    height: 1px;
-    flex-shrink: 0;
-    background: linear-gradient(90deg,
-      rgba(185, 178, 157, 0.00) 0%,
-      rgba(185, 178, 157, 0.50) 50%,
-      rgba(185, 178, 157, 0.00) 100%);
-  }
-
-  // `.dual-field` / `.dual-value` / `.dual-input` / `.dual-input-narrow` /
-  // `.dual-value-narrow` / `.dual-separator` are now shared across every
-  // `.item-card`. See _item-card-base.scss for the base definitions.
+.weapon-card .weapon-divider {
+  width: 100%;
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg,
+    rgba(185, 178, 157, 0.00) 0%,
+    rgba(185, 178, 157, 0.50) 50%,
+    rgba(185, 178, 157, 0.00) 100%);
 }

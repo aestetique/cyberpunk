@@ -39,6 +39,32 @@ export const WOUND_STATE_TO_CONDITION = {
 export const WOUND_CONDITION_IDS = Object.values(WOUND_STATE_TO_CONDITION);
 
 /**
+ * Conditions that should be hidden from the visual token sprite badge tray.
+ * They still exist on the actor (combat trackers / carousels / sheets still see
+ * them) and continue to drive derived-stat logic — only the token icon is
+ * suppressed. Used by the Token#_drawEffects monkey-patch in cyberpunk.js.
+ *
+ * Includes the numeric ladders that the sheet drives automatically (wounds,
+ * stress, fatigue / sleep deprivation) plus the baseline `fresh` and the
+ * medical `stabilized` state — those don't need to clutter the canvas.
+ */
+export const HIDDEN_ON_TOKEN_IDS = new Set([
+    // Wound ladder (10 levels)
+    "lightly-wounded", "seriously-wounded", "critically-wounded",
+    "mortally-wounded-0", "mortally-wounded-1", "mortally-wounded-2",
+    "mortally-wounded-3", "mortally-wounded-4", "mortally-wounded-5",
+    "mortally-wounded-6",
+    // Stress ladder
+    "anxious", "tense", "stressed", "cracked",
+    // Fatigue / sleep deprivation ladder
+    "tired", "fatigued", "exhausted", "debilitated", "collapse",
+    // Sleep deprivation side-effect
+    "insomnia",
+    // Baseline + medical
+    "fresh", "stabilized"
+]);
+
+/**
  * Cover type definitions: key -> { sp, label, desc }
  */
 export const COVER_TYPES = {
@@ -415,6 +441,18 @@ export const CYBERPUNK_CONDITIONS = [
         statuses: [`cover-${sp}`]
     }))
 ];
+
+// Mark conditions in HIDDEN_ON_TOKEN_IDS with Foundry V14's native
+// showIcon=NEVER (CONST.ACTIVE_EFFECT_SHOW_ICON.NEVER === 0). Foundry's stock
+// Token#_drawEffects filters appliedEffects by this flag — so the icon never
+// gets drawn on the token sprite, but the ActiveEffect still exists on the
+// actor and continues to drive derived-stat logic / show up in combat trackers.
+// The `?? 0` fallback keeps this safe under V13 (which doesn't expose the
+// constant; the field is just ignored there).
+const SHOW_ICON_NEVER = CONST.ACTIVE_EFFECT_SHOW_ICON?.NEVER ?? 0;
+for (const cond of CYBERPUNK_CONDITIONS) {
+    if (HIDDEN_ON_TOKEN_IDS.has(cond.id)) cond.showIcon = SHOW_ICON_NEVER;
+}
 
 /**
  * Active Effect changes for each condition

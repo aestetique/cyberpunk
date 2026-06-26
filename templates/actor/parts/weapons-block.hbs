@@ -34,7 +34,7 @@
     </div>
     {{/if}}
     {{#each weapons as |weapon|}}
-      <div class="gear-row" data-item-id="{{weapon.id}}">
+      <div class="gear-row weapon-row" data-item-id="{{weapon.id}}">
         <div class="gear-icon gear-fire-weapon" data-item-id="{{weapon.id}}">
           <img src="{{weapon.img}}" alt="{{weapon.name}}">
         </div>
@@ -129,6 +129,11 @@
 
     {{!-- Unattached ammo rows — sit at the bottom of the Weapons list with --}}
     {{!-- an inactive (detached) attach icon. Drag-drop attaches to a weapon. --}}
+    {{#if unattachedAmmo.length}}
+      <div class="detached-options-header">
+        <span>AMMUNITION</span>
+      </div>
+    {{/if}}
     {{#each unattachedAmmo as |ammo|}}
       <div class="gear-row weapon-row attached-ammo detached" data-item-id="{{ammo.id}}" draggable="true">
         <div class="option-icon" title="{{loc "NoAmmoAttached"}}">

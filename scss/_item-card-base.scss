@@ -1054,3 +1054,36 @@
     }
   }
 }
+
+
+// ============================================
+// Per-item-sheet chrome reset + card height
+// ============================================
+// Consolidates the @include item-sheet-chrome-reset call that used to live
+// in each tiny per-item-sheet partial (skill/commodity/drug/netware/weapon).
+// _cyberware-sheet, _tool-sheet, _outfit-sheet, _role-sheet still have
+// their own @include calls — harmless duplicate output, kept because those
+// files own substantial additional content.
+.cyberpunk.commodity-sheet,
+.cyberpunk.cyberware-sheet,
+.cyberpunk.drug-sheet,
+.cyberpunk.netware-sheet,
+.cyberpunk.outfit-sheet,
+.cyberpunk.role-sheet,
+.cyberpunk.skill-sheet,
+.cyberpunk.tool-sheet,
+.cyberpunk.weapon-sheet {
+  @include item-sheet-chrome-reset;
+}
+
+// Fixed 400px containers (skill / commodity) vs expandable (drug / netware / weapon).
+.skill-card,
+.commodity-card {
+  height: 400px;
+}
+
+.drug-card,
+.netware-card,
+.weapon-card {
+  min-height: 400px;
+}

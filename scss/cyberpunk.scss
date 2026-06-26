@@ -173,12 +173,6 @@ $field-border-width: 2px;
     }
 }
 
-@mixin image-bg {
-    border:0px;
-    border-radius: 0px;
-    background-size: cover;
-}
-
 .cyberpunk h2 {
     font-family: $font-primary;
     font-variant: small-caps;
@@ -328,13 +322,9 @@ details[open] summary ~ * {
 @import "shop-sheet";
 @import "item-card-base";
 @import "role-sheet";
-@import "skill-sheet";
-@import "commodity-sheet";
 @import "outfit-sheet";
 @import "dialogs";
 @import "weapon-sheet";
 @import "tool-sheet";
-@import "drug-sheet";
-@import "netware-sheet";
 @import "cyberware-sheet";
 

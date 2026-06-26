@@ -63,6 +63,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheetV2 {
                     || (cyberType === "optics"    && cyberSubtype === "option")
                     || (cyberType === "audio"     && cyberSubtype === "option");
 
+
     ctx.canHaveOptions = canHaveOptions(cyberType, cyberSubtype);
     ctx.needsPlacement = isPlacementRequired(cyberType, cyberSubtype);
     ctx.showStructure  = ctx.isCyberlimbBase;
@@ -89,7 +90,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheetV2 {
     }
 
     ctx.canBeWeapon = canBeWeapon(cyberType, cyberSubtype);
-    ctx.canBeArmor = canBeArmor(cyberType);
+    ctx.canBeArmor = canBeArmor(cyberType, cyberSubtype);
     ctx.isWeapon = sys.isWeapon && ctx.canBeWeapon;
     ctx.isArmor = sys.isArmor && ctx.canBeArmor;
 
@@ -142,7 +143,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheetV2 {
       label: game.i18n.localize(`CYBERPUNK.${labelKey}`),
       selected: sys.surgeryCode === value
     }));
-    const selectedSurgKey = surgeryCodes[sys.surgeryCode] || "SurgHarmless";
+    const selectedSurgKey = surgeryCodes[sys.surgeryCode] || "SurgNegligible";
     ctx.selectedSurgeryLabel = game.i18n.localize(`CYBERPUNK.${selectedSurgKey}`);
 
     ctx.availabilityOptions = Object.entries(availability).map(([value, labelKey]) => ({

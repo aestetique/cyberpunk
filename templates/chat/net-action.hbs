@@ -1,0 +1,131 @@
+<div class="cyberpunk-card cyberpunk-card--net-action">
+    {{!-- Section Bar: Action name + NET-action icon --}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=title icon=actionIcon}}
+
+    {{!-- Roll result (reuses the skill-check roll-container layout) --}}
+    {{#each rolls}}
+    <div class="roll-container roll-container--collapsed">
+        <div class="roll-expandable">
+            <div class="roll-expandable__inner">
+                <div class="formula-bar">
+                    <span class="formula-bar__text">{{cleanFormula roll._formula}}</span>
+                </div>
+                <div class="roll-details">
+                    <div class="roll-details__row">
+                        <span class="roll-details__label">{{#if name}}{{name}}{{else}}1d10{{/if}}</span>
+                        <span class="roll-details__value">
+                            <span class="roll-details__value-text">{{roll.total}}</span>
+                        </span>
+                    </div>
+                    {{#if dice}}
+                    <div class="roll-details__row roll-details__row--dice">
+                        {{#each dice}}
+                        {{#each this.results}}
+                        <div class="dice-badge dice-badge--d{{../faces}} {{this.classes}}">
+                            <span class="dice-badge__value">{{{this.result}}}</span>
+                        </div>
+                        {{/each}}
+                        {{/each}}
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+        {{#if ../hasDifficulty}}
+        {{!-- Opposed roll — success / failure vs difficulty, plus DV badge --}}
+        <div class="result-row result-row--{{#if ../success}}success{{else}}failure{{/if}} roll-toggle">
+            {{#if ../success}}
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/success.png" alt="Success"></span>
+            {{else}}
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/failure.png" alt="Failure"></span>
+            {{/if}}
+            <span class="result-row__value">{{roll.total}}</span>
+            <span class="result-row__target">
+                <div class="dice-badge dice-badge--d10 {{#if ../success}}save-success{{else}}save-failure{{/if}}">
+                    <span class="dice-badge__value">{{../difficulty}}</span>
+                </div>
+            </span>
+        </div>
+        {{else}}
+        {{!-- Flat roll — crit / fumble coloring on the d10 --}}
+        <div class="result-row result-row--{{#if isCrit}}success{{else if isFumble}}failure{{else}}neutral{{/if}} roll-toggle">
+            <span class="result-row__value">{{roll.total}}</span>
+        </div>
+        {{/if}}
+    </div>
+    {{/each}}
+
+    {{!-- Scanner: Result section + one transfer-line row per AP (or muted empty state) --}}
+    {{#if hasResultSection}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Result")}}
+    {{#if hasDetectedAPs}}
+        {{#each detectedAPs}}
+        <div class="target-info__selected transfer-line">
+            <div class="target-info__portrait">
+                <img src="{{this.img}}" alt="{{this.name}}">
+            </div>
+            <span class="target-info__name">{{this.name}}</span>
+            <span class="target-info__damage">{{this.distance}} m</span>
+        </div>
+        {{/each}}
+    {{else}}
+        <div class="target-info target-info--empty">{{loc "NoAccessPointsDetected"}}</div>
+    {{/if}}
+    {{/if}}
+
+    {{!-- Eye-Dee success: file contents under a Contents section bar --}}
+    {{#if hasFileContents}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Contents")}}
+    <div class="net-file-contents">
+        {{#each fileContentLines}}<p>{{this}}</p>{{/each}}
+    </div>
+    {{/if}}
+
+    {{!-- Control success: Target row (drone link) + GM-only Apply button --}}
+    {{#if hasTargetSection}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Target")}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{targetActor.img}}" alt="{{targetActor.name}}">
+        </div>
+        <span class="target-info__name">{{targetActor.name}}</span>
+    </div>
+    {{/if}}
+
+    {{#if hasApplyButton}}
+    <div class="defence-buttons net-response-buttons gm-only" data-response-type="apply"
+         data-control-point-uuid="{{applyData.controlPointUuid}}"
+         data-drone-token-uuid="{{applyData.droneTokenUuid}}"
+         data-netrunner-actor-id="{{applyData.netrunnerActorId}}"
+         data-roll-total="{{applyData.rollTotal}}">
+        <button class="defence-btn defence-btn--apply net-response-btn" disabled>{{loc "Apply"}}</button>
+    </div>
+    {{/if}}
+
+    {{!-- Backdoor success: GM-only Unlock button (flips door LOCKED → CLOSED) --}}
+    {{#if hasUnlockButton}}
+    <div class="defence-buttons net-response-buttons gm-only" data-response-type="backdoor-unlock"
+         data-door-uuid="{{unlockData.doorUuid}}">
+        <button class="defence-btn defence-btn--apply net-response-btn" disabled>{{loc "Unlock"}}</button>
+    </div>
+    {{/if}}
+
+    {{!-- Cloak: Detect response button (same shape as defence-btn--escape, full width) --}}
+    {{#if hasResponse}}
+    <div class="defence-buttons net-response-buttons" data-response-type="{{responseType}}" data-source-total="{{sourceTotal}}">
+        <button class="defence-btn defence-btn--detect net-response-btn" disabled>{{responseLabel}}</button>
+    </div>
+    {{/if}}
+
+    {{!-- IP Gain Hint — same chrome / positioning as skill-check.hbs so
+         NET-action rolls read the same way as skill rolls. --}}
+    {{#if ipGained}}
+    <div class="fumble-hint-container">
+        <span class="card-hint">+{{ipGained}} IP</span>
+    </div>
+    {{/if}}
+
+    {{#if fumble}}
+    {{> (sysPath "chat/partials/fumble-section.hbs") fumble=fumble}}
+    {{/if}}
+</div>

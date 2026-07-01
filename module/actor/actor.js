@@ -1,6 +1,6 @@
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes } from "./skill-sort.js";
-import { bodyTypeModifier, getInterfaceSkillRank, isCyberlimbBase, isCyberlimbOption, isSensorOption } from "../lookups.js";
+import { bodyTypeModifier, isCyberlimbBase, isCyberlimbOption, isSensorOption } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
@@ -714,16 +714,18 @@ export class CyberpunkActor extends Actor {
 
     system.armorState = armorState;
 
-    // NET Actions: derived from Interface skill rank.
-    // Hidden entirely if no Interface mapping or rank 0.
-    const ifaceRank = getInterfaceSkillRank(this);
-    if (ifaceRank <= 0) {
+    // NET Actions: derived from the effective Interface skill value
+    // (level + IP improvements + any equipped-gear bonuses) via the same
+    // pipeline skill rolls use. Hidden entirely if no Interface skill
+    // or the effective value is 0.
+    const ifaceValue = this.resolveSkillTotal("Interface");
+    if (ifaceValue <= 0) {
       system.netActions = null;
     } else {
       const baseTotal =
-        ifaceRank >= 10 ? 5 :
-        ifaceRank >= 7  ? 4 :
-        ifaceRank >= 4  ? 3 : 2;
+        ifaceValue >= 10 ? 5 :
+        ifaceValue >= 7  ? 4 :
+        ifaceValue >= 4  ? 3 : 2;
       const lagging = this.statuses.has("lagging");
       const disabled = lagging ? Math.min(1, Math.max(0, baseTotal - 2)) : 0;
       const used = this.getFlag("cyberpunk", "netActionsUsed") ?? 0;
@@ -1650,6 +1652,9 @@ export class CyberpunkActor extends Actor {
       }]);
     }
 
+    // Embed the fumble section into this chat card on natural 1.
+    const fumble = isNatural1 ? await this.rollFumbleData() : null;
+
     // Create chat message
     const speaker = ChatMessage.getSpeaker({ actor: this });
     new RollBundle(skill.name)
@@ -1658,13 +1663,13 @@ export class CyberpunkActor extends Actor {
         statIcon: skill.system.stat,
         difficulty: difficulty,
         success: success,
-        ipGained: ipGained
+        ipGained: ipGained,
+        fumble
       });
 
-    // Roll fumble on natural 1
-    if (isNatural1) {
-      await this.rollFumble();
-    }
+    // Return the resolved outcome so callers (Repair, future helpers) can
+    // branch on it without scraping the posted chat message.
+    return { success, isNatural1, total: roll.total };
   }
 
   /**
@@ -1748,6 +1753,7 @@ export class CyberpunkActor extends Actor {
     const d10Result = roll.dice[0]?.results[0]?.result;
     const isNatural1 = d10Result === 1;
     const success = !isNatural1 && roll.total >= difficulty;
+    const fumble = isNatural1 ? await this.rollFumbleData() : null;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
     new RollBundle(skillName)
@@ -1755,13 +1761,9 @@ export class CyberpunkActor extends Actor {
       .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: stat,
         difficulty: difficulty,
-        success: success
+        success: success,
+        fumble
       });
-
-    // Roll fumble on natural 1
-    if (isNatural1) {
-      await this.rollFumble();
-    }
   }
 
   /**
@@ -1796,6 +1798,7 @@ export class CyberpunkActor extends Actor {
     const d10Result = roll.dice[0]?.results[0]?.result;
     const isNatural1 = d10Result === 1;
     const success = !isNatural1 && roll.total >= difficulty;
+    const fumble = isNatural1 ? await this.rollFumbleData() : null;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
     new RollBundle(fullStatName)
@@ -1803,13 +1806,9 @@ export class CyberpunkActor extends Actor {
       .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: statName,
         difficulty: difficulty,
-        success: success
+        success: success,
+        fumble
       });
-
-    // Roll fumble on natural 1
-    if (isNatural1) {
-      await this.rollFumble();
-    }
   }
 
   /**
@@ -1897,6 +1896,7 @@ export class CyberpunkActor extends Actor {
     const d10Result = roll.dice[0]?.results[0]?.result;
     const isNatural1 = d10Result === 1;
     const success = !isNatural1 && roll.total >= difficulty;
+    const fumble = isNatural1 ? await this.rollFumbleData() : null;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
     new RollBundle(localize("FrightRoll"))
@@ -1904,7 +1904,8 @@ export class CyberpunkActor extends Actor {
       .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
         statIcon: "stress",
         difficulty: difficulty,
-        success: success
+        success: success,
+        fumble
       });
 
     // On failure, add fright points equal to the difference
@@ -1912,11 +1913,6 @@ export class CyberpunkActor extends Actor {
       const frightPoints = difficulty - roll.total;
       const currentFright = this.system.fright || 0;
       await this.update({ "system.fright": currentFright + frightPoints });
-    }
-
-    // Roll fumble on natural 1
-    if (isNatural1) {
-      await this.rollFumble();
     }
   }
 
@@ -2086,74 +2082,75 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
-   * Roll a fumble (1d10) and display the result with narrative hint.
-   * Called when a natural 1 is rolled on a skill or stat check.
-   * @param {string} reliability - Optional weapon reliability: "very", "standard", or "unreliable"
+   * Compute the fumble data shape for a triggering roll. Mirrors rollFumble's
+   * severity / hint / luck logic but returns the data instead of posting a
+   * separate chat card. Callers embed the result in their own chat message
+   * via the `partials/fumble-section.hbs` partial.
+   *
+   * @param {string|null} reliability  Optional weapon reliability: "very", "standard", or "unreliable"
+   * @returns {Promise<object>}        Fumble data: { roll, dice, total, severity, hint, canRollLuck, effectiveLuck, actorId }
    */
-  async rollFumble(reliability = null) {
+  async rollFumbleData(reliability = null) {
+    const { extractDiceResults } = await import("../dice.js");
     const roll = await new Roll("1d10").evaluate();
     const result = roll.total;
 
     // Severity levels: 0=stumble, 1=loss, 2=mark, 3=turningPoint
-    // Determine severity based on result and weapon reliability
-    // Standard: 1-4 Stumble, 5-7 Loss, 8-9 Mark, 10 Turning Point
-    // Very Reliable: 1-7 Stumble, 8-9 Loss, 10 Mark (reduced severity)
-    // Unreliable: 1-4 Loss, 5-7 Mark, 8-10 Turning Point (increased severity)
+    // Standard:        1-4 Stumble, 5-7 Loss, 8-9 Mark, 10 Turning Point
+    // Very Reliable:   1-7 Stumble, 8-9 Loss, 10 Mark  (reduced severity)
+    // Unreliable:      1-4 Loss,   5-7 Mark, 8-10 Turning Point (increased severity)
     let severity;
-
     if (reliability === "very") {
-      // Very Reliable: reduced severity (no Turning Point possible)
-      if (result <= 7) {
-        severity = 0; // Stumble
-      } else if (result <= 9) {
-        severity = 1; // Loss
-      } else {
-        severity = 2; // Mark
-      }
+      if (result <= 7)      severity = 0; // Stumble
+      else if (result <= 9) severity = 1; // Loss
+      else                  severity = 2; // Mark
     } else if (reliability === "unreliable") {
-      // Unreliable: increased severity (no Stumble possible)
-      if (result <= 4) {
-        severity = 1; // Loss
-      } else if (result <= 7) {
-        severity = 2; // Mark
-      } else {
-        severity = 3; // Turning Point
-      }
+      if (result <= 4)      severity = 1; // Loss
+      else if (result <= 7) severity = 2; // Mark
+      else                  severity = 3; // Turning Point
     } else {
-      // Standard/default fumble table
-      if (result <= 4) {
-        severity = 0; // Stumble
-      } else if (result <= 7) {
-        severity = 1; // Loss
-      } else if (result <= 9) {
-        severity = 2; // Mark
-      } else {
-        severity = 3; // Turning Point
-      }
+      if (result <= 4)      severity = 0; // Stumble
+      else if (result <= 7) severity = 1; // Loss
+      else if (result <= 9) severity = 2; // Mark
+      else                  severity = 3; // Turning Point
     }
 
-    // Map severity to hint localization key
     const severityHints = [
       localize("FumbleHint1to4"),  // 0: Stumble
       localize("FumbleHint5to7"),  // 1: Loss
       localize("FumbleHint8to9"),  // 2: Mark
       localize("FumbleHint10")     // 3: Turning Point
     ];
-    const fumbleHint = severityHints[severity];
-
-    // Get effective luck for the Roll Luck button
     const effectiveLuck = this.system.stats.luck?.effective ?? this.system.stats.luck?.total ?? 0;
 
+    return {
+      roll,
+      dice: extractDiceResults(roll),
+      total: result,
+      formula: roll._formula,
+      severity,
+      hint: severityHints[severity],
+      effectiveLuck,
+      canRollLuck: effectiveLuck > 0 && severity > 0, // Can't reduce below stumble
+      actorId: this.id
+    };
+  }
+
+  /**
+   * Roll a fumble (1d10) and display the result as a standalone chat card.
+   * Use this only when there is no triggering chat card to embed into
+   * (macros, console). Roll flows from a triggering action should use
+   * `rollFumbleData` + the `partials/fumble-section.hbs` partial inside
+   * their own chat template instead.
+   *
+   * @param {string|null} reliability
+   */
+  async rollFumble(reliability = null) {
+    const fumble = await this.rollFumbleData(reliability);
     const speaker = ChatMessage.getSpeaker({ actor: this });
     new RollBundle(localize("Fumble"))
-      .addRoll(roll, { name: "1d10" })
-      .execute(speaker, "systems/cyberpunk/templates/chat/fumble.hbs", {
-        fumbleHint: fumbleHint,
-        actorId: this.id,
-        severity: severity,
-        effectiveLuck: effectiveLuck,
-        canRollLuck: effectiveLuck > 0 && severity > 0  // Can't reduce below stumble
-      });
+      .addRoll(fumble.roll, { name: "1d10" })
+      .execute(speaker, "systems/cyberpunk/templates/chat/fumble.hbs", { fumble });
   }
 
   /**
@@ -2202,8 +2199,17 @@ function _ratchetActorHumanity(item) {
     }
 }
 
-Hooks.on("createItem", (item, _options, _userId) => _ratchetActorHumanity(item));
-Hooks.on("updateItem", (item, changes, _options, _userId) => {
+// Single-client gate: the user who issued the item change is the only
+// one who runs the ratchet. Prior `actor.isOwner` check kept non-owners
+// out but still ran the sum walk on every co-owner (e.g. GM + assigned
+// player). userId singleton fires the check exactly once per network
+// event.
+Hooks.on("createItem", (item, _options, userId) => {
+    if (userId !== game.user.id) return;
+    _ratchetActorHumanity(item);
+});
+Hooks.on("updateItem", (item, changes, _options, userId) => {
+    if (userId !== game.user.id) return;
     // Only react when humanityLoss actually changed — cheap guard.
     if (!("humanityLoss" in (changes.system ?? {}))) return;
     _ratchetActorHumanity(item);

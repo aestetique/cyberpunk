@@ -1,4 +1,4 @@
-import { localize, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons } from "../utils.js";
+import { localize, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons, getFilePickerClass, getImagePopoutClass } from "../utils.js";
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js";
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildDroneSkillsList, buildCoverToggles } from "./gear-data.js";
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js";
@@ -475,13 +475,13 @@ export class CyberpunkDroneSheet extends HandlebarsApplicationMixin(ActorSheetV2
     html.find(".portrait-frame").click(ev => {
       ev.preventDefault();
       if (this._isLocked) {
-        new foundry.applications.apps.ImagePopout({
+        new (getImagePopoutClass())({
           src: this.actor.img,
           window: { title: this.actor.name },
           uuid: this.actor.uuid
         }).render({ force: true });
       } else {
-        new foundry.applications.apps.FilePicker.implementation({
+        new (getFilePickerClass())({
           type: "image",
           current: this.actor.img,
           callback: (path) => this.actor.update({ img: path }),

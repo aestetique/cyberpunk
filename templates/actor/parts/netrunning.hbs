@@ -19,10 +19,10 @@
         {{!-- Cyberdeck row (base) --}}
         <div class="gear-row cyberware-row netware-row" data-item-id="{{deck.id}}" data-is-base="true" data-netware-type="cyberdeck">
           <div class="option-icon-spacer"></div>
-          <div class="gear-icon">
+          <div class="gear-icon gear-fire-cyberdeck" data-item-id="{{deck.id}}">
             <img src="{{deck.img}}" alt="{{deck.name}}">
           </div>
-          <div class="gear-info">
+          <div class="gear-info gear-fire-cyberdeck" data-item-id="{{deck.id}}">
             <span class="gear-name">{{deck.name}}</span>
             <span class="gear-context">{{deck.context}}</span>
           </div>
@@ -30,17 +30,22 @@
             <span class="price-value">{{deck.price}}</span>
             <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
           </div>
-          <div class="gear-field" style="width: 80px;">
+          <div class="gear-field" style="width: 60px;">
+            <span class="field-top">{{deck.damage}}</span>
+            <span class="field-bottom">Damage</span>
+          </div>
+          <div class="gear-field" style="width: 60px;"></div>
+          <div class="gear-field" style="width: 60px;">
             <span class="field-top">{{deck.slotDisplay}}</span>
-            <span class="field-bottom">Program Slots</span>
+            <span class="field-bottom">Slots</span>
           </div>
-          <div class="gear-action-btn toggle-netware-deck" data-item-id="{{deck.id}}" data-equipped="{{deck.equipped}}" title="{{#if deck.equipped}}Jack Out{{else}}Jack In{{/if}}">
-            {{#if deck.equipped}}
-              <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="On">
-            {{else}}
-              <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Off">
-            {{/if}}
-          </div>
+          {{#if deck.isInoperable}}
+            <div class="gear-action-btn cyberdeck-repair-request" data-item-id="{{deck.id}}" title="{{loc "CyberdeckInoperable"}}">
+              <img src="systems/cyberpunk/img/ui/badge-destroyed.svg" alt="Inoperable">
+            </div>
+          {{else}}
+            <div class="gear-action-btn"></div>
+          {{/if}}
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{deck.id}}" title="View">
               <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">
@@ -57,10 +62,10 @@
             <div class="option-icon detach-netware-option" data-item-id="{{opt.id}}" title="Unslot">
               <img src="systems/cyberpunk/img/ui/badge-option-on.svg" alt="Slotted">
             </div>
-            <div class="gear-icon">
+            <div class="gear-icon {{#if opt.isAttacker}}gear-fire-attacker{{/if}}{{#if opt.isBlackIceProgram}}gear-fire-blackice{{/if}}" data-item-id="{{opt.id}}">
               <img src="{{opt.img}}" alt="{{opt.name}}">
             </div>
-            <div class="gear-info">
+            <div class="gear-info {{#if opt.isAttacker}}gear-fire-attacker{{/if}}{{#if opt.isBlackIceProgram}}gear-fire-blackice{{/if}}" data-item-id="{{opt.id}}">
               <span class="gear-name">{{opt.name}}</span>
               <span class="gear-context">{{opt.context}}</span>
             </div>
@@ -68,18 +73,61 @@
               <span class="price-value">{{opt.price}}</span>
               <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
             </div>
-            <div class="gear-field" style="width: 80px;">
+            {{!-- Col 2: Damage (attacker / Black-ICE-program). Others empty. --}}
+            {{#if opt.isAttacker}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top">{{opt.damage}}</span>
+                <span class="field-bottom">Damage</span>
+              </div>
+            {{else if opt.isBlackIceProgram}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top">{{opt.damage}}</span>
+                <span class="field-bottom">Damage</span>
+              </div>
+            {{else}}
+              <div class="gear-field" style="width: 60px;"></div>
+            {{/if}}
+            {{!-- Col 3: ATK (attacker) / REZ (booster, defender, Black ICE) / empty (upgrade). --}}
+            {{#if opt.isAttacker}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top">{{opt.atk}}</span>
+                <span class="field-bottom">ATK</span>
+              </div>
+            {{else if opt.showRez}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top {{#if (eq opt.rez 0)}}rez-depleted{{/if}}">{{opt.rez}}</span>
+                <span class="field-bottom">REZ</span>
+              </div>
+            {{else}}
+              <div class="gear-field" style="width: 60px;"></div>
+            {{/if}}
+            <div class="gear-field" style="width: 60px;">
               <span class="field-top">{{opt.takesSpace}}</span>
-              <span class="field-bottom">Slots Used</span>
+              <span class="field-bottom">Slots</span>
             </div>
             {{#if opt.hasStateSwitch}}
-              <div class="gear-action-btn toggle-program-state" data-item-id="{{opt.id}}" data-program-state="{{opt.programState}}" title="{{opt.programState}}">
+              <div class="gear-action-btn toggle-program-state" data-item-id="{{opt.id}}" data-program-state="{{opt.programState}}" title="{{toTitleCase opt.programState}}">
                 {{#if (eq opt.programState "active")}}
                   <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="Active">
                 {{else if (eq opt.programState "derezzed")}}
                   <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Derezzed">
                 {{else if (eq opt.programState "destroyed")}}
                   <img src="systems/cyberpunk/img/ui/badge-destroyed.svg" alt="Destroyed">
+                {{else}}
+                  <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Inactive">
+                {{/if}}
+              </div>
+            {{else if opt.isBlackIceProgram}}
+              {{!-- Display-only state badge for Black ICE programs. The
+                   actual activation happens via the gear-fire-blackice
+                   handler on the icon/name area; the badge just mirrors
+                   programState so the netrunner can see "this is currently
+                   deployed" / "derezzed and locked out" / "inactive". --}}
+              <div class="gear-action-btn" title="{{toTitleCase opt.programState}}">
+                {{#if (eq opt.programState "active")}}
+                  <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="Active">
+                {{else if (eq opt.programState "derezzed")}}
+                  <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Derezzed">
                 {{else}}
                   <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Inactive">
                 {{/if}}
@@ -120,9 +168,37 @@
               <span class="price-value">{{opt.price}}</span>
               <img src="systems/cyberpunk/img/ui/badge-eurodollar.svg" alt="eb">
             </div>
-            <div class="gear-field" style="width: 80px;">
+            {{!-- Col 2: Damage (attacker / Black-ICE-program). Others empty. --}}
+            {{#if opt.isAttacker}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top">{{opt.damage}}</span>
+                <span class="field-bottom">Damage</span>
+              </div>
+            {{else if opt.isBlackIceProgram}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top">{{opt.damage}}</span>
+                <span class="field-bottom">Damage</span>
+              </div>
+            {{else}}
+              <div class="gear-field" style="width: 60px;"></div>
+            {{/if}}
+            {{!-- Col 3: ATK (attacker) / REZ (booster, defender, Black ICE) / empty (upgrade). --}}
+            {{#if opt.isAttacker}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top">{{opt.atk}}</span>
+                <span class="field-bottom">ATK</span>
+              </div>
+            {{else if opt.showRez}}
+              <div class="gear-field" style="width: 60px;">
+                <span class="field-top {{#if (eq opt.rez 0)}}rez-depleted{{/if}}">{{opt.rez}}</span>
+                <span class="field-bottom">REZ</span>
+              </div>
+            {{else}}
+              <div class="gear-field" style="width: 60px;"></div>
+            {{/if}}
+            <div class="gear-field" style="width: 60px;">
               <span class="field-top">{{opt.takesSpace}}</span>
-              <span class="field-bottom">Slots Used</span>
+              <span class="field-bottom">Slots</span>
             </div>
             <div class="gear-action-btn"></div>
             <div class="gear-actions">

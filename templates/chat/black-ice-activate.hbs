@@ -1,0 +1,22 @@
+<div class="cyberpunk-card cyberpunk-card--black-ice-activate">
+    {{!-- Section Bar: "Black ICE" + net-action icon --}}
+    {{> (sysPath "chat/partials/section-bar.hbs") icon="net-action" label=(loc "BlackIceDeploySection")}}
+
+    {{!-- Linked actor identity — portrait + name in the standard
+         transfer-line layout used by Repair Request / Control etc. --}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{actorImg}}" alt="{{actorName}}">
+        </div>
+        <span class="target-info__name">{{actorName}}</span>
+    </div>
+
+    {{!-- GM-only Activate button — same chrome / disabled-for-non-GM
+         behaviour as Backdoor's Unlock and Control's Apply. --}}
+    <div class="defence-buttons net-response-buttons gm-only" data-response-type="black-ice-activate"
+         data-program-uuid="{{programUuid}}"
+         data-actor-uuid="{{actorUuid}}"
+         data-netrunner-id="{{netrunnerId}}">
+        <button class="defence-btn defence-btn--apply net-response-btn black-ice-activate-btn" disabled>{{loc "BlackIceDeployActivate"}}</button>
+    </div>
+</div>

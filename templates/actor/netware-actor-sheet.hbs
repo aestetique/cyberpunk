@@ -1,0 +1,270 @@
+{{!-- Netware actor card (Access Point / Password / File / Control Point) --}}
+<div class="item-card netware-actor-card {{#unless isLocked}}unlocked{{/unless}}">
+  {{!-- Header (38px) --}}
+  <header class="sheet-header">
+    <button class="lock-toggle" type="button" data-action="lockToggle" title="{{#if isLocked}}Unlock{{else}}Lock{{/if}} Sheet">
+      <img src="systems/cyberpunk/img/ui/{{#if isLocked}}lock{{else}}unlock{{/if}}.svg" alt="">
+    </button>
+
+    <span class="header-name">{{actor.name}}</span>
+
+    <a class="header-control" data-action="copyUuid" title="Copy UUID">
+      <i class="fas fa-passport"></i>
+    </a>
+    <a class="header-control" data-action="configureSheet" title="Sheet">
+      <i class="fas fa-cog"></i>
+    </a>
+    <a class="header-control" data-action="configureToken" title="Token">
+      <i class="fas fa-user-circle"></i>
+    </a>
+    <a class="header-control close" data-action="closeSheet" title="Close">
+      <i class="fas fa-times"></i>
+    </a>
+  </header>
+
+  <div class="item-content">
+    {{!-- Item Trivia (portrait + name + category badge) --}}
+    <div class="item-trivia">
+      <div class="item-portrait" data-action="portraitClick">
+        <img src="{{actor.img}}" alt="{{actor.name}}">
+      </div>
+
+      <div class="item-identity">
+        <input type="text" class="item-name" name="name" value="{{actor.name}}" {{#if isLocked}}readonly{{/if}}>
+        <div class="item-category">
+          <div class="category-icon">
+            <img src="systems/cyberpunk/img/ui/badge-net-object.svg" alt="">
+          </div>
+          <span class="category-label">{{localize "CYBERPUNK.NetObject"}}</span>
+        </div>
+      </div>
+    </div>
+
+    {{!-- Horizontal Divider --}}
+    <div class="divider"></div>
+
+    {{!-- Single-tab content (no tab selector) --}}
+    <div class="tab-content">
+
+      {{!-- Row 1: Subtype + Radius/DV --}}
+      <div class="variables-row">
+        <div class="variable-field">
+          <label class="variable-label">{{localize "CYBERPUNK.Type"}}</label>
+          {{#if isLocked}}
+            <div class="dropdown">
+              <span class="dropdown-text">{{selectedSubtypeLabel}}</span>
+              <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+            </div>
+          {{else}}
+            <div class="dropdown-wrapper">
+              <select class="dropdown-select" name="system.subtype">
+                {{#each subtypeOptions}}
+                  <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                {{/each}}
+              </select>
+              <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+            </div>
+          {{/if}}
+        </div>
+
+        {{#if showRadius}}
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.NetActorRadius"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.radius}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.radius" value="{{system.radius}}" min="0" step="1">
+            {{/if}}
+          </div>
+        {{else if showDV}}
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.NetActorDV"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.dv}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.dv" value="{{system.dv}}" min="0" step="1">
+            {{/if}}
+          </div>
+        {{else if showRez}}
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.REZ"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.rez}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.rez" value="{{system.rez}}" min="0" step="1">
+            {{/if}}
+          </div>
+        {{/if}}
+      </div>
+
+      {{!-- ============================== --}}
+      {{!-- BLACK ICE: stat + attack rows  --}}
+      {{!-- ============================== --}}
+      {{#if isBlackIce}}
+        {{!-- Row 2: PER + SPD --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.PER"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.per}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.per" value="{{system.per}}" step="1">
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.SPD"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.spd}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.spd" value="{{system.spd}}" step="1">
+            {{/if}}
+          </div>
+        </div>
+
+        {{!-- Row 3: ATK + DEF --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.ATK"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.atk}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.atk" value="{{system.atk}}" step="1">
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DEF"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.def}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input" name="system.def" value="{{system.def}}" step="1">
+            {{/if}}
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        {{!-- Row 4: Class + Damage --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.AttackerClass"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown">
+                <span class="dropdown-text">{{selectedAttackerClassLabel}}</span>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{else}}
+              <div class="dropdown-wrapper">
+                <select class="dropdown-select" name="system.attackerClass">
+                  {{#each attackerClassOptions}}
+                    <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                  {{/each}}
+                </select>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.AttackerDamage"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.attackerDamage}}</span></div>
+            {{else}}
+              <input type="text" class="variable-input" name="system.attackerDamage" value="{{system.attackerDamage}}">
+            {{/if}}
+          </div>
+        </div>
+
+        {{!-- Row 5: Effect + Attack button (Attack mirrors humanity-roll
+             button shape — label on the left, d10 button on the right). --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.AttackerEffect"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown">
+                <span class="dropdown-text">{{selectedAttackerEffectLabel}}</span>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{else}}
+              <div class="dropdown-wrapper">
+                <select class="dropdown-select" name="system.attackerEffect">
+                  {{#each attackerEffectOptions}}
+                    <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                  {{/each}}
+                </select>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{/if}}
+          </div>
+
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.Attack"}}</label>
+            <button class="humanity-roll-btn black-ice-attack-btn" type="button" data-action="blackIceAttack" title="{{localize "CYBERPUNK.Attack"}}">
+              <img src="systems/cyberpunk/img/dice/d10gold.svg" alt="Roll">
+            </button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        {{!-- Black ICE conditions row: Disabled + Dead, centered, 10px gap.
+             Uses the shared `.condition-toggle` markup from the character /
+             drone sheets so the icon swap (-off/-on) and the orbitron text
+             label come through automatically via global SCSS. The V2
+             `toggleBlackIceCondition` action fires on click. --}}
+        <div class="black-ice-conditions-row">
+          <div class="condition-toggle{{#if isDisabled}} active{{/if}}"
+               data-action="toggleBlackIceCondition"
+               data-condition="disabled">
+            <div class="condition-toggle-icon"
+                 style="background-image: url('systems/cyberpunk/img/conditions/disabled-{{#if isDisabled}}on{{else}}off{{/if}}.svg')"></div>
+            <span class="condition-toggle-label">{{localize "CYBERPUNK.Conditions.Disabled"}}</span>
+          </div>
+          <div class="condition-toggle{{#if isDead}} active{{/if}}"
+               data-action="toggleBlackIceCondition"
+               data-condition="dead">
+            <div class="condition-toggle-icon"
+                 style="background-image: url('systems/cyberpunk/img/conditions/dead-{{#if isDead}}on{{else}}off{{/if}}.svg')"></div>
+            <span class="condition-toggle-label">{{localize "CYBERPUNK.Conditions.Dead"}}</span>
+          </div>
+        </div>
+      {{/if}}
+
+      {{!-- Row 2 (subtype-specific, single-line label + input) --}}
+      {{#if showEntryRegion}}
+        <div class="source-field">
+          <label class="variable-label">{{localize "CYBERPUNK.NetActorEntryRegion"}}</label>
+          <input type="text" class="source-input" name="system.entryRegion" value="{{system.entryRegion}}" placeholder="{{localize "CYBERPUNK.NetActorEntryRegionPlaceholder"}}" {{#if isLocked}}readonly{{/if}}>
+        </div>
+      {{/if}}
+
+      {{#if showDoorLink}}
+        <div class="source-field">
+          <label class="variable-label">{{localize "CYBERPUNK.NetActorDoorLink"}}</label>
+          <input type="text" class="source-input" name="system.doorLink" value="{{system.doorLink}}" placeholder="{{localize "CYBERPUNK.NetActorDoorLinkPlaceholder"}}" {{#if isLocked}}readonly{{/if}}>
+        </div>
+      {{/if}}
+
+      {{#if isControlPoint}}
+        <div class="source-field">
+          <label class="variable-label">{{localize "CYBERPUNK.NetActorDroneLink"}}</label>
+          <input type="text" class="source-input" name="system.droneLink" value="{{system.droneLink}}" placeholder="{{localize "CYBERPUNK.NetActorDroneLinkPlaceholder"}}" {{#if isLocked}}readonly{{/if}}>
+        </div>
+      {{/if}}
+
+      {{#if isFile}}
+        <div class="source-field">
+          <label class="variable-label">{{localize "CYBERPUNK.NetActorFileContents"}}</label>
+        </div>
+        <div class="flavour-section">
+          {{#if isLocked}}
+            <div class="flavour-text">
+              {{#each descriptionLines}}<p>{{this}}</p>{{/each}}
+            </div>
+          {{else}}
+            <textarea class="flavour-text" name="system.description" placeholder="{{localize "CYBERPUNK.NetActorFilePlaceholder"}}">{{system.description}}</textarea>
+          {{/if}}
+        </div>
+      {{/if}}
+
+    </div>
+  </div>
+</div>

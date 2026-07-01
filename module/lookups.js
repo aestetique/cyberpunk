@@ -340,18 +340,6 @@ export function getOrdnanceSubtypeLabelKey(skill) {
     return "";
 }
 
-/**
- * Get the actor's Interface skill rank from the mapping.
- * @param {Actor} actor
- * @returns {number} Skill rank, or 0 if not found.
- */
-export function getInterfaceSkillRank(actor) {
-    const names = getSkillsForCategory("interfaceSkills");
-    if (!names.length) return 0;
-    const skill = actor.itemTypes.skill?.find(s => names.includes(s.name));
-    return Number(skill?.system?.level) || 0;
-}
-
 // ============================================================================
 // Other lookups (unchanged from prior file)
 // ============================================================================
@@ -410,11 +398,21 @@ export const netwareTypes = {
     program: "NetwareTypeProgram"
 };
 
+/** Netware ACTOR subtypes — NET-architecture objects placed on the map. */
+export const netwareActorSubtypes = {
+    accessPoint:  "NetActorSubAccessPoint",
+    password:     "NetActorSubPassword",
+    file:         "NetActorSubFile",
+    controlPoint: "NetActorSubControlPoint",
+    blackIce:     "NetActorSubBlackIce"
+};
+
 /** Program subtypes (when netwareType === "program") */
 export const programSubtypes = {
     booster: "ProgramSubBooster",
     defender: "ProgramSubDefender",
-    attacker: "ProgramSubAttacker"
+    attacker: "ProgramSubAttacker",
+    blackIce: "ProgramSubBlackIce"
 };
 
 /** Booster bonus types */
@@ -424,7 +422,7 @@ export const boosterBonuses = {
     cloak: "BoosterCloak",
     control: "BoosterControl",
     eyedee: "BoosterEyeDee",
-    pathfinder: "BoosterPathfinder",
+    detect: "BoosterDetect",
     slide: "BoosterSlide",
     speed: "BoosterSpeed",
     zap: "BoosterZap"
@@ -443,6 +441,30 @@ export const attackerClasses = {
     antiPersonnel: "AttackerAntiPersonnel"
 };
 
+/**
+ * Upgrade effect types — chrome bolted onto a cyberdeck.
+ *
+ *   - backup       — programs detach (not destroy) when REZ→0 with the
+ *                    Destroyed effect; they reappear in Unslotted.
+ *   - dnaLock      — flavor; no mechanical effect.
+ *   - empShielding — protects the parent deck from the Microwave Inoperable
+ *                    result (random-cyberdeck pick skips shielded decks).
+ *   - insulated    — while jacked-in via this deck, Burning status is blocked.
+ *   - antiCrash    — while jacked-in via this deck, Crashed status is blocked.
+ *   - range        — uses upgradeValue (metres) to widen every Access
+ *                    Point's effective radius from this runner's view
+ *                    (jack-in proximity gate + auto jack-out gate).
+ */
+export const upgradeEffects = {
+    none: "UpgradeNone",
+    backup: "UpgradeBackup",
+    dnaLock: "UpgradeDnaLock",
+    empShielding: "UpgradeEmpShielding",
+    insulated: "UpgradeInsulated",
+    antiCrash: "UpgradeAntiCrash",
+    range: "UpgradeRange"
+};
+
 /** Attacker effect types */
 export const attackerEffects = {
     none: "EffectNone",
@@ -452,7 +474,8 @@ export const attackerEffects = {
     lagging: "EffectLagging",
     tagged: "EffectTagged",
     burning: "EffectBurning",
-    crashed: "EffectCrashed"
+    crashed: "EffectCrashed",
+    destroyed: "EffectDestroyed"
 };
 
 /**

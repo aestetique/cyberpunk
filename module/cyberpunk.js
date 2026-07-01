@@ -1,7 +1,9 @@
 import { CyberpunkActor } from "./actor/actor.js";
+import { renderTemplateCompat } from "./utils.js";
 import { CyberpunkCharacterSheet } from "./actor/character-sheet.js";
 import { CyberpunkDroneSheet } from "./actor/drone-sheet.js";
 import { CyberpunkShopSheet } from "./actor/shop-sheet.js";
+import { CyberpunkNetwareActorSheet } from "./actor/netware-actor-sheet.js";
 import { CyberpunkItem } from "./item/item.js";
 import { CyberpunkLegacyItemSheet } from "./item/item-sheet.js";
 import { CyberpunkRoleSheet } from "./item/role-sheet.js";
@@ -33,16 +35,10 @@ import "./canvas/hover-guard.js";
 // hidden from meatspace viewers), realm-aware canvas rendering (hides
 // scene background / lighting / tiles when the viewer is in NET), and the
 // canvas layer that paints the current NET region in cyan under fog.
-import "./netrun/net-architecture-layer.js";
-import "./netrun/realm-rendering.js";
-import "./netrun/region-config.js";
-import "./netrun/net-detection-mode.js";
-import "./netrun/vision.js";
-import "./netrun/vision-polygon.js";
-import "./netrun/collision.js";
-import "./netrun/movement-preview.js";
 import "./netrun/jack-in.js";
 import "./netrun/net-token-fx.js";
+import "./netrun/control-bridge.js";
+import "./netrun/black-ice.js";
 
 import { preloadHandlebarsTemplates } from "./templates.js";
 import { registerHandlebarsHelpers } from "./handlebars-helpers.js"
@@ -137,6 +133,7 @@ Hooks.once('init', async function () {
     Actors.registerSheet("cyberpunk", CyberpunkCharacterSheet, { types: ["character"], makeDefault: true });
     Actors.registerSheet("cyberpunk", CyberpunkDroneSheet,  { types: ["drone"],     makeDefault: true });
     Actors.registerSheet("cyberpunk", CyberpunkShopSheet,   { types: ["shop"],      makeDefault: true });
+    Actors.registerSheet("cyberpunk", CyberpunkNetwareActorSheet, { types: ["netware"], makeDefault: true });
     Items.unregisterSheet("core", ItemSheet);
     Items.registerSheet("cyberpunk", CyberpunkLegacyItemSheet, { makeDefault: true });
     Items.registerSheet("cyberpunk", CyberpunkRoleSheet, {
@@ -221,13 +218,25 @@ Hooks.once("setup", function() {
  * non-GMs; technical players could still tamper via console, accepted risk.
  */
 Hooks.on("preCreateActor", (actor, data, options, userId) => {
-    if (data.type !== "shop") return;
-    actor.updateSource({
-        ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
-        // Shops are typically merchants — neither friendly nor hostile out of
-        // the box. Lets the GM drop a token down without it auto-coloring red.
-        prototypeToken: { disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL }
-    });
+    if (data.type === "shop") {
+        actor.updateSource({
+            ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
+            // Shops are typically merchants — neither friendly nor hostile out of
+            // the box. Lets the GM drop a token down without it auto-coloring red.
+            prototypeToken: { disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL }
+        });
+        return;
+    }
+    if (data.type === "netware") {
+        const icon = "systems/cyberpunk/img/svg/placeholder-netobject.svg";
+        const updates = {};
+        if (!data.img) updates.img = icon;
+        if (!data.prototypeToken?.texture?.src) {
+            updates.prototypeToken = { ...(data.prototypeToken ?? {}), texture: { src: icon } };
+        }
+        if (Object.keys(updates).length) actor.updateSource(updates);
+        return;
+    }
 });
 
 Hooks.on("preCreateActiveEffect", (effect, data, options, userId) => {
@@ -460,7 +469,7 @@ Hooks.on("preCreateChatMessage", async (message, data, options, userId) => {
     const roll = message.rolls?.[0];
     if (roll && !message.content?.includes("cyberpunk-card")) {
         const templateData = processFormulaRoll(roll);
-        source.content = await foundry.applications.handlebars.renderTemplate(
+        source.content = await renderTemplateCompat(
             "systems/cyberpunk/templates/chat/formula-roll.hbs",
             templateData
         );
@@ -590,7 +599,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
             // Post to chat with expandable roll details
             const speaker = ChatMessage.getSpeaker({ actor });
             const rollData = processFormulaRoll(damageRoll);
-            const content = await foundry.applications.handlebars.renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+            const content = await renderTemplateCompat("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                 label: game.i18n.localize("CYBERPUNK.BurningDamage"),
                 icon: "fire",
                 formula: rollData.formula,
@@ -644,7 +653,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
                     const newSP = Math.max(0, currentSP - spReduction);
                     await item.update({ [`system.coverage.${hitLocation}.stoppingPower`]: newSP });
                 }
-                const content = await foundry.applications.handlebars.renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+                const content = await renderTemplateCompat("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                     label: game.i18n.localize("CYBERPUNK.AcidDamage"),
                     icon: "acid",
                     formula: rollData.formula,
@@ -662,7 +671,7 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
                 // No armor - deal wound damage instead
                 const currentDamage = actor.system.damage || 0;
                 await actor.update({ "system.damage": Math.min(currentDamage + spReduction, 40) });
-                const content = await foundry.applications.handlebars.renderTemplate("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+                const content = await renderTemplateCompat("systems/cyberpunk/templates/chat/condition-damage.hbs", {
                     label: game.i18n.localize("CYBERPUNK.AcidWounds"),
                     icon: "acid",
                     formula: rollData.formula,

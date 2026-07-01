@@ -46,6 +46,46 @@
   {{/if}}
 </div>
 
+{{!-- Upgrade-specific rows --}}
+{{#if isUpgrade}}
+  {{!-- Row 2: Effect (+ Value when Range) --}}
+  <div class="variables-row">
+    <div class="variable-field">
+      <label class="variable-label">{{localize "CYBERPUNK.UpgradeEffect"}}</label>
+      {{#if isLocked}}
+        <div class="dropdown">
+          <span class="dropdown-text">{{selectedUpgradeEffectLabel}}</span>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{else}}
+        <div class="dropdown-wrapper">
+          <select class="dropdown-select" name="system.upgradeEffect">
+            {{#each upgradeEffectOptions}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+          </select>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{/if}}
+    </div>
+
+    {{#if isRangeUpgrade}}
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.UpgradeValue"}}</label>
+        {{#if isLocked}}
+          <div class="dropdown"><span class="dropdown-text">{{system.upgradeValue}}</span></div>
+        {{else}}
+          <input type="number" class="variable-input" name="system.upgradeValue" value="{{system.upgradeValue}}" min="0">
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+{{/if}}
+
 {{!-- Program-specific rows --}}
 {{#if isProgram}}
   {{!-- Row 2: Subtype + REZ / ATK --}}
@@ -82,6 +122,20 @@
           <input type="number" class="variable-input" name="system.atk" value="{{system.atk}}" min="0">
         {{/if}}
       </div>
+    {{else if isBlackIceProgram}}
+      {{!-- Black ICE programs don't carry their own REZ/ATK — the linked
+           actor is the source of truth. The right column hosts the Actor
+           Link input (UUID; accepts dragged Black-ICE actors from the
+           sidebar). --}}
+      <div class="variable-field">
+        <label class="variable-label">{{localize "CYBERPUNK.NetwareActorLink"}}</label>
+        <input type="text"
+               class="variable-input"
+               name="system.actorLink"
+               value="{{system.actorLink}}"
+               placeholder="{{localize "CYBERPUNK.NetwareActorLinkPlaceholder"}}"
+               {{#if isLocked}}readonly{{/if}}>
+      </div>
     {{else}}
       <div class="variable-field">
         <label class="variable-label">{{localize "CYBERPUNK.REZ"}}</label>
@@ -94,8 +148,12 @@
     {{/if}}
   </div>
 
-  {{!-- Row 3: Divider --}}
-  <div class="divider"></div>
+  {{!-- Row 3: Divider — suppressed for Black ICE programs since no
+       subtype-specific block follows; the linked actor sheet is the
+       source of truth for Class / Damage / Effect. --}}
+  {{#unless isBlackIceProgram}}
+    <div class="divider"></div>
+  {{/unless}}
 
   {{!-- ===================== --}}
   {{!-- BOOSTER               --}}

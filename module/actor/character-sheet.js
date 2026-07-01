@@ -1,5 +1,5 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildRangedModifierGroups, weaponTypes, ammoAbbreviations, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects } from "../lookups.js"
-import { localize, tabBeautifying, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons } from "../utils.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildRangedModifierGroups, weaponTypes, ammoAbbreviations, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects, upgradeEffects } from "../lookups.js"
+import { localize, tabBeautifying, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons, renderTemplateCompat, getFilePickerClass, getImagePopoutClass } from "../utils.js"
 import { processFormulaRoll } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
@@ -18,6 +18,8 @@ import { CreateItemDialog } from "../dialog/create-item-dialog.js"
 import { SleepRollDialog } from "../dialog/sleep-roll-dialog.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { spendNetAction } from "../action-tracker.js"
+import { CyberdeckActionDialog } from "../dialog/cyberdeck-action-dialog.js"
+import { performAttackerStrike, performBlackIceProgramActivate } from "../netrun/net-attack.js"
 import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildCoverToggles, buildAmmoContext, buildWeaponContextString, buildCyberwareContext, formatBonusLabel, summariseBonuses } from "./gear-data.js"
 import { calibers as CALIBERS } from "../calibers.js"
 import { resolveWeaponDiscriminator } from "../lookups.js"
@@ -259,7 +261,6 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
   static _onConfigureSheet(event, _target) {
     event?.preventDefault?.();
     const SheetConfig = foundry.applications.apps?.DocumentSheetConfig
-                     ?? foundry.applications.apps?.DocumentSheetConfig
                      ?? DocumentSheetConfig;
     new SheetConfig({ document: this.document }).render({ force: true });
   }
@@ -1287,6 +1288,30 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     return showItems;
   }
 
+  /**
+   * Post a generic Repair Request chat card for any owned item. The card
+   * carries the item UUID + skill name; clicking Repair on the card rolls
+   * that skill against DV 15 and (on success) restores the item via the
+   * type-specific path in chat-message.js#_onRepairRequest.
+   *
+   * Used by the cyberdeck Inoperable badge (Electronics) and the broken
+   * cyberlimb badge (CyberTech). New repairable types just need a branch
+   * inside the chat-side handler.
+   */
+  async _postRepairRequest(item, skillName) {
+    const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+    const content = await renderTemplateCompat(
+      "systems/cyberpunk/templates/chat/repair-request.hbs",
+      {
+        targetUuid: item.uuid,
+        targetName: item.name,
+        targetImg:  item.img,
+        skillName
+      }
+    );
+    await ChatMessage.create({ user: game.user.id, speaker, content });
+  }
+
   _buildGearDisplay(sheetData) {
     const weapons = this.actor.itemTypes.weapon || [];
     const armor = this.actor.itemTypes.armor || [];
@@ -1923,13 +1948,31 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     const allNetware = this.actor.itemTypes.netware || [];
 
     const category = { items: [], detachedOptions: [] };
+    // Type-band order for netware lists (attached + unslotted): Attackers
+    // first, then Defenders, then Boosters, then Upgrades/everything else.
+    // Within a band, items stay alphabetical.
+    const _netwareTypeSorter = (a, b) => {
+      const rank = (o) =>
+        o.isBlackIceProgram ? 0
+        : o.isAttacker      ? 1
+        : o.isDefender      ? 2
+        : o.isBooster       ? 3
+        : 4;
+      return rank(a) - rank(b) || a.name.localeCompare(b.name);
+    };
 
     // Build context string for netware items
     const buildContext = (item) => {
       const sys = item.system;
       const type = sys.netwareType;
       if (type === 'cyberdeck') return `Cyberdeck \u00B7 ${sys.slots || 0} slots`;
-      if (type === 'upgrade') return 'Upgrade';
+      if (type === 'upgrade') {
+        const effect = sys.upgradeEffect;
+        if (!effect || effect === 'none') return 'Upgrade';
+        const effectKey = upgradeEffects[effect];
+        const effectLabel = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : effect;
+        return `Upgrade · ${effectLabel}`;
+      }
       if (type === 'program') {
         const subtype = sys.programSubtype;
         if (subtype === 'defender') {
@@ -1952,7 +1995,27 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
             const effectLabel = effectKey ? game.i18n.localize(`CYBERPUNK.${effectKey}`) : sys.attackerEffect;
             parts.push(effectLabel);
           }
-          if (sys.attackerDamage) parts.push(sys.attackerDamage);
+          // Damage shown in its own column \u2014 no longer duplicated here.
+          return parts.join(' \u00B7 ');
+        }
+        if (subtype === 'blackIce') {
+          // Subtext mirrors the Attacker's "Class \u00B7 Effect?" but reads
+          // off the LINKED ACTOR \u2014 the item itself has no class/effect
+          // fields. If the actor link is unset / unresolved, fall back to
+          // just "Black ICE" so the row still renders cleanly.
+          const linked = sys.actorLink ? fromUuidSync?.(sys.actorLink) : null;
+          const isBI = linked?.type === 'netware' && linked?.system?.subtype === 'blackIce';
+          if (!isBI) return 'Black ICE';
+          const aCls = linked.system?.attackerClass || 'antiProgram';
+          const classKey = attackerClasses[aCls];
+          const classLabel = classKey ? game.i18n.localize(`CYBERPUNK.${classKey}`) : aCls;
+          const parts = ['Black ICE', classLabel];
+          const aEff = linked.system?.attackerEffect;
+          if (aEff && aEff !== 'none') {
+            const effKey = attackerEffects[aEff];
+            const effLabel = effKey ? game.i18n.localize(`CYBERPUNK.${effKey}`) : aEff;
+            parts.push(effLabel);
+          }
           return parts.join(' \u00B7 ');
         }
         const subtypeKey = programSubtypes[subtype];
@@ -1989,8 +2052,32 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       const preparedOptions = attached.map(opt => {
         const optSys = opt.system;
         usedSlots += (optSys.takesSpace ?? 1);
-        const hasStateSwitch = optSys.netwareType === 'program' &&
-          (optSys.programSubtype === 'booster' || optSys.programSubtype === 'defender');
+        const isBooster  = optSys.netwareType === 'program' && optSys.programSubtype === 'booster';
+        const isDefender = optSys.netwareType === 'program' && optSys.programSubtype === 'defender';
+        // Attacker / Black-ICE programs are fire-on-demand: clicking the
+        // icon/name area launches the attack or activates the ICE
+        // respectively (target/state validation in the handler).
+        const isAttacker = optSys.netwareType === 'program' && optSys.programSubtype === 'attacker';
+        const isBlackIceProgram = optSys.netwareType === 'program' && optSys.programSubtype === 'blackIce';
+        // Black ICE programs mirror their REZ / Damage off an actor
+        // instead of item fields. Two source cases:
+        //   - Active + deployed → the DEPLOYED synth actor (its REZ ticks
+        //     down during combat, we want the live value on the sheet).
+        //   - Otherwise → the world actor LINKED via `actorLink` (template
+        //     values shown while the program sits inactive).
+        // Damage / Class / Effect always come from the world actor —
+        // those are immutable template stats, not per-instance state.
+        const worldLinked = isBlackIceProgram && optSys.actorLink
+          ? fromUuidSync?.(optSys.actorLink) : null;
+        const worldActor = (worldLinked?.type === 'netware' && worldLinked?.system?.subtype === 'blackIce')
+          ? worldLinked : null;
+        const deployedTok = isBlackIceProgram && optSys.programState === 'active' && optSys.deployedTokenUuid
+          ? fromUuidSync?.(optSys.deployedTokenUuid) : null;
+        const deployedActor = deployedTok?.actor?.system?.subtype === 'blackIce'
+          ? deployedTok.actor : null;
+        const biRezActor = deployedActor ?? worldActor;
+        const showRez    = isBooster || isDefender || isBlackIceProgram;
+        const hasStateSwitch = isBooster || isDefender;
         return {
           id: opt.id, img: opt.img, name: opt.name,
           context: buildContext(opt),
@@ -1998,9 +2085,22 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
           takesSpace: optSys.takesSpace ?? 1,
           parentId: deck.id,
           hasStateSwitch,
+          isBooster, isDefender, isAttacker, isBlackIceProgram, showRez,
+          rez: isBlackIceProgram
+            ? (biRezActor ? (Number(biRezActor.system?.rez) || 0) : null)
+            : (showRez ? (Number(optSys.rez) || 0) : null),
+          atk: isAttacker ? (Number(optSys.atk) || 0) : null,
+          damage: isAttacker
+            ? (optSys.attackerDamage || '')
+            : (isBlackIceProgram && worldActor ? (worldActor.system?.attackerDamage || '') : null),
           programState: optSys.programState || 'inactive',
         };
       });
+
+      // Attached order: Attackers → Defenders → Boosters → Upgrades, then
+      // alphabetical within each band. Same order on detached options below
+      // for consistency between slotted and unslotted reads.
+      preparedOptions.sort(_netwareTypeSorter);
 
       category.items.push({
         id: deck.id, img: deck.img, name: deck.name,
@@ -2009,7 +2109,12 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         slots: sys.slots || 0,
         usedSlots,
         slotDisplay: `${usedSlots} / ${sys.slots || 0}`,
+        damage: "1d6",          // Zap's built-in damage — same column as Attacker programs
         equipped: sys.equipped ?? false,
+        // `inoperable` flag — drives the action-slot badge + blocks the
+        // action dialog. Set by Microwave's Neuralware result; cleared
+        // by a successful Electronics check via the Repair Request flow.
+        isInoperable: sys.programState === "inoperable",
         attachedOptions: preparedOptions,
       });
     }
@@ -2017,21 +2122,43 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     // Process detached (unslotted) programs/upgrades
     for (const opt of detachedOptions) {
       const optSys = opt.system;
-      const hasStateSwitch = optSys.netwareType === 'program' &&
-        (optSys.programSubtype === 'booster' || optSys.programSubtype === 'defender');
+      const isBooster  = optSys.netwareType === 'program' && optSys.programSubtype === 'booster';
+      const isDefender = optSys.netwareType === 'program' && optSys.programSubtype === 'defender';
+      const isAttacker = optSys.netwareType === 'program' && optSys.programSubtype === 'attacker';
+      const isBlackIceProgram = optSys.netwareType === 'program' && optSys.programSubtype === 'blackIce';
+      const worldLinked = isBlackIceProgram && optSys.actorLink
+        ? fromUuidSync?.(optSys.actorLink) : null;
+      const worldActor = (worldLinked?.type === 'netware' && worldLinked?.system?.subtype === 'blackIce')
+        ? worldLinked : null;
+      const deployedTok = isBlackIceProgram && optSys.programState === 'active' && optSys.deployedTokenUuid
+        ? fromUuidSync?.(optSys.deployedTokenUuid) : null;
+      const deployedActor = deployedTok?.actor?.system?.subtype === 'blackIce'
+        ? deployedTok.actor : null;
+      const biRezActor = deployedActor ?? worldActor;
+      const showRez    = isBooster || isDefender || isBlackIceProgram;
+      const hasStateSwitch = isBooster || isDefender;
       category.detachedOptions.push({
         id: opt.id, img: opt.img, name: opt.name,
         context: buildContext(opt),
         price: optSys.cost || 0,
         takesSpace: optSys.takesSpace ?? 1,
         hasStateSwitch,
+        isBooster, isDefender, isAttacker, isBlackIceProgram, showRez,
+        rez: isBlackIceProgram
+          ? (biRezActor ? (Number(biRezActor.system?.rez) || 0) : null)
+          : (showRez ? (Number(optSys.rez) || 0) : null),
+        atk: isAttacker ? (Number(optSys.atk) || 0) : null,
+        damage: isAttacker
+          ? (optSys.attackerDamage || '')
+          : (isBlackIceProgram && worldActor ? (worldActor.system?.attackerDamage || '') : null),
         programState: optSys.programState || 'inactive',
       });
     }
 
-    // Sort alphabetically
+    // Cyberdecks stay alphabetical; programs/upgrades sort by type band
+    // (matches the attached-options order above).
     category.items.sort((a, b) => a.name.localeCompare(b.name));
-    category.detachedOptions.sort((a, b) => a.name.localeCompare(b.name));
+    category.detachedOptions.sort(_netwareTypeSorter);
 
     sheetData.netwareCategory = category;
 
@@ -2168,13 +2295,13 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     html.find('.portrait-frame').click(ev => {
       ev.preventDefault();
       if (this._isLocked) {
-        new foundry.applications.apps.ImagePopout({
+        new (getImagePopoutClass())({
           src: this.actor.img,
           window: { title: this.actor.name },
           uuid: this.actor.uuid
         }).render({ force: true });
       } else {
-        new foundry.applications.apps.FilePicker.implementation({
+        new (getFilePickerClass())({
           type: "image",
           current: this.actor.img,
           callback: (path) => { this.actor.update({ img: path }); },
@@ -2755,7 +2882,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       // capped at two bonuses to match the gear card. No "Drug · " prefix
       // here — the section bar already carries the action context.
       const subtext = summariseBonuses(item.system.bonuses).join(" · ");
-      const html2 = await renderTemplate(
+      const html2 = await renderTemplateCompat(
         "systems/cyberpunk/templates/chat/drug-use.hbs",
         {
           actionLabel: game.i18n.localize("CYBERPUNK.UseDrug"),
@@ -2839,9 +2966,11 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       const turningOn = !currentEquipped;
       const isStructurallyBroken = ev.currentTarget.dataset.structurallyBroken === 'true';
 
-      // Broken limbs can be turned OFF but not ON
-      if (turningOn && isStructurallyBroken) {
-        ui.notifications.error(`Cannot activate: ${item.name} is broken and must be repaired first.`);
+      // Broken cyberlimb badge — clicking either state (broken-on or broken-off)
+      // posts a Repair Request chat card instead of toggling. Repair runs a
+      // CyberTech check via the same flow the cyberdeck Inoperable badge uses.
+      if (isStructurallyBroken) {
+        await this._postRepairRequest(item, "CyberTech");
         return;
       }
 
@@ -2883,7 +3012,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
           // Show roll in chat with custom humanity template
           const templateData = processFormulaRoll(roll);
-          const content = await foundry.applications.handlebars.renderTemplate(
+          const content = await renderTemplateCompat(
             "systems/cyberpunk/templates/chat/humanity-roll.hbs",
             templateData
           );
@@ -2922,7 +3051,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
       // Show roll in chat with custom humanity template
       const templateData = processFormulaRoll(roll);
-      const content = await foundry.applications.handlebars.renderTemplate(
+      const content = await renderTemplateCompat(
         "systems/cyberpunk/templates/chat/humanity-roll.hbs",
         templateData
       );
@@ -3204,58 +3333,52 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       await this.actor.setFlag("cyberpunk", "netActionsUsed", newUsed);
     });
 
-    // Toggle cyberdeck on/off (jacked-in condition)
-    html.find('.toggle-netware-deck').click(async ev => {
+    // Cyberdeck action menu — opens a popup dialog whose buttons vary by
+    // jacked-in state (Jack In/Out, Scanner, Cloak, ...). The click target
+    // is the deck row's icon + name/context block. The dialog owns the
+    // per-action logic and any action spend.
+    html.find('.gear-fire-cyberdeck').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const item = this.actor.items.get(itemId);
       if (!item) return;
-
-      const currentEquipped = item.system.equipped ?? false;
-      const turningOn = !currentEquipped;
-
-      if (turningOn) {
-        // Check no other deck is already active (validate before charging NET Action)
-        const activeDeck = this.actor.items.find(i =>
-          i.type === 'netware' &&
-          i.system.netwareType === 'cyberdeck' &&
-          i.id !== item.id &&
-          i.system.equipped
-        );
-        if (activeDeck) {
-          ui.notifications.error(`Cannot jack in: ${activeDeck.name} is already active. Jack out first.`);
-          return;
-        }
-
-        // NET Action cost: Jacking In costs 1 NET Action.
-        if (!await spendNetAction(this.actor, "jack in")) return;
-
-        // Turn on deck and apply jacked-in condition
-        await item.update({ "system.equipped": true });
-        await this.actor.toggleStatusEffect("jacked-in", { active: true });
-      } else {
-        // NET Action cost: Jacking Off costs 1 NET Action.
-        if (!await spendNetAction(this.actor, "jack out")) return;
-
-        // Turn off deck: deactivate all attached booster/defender programs first
-        const attachedPrograms = this.actor.items.filter(i =>
-          i.type === 'netware' &&
-          i.system.netwareType === 'program' &&
-          (i.system.programSubtype === 'booster' || i.system.programSubtype === 'defender') &&
-          i.getFlag('cyberpunk', 'attachedTo') === item.id &&
-          i.system.programState === 'active'
-        );
-        if (attachedPrograms.length) {
-          const updates = attachedPrograms.map(p => ({
-            _id: p.id,
-            "system.programState": "inactive"
-          }));
-          await this.actor.updateEmbeddedDocuments("Item", updates);
-        }
-
-        // Turn off deck and remove jacked-in condition
-        await item.update({ "system.equipped": false });
-        await this.actor.toggleStatusEffect("jacked-in", { active: false });
+      // Inoperable decks have no actions until repaired. Surface a notice
+      // pointing at the badge instead of silently doing nothing.
+      if (item.system?.programState === "inoperable") {
+        ui.notifications.warn(localize("CyberdeckInoperableUseBadge"));
+        return;
       }
+      new CyberdeckActionDialog(this.actor, item).render(true);
+    });
+
+    // Inoperable-badge click: posts a Repair Request chat card. Anyone with
+    // Electronics (typically the runner or a techie buddy) can pick it up.
+    html.find('.cyberdeck-repair-request').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const deck = this.actor.items.get(itemId);
+      if (!deck) return;
+      await this._postRepairRequest(deck, "Electronics");
+    });
+
+    // Attacker program rows fire directly — the program's own ATK / damage /
+    // effect drive the strike via performAttackerStrike. Lifecycle gates
+    // (slotted, deck jacked-in, not derezzed) and target validation live
+    // inside the helper.
+    html.find('.gear-fire-attacker').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const program = this.actor.items.get(itemId);
+      if (!program) return;
+      await performAttackerStrike(this.actor, program);
+    });
+
+    // Black ICE program rows — click the icon/name area to deploy. All
+    // gating + chat-card posting + state transition lives in
+    // performBlackIceProgramActivate. GM completes the deployment by
+    // clicking Activate on the resulting chat card.
+    html.find('.gear-fire-blackice').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const program = this.actor.items.get(itemId);
+      if (!program) return;
+      await performBlackIceProgramActivate(this.actor, program);
     });
 
     // Toggle program state (booster/defender: inactive <-> active)
@@ -3268,7 +3391,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
       // Derezzed/Destroyed cannot be toggled from UI
       if (currentState === 'derezzed' || currentState === 'destroyed') {
-        ui.notifications.warn(`${item.name} is ${currentState} and cannot be toggled.`);
+        ui.notifications.warn(`${item.name} is ${toTitleCase(currentState)} and cannot be toggled.`);
         return;
       }
 
@@ -3431,7 +3554,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       ev.preventDefault();
       const currentPath = this.actor.system.icon || "";
 
-      new foundry.applications.apps.FilePicker.implementation({
+      new (getFilePickerClass())({
         type: "image",
         current: currentPath,
         callback: (path) => {
@@ -3758,7 +3881,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     if (woundCount <= 0) return;
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
-    const content = await foundry.applications.handlebars.renderTemplate(
+    const content = await renderTemplateCompat(
       "systems/cyberpunk/templates/chat/medical-help.hbs",
       { actorId: this.actor.id, woundCount }
     );

@@ -416,6 +416,27 @@
         background: #2C684A;
       }
     }
+
+    // Per-button disabled state — matches the luck-btn.disabled dim so
+    // Realm Switcher's target-invalid Menu buttons read consistently
+    // with the luck stepper cue on roll dialogs.
+    &.disabled {
+      background: #26282F;
+      color: #444856;
+      cursor: not-allowed;
+
+      &:hover {
+        background: #26282F;
+      }
+    }
+  }
+
+  // Realm Switcher — Programs section is a single-column list so
+  // longer attacker-program names don't get clipped in a 2-col grid.
+  .realm-programs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   // Luck controls row

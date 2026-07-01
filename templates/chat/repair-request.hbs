@@ -1,0 +1,16 @@
+<div class="cyberpunk-card cyberpunk-card--repair-request" data-target-uuid="{{targetUuid}}" data-skill-name="{{skillName}}">
+    {{!-- Section Bar: Repair Request + tech icon --}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "RepairRequest") icon="tech"}}
+
+    {{!-- Target row: portrait + name (transfer-line style used by item-trade
+         and Control's Target section). --}}
+    <div class="target-info__selected transfer-line">
+        <div class="target-info__portrait">
+            <img src="{{targetImg}}" alt="{{targetName}}">
+        </div>
+        <span class="target-info__name">{{targetName}}</span>
+    </div>
+
+    {{!-- Repair action button — same chrome as Help on medical-help. --}}
+    <button class="apply-damage-btn repair-request-btn" type="button">{{loc "Repair"}}</button>
+</div>

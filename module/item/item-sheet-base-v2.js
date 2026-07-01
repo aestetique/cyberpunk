@@ -1,4 +1,4 @@
-import { localize, commitPendingEdits } from "../utils.js";
+import { localize, commitPendingEdits, getFilePickerClass, getImagePopoutClass } from "../utils.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const ItemSheetV2Base =
@@ -136,13 +136,13 @@ export class CyberpunkItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV2
   static _onPortraitClick(event, _target) {
     event?.preventDefault?.();
     if (this._isLocked) {
-      new foundry.applications.apps.ImagePopout({
+      new (getImagePopoutClass())({
         src: this.document.img,
         window: { title: this.document.name },
         uuid: this.document.uuid
       }).render({ force: true });
     } else {
-      new foundry.applications.apps.FilePicker.implementation({
+      new (getFilePickerClass())({
         type: "image",
         current: this.document.img,
         callback: path => this.document.update({ img: path })

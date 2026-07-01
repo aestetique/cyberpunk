@@ -821,7 +821,7 @@ async function _normalizeCaliberAndDamage() {
                 // sibling on the same actor will fail the same way. Skip the rest
                 // of this scope so we don't spam N copies of the same trace.
                 if (parent !== "world" && /is not a valid type/i.test(err?.message || "")) {
-                    console.warn(`CYBERPUNK | Skipping remaining weapon items on ${scopeName(parent)} — stale token delta is poisoning validation; user must clean the affected token.`);
+                    console.warn(`CYBERPUNK | Skipping remaining weapon items on ${scopeName(parent)}: stale token delta is poisoning validation; user must clean the affected token.`);
                     aborted = true;
                 }
             }
@@ -845,7 +845,7 @@ async function _normalizeCaliberAndDamage() {
                 console.error(`CYBERPUNK | Failed to normalize cyberweapon caliber/damage on "${item.name}" (${scopeName(parent)}):`, err);
                 migrationSuccess = false;
                 if (parent !== "world" && /is not a valid type/i.test(err?.message || "")) {
-                    console.warn(`CYBERPUNK | Skipping remaining cyberweapons on ${scopeName(parent)} — stale token delta is poisoning validation.`);
+                    console.warn(`CYBERPUNK | Skipping remaining cyberweapons on ${scopeName(parent)}: stale token delta is poisoning validation.`);
                     aborted = true;
                 }
             }

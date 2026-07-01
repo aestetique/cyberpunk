@@ -239,6 +239,8 @@ $fail-color: #d1502fb8;
 // ============================================
 .fumble-hint-container {
   padding: 0;
+  width: 100%;
+  text-align: center;
 }
 
 .fumble-luck-container {
@@ -914,6 +916,65 @@ $fail-color: #d1502fb8;
 .defence-buttons {
   display: flex;
   gap: 10px;
+}
+
+// Net-action response row (e.g. Detect after Cloak) is single-button and
+// stretches edge-to-edge of the chat card.
+.net-response-buttons {
+  width: 100%;
+  align-self: stretch;
+}
+
+// Control's GM-only Apply button gets the same red treatment as the
+// Roll Luck button — destructive / commit semantics deserve the same
+// visual weight.
+.defence-btn.defence-btn--apply {
+  background: var(--chat-red);
+  border-color: var(--chat-red);
+
+  &:hover:not(:disabled) { background: var(--chat-red-text); }
+}
+
+// Fumble section — used both standalone (inside .cyberpunk-card--fumble)
+// and embedded at the bottom of any triggering chat card. Match the
+// surrounding card's flex-column layout (width 100%, 10 px gap between
+// the section-bar / roll row / hint / button) so the internal rhythm
+// stays consistent regardless of where it lives.
+.cyberpunk-fumble-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+// Empty "No APs found" placeholder on Scanner cards. Same dashed-border
+// chrome as elsewhere, but the chat card is `align-items: center` so we
+// need an explicit stretch to fill the message width.
+.cyberpunk-card--net-action .target-info--empty {
+  width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+// Eye-Dee file contents — same chrome as the netware actor sheet's
+// Contents textarea (locked view), so the in-sheet and in-chat reads
+// look identical.
+.cyberpunk-card--net-action .net-file-contents {
+  width: 100%;
+  align-self: stretch;
+  padding: 10px 16px;
+  border-radius: 4px;
+  background: var(--Chat-Front, #26282F);
+  color: var(--chat-text);
+  font-family: var(--font-blender);
+  font-size: 14px;
+  line-height: 16px;
+  box-sizing: border-box;
+
+  p { margin: 0 0 8px 0; }
+  p:last-child { margin-bottom: 0; }
 }
 
 .defence-btn {

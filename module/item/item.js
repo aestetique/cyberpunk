@@ -653,10 +653,13 @@ export class CyberpunkItem extends Item {
           }
 
           const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-          if (isNatural1 && this.actor && !fumbleTriggered) {
-              await this.actor.rollFumble(wd.reliability);
-              fumbleTriggered = true;
-          }
+          // Embed the fumble section into the first card that natural-1'd.
+          // Later iterations skip it so only one Roll Luck button exists
+          // per attack action (matching the prior fumbleTriggered guard).
+          const fumble = (isNatural1 && this.actor && !fumbleTriggered)
+              ? await this.actor.rollFumbleData(wd.reliability)
+              : null;
+          if (fumble) fumbleTriggered = true;
 
           let roundsFired = Math.min(ammoLeft, effectiveRof / targetCount);
           ammoLeft -= roundsFired;
@@ -720,7 +723,8 @@ export class CyberpunkItem extends Item {
               effectIcon: effectIcon,
               effectSaveCount: effectSaveCount,
               hasDamage: true,
-              ipGained: ipGained
+              ipGained: ipGained,
+              fumble
           };
           let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.fullAuto));
           roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
@@ -743,9 +747,9 @@ export class CyberpunkItem extends Item {
       }
 
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-      if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(wd.reliability);
-      }
+      const fumble = (isNatural1 && this.actor)
+          ? await this.actor.rollFumbleData(wd.reliability)
+          : null;
 
       const minBodyPenalty = this._getMinBodyPenalty();
       const effectiveRof = Math.max(1, Math.floor(wd.rof * minBodyPenalty.rofMultiplier));
@@ -822,7 +826,8 @@ export class CyberpunkItem extends Item {
           effectIcon: effectIcon,
           effectSaveCount: effectSaveCount,
           hasDamage: true,
-          ipGained: ipGained
+          ipGained: ipGained,
+          fumble
       };
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(maxRounds === 2 ? fireModes.twoRoundBurst : fireModes.threeRoundBurst));
       roll.execute(undefined, "systems/cyberpunk/templates/chat/multi-hit.hbs", templateData);
@@ -850,9 +855,9 @@ export class CyberpunkItem extends Item {
       }
 
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-      if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(wd.reliability);
-      }
+      const fumble = (isNatural1 && this.actor)
+          ? await this.actor.rollFumbleData(wd.reliability)
+          : null;
 
       let actualRangeBracket = rangeResolve[attackMods.range](wd.range);
       let attackHits = attackRoll.total >= DC && !isNatural1;
@@ -924,7 +929,8 @@ export class CyberpunkItem extends Item {
           effectIcon: effectIcon,
           hitLocation: hitLocation,
           effectSaveCount: effectSaveCount,
-          ipGained: ipGained
+          ipGained: ipGained,
+          fumble
       };
 
       let roll = new RollBundle(CyberpunkItem.getFireModeLabel(fireModes.singleShot));
@@ -973,9 +979,9 @@ export class CyberpunkItem extends Item {
       }
 
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-      if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(wd.reliability);
-      }
+      const fumble = (isNatural1 && this.actor)
+          ? await this.actor.rollFumbleData(wd.reliability)
+          : null;
 
       let actualRangeBracket = (attackMods.actualDistance != null)
           ? attackMods.actualDistance
@@ -1090,7 +1096,8 @@ export class CyberpunkItem extends Item {
           effectSaveCount: effectSaveCount,
           isCircle: isCircle,
           scatterDistance: scatterDistance,
-          ipGained: ipGained
+          ipGained: ipGained,
+          fumble
       };
 
       let roll = new RollBundle(localize("OrdnanceAction"));
@@ -1287,9 +1294,9 @@ export class CyberpunkItem extends Item {
       }
 
       const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-      if (isNatural1 && this.actor) {
-          await this.actor.rollFumble(this.weaponData.reliability);
-      }
+      const fumble = (isNatural1 && this.actor)
+          ? await this.actor.rollFumbleData(this.weaponData.reliability)
+          : null;
 
       const wd = this.weaponData;
       const resolvedSkill = this._resolveAttackSkill();
@@ -1366,7 +1373,8 @@ export class CyberpunkItem extends Item {
           loadedAmmoType: "standard",
           damageType: this.weaponData.damageType || "",
           hitLocation: hitLocation,
-          ipGained: ipGained
+          ipGained: ipGained,
+          fumble
       };
 
       let roll = new RollBundle(localize("Strike"));

@@ -4,8 +4,9 @@
     <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
   </header>
 
-  {{!-- Single row of toggleable buttons (gray / selected = green). Disabled
-       when the corresponding token doesn't exist on the scene. --}}
+  {{!-- Realm row — jump between meat token and NET icon. Green when
+       selected, disabled dashed frame when the corresponding token
+       isn't on the scene. --}}
   <div class="conditions-grid">
     <button type="button"
             class="condition-btn realm-btn{{#if meat.selected}} selected{{/if}}{{#unless meat}} disabled{{/unless}}"
@@ -20,4 +21,57 @@
       {{localize "CYBERPUNK.NetToken"}}
     </button>
   </div>
+
+  {{!-- Menu section — state-aware cyberdeck actions. Section header uses
+       the GM-toolbox no-icon style (fire-mode-section + fire-mode-label).
+       Buttons that don't apply to the current target get a `.disabled`
+       class matching the luck-button disabled treatment. --}}
+  {{#if hasMenu}}
+    <div class="fire-mode-section">
+      <span class="fire-mode-label">{{menuLabel}}</span>
+    </div>
+    <div class="conditions-grid">
+      {{#each menuActions}}
+        <button type="button"
+                class="condition-btn realm-menu-btn{{#if disabled}} disabled{{/if}}"
+                data-action-key="{{key}}"
+                {{#if disabled}}disabled{{/if}}>
+          {{label}}
+        </button>
+      {{/each}}
+    </div>
+  {{/if}}
+
+  {{!-- Target section — mirrors Foundry's game.user.targets, but only
+       for NET-side tokens. Off-canvas / multi-target / meat-side
+       selections resolve to the empty placeholder. --}}
+  <div class="fire-mode-section">
+    <span class="fire-mode-label">{{targetLabel}}</span>
+  </div>
+  {{#if hasTarget}}
+    <div class="target-info__selected transfer-line">
+      <div class="target-info__portrait">
+        <img src="{{target.img}}" alt="{{target.name}}">
+      </div>
+      <span class="target-info__name">{{target.name}}</span>
+    </div>
+  {{else}}
+    <div class="target-info target-info--empty">{{emptyTargetText}}</div>
+  {{/if}}
+
+  {{!-- Programs section — only when a target is set and there's at
+       least one active Attacker on the equipped deck whose class
+       validly hits the target. Click-to-fire. --}}
+  {{#if hasPrograms}}
+    <div class="fire-mode-section">
+      <span class="fire-mode-label">{{programsLabel}}</span>
+    </div>
+    <div class="realm-programs-list">
+      {{#each programs}}
+        <button type="button" class="condition-btn realm-program-btn" data-item-id="{{id}}">
+          {{name}}
+        </button>
+      {{/each}}
+    </div>
+  {{/if}}
 </div>

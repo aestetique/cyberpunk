@@ -1,4 +1,4 @@
-import { localize } from "../utils.js";
+import { localize, renderTemplateCompat } from "../utils.js";
 import { processFormulaRoll } from "../dice.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -118,7 +118,7 @@ export class StressRollDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     await this.actor.update({ "system.stress": currentStress + roll.total });
 
     const templateData = processFormulaRoll(roll);
-    const content = await foundry.applications.handlebars.renderTemplate(
+    const content = await renderTemplateCompat(
       "systems/cyberpunk/templates/chat/stress-roll.hbs",
       templateData
     );

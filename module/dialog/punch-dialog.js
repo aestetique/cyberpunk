@@ -348,11 +348,9 @@ export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       await game.dice3d.showForRoll(attackRoll, game.user, true);
     }
 
-    // Check for fumble (natural 1)
+    // Check for fumble (natural 1) — embed the section into this chat card.
     const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-    if (isNatural1) {
-      await this.actor.rollFumble();
-    }
+    const fumble = isNatural1 ? await this.actor.rollFumbleData() : null;
 
     // Grant IP on non-fumble (unarmed is contested, no DC)
     let ipGained = 0;
@@ -434,7 +432,8 @@ export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       effectIcon: { prone: "prone", grapple: "restrained", hold: "immobilized", throw: "prone" }[this._weaponEffect] || null,
       effectLabel: { prone: localize("Conditions.Prone"), grapple: localize("Conditions.Restrained"), hold: localize("Conditions.Immobilized"), throw: localize("Conditions.Prone") }[this._weaponEffect] || null,
       hitLocation: hitLocation,
-      ipGained: ipGained
+      ipGained: ipGained,
+      fumble
     };
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
@@ -562,11 +561,9 @@ export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       await game.dice3d.showForRoll(attackRoll, game.user, true);
     }
 
-    // Check for fumble
+    // Check for fumble — embed the section into this chat card.
     const isNatural1 = attackRoll.dice[0]?.results?.[0]?.result === 1;
-    if (isNatural1) {
-      await this.actor.rollFumble();
-    }
+    const fumble = isNatural1 ? await this.actor.rollFumbleData() : null;
 
     // Grant IP on non-fumble (Ram is contested, no DC)
     let ipGained = 0;
@@ -629,7 +626,8 @@ export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       effectIcon: null,
       effectLabel: null,
       hitLocation: hitLocation,
-      ipGained: ipGained
+      ipGained: ipGained,
+      fumble
     };
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });

@@ -6,15 +6,10 @@
  * and selling is the inverse. Both flow through `executeTrade()`.
  */
 import { MoveItemsDialog } from "../dialog/move-items-dialog.js";
-import { detachAllChildren } from "./item-transfer.js";
+import { detachAllChildren, isStackable, findMergeTarget } from "./item-transfer.js";
+import { renderTemplateCompat } from "../utils.js";
 
 const EUROBUCKS_PATH = "system.gear.eurobucks";
-
-function isStackable(item) {
-  if (item.type === "drug") return true;
-  if (item.type === "weapon" && item.system?.weaponType === "Ammo") return true;
-  return false;
-}
 
 /**
  * Express a tradeable item in "trade unit" terms.
@@ -117,45 +112,6 @@ function resetForTrade(data) {
 }
 
 /**
- * Find an existing same-shape stack on the target. Stacking has to work across
- * actors, so we match on semantic identity (name, plus caliber + ammoType for
- * ammo) rather than `uuid` — `uuid` is per-actor and never matches the source.
- * `sourceUuid` is honoured when both sides carry it (compendium drops) but
- * we never FALL BACK to `uuid`, only forward to the name match.
- */
-function findMergeTarget(sourceItem, targetActor) {
-  const norm = (s) => (s ?? "").toString().trim().toLowerCase();
-  if (sourceItem.type === "drug") {
-    const srcName = norm(sourceItem.name);
-    return targetActor.items.find(i =>
-      i.type === "drug" && norm(i.name) === srcName
-    );
-  }
-  if (sourceItem.type === "weapon" && sourceItem.system?.weaponType === "Ammo") {
-    const srcUuid = sourceItem.system?.sourceUuid;
-    if (srcUuid) {
-      const byUuid = targetActor.items.find(i =>
-        i.type === "weapon" &&
-        i.system?.weaponType === "Ammo" &&
-        i.system?.sourceUuid === srcUuid
-      );
-      if (byUuid) return byUuid;
-    }
-    const srcName = norm(sourceItem.name);
-    const srcCaliber = sourceItem.system?.caliber || "";
-    const srcAmmoType = sourceItem.system?.ammoType || "";
-    return targetActor.items.find(i =>
-      i.type === "weapon" &&
-      i.system?.weaponType === "Ammo" &&
-      norm(i.name) === srcName &&
-      (i.system?.caliber || "") === srcCaliber &&
-      (i.system?.ammoType || "") === srcAmmoType
-    );
-  }
-  return null;
-}
-
-/**
  * Move `qty` units of `sourceItem` from its owner to `targetActor`,
  * factory-resetting along the way. Stackable items decrement or delete the
  * source row; non-stackable items detach any attached children (they stay
@@ -221,7 +177,7 @@ async function transferEurobucks(payer, payee, amount) {
  * @param {"buy"|"sell"} mode
  */
 async function postTradeMessage(mode, character, shop, item, count) {
-  const content = await renderTemplate(
+  const content = await renderTemplateCompat(
     "systems/cyberpunk/templates/chat/item-trade.hbs",
     {
       // Resolved labels (template can't do inline if/ternary, so we pick here)

@@ -9,13 +9,14 @@
  * along with them. A chat message is posted from the source actor.
  */
 import { MoveItemsDialog } from "../dialog/move-items-dialog.js";
+import { renderTemplateCompat } from "../utils.js";
 
 const TRANSFERRABLE_TYPES = new Set([
   "weapon", "armor", "cyberware", "netware", "drug", "tool", "misc"
 ]);
 
 /** True for item types whose `quantity` field is meaningful. */
-function isStackable(item) {
+export function isStackable(item) {
   if (item.type === "drug") return true;
   if (item.type === "weapon" && item.system?.weaponType === "Ammo") return true;
   return false;
@@ -175,7 +176,7 @@ function buildTransferData(item, idMap = null) {
  * is per-actor and never matches across actors. `sourceUuid` is honoured
  * when both sides carry it (compendium drops) but never falls back to `uuid`.
  */
-function findMergeTarget(sourceItem, targetActor) {
+export function findMergeTarget(sourceItem, targetActor) {
   const norm = (s) => (s ?? "").toString().trim().toLowerCase();
   if (sourceItem.type === "drug") {
     const srcName = norm(sourceItem.name);
@@ -325,7 +326,7 @@ export async function detachAllChildren(parentItem) {
  * Post a "Gave / To" chat message from the source actor.
  */
 async function postTransferMessage(sourceActor, targetActor, item, count) {
-  const content = await renderTemplate(
+  const content = await renderTemplateCompat(
     "systems/cyberpunk/templates/chat/item-transfer.hbs",
     {
       itemImg:    item.img,

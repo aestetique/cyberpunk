@@ -4,6 +4,8 @@
  */
 
 import { ACTION_TYPE } from "./constants.js";
+import { runCyberdeckAction } from "../dialog/cyberdeck-action-dialog.js";
+import { performAttackerStrike } from "../netrun/net-attack.js";
 
 export let RollHandler = null;
 
@@ -64,6 +66,8 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                     return this._handleCondition(actor, token, actionId);
                 case ACTION_TYPE.utility:
                     return this._handleUtility(actor, actionId);
+                case ACTION_TYPE.netware:
+                    return this._handleNetware(actor, actionId);
             }
         }
 
@@ -280,6 +284,43 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
          */
         async _handleUtility(actor, actionId) {
             if (actionId === "initiative") return this._handleInitiative(actor);
+        }
+
+        /**
+         * Netware — dispatches to the existing cyberdeck action helper
+         * (phantom dispatcher, same code path the RealmSwitcher toolbox
+         * uses) or to `performAttackerStrike` for slotted attackers.
+         *
+         * `actionId` shape: `"<subtype>:<payload>"` where subtype is
+         * `"deck"` (payload = a `cyberdeckX` action key) or `"program"`
+         * (payload = the attacker program item's id). All gating / target
+         * validation / roll dialogs happen inside the underlying handler.
+         */
+        async _handleNetware(actor, actionId) {
+            const idx = actionId.indexOf(":");
+            if (idx < 0) return;
+            const subtype = actionId.slice(0, idx);
+            const payload = actionId.slice(idx + 1);
+
+            if (subtype === "deck") {
+                // Re-resolve the deck at click time (state may have changed
+                // between HUD build and click: another deck equipped,
+                // repair completed, etc.).
+                const decks = actor.items.filter(i =>
+                    i.type === "netware" && i.system?.netwareType === "cyberdeck"
+                );
+                const deck = decks.find(d => d.system?.equipped)
+                    ?? decks.find(d => d.system?.programState !== "inoperable")
+                    ?? null;
+                if (!deck) return;
+                return runCyberdeckAction(actor, deck, payload);
+            }
+
+            if (subtype === "program") {
+                const program = actor.items.get(payload);
+                if (!program) return;
+                return performAttackerStrike(actor, program);
+            }
         }
 
         /**

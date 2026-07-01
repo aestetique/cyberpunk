@@ -1,3 +1,5 @@
+import { renderTemplateCompat } from "./utils.js";
+
 export const EXPLODING_D10 = "1d10x10";
 export const CHAT_ROLL_TEMPLATE = "systems/cyberpunk/templates/chat/default-roll.hbs";
 
@@ -83,6 +85,16 @@ export function getPlayerName(speaker) {
 }
 
 // Check whether a formula string contains dice notation
+/**
+ * True when a roll's first d10 came up 1 — the system-wide fumble signal.
+ * Shared by every roll site that cares (NET actions, attacker programs,
+ * cyberdeck actions). Roll formulas that don't start with a d10 (or where
+ * the die was consumed by a filter) return false.
+ */
+export function isNaturalOne(roll) {
+    return roll?.dice?.[0]?.results?.[0]?.result === 1;
+}
+
 export function containsDice(formula) {
     try {
         return Roll.parse(formula).some(term => term instanceof foundry.dice.terms.Die);
@@ -244,7 +256,7 @@ export class RollBundle {
             user: game.user.id,
             speaker,
             sound: "sounds/dice.wav",
-            content: await foundry.applications.handlebars.renderTemplate(templatePath, templateData)
+            content: await renderTemplateCompat(templatePath, templateData)
         });
         return this;
     }

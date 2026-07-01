@@ -1,0 +1,133 @@
+{{!--
+    Zap chat card — opposed attack + flat 1d6 damage.
+
+    Structure mirrors `melee-hit.hbs` (weapon line + damage grid + target
+    selector + Apply Damage) but with two differences:
+      - the attack/result row uses the skill-check opposed style
+        (success/failure icon + defence total as DV badge) since defence
+        was already rolled when the attack landed
+      - the target selector skips Parry/Dodge buttons for the same reason.
+
+    Damage is bucketed under the `aoe` key (single cell, no body location)
+    — `_expandAoeDamage` in chat-message.js will spread it on Apply, the
+    same way ordnance hits work.
+--}}
+<div class="cyberpunk-card cyberpunk-card--attack cyberpunk-card--net-action">
+    {{!-- Section Bar: Zap with NET-action icon --}}
+    {{> (sysPath "chat/partials/section-bar.hbs") icon=actionIcon label=fireModeLabel}}
+
+    {{!-- Weapon Line: cyberdeck used --}}
+    {{#if weaponName}}
+    {{> (sysPath "chat/partials/weapon-line.hbs")}}
+    {{/if}}
+
+    {{!-- Collapsible Attack Roll Container --}}
+    <div class="roll-container roll-container--collapsed">
+        <div class="roll-expandable">
+            <div class="roll-expandable__inner">
+                {{#if attackRoll}}
+                <div class="formula-bar">
+                    <span class="formula-bar__text">{{cleanFormula attackRoll.formula}}</span>
+                </div>
+                <div class="roll-details">
+                    <div class="roll-details__row">
+                        <span class="roll-details__label">1d10</span>
+                        <span class="roll-details__value">
+                            <span class="roll-details__value-text">{{attackRoll._total}}</span>
+                        </span>
+                    </div>
+                    <div class="roll-details__row roll-details__row--dice">
+                        {{#each attackRoll.terms as |term|}}
+                            {{#if term.results}}
+                                {{#each term.results as |die|}}
+                                <div class="dice-badge dice-badge--d10 {{#if (eq die.result 10)}}max{{/if}} {{#if (eq die.result 1)}}min{{/if}} {{#if die.exploded}}exploded{{/if}}">
+                                    <span class="dice-badge__value">{{die.result}}</span>
+                                </div>
+                                {{/each}}
+                            {{/if}}
+                        {{/each}}
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+
+        {{!-- Opposed Result Row: success/failure + defence-total DV badge --}}
+        <div class="result-row result-row--{{#if success}}success{{else}}failure{{/if}} roll-toggle">
+            {{#if success}}
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/success.png" alt="Success"></span>
+            {{else}}
+            <span class="result-row__icon"><img src="systems/cyberpunk/img/chat/failure.png" alt="Failure"></span>
+            {{/if}}
+            <span class="result-row__value">{{attackRoll._total}}</span>
+            <span class="result-row__target">
+                <div class="dice-badge dice-badge--d10 {{#if success}}save-success{{else}}save-failure{{/if}}">
+                    <span class="dice-badge__value">{{defenceTotal}}</span>
+                </div>
+            </span>
+        </div>
+    </div>
+
+    {{!-- Damage / Effect section bar — label + icon depend on attacker class.
+         Anti-Program uses "Derezz" + derezz icon; everything else uses
+         the default "Damage" + damage icon. --}}
+    {{#if hasEffect}}
+        {{#if hasDamage}}
+            {{> (sysPath "chat/partials/section-bar.hbs") icon=damageIcon label=damageAndEffectLabel}}
+        {{else}}
+            {{> (sysPath "chat/partials/section-bar.hbs") icon=damageIcon label=(loc "Effect")}}
+        {{/if}}
+    {{else if hasDamage}}
+        {{> (sysPath "chat/partials/section-bar.hbs") icon=damageIcon label=damageLabel}}
+    {{/if}}
+
+    {{!-- Single-cell damage grid (only when damage is present) --}}
+    {{#if hasDamage}}
+    <div class="damage-grid damage-grid--single" data-damages="{{json areaDamages}}">
+        <div class="damage-grid__expand damage-grid__expand--hidden">
+            <div class="damage-grid__expand-content"></div>
+        </div>
+        <div class="damage-grid__row">
+            <div class="damage-grid__cell damage-grid__cell--hit" data-location="aoe">
+                <span class="damage-grid__value">{{damageTotal}}</span>
+            </div>
+        </div>
+    </div>
+    {{/if}}
+
+    {{!-- Effect row (status icon + label) --}}
+    {{#if hasEffect}}
+    <div class="effect-row">
+        <img src="systems/cyberpunk/img/conditions/{{effectIcon}}.svg" alt="">
+        <span class="effect-row__label">{{effectLabel}}</span>
+    </div>
+    {{/if}}
+
+    {{!-- Target Selector with Apply button (no Parry/Dodge — defence already rolled) --}}
+    {{#if hasApply}}
+    <div class="target-selector" data-damage="{{json areaDamages}}" data-ammo-type="standard" data-damage-type="{{damageType}}" data-weapon-effect="{{weaponEffect}}" data-effect-save-count="{{effectSaveCount}}" data-hit-location="" data-net-attacker-source="{{netAttackerSource}}" data-attacker-class="{{attackerClass}}">
+        <div class="target-selector__tabs">
+            <button class="target-selector__tab target-selector__tab--active" data-mode="targeted">{{loc "Targeted"}}</button>
+            <span class="target-selector__divider"></span>
+            <button class="target-selector__tab" data-mode="selected">{{loc "Selected"}}</button>
+        </div>
+        <div class="target-selector__content">
+            <div class="target-info target-info--empty">{{loc "SelectTarget"}}</div>
+        </div>
+        <button class="apply-damage-btn" disabled>{{loc "Apply"}}</button>
+    </div>
+    {{/if}}
+
+    {{!-- IP Gain Hint — same chrome / positioning as skill-check.hbs so
+         NET-action attack rolls (Zap, attacker programs, Speed) read the
+         same way as skill rolls. --}}
+    {{#if ipGained}}
+    <div class="fumble-hint-container">
+        <span class="card-hint">+{{ipGained}} IP</span>
+    </div>
+    {{/if}}
+
+    {{#if fumble}}
+    {{> (sysPath "chat/partials/fumble-section.hbs") fumble=fumble}}
+    {{/if}}
+</div>

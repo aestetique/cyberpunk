@@ -43,6 +43,15 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                 ]
             },
             {
+                nestId: "netware",
+                id: "netware",
+                name: "Netware",
+                groups: [
+                    { ...groups.netwareCyberdeck, nestId: "netware_cyberdeck" },
+                    { ...groups.netwarePrograms,  nestId: "netware_programs" }
+                ]
+            },
+            {
                 nestId: "conditions",
                 id: "conditions",
                 name: "Conditions",

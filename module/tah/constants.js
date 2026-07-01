@@ -16,7 +16,8 @@ export const ACTION_TYPE = {
     ordnance: "ordnance",
     save: "save",
     condition: "condition",
-    utility: "utility"
+    utility: "utility",
+    netware: "netware"
 };
 
 /**
@@ -45,7 +46,12 @@ export const GROUP = {
     // Utility parent — stress / fright / fatigue / sleep moved to the GM
     // Toolbox dialog; only initiative and saves remain in the HUD.
     initiative: { id: "initiative", name: "Initiative", type: "system" },
-    saves: { id: "saves", name: "Saves", type: "system" }
+    saves: { id: "saves", name: "Saves", type: "system" },
+
+    // Netware parent — cyberdeck actions (state-aware) + Attacker programs
+    // slotted on the currently-equipped deck.
+    netwareCyberdeck: { id: "netwareCyberdeck", name: "Cyberdeck", type: "system" },
+    netwarePrograms: { id: "netwarePrograms", name: "Programs", type: "system" }
 };
 
 /**

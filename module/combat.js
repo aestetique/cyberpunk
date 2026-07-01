@@ -24,6 +24,16 @@ export class CyberpunkCombat extends Combat {
         for (const combatant of combatants) {
             if (!combatant?.actor) continue;
 
+            // Black ICE never rolls — its initiative is a deterministic
+            // 50 + SPD/10 derived straight from the actor's stat block.
+            // Skip the dialog, the d10, and the chat card entirely.
+            if (combatant.actor.type === "netware"
+                && combatant.actor.system?.subtype === "blackIce") {
+                const spd = Number(combatant.actor.system?.spd) || 0;
+                updates.push({ _id: combatant.id, initiative: 50 + spd / 10 });
+                continue;
+            }
+
             let luckMod = 0;
 
             // Show dialog for actors owned by the current user

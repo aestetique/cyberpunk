@@ -187,15 +187,16 @@ export class DefenceRollDialog extends HandlebarsApplicationMixin(ApplicationV2)
       if (this.defenceType === "parry") actionLabel = localize("Parry");
       else if (this.defenceType === "escape") actionLabel = localize("Escape");
       else actionLabel = localize("Dodge");
+      const fumble = isNatural1 ? await this.actor.rollFumbleData() : null;
       const speaker = ChatMessage.getSpeaker({ actor: this.actor });
       new RollBundle(actionLabel)
         .addRoll(roll)
         .execute(speaker, "systems/cyberpunk/templates/chat/skill-check.hbs", {
           statIcon: "defend",
           difficulty: this.attackTotal,
-          success
+          success,
+          fumble
         });
-      if (isNatural1) await this.actor.rollFumble();
       return;
     }
 
@@ -243,6 +244,7 @@ export class DefenceRollDialog extends HandlebarsApplicationMixin(ApplicationV2)
     if (this.defenceType === "parry") actionLabel = localize("Parry");
     else if (this.defenceType === "escape") actionLabel = localize("Escape");
     else actionLabel = localize("Dodge");
+    const fumble = isNatural1 ? await this.actor.rollFumbleData() : null;
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
     new RollBundle(actionLabel)
       .addRoll(roll)
@@ -250,10 +252,9 @@ export class DefenceRollDialog extends HandlebarsApplicationMixin(ApplicationV2)
         statIcon: "defend",
         difficulty: this.attackTotal,
         success,
-        ipGained
+        ipGained,
+        fumble
       });
-
-    if (isNatural1) await this.actor.rollFumble();
   }
 
   async close(options) {

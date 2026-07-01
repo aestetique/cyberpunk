@@ -3,7 +3,8 @@
 		"types": [
 			"character",
 			"drone",
-			"shop"
+			"shop",
+			"netware"
 		],
 		"templates": {
 			"stats": {
@@ -739,24 +740,6 @@
 			},
 			"gear": {
 				"eurobucks": 0
-			},
-			"netrun": {
-				"icon": "",
-				"deckModel": "",
-				"interface": 0,
-				"cpu": 0,
-				"speed": 0,
-				"strength": 0,
-				"dataWall": 0,
-				"deckType": "",
-				"hasElectrodes": false,
-				"hasKeyboard": false,
-				"hasScreen": false,
-				"hasPrinter": false,
-				"hasChipReader": false,
-				"hasVoxBox": false,
-				"hasScanner": false,
-				"hasExtraChip": false
 			}
 		},
 		"character": {
@@ -766,8 +749,7 @@
 				"stats",
 				"skills",
 				"hitLocations",
-				"gear",
-				"netrun"
+				"gear"
 			],
 			"damage": 0,
 			"fatigue": 0,
@@ -837,6 +819,24 @@
 					"vehicles": true
 				}
 			}
+		},
+		"netware": {
+			"subtype": "accessPoint",
+			"radius": 6,
+			"dv": 0,
+			"entryRegion": "",
+			"droneLink": "",
+			"doorLink": "",
+			"description": "",
+			"controllingActorId": "",
+			"rez": 1,
+			"per": 0,
+			"spd": 0,
+			"atk": 0,
+			"def": 0,
+			"attackerClass": "antiProgram",
+			"attackerDamage": "2d6",
+			"attackerEffect": "none"
 		}
 	},
 	"Item": {
@@ -894,6 +894,10 @@
 			"attackerClass": "antiProgram",
 			"attackerDamage": "2d6",
 			"attackerEffect": "none",
+			"upgradeEffect": "none",
+			"upgradeValue": 0,
+			"actorLink": "",
+			"deployedTokenUuid": "",
 			"programState": "inactive"
 		},
 		"weapon": {

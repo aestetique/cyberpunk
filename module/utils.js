@@ -365,3 +365,35 @@ export function bindHoverTooltips(html, selector) {
         }
     });
 }
+
+/**
+ * Return the constructor for Foundry's FilePicker in a V13/V14-safe way.
+ * V14 exposes it under `foundry.applications.apps.FilePicker.implementation`;
+ * V13 still uses the top-level global. Callers pass an options object to
+ * the returned class, same shape either version.
+ */
+export function getFilePickerClass() {
+    return foundry?.applications?.apps?.FilePicker?.implementation
+        ?? (typeof FilePicker !== "undefined" ? FilePicker : null);
+}
+
+/** Same shape shim for ImagePopout (V13 global vs V14 namespaced). */
+export function getImagePopoutClass() {
+    return foundry?.applications?.apps?.ImagePopout
+        ?? (typeof ImagePopout !== "undefined" ? ImagePopout : null);
+}
+
+/**
+ * Render a Handlebars template in a V13/V14-compatible way.
+ *
+ * V14 relocated `renderTemplate` under `foundry.applications.handlebars`
+ * and logs a compat warning on the bare global. V13 still ships the
+ * global and doesn't expose the new namespace. Both worlds land here.
+ *
+ * Callers should use this instead of either raw form.
+ */
+export async function renderTemplateCompat(path, data) {
+    const v14 = foundry?.applications?.handlebars?.renderTemplate;
+    if (typeof v14 === "function") return v14(path, data);
+    return renderTemplate(path, data);
+}

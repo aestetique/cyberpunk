@@ -1,0 +1,67 @@
+// ============================================
+// Netware Actor Card - NET-architecture objects
+// (Access Point / Password / File / Control Point)
+// Extends _item-card-base.scss; single-line label+input rows reuse
+// .source-field from the role item card.
+// ============================================
+
+.cyberpunk.netware-actor-sheet {
+  @include item-sheet-chrome-reset;
+}
+
+.netware-actor-card {
+  min-height: 400px;
+}
+
+// Match `.source-input` (Entry Point / Drone Link UUID) to the rest of
+// the system's 26 px input chip. Without an explicit height, Foundry's
+// inherited form-field height kicks in and the field renders too tall
+// next to `.variable-input` (Radius / Difficulty).
+.netware-actor-card .source-input {
+  height: 26px;
+  box-sizing: border-box;
+}
+
+// Black ICE Attack button — same gold-d10 click target the cyberware
+// item card uses for Humanity Loss rolls. SCSS for `.humanity-roll-btn`
+// lives in `_cyberware-sheet.scss` under `.cyberware-card`, so it
+// doesn't reach the netware actor card; re-declare here for parity.
+.netware-actor-card .humanity-roll-btn {
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+  }
+
+  &:hover:not([disabled]) {
+    transform: scale(1.1);
+  }
+
+  &[disabled] {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+// Black ICE conditions row — Disabled + Dead toggle pair, centered on
+// the card, 10 px gap between them. The .condition-toggle items inside
+// inherit their full visual treatment from the global
+// `_character-sheet.scss` rule (60×60 column, 36 px icon-div, orbitron
+// 8 px label, .active colour swap). `align-self: stretch` overrides
+// `.tab-content`'s `align-items: flex-start` so the row spans the full
+// card width; `justify-content: center` then horizontally centres the
+// pair inside that span.
+.netware-actor-card .black-ice-conditions-row {
+  display: flex;
+  align-self: stretch;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}

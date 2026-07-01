@@ -11,6 +11,11 @@
  * @returns {Promise<boolean>} True if action surge was applied
  */
 export async function registerAction(actor, actionType = "action") {
+  // Always fire the hook — listeners (e.g. NET Control's Use grant) need
+  // to know an action attempt happened even when the combat-economy
+  // counter below decides to no-op (out of combat, wrong combatant).
+  Hooks.callAll("cyberpunk.actionRegistered", actor, actionType);
+
   // Only track actions during combat
   if (!game.combat) return false;
 
@@ -52,7 +57,7 @@ export async function spendNetAction(actor, actionType = "NET action") {
   if (!na) return true;
 
   if (na.available <= 0) {
-    ui.notifications.warn(`No NET Actions left this turn — cannot ${actionType}.`);
+    ui.notifications.warn(`No NET Actions left this turn: cannot ${actionType}.`);
     return false;
   }
 

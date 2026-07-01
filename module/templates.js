@@ -40,6 +40,9 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/melee-execute.hbs",
         "systems/cyberpunk/templates/chat/melee-hit.hbs",
         "systems/cyberpunk/templates/chat/ordnance-hit.hbs",
+        "systems/cyberpunk/templates/chat/zap-hit.hbs",
+        "systems/cyberpunk/templates/chat/repair-request.hbs",
+        "systems/cyberpunk/templates/chat/black-ice-activate.hbs",
         "systems/cyberpunk/templates/chat/item-transfer.hbs",
         "systems/cyberpunk/templates/chat/item-trade.hbs",
         "systems/cyberpunk/templates/chat/drug-use.hbs",
@@ -53,6 +56,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/partials/roll-details.hbs",
         "systems/cyberpunk/templates/chat/partials/result-row.hbs",
         "systems/cyberpunk/templates/chat/partials/damage-grid.hbs",
+        "systems/cyberpunk/templates/chat/partials/fumble-section.hbs",
 
         // Item sheet
         "systems/cyberpunk/templates/item/item-sheet.hbs",
@@ -91,6 +95,7 @@ export const preloadHandlebarsTemplates = async function() {
         // Weapon settings dialog
         "systems/cyberpunk/templates/dialog/modifiers.hbs",
         "systems/cyberpunk/templates/dialog/skill-roll.hbs",
+        "systems/cyberpunk/templates/dialog/net-action-roll.hbs",
         "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
         "systems/cyberpunk/templates/dialog/melee-attack.hbs",
         "systems/cyberpunk/templates/dialog/defence-roll.hbs",

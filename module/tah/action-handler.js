@@ -89,6 +89,7 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
                 this._buildConditionActions(actor);
                 this._buildInitiativeAction();
                 this._buildSaveActions();
+                this._buildNetwareActions(actor);
                 return;
             }
 
@@ -300,6 +301,82 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
          */
         _buildOrdnanceActions(actor) {
             // Intentionally empty — ordnance actions are emitted by _buildWeaponActions.
+        }
+
+        /**
+         * Netware — cyberdeck actions (state-aware) + Attacker programs
+         * slotted on the equipped deck. Skipped when the actor isn't a
+         * character or has no usable deck.
+         *
+         * `encodedValue` layout:
+         *   - deck action  → "netware|deck:<cyberdeckActionKey>"
+         *   - program fire → "netware|program:<itemId>"
+         * Roll handler splits on "|" then ":" to dispatch.
+         */
+        _buildNetwareActions(actor) {
+            if (!actor || actor.type !== "character") return;
+
+            // Deck resolution: prefer equipped (jacked-in one), else any
+            // non-inoperable cyberdeck. Matches RealmSwitcher / phantom
+            // dispatcher expectations.
+            const decks = actor.items.filter(i =>
+                i.type === "netware" && i.system?.netwareType === "cyberdeck"
+            );
+            const deck = decks.find(d => d.system?.equipped)
+                ?? decks.find(d => d.system?.programState !== "inoperable")
+                ?? null;
+            if (!deck) return;
+
+            const jackedIn = actor.statuses?.has?.("jacked-in") ?? false;
+
+            // Cyberdeck group — state-aware, same ordering as the cyberdeck
+            // action dialog.
+            const deckActionKeys = jackedIn
+                ? [
+                    { key: "cyberdeckJackOut",  labelKey: "JackOut" },
+                    { key: "cyberdeckCloak",    labelKey: "Cloak" },
+                    { key: "cyberdeckSlide",    labelKey: "Slide" },
+                    { key: "cyberdeckSpeed",    labelKey: "Speed" },
+                    { key: "cyberdeckControl",  labelKey: "Control" },
+                    { key: "cyberdeckEyeDee",   labelKey: "EyeDee" },
+                    { key: "cyberdeckBackdoor", labelKey: "Backdoor" },
+                    { key: "cyberdeckZap",      labelKey: "Zap" }
+                  ]
+                : [
+                    { key: "cyberdeckJackIn",  labelKey: "JackIn" },
+                    { key: "cyberdeckScanner", labelKey: "Scanner" }
+                  ];
+
+            const deckActions = deckActionKeys.map(a => ({
+                id: a.key,
+                name: game.i18n.localize(`CYBERPUNK.${a.labelKey}`),
+                encodedValue: [ACTION_TYPE.netware, `deck:${a.key}`].join("|")
+            }));
+            this.addActions(deckActions, { id: "netwareCyberdeck", type: "system" });
+
+            // Programs group — only meaningful when jacked in. Attackers
+            // slotted on the equipped deck; skip derezzed / destroyed
+            // (same filter as toolbox + performAttackerStrike gate).
+            if (!jackedIn) return;
+
+            const programs = actor.items
+                .filter(i =>
+                    i.type === "netware"
+                    && i.system?.netwareType === "program"
+                    && i.system?.programSubtype === "attacker"
+                    && i.system?.programState !== "derezzed"
+                    && i.system?.programState !== "destroyed"
+                    && i.getFlag?.("cyberpunk", "attachedTo") === deck.id
+                )
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            const programActions = programs.map(p => ({
+                id: p.id,
+                name: p.name,
+                encodedValue: [ACTION_TYPE.netware, `program:${p.id}`].join("|"),
+                img: p.img
+            }));
+            this.addActions(programActions, { id: "netwarePrograms", type: "system" });
         }
 
         /**

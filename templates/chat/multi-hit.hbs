@@ -126,4 +126,8 @@
         <span class="card-hint">+{{ipGained}} IP</span>
     </div>
     {{/if}}
+
+    {{#if fumble}}
+    {{> (sysPath "chat/partials/fumble-section.hbs") fumble=fumble}}
+    {{/if}}
 </div>

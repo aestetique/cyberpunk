@@ -2,22 +2,19 @@
  * Jack In / Jack Out — spawn/despawn the NET icon token in response to the
  * `jacked-in` status effect on the actor.
  *
- * The trigger is the existing status effect (already toggled by the
- * cyberdeck button on the character sheet, the token HUD, TAH, macros, etc.).
- * This module just listens for that effect appearing/disappearing on an
- * Actor and translates it into TokenDocument create/delete on the active
- * scene.
+ * The trigger is the existing status effect (toggled by the cyberdeck
+ * button on the character sheet, the token HUD, TAH, macros, etc.). This
+ * module just listens for that effect appearing/disappearing on an Actor
+ * and translates it into TokenDocument create/delete on the active scene.
  *
  * Token model:
  *   - The NET icon is a TokenDocument pointing at the SAME actor doc as the
  *     physical token (so damage, status, items, sheet — all one source of
  *     truth, no duplication).
- *   - Token data is copied from the physical token so the icon inherits the
+ *   - Token data is cloned from the physical token so the icon inherits the
  *     actor's portrait, name, scale, vision settings, etc. We override only
- *     `flags.cyberpunk.isNetIcon=true`, the spawn offset, and `sight.enabled`
- *     so the icon has a vision source on the canvas.
- *   - Spawn offset: one grid cell to the right of the physical token. Real
- *     "entry point" placement comes later.
+ *     `flags.cyberpunk.isNetIcon=true` and the spawn offset.
+ *   - Spawn offset: one grid cell to the right of the physical token.
  *
  * Multi-user / permissions model:
  *   - The hook fires on every connected client when the status effect is
@@ -25,21 +22,25 @@
  *     GMs can do it — so we delegate the actual create/delete to the
  *     singleton `game.users.activeGM` client. That keeps multi-GM sessions
  *     from racing on identical creates, and lets PLAYERS jack themselves
- *     in/out (the cyberdeck button on their own sheet is a status-toggle
- *     they already have permission to perform, since they own the actor;
- *     the GM client picks up the hook and spawns the icon on their behalf).
+ *     in/out (they trigger the status toggle on their own actor; the GM
+ *     client picks up the hook and spawns the icon on their behalf).
  *   - To hand control of the freshly-spawned icon back to the right user,
  *     we stamp `flags.cyberpunk.pilotUser` on the token at creation time.
  *     The matching client picks it up via the `createToken` hook below and
- *     calls `.control()`. The pilot is preferred to be a connected non-GM
- *     owner of the actor (so a GM toggling the effect for a player still
- *     hands control to the player), falling back to whoever triggered the
- *     effect, falling back to the local user. Same flag drives auto-
- *     re-control of the physical token on jack-out.
+ *     calls `.control()`. Preference: connected non-GM owner → triggering
+ *     user → local user. Same flag drives auto-re-control of the physical
+ *     token on jack-out.
  */
 
+import {
+    accessPointsCovering,
+    nearestCoveringAccessPoint,
+    getEntryRegionSpawn,
+    getApCentreSpawn
+} from "./access-points.js";
+import { getEquippedDeck } from "./upgrades.js";
+
 const NET_ICON_FLAG = "isNetIcon";
-const SPAWN_OFFSET_CELLS = 1;
 
 /** True if `effect` carries the `jacked-in` status. */
 function isJackedInEffect(effect) {
@@ -104,11 +105,39 @@ async function jackIn(actor, userId) {
         return;
     }
 
-    const gridSize = canvas.scene.grid.size || 100;
+    // Proximity gate — the meat token must be inside the (Range-upgrade-
+    // extended) radius of at least one Access Point. Nearest AP wins when
+    // multiple cover. No AP in range → undo the jack-in toggle entirely
+    // (delete the just-created effect) so the runner doesn't end up stuck
+    // in a "jacked-in but no NET icon" half-state. The dialog path
+    // pre-gates with its own warning; this post-gate catches token-HUD /
+    // macro paths and only surfaces locally to the GM that's executing the
+    // spawn.
+    const equippedDeck = getEquippedDeck(actor);
+    const ap = nearestCoveringAccessPoint(physical, canvas.scene, equippedDeck);
+    if (!ap) {
+        const triggeringEffect = actor.effects.find(e => e.statuses?.has?.("jacked-in"));
+        if (triggeringEffect) await triggeringEffect.delete();
+        ui.notifications.warn(game.i18n.localize("CYBERPUNK.JackInNoAccessPoint"));
+        return;
+    }
+
+    // Spawn target: AP's linked region centre if set, else AP token centre.
+    // Region-mode lets the GM pre-paint the NET map; AP-centre is the lazy
+    // fallback for testing / quick play.
+    const spawn = getEntryRegionSpawn(ap) ?? getApCentreSpawn(ap);
     const data = physical.toObject();
     delete data._id;
-    data.x = physical.x + SPAWN_OFFSET_CELLS * gridSize;
-    data.y = physical.y;
+    if (spawn) {
+        data.x = spawn.x;
+        data.y = spawn.y;
+    } else {
+        // No AP placement either — shouldn't happen post-gate, but degrade
+        // gracefully to one-cell-right of the meat token.
+        const gridSize = canvas.scene.grid.size || 100;
+        data.x = physical.x + gridSize;
+        data.y = physical.y;
+    }
     data.flags = data.flags ?? {};
 
     const pilot = pickPilot(actor, userId);
@@ -117,19 +146,6 @@ async function jackIn(actor, userId) {
         [NET_ICON_FLAG]: true,
         pilotUser: pilot.id
     };
-    // Vision config:
-    //   - sight.enabled=true so V13 has a polygon to compute from (otherwise
-    //     it falls back to "show entire scene")
-    //   - sight.range=999 so the polygon covers the whole scene. Combined
-    //     with vision-polygon.js stripping wall edges from NET-icon sight
-    //     polygons, the polygon sweeps unbounded — every NET token on the
-    //     scene falls inside, so their portraits paint properly. In meat
-    //     realm the `hasSight` wrap drops the NET icon from the pool, so
-    //     this range doesn't leak into the netrunner's meat vision.
-    //   - detectionModes: just `netSense`, our custom mode that detects
-    //     NET-flagged tokens regardless of walls / LOS / range.
-    data.sight = { ...(data.sight ?? {}), enabled: true, range: 999 };
-    data.detectionModes = [{ id: "netSense", enabled: true, range: 999 }];
 
     await canvas.scene.createEmbeddedDocuments("Token", [data]);
 }
@@ -151,9 +167,35 @@ async function jackOut(actor, userId) {
     }
     if (game.user.id !== activeGM.id) return;
 
+    // Despawn the NET icon token.
     const icon = findNetIcon(actor, canvas.scene);
-    if (!icon) return;
-    await canvas.scene.deleteEmbeddedDocuments("Token", [icon.id]);
+    if (icon) await canvas.scene.deleteEmbeddedDocuments("Token", [icon.id]);
+
+    // Power down the equipped cyberdeck and deactivate every active
+    // booster/defender slotted on it. Runs regardless of HOW jack-out was
+    // triggered — manual click on the dialog, GM toggling the status,
+    // forced jack-out from a Crashed effect, etc. Idempotent: if the
+    // dialog already cleaned things up before removing the status, the
+    // updates here find nothing to change and no-op.
+    const deck = actor.items.find(i =>
+        i.type === "netware"
+        && i.system?.netwareType === "cyberdeck"
+        && i.system?.equipped
+    );
+    if (!deck) return;
+
+    const activePrograms = actor.items.filter(i =>
+        i.type === "netware"
+        && i.system?.netwareType === "program"
+        && (i.system?.programSubtype === "booster" || i.system?.programSubtype === "defender")
+        && i.getFlag("cyberpunk", "attachedTo") === deck.id
+        && i.system?.programState === "active"
+    );
+    if (activePrograms.length) {
+        const updates = activePrograms.map(p => ({ _id: p.id, "system.programState": "inactive" }));
+        await actor.updateEmbeddedDocuments("Item", updates);
+    }
+    await deck.update({ "system.equipped": false });
 }
 
 /**
@@ -194,32 +236,37 @@ Hooks.on("deleteActiveEffect", (effect, _options, userId) => {
 });
 
 /**
- * Self-heal pass on every scene load: stamp every existing NET icon with the
- * "degenerate vision" config (enabled=true, range=0, no detection modes). The
- * config has been a moving target across builds; this normalises whatever the
- * scene currently holds. Runs only on the GM client so we don't fire N times.
+ * Auto jack-out when the runner walks out of every AP radius.
+ *
+ * Singleton rule: the user who issued the move is the one who fires the
+ * effect delete. That keeps it from running N times across N clients and,
+ * crucially, lets a PLAYER move their own meat token (and lose connection)
+ * without needing the GM to babysit the gate. The triggering user always
+ * has permission to delete an ActiveEffect on the actor they just moved.
+ * Token despawn / deck cleanup further down still rides the GM via the
+ * cascading deleteActiveEffect → jackOut() chain.
+ *
+ * `update` may carry just `x`, just `y`, or both. We only fire when at
+ * least one of them changed (skipping pure-flag updates etc.).
  */
-Hooks.on("canvasReady", async () => {
-    if (!canvas.scene) return;
-    const updates = [];
-    for (const token of canvas.scene.tokens) {
-        if (token.getFlag("cyberpunk", "isNetIcon") !== true) continue;
-        // Only heal NET icons we have permission to update — players will
-        // migrate their own actor's NET icon when they load the scene; the
-        // GM picks up any orphans.
-        if (!token.canUserModify?.(game.user, "update")) continue;
-        const sightOK  = token.sight?.enabled === true && (token.sight?.range ?? 0) >= 999;
-        const modes    = token.detectionModes ?? [];
-        const hasNetSense = modes.some(m => m.id === "netSense" && m.enabled === true);
-        const onlyNetSense = modes.length === 1 && hasNetSense;
-        if (!sightOK || !onlyNetSense) {
-            updates.push({
-                _id: token.id,
-                "sight.enabled": true,
-                "sight.range": 999,
-                detectionModes: [{ id: "netSense", enabled: true, range: 999 }]
-            });
-        }
-    }
-    if (updates.length) await canvas.scene.updateEmbeddedDocuments("Token", updates);
+Hooks.on("updateToken", async (tokenDoc, update, _options, userId) => {
+    if (update.x === undefined && update.y === undefined) return;
+    if (tokenDoc.getFlag?.("cyberpunk", NET_ICON_FLAG) === true) return;
+    if (userId !== game.user.id) return;
+
+    const actor = tokenDoc.actor;
+    if (!actor?.statuses?.has?.("jacked-in")) return;
+
+    // Doc-based centre means accessPointsCovering reads the post-update x/y
+    // — Foundry has already mutated tokenDoc in place by the time this hook
+    // fires. Equipped deck (with its Range upgrades) widens every AP's
+    // effective radius from this runner's perspective, so we test the same
+    // extended radius they walked in with.
+    const equippedDeck = getEquippedDeck(actor);
+    const covering = accessPointsCovering(tokenDoc, canvas.scene, equippedDeck);
+    if (covering.length) return;
+
+    const effect = actor.effects.find(e => e.statuses?.has?.("jacked-in"));
+    if (effect) await effect.delete();
+    ui.notifications.info(game.i18n.localize("CYBERPUNK.AutoJackedOutNoAccessPoint"));
 });

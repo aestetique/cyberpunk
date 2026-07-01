@@ -1,0 +1,55 @@
+{{!--
+    Fumble Section partial — section bar + 1d10 result + hint + Roll Luck button.
+    Embedded at the bottom of any roll's chat card when a natural 1 fires.
+    Also wraps inside `fumble.hbs` for the standalone (macro / console) path.
+
+    Parameters: pass {{fumble}} (the object returned by actor.rollFumbleData()).
+--}}
+<div class="cyberpunk-fumble-section" data-actor-id="{{fumble.actorId}}" data-severity="{{fumble.severity}}" data-effective-luck="{{fumble.effectiveLuck}}">
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Fumble") icon="fumble"}}
+
+    <div class="roll-container roll-container--collapsed">
+        <div class="roll-expandable">
+            <div class="roll-expandable__inner">
+                <div class="formula-bar">
+                    <span class="formula-bar__text">{{cleanFormula fumble.formula}}</span>
+                </div>
+                <div class="roll-details">
+                    <div class="roll-details__row">
+                        <span class="roll-details__label">1d10</span>
+                        <span class="roll-details__value">
+                            <span class="roll-details__value-text">{{fumble.total}}</span>
+                        </span>
+                    </div>
+                    {{#if fumble.dice}}
+                    <div class="roll-details__row roll-details__row--dice">
+                        {{#each fumble.dice as |die|}}
+                        {{#each die.results as |subroll|}}
+                        <div class="dice-badge dice-badge--d10 {{subroll.classes}}">
+                            <span class="dice-badge__value">{{{subroll.result}}}</span>
+                        </div>
+                        {{/each}}
+                        {{/each}}
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+
+        <div class="result-row result-row--failure roll-toggle">
+            <span class="result-row__value">{{fumble.total}}</span>
+        </div>
+    </div>
+
+    <div class="fumble-hint-container">
+        <span class="card-hint card-hint--centered fumble-hint-text">{{fumble.hint}}</span>
+    </div>
+
+    <div class="fumble-luck-container">
+        {{#if fumble.canRollLuck}}
+        <button class="fumble-roll-luck-btn" type="button">{{loc "RollLuck"}}</button>
+        {{else}}
+        <button class="fumble-roll-luck-btn fumble-roll-luck-btn--disabled" type="button" disabled>{{loc "RollLuck"}}</button>
+        {{/if}}
+    </div>
+</div>

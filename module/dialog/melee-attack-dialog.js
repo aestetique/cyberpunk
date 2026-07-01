@@ -1,4 +1,4 @@
-import { localize, getHiddenLocationsForTargets, resolveTargetActor } from "../utils.js";
+import { localize, getHiddenLocationsForTargets, resolveTargetActor, renderTemplateCompat } from "../utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -169,7 +169,7 @@ export class MeleeAttackDialog extends HandlebarsApplicationMixin(ApplicationV2)
         weaponType: this.weapon.getWeaponLineType(),
         effectLabel, effectIcon, conditionId
       };
-      const content = await foundry.applications.handlebars.renderTemplate(
+      const content = await renderTemplateCompat(
         "systems/cyberpunk/templates/chat/melee-execute.hbs",
         templateData
       );

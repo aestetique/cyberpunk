@@ -5,7 +5,7 @@
  * gear-row layout). Action buttons are buy / sell badges instead of the
  * character's equip / use / quantity widgets.
  */
-import { localize, commitPendingEdits } from "../utils.js";
+import { localize, commitPendingEdits, getFilePickerClass, getImagePopoutClass } from "../utils.js";
 import { resolveWeaponDiscriminator } from "../lookups.js";
 import {
   buildWeaponContextString,
@@ -662,13 +662,13 @@ export class CyberpunkShopSheet extends HandlebarsApplicationMixin(ActorSheetV2B
     html.find('.portrait-frame').click(ev => {
       ev.preventDefault();
       if (this._isLocked || !game.user.isGM) {
-        new foundry.applications.apps.ImagePopout({
+        new (getImagePopoutClass())({
           src: this.actor.img,
           window: { title: this.actor.name },
           uuid: this.actor.uuid
         }).render({ force: true });
       } else {
-        new foundry.applications.apps.FilePicker.implementation({
+        new (getFilePickerClass())({
           type: "image",
           current: this.actor.img,
           callback: (path) => this.actor.update({ img: path }),

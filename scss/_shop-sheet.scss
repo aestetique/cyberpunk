@@ -181,5 +181,11 @@
     min-height: 136px;
 
     &:focus { outline: none; box-shadow: none; }
+
+    // Placeholder inherits the shop's italic small-caps typography but
+    // needs the system-standard #444856 to match every other input/
+    // textarea placeholder (the `.item-card ::placeholder` rule doesn't
+    // reach here because .shop-sheet isn't inside .item-card).
+    &::placeholder { color: #444856; }
   }
 }

@@ -2,6 +2,16 @@
 // Character Sheet Layout
 // ============================================
 
+// Lock the character sheet's outer window to its native content width —
+// both min and max — so the resize handle can't drag the invisible Foundry
+// wrapper past (either side of) the content edge. Initial width (930) is
+// set in `position: { width: 930, ... }` in character-sheet.js; the caps
+// here match.
+.application.sheet.cyberpunk.actor.character-sheet {
+  min-width: 930px;
+  max-width: 930px;
+}
+
 // Shared Foundry chrome reset for all three actor sheets (character / drone / shop).
 // Mixin lives in _resets.scss; everything below this block is actor-sheet specific.
 .cyberpunk.character-sheet,
@@ -444,6 +454,13 @@
 // Damaged cyberlimb SDP color
 .armor-sdp.damaged {
   color: #B60F3C;
+}
+
+// Depleted REZ on slotted booster / defender programs — same crimson as
+// damaged armor SP, applied via the `.rez-depleted` modifier on the
+// gear-field's value span when system.rez has dropped to 0.
+.rez-depleted {
+  color: var(--sheet-crimson);
 }
 
 // Head, Torso, BTM blocks (center column - 64px height)
@@ -1377,7 +1394,10 @@ input.skill-value.skill-level-input {
   }
 
   &.gear-fire-weapon,
-  &.gear-fire-ordnance {
+  &.gear-fire-ordnance,
+  &.gear-fire-cyberdeck,
+  &.gear-fire-attacker,
+  &.gear-fire-blackice {
     cursor: pointer;
   }
 }
@@ -1391,7 +1411,10 @@ input.skill-value.skill-level-input {
   gap: 2px;
 
   &.gear-fire-weapon,
-  &.gear-fire-ordnance {
+  &.gear-fire-ordnance,
+  &.gear-fire-cyberdeck,
+  &.gear-fire-attacker,
+  &.gear-fire-blackice {
     cursor: pointer;
   }
 }

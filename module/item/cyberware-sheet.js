@@ -7,7 +7,7 @@ import {
   isSensorBase, isSensorOption,
   SENSOR_TYPES
 } from "../lookups.js";
-import { localize } from "../utils.js";
+import { localize, renderTemplateCompat } from "../utils.js";
 import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
 import {
   prepareEffectTabContext,
@@ -254,7 +254,7 @@ export class CyberpunkCyberwareSheet extends CyberpunkItemSheetV2 {
 
     const { processFormulaRoll } = await import("../dice.js");
     const templateData = processFormulaRoll(roll);
-    const content = await foundry.applications.handlebars.renderTemplate(
+    const content = await renderTemplateCompat(
       "systems/cyberpunk/templates/chat/humanity-roll.hbs",
       templateData
     );

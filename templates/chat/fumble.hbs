@@ -1,59 +1,9 @@
-<div class="cyberpunk-card cyberpunk-card--fumble" data-actor-id="{{actorId}}" data-severity="{{severity}}" data-effective-luck="{{effectiveLuck}}">
-    {{!-- Section Bar: Fumble with Fumble Icon --}}
-    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Fumble") icon="fumble"}}
-
-    {{!-- Roll Results --}}
-    {{#each rolls as |rollData|}}
-    <div class="roll-container roll-container--collapsed">
-        {{!-- Expandable Details (hidden by default) --}}
-        <div class="roll-expandable">
-            <div class="roll-expandable__inner">
-                {{!-- Formula Bar --}}
-                <div class="formula-bar">
-                    <span class="formula-bar__text">{{cleanFormula rollData.roll._formula}}</span>
-                </div>
-
-                {{!-- Roll Details --}}
-                <div class="roll-details">
-                    <div class="roll-details__row">
-                        <span class="roll-details__label">1d10</span>
-                        <span class="roll-details__value">
-                            <span class="roll-details__value-text">{{rollData.roll.total}}</span>
-                        </span>
-                    </div>
-                    {{#if rollData.dice}}
-                    <div class="roll-details__row roll-details__row--dice">
-                        {{#each rollData.dice as |die|}}
-                        {{#each die.results as |subroll|}}
-                        <div class="dice-badge dice-badge--d10 {{subroll.classes}}">
-                            <span class="dice-badge__value">{{{subroll.result}}}</span>
-                        </div>
-                        {{/each}}
-                        {{/each}}
-                    </div>
-                    {{/if}}
-                </div>
-            </div>
-        </div>
-
-        {{!-- Result Row (always visible, clickable to expand) --}}
-        <div class="result-row result-row--failure roll-toggle">
-            <span class="result-row__value">{{rollData.roll.total}}</span>
-        </div>
-    </div>
-    {{/each}}
-
-    {{!-- Fumble Hint (centered) --}}
-    <div class="fumble-hint-container">
-        <span class="card-hint card-hint--centered fumble-hint-text">{{fumbleHint}}</span>
-    </div>
-
-    {{!-- Roll Luck Button / Result Container --}}
-    <div class="fumble-luck-container">
-        {{#if canRollLuck}}
-        <button class="fumble-roll-luck-btn" type="button">{{loc "RollLuck"}}</button>
-        {{else}}
-        <button class="fumble-roll-luck-btn fumble-roll-luck-btn--disabled" type="button" disabled>{{loc "RollLuck"}}</button>
-        {{/if}}
-    </div>
+{{!--
+    Standalone fumble card — used by actor.rollFumble() when there is no
+    triggering chat card to embed into (macros, console). The card chrome
+    wraps the shared fumble-section partial; embedded fumbles use the
+    partial directly inside their parent card.
+--}}
+<div class="cyberpunk-card cyberpunk-card--fumble">
+    {{> (sysPath "chat/partials/fumble-section.hbs") fumble=fumble}}
 </div>

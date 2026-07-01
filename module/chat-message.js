@@ -1,10 +1,13 @@
-import { RollBundle } from "./dice.js";
+import { RollBundle, EXPLODING_D10 } from "./dice.js";
 import { localize, resolveZoneForTarget, rollLocation, findActorKey } from "./utils.js";
 import { getSkillsForCategory } from "./lookups.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
 import { formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
 import { applyDrugToActor } from "./drug-effects.js";
+import { deckHasUpgrade, getEquippedDeck } from "./netrun/upgrades.js";
+import { NetActionRollDialog, commitLuckSpend } from "./dialog/net-action-roll-dialog.js";
+import { activeBoosterValue } from "./dialog/cyberdeck-action-dialog.js";
 
 /**
  * Custom ChatMessage rendering for the Cyberpunk system.
@@ -300,24 +303,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 this._updateTargetInfo(html, "targeted");
             }
 
-            // Subscribe to target/selection changes for reactive updates
-            Hooks.on("cyberpunk.targetChanged", () => {
-                // Check if this chat message is still in the DOM
-                if (!document.body.contains(html)) return;
-                const activeTab = html.querySelector(".target-selector__tab--active");
-                if (activeTab?.dataset.mode === "targeted") {
-                    this._updateTargetInfo(html, "targeted");
-                }
-            });
-
-            Hooks.on("cyberpunk.selectionChanged", () => {
-                // Check if this chat message is still in the DOM
-                if (!document.body.contains(html)) return;
-                const activeTab = html.querySelector(".target-selector__tab--active");
-                if (activeTab?.dataset.mode === "selected") {
-                    this._updateTargetInfo(html, "selected");
-                }
-            });
+            // Reactive updates on target / selection change land via a
+            // singleton hook registered at module init (see bottom of
+            // file). Registering hooks per render (as we used to) leaked
+            // one closure per chat message per session — a real memory
+            // grower on long sessions.
         }
 
         // Defence buttons (Parry / Dodge / Escape) — enabled on every client
@@ -326,9 +316,24 @@ export class CyberpunkChatMessage extends ChatMessage {
         // defender rolls for THEIR character, not for whatever the GM has
         // targeted. The click handler issues a no-actor warning if neither
         // side resolves.
-        html.querySelectorAll(".defence-btn").forEach(btn => {
+        html.querySelectorAll(".defence-btn:not(.net-response-btn)").forEach(btn => {
             btn.disabled = false;
             btn.addEventListener("click", (event) => this._onDefenceClick(event, html));
+        });
+
+        // NET response buttons (Detect, Apply, ...) — same chrome as defence
+        // buttons but route to NET-specific handlers in _onNetResponseClick.
+        // Anything marked .gm-only is hidden for non-GM viewers; the
+        // remaining enabled buttons get a click listener.
+        const isGM = game.user.isGM;
+        html.querySelectorAll(".gm-only").forEach(el => {
+            if (!isGM) el.style.display = "none";
+        });
+        html.querySelectorAll(".net-response-btn").forEach(btn => {
+            const container = btn.closest(".net-response-buttons");
+            if (container?.classList.contains("gm-only") && !isGM) return;
+            btn.disabled = false;
+            btn.addEventListener("click", (event) => this._onNetResponseClick(event, html));
         });
 
         // Damage grid cell clicks for expandable details
@@ -339,16 +344,19 @@ export class CyberpunkChatMessage extends ChatMessage {
             });
         }
 
-        // Fumble Roll Luck button
-        const fumbleCard = html.querySelector(".cyberpunk-card--fumble");
-        if (fumbleCard) {
-            const rollLuckBtn = fumbleCard.querySelector(".fumble-roll-luck-btn:not(.fumble-roll-luck-btn--disabled)");
+        // Fumble Roll Luck button — same wiring whether the fumble lives
+        // inside a standalone cyberpunk-card--fumble or embedded at the
+        // bottom of a triggering chat card (skill, melee, weapon, net).
+        // The `.cyberpunk-fumble-section` wrapper carries the data
+        // attributes either way.
+        const fumbleSection = html.querySelector(".cyberpunk-fumble-section");
+        if (fumbleSection) {
+            const rollLuckBtn = fumbleSection.querySelector(".fumble-roll-luck-btn:not(.fumble-roll-luck-btn--disabled)");
             if (rollLuckBtn) {
-                // Check if luck was already rolled (persisted in flags)
                 if (this.getFlag("cyberpunk", "fumbleLuckRolled")) {
-                    this._restoreFumbleLuckResult(html, fumbleCard);
+                    this._restoreFumbleLuckResult(html, fumbleSection);
                 } else {
-                    rollLuckBtn.addEventListener("click", (event) => this._onFumbleRollLuck(event, html, fumbleCard));
+                    rollLuckBtn.addEventListener("click", (event) => this._onFumbleRollLuck(event, html, fumbleSection));
                 }
             }
         }
@@ -359,6 +367,16 @@ export class CyberpunkChatMessage extends ChatMessage {
             const helpBtn = medicalCard.querySelector(".medical-help-btn");
             if (helpBtn) {
                 helpBtn.addEventListener("click", (event) => this._onMedicalHelp(event, medicalCard));
+            }
+        }
+
+        // Repair Request card — covers cyberdeck (Electronics) and cyberlimb
+        // (CyberTech) flows via the shared generic button.
+        const repairCard = html.querySelector(".cyberpunk-card--repair-request");
+        if (repairCard) {
+            const repairBtn = repairCard.querySelector(".repair-request-btn");
+            if (repairBtn) {
+                repairBtn.addEventListener("click", (event) => this._onRepairRequest(event, repairCard, repairBtn));
             }
         }
     }
@@ -610,6 +628,280 @@ export class CyberpunkChatMessage extends ChatMessage {
     }
 
     /* -------------------------------------------- */
+    /*  NET Response Buttons (Detect, ...)          */
+    /* -------------------------------------------- */
+
+    /**
+     * Handler for `.net-response-btn` clicks on net-action chat cards.
+     * Currently only "Detect" — rolls 1d10 + Interface for the clicking
+     * user's controlled actor (or assigned character) and posts a
+     * follow-up chat card. The GM compares against the source Cloak total
+     * shown above; we don't auto-resolve.
+     */
+    async _onNetResponseClick(event, html) {
+        event.preventDefault();
+        const btn = event.currentTarget;
+        const container = btn.closest(".net-response-buttons");
+        const responseType = container?.dataset.responseType;
+        if (responseType === "apply")              return this._onNetControlApplyClick(event, container, btn);
+        if (responseType === "backdoor-unlock")    return this._onNetBackdoorUnlockClick(event, container, btn);
+        if (responseType === "black-ice-activate") return this._onBlackIceActivateClick(event, container, btn);
+        if (responseType !== "detect") return;
+
+        let actor = canvas.tokens.controlled[0]?.actor;
+        if (!actor) actor = game.user.character;
+        if (!actor) {
+            ui.notifications.warn(localize("DefenceNoActor"));
+            return;
+        }
+
+        const mods = await NetActionRollDialog.prompt(actor, { title: localize("Detect") });
+        if (!mods) return;
+        await commitLuckSpend(actor, mods.luckToSpend);
+
+        // Detect roll: 1d10x10 + Interface + Σ active Detect boosters on
+        // the responder's equipped deck + Conditions/Luck. Boosters are
+        // 0 when the responder isn't jacked in (no equipped deck to slot
+        // boosters onto) — same null-safe path activeBoosterValue handles.
+        const iface = actor.resolveSkillTotal("Interface");
+        const equippedDeck = getEquippedDeck(actor);
+        const bonus = activeBoosterValue(actor, equippedDeck, "detect");
+        const formula = [EXPLODING_D10, iface ? String(iface) : null, bonus ? String(bonus) : null, mods.extraMod ? String(mods.extraMod) : null].filter(Boolean).join(" + ");
+        const roll  = await new Roll(formula).evaluate();
+        const detectTotal = Number(roll.total) || 0;
+        const difficulty  = Number(container?.dataset.sourceTotal) || 0;
+        // Natural 1 always fails an opposed roll and fires the system fumble cascade.
+        const fumbled = roll.dice?.[0]?.results?.[0]?.result === 1;
+        const ipGained = fumbled ? 0 : await actor.grantCombatIP(roll, "Interface");
+        const success = !fumbled && detectTotal >= difficulty;
+        const fumble  = fumbled ? await actor.rollFumbleData() : null;
+        const speaker = ChatMessage.getSpeaker({ actor });
+        await new RollBundle(localize("Detect"))
+            .addRoll(roll)
+            .execute(speaker, "systems/cyberpunk/templates/chat/net-action.hbs", {
+                title: localize("Detect"),
+                actionIcon: "net-action",
+                hasDetectedAPs: false,
+                hasResponse: false,
+                hasDifficulty: true,
+                difficulty,
+                success,
+                ipGained,
+                fumble
+            });
+    }
+
+    /**
+     * Apply button on a Control success card — GM-only. Locks in the
+     * three privileged writes the player can't do themselves:
+     *  - raise the Control Point's DV to the rolled total
+     *  - stamp `system.controllingActorId` so the next attempt by the
+     *    same character skips the roll entirely
+     *  - grant OWNER on the drone to the netrunner's owning player(s)
+     *
+     * Then stamps `flags.cyberpunk.controlPendingDrone` on the netrunner;
+     * the owning player's `updateActor` listener in control-bridge.js
+     * picks it up and swaps their view to the drone for one action.
+     *
+     * Ownership stays granted after the engagement — re-control by the
+     * same character is silent (handled in the dialog's skip-roll path).
+     * Disables the button after one successful run so repeat clicks
+     * don't re-grant.
+     */
+    async _onNetControlApplyClick(event, container, btn) {
+        event.preventDefault?.();
+        if (!game.user.isGM) return;
+
+        const controlPointUuid = container?.dataset.controlPointUuid;
+        const droneTokenUuid   = container?.dataset.droneTokenUuid;
+        const netrunnerActorId = container?.dataset.netrunnerActorId;
+        const rollTotal        = Number(container?.dataset.rollTotal) || 0;
+        if (!controlPointUuid || !droneTokenUuid || !netrunnerActorId) return;
+
+        const netrunner = game.actors.get(netrunnerActorId);
+        if (!netrunner) {
+            ui.notifications.warn(localize("ControlUseNoNetrunner"));
+            return;
+        }
+
+        // Resolve Control Point (Token/Actor/synthetic).
+        const cpDoc = await fromUuid(controlPointUuid);
+        const controlPoint = cpDoc?.actor
+            ?? (cpDoc?.documentName === "Actor" ? cpDoc : null);
+        if (!controlPoint) return;
+
+        // Resolve drone (same Token-or-Actor-or-synthetic split). Silent
+        // bail on resolution failure — the dialog already validated the
+        // link existed before posting this card, so a miss here is either
+        // a stale UUID or a transient state, not user-actionable.
+        const droneDoc = await fromUuid(droneTokenUuid);
+        const droneActor = droneDoc?.actor
+            ?? (droneDoc?.documentName === "Actor" ? droneDoc : null);
+        if (!droneActor) return;
+
+        // Build the merged ownership map — every non-GM owner of the
+        // netrunner gets OWNER on the drone, so any player driving this
+        // character can pilot the drone.
+        const newOwnership = { ...(droneActor.ownership ?? {}) };
+        for (const u of game.users) {
+            if (u.isGM) continue;
+            if (netrunner.testUserPermission?.(u, "OWNER")) {
+                newOwnership[u.id] = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+            }
+        }
+
+        try {
+            await controlPoint.update({
+                "system.dv": rollTotal,
+                "system.controllingActorId": netrunnerActorId
+            });
+            await droneActor.update({ ownership: newOwnership });
+            await netrunner.setFlag("cyberpunk", "controlPendingDrone", droneTokenUuid);
+        } catch (err) {
+            console.error("Cyberpunk | Apply failed:", err);
+            ui.notifications.error(localize("ControlApplyFailed"));
+            return;
+        }
+
+        // One-shot: disable the button so we don't re-grant on repeat clicks.
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add("net-response-btn--used");
+        }
+    }
+
+    /**
+     * Unlock button on a Backdoor success card — GM-only. Flips a single
+     * wall's door state from LOCKED to CLOSED. After this, the door is
+     * a normal unlocked door and any player can click it open via
+     * Foundry's native door interaction (Wall `#canUpdate` permits
+     * non-locked dsOnly writes from PLAYER role).
+     */
+    async _onNetBackdoorUnlockClick(event, container, btn) {
+        event.preventDefault?.();
+        if (!game.user.isGM) return;
+
+        const doorUuid = container?.dataset.doorUuid;
+        if (!doorUuid) return;
+        const wall = await fromUuid(doorUuid);
+        if (!wall || wall.documentName !== "Wall") {
+            ui.notifications.warn(localize("BackdoorWallMissing"));
+            return;
+        }
+        try {
+            await wall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
+        } catch (err) {
+            console.error("Cyberpunk | Backdoor unlock failed:", err);
+            ui.notifications.error(localize("BackdoorUnlockFailed"));
+            return;
+        }
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add("net-response-btn--used");
+        }
+    }
+
+    /**
+     * Activate button on a Black ICE Deployment card — GM-only. Spawns
+     * a token of the linked Black ICE actor next to the netrunner's NET
+     * icon. The netrunner's `_onBlackIceProgramActivate` already flipped
+     * the program to `active` and spent the NET action, so this handler
+     * only does the privileged scene write (token create).
+     *
+     * Token placement: one grid cell to the right of the netrunner's
+     * NET icon — same offset jack-in uses for the NET icon itself.
+     * Carries `flags.cyberpunk.deployedFromProgram` with the program's
+     * UUID so the lifecycle hook can find this program when the actor
+     * later goes Dead / the token is despawned.
+     */
+    async _onBlackIceActivateClick(event, container, btn) {
+        event.preventDefault?.();
+        if (!game.user.isGM) return;
+
+        const actorUuid    = container?.dataset.actorUuid;
+        const programUuid  = container?.dataset.programUuid;
+        const netrunnerId  = container?.dataset.netrunnerId;
+        if (!actorUuid || !programUuid || !netrunnerId) return;
+
+        // Rollback helper — if any gate below fails after the netrunner
+        // already flipped the item to "active", reset it so they can
+        // retry once the GM clears the blocker (e.g. jacks them in).
+        const rollbackProgramState = async () => {
+            const program = await fromUuid(programUuid);
+            if (program) await program.update({ "system.programState": "inactive" });
+        };
+
+        const blackIce = await fromUuid(actorUuid);
+        if (!blackIce || blackIce.type !== "netware" || blackIce.system?.subtype !== "blackIce") {
+            ui.notifications.warn(localize("BlackIceProgramActorMissing"));
+            await rollbackProgramState();
+            return;
+        }
+        if (!canvas?.scene) return;
+
+        // Find the netrunner's NET icon (not the meat token) on the
+        // active scene. Spawning happens relative to it; if absent the
+        // GM either forgot to jack the netrunner in, or the scene
+        // changed — surface a warning instead of guessing.
+        const netToken = canvas.scene.tokens.find(t =>
+            t.actorId === netrunnerId
+            && t.getFlag?.("cyberpunk", "isNetIcon") === true
+        );
+        if (!netToken) {
+            ui.notifications.warn(localize("BlackIceDeployNoNetToken"));
+            await rollbackProgramState();
+            return;
+        }
+
+        const gridSize = canvas.scene.grid.size || 100;
+        // Force `actorLink: false` on the spawned token so its actor is a
+        // synthetic instance — each deployment is an independent copy of
+        // the world actor's template. Damage / status changes on the
+        // deployed token affect ONLY this instance; the world actor stays
+        // pristine as the template. Also stamp `deployedFromProgram` so
+        // the lifecycle hooks can locate the owning program item.
+        const tokenDoc = await blackIce.getTokenDocument({
+            x: netToken.x + gridSize,
+            y: netToken.y
+        });
+        const data = tokenDoc.toObject();
+        delete data._id;
+        data.actorLink = false;
+        data.flags = data.flags ?? {};
+        data.flags.cyberpunk = {
+            ...(data.flags.cyberpunk ?? {}),
+            deployedFromProgram: programUuid
+        };
+
+        let created;
+        try {
+            [created] = await canvas.scene.createEmbeddedDocuments("Token", [data]);
+        } catch (err) {
+            console.error("Cyberpunk | Black ICE deploy failed:", err);
+            await rollbackProgramState();
+            return;
+        }
+        if (!created) {
+            await rollbackProgramState();
+            return;
+        }
+
+        // Bind the item to the spawned token instance — the lifecycle
+        // hooks read `deployedTokenUuid` to know which item to refresh /
+        // derezz / destroy when the deployed actor's state changes.
+        const program = await fromUuid(programUuid);
+        if (program) {
+            await program.update({ "system.deployedTokenUuid": created.uuid });
+        }
+
+        ui.notifications.info(localize("BlackIceDeployed", { name: blackIce.name }));
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add("net-response-btn--used");
+        }
+    }
+
+    /* -------------------------------------------- */
     /*  Medical Help                                 */
     /* -------------------------------------------- */
 
@@ -650,6 +942,82 @@ export class CyberpunkChatMessage extends ChatMessage {
         }
 
         new MedicalHelpDialog(actor, woundedActorId).render(true);
+    }
+
+    /**
+     * Generic Repair button — handles any item posted via the shared
+     * Repair Request card. The card carries `data-target-uuid` (the
+     * thing being repaired) and `data-skill-name` (the skill that
+     * resolves the check). The clicking user's controlled / assigned
+     * actor rolls that skill vs DV 15; on success the item is restored
+     * to working order via the type-specific branch below.
+     *
+     * Repairable types (extend here as needed):
+     *   - netware cyberdeck → `system.programState = "inactive"`
+     *   - cyberware cyberlimb → `system.structure.current = maxSdp`
+     *
+     * Permission: the actor doing the restore needs OWNER on the target
+     * item's owning actor (or be GM). Multi-user with non-owner repairers
+     * surfaces a permission notice; socket delegation is deferred until
+     * play actually demands it.
+     */
+    async _onRepairRequest(event, card, btn) {
+        event.preventDefault?.();
+        const targetUuid = card.dataset.targetUuid;
+        const skillName  = card.dataset.skillName;
+        if (!targetUuid || !skillName) return;
+
+        let actor = canvas.tokens.controlled[0]?.actor;
+        if (!actor) actor = game.user.character;
+        if (!actor) {
+            ui.notifications.warn(localize("HelpNoActor"));
+            return;
+        }
+
+        const target = await fromUuid(targetUuid);
+        if (!target || target.documentName !== "Item") {
+            ui.notifications.warn(localize("RepairTargetMissing"));
+            return;
+        }
+
+        const skill = actor.itemTypes.skill.find(s => s.name === skillName);
+        if (!skill) {
+            ui.notifications.warn(localize("RepairNoSkill", { name: skillName }));
+            return;
+        }
+
+        // Modifier dialog first (Conditions + Luck). Cancel → no roll,
+        // no Luck spent, repair card stays clickable for a retry.
+        const mods = await NetActionRollDialog.prompt(actor, { title: localize("Repair") });
+        if (!mods) return;
+        await commitLuckSpend(actor, mods.luckToSpend);
+
+        // DV 15 (Difficult tier). extraMod carries Conditions + Luck into
+        // the standard skill-check formula; crit / fumble already wired.
+        const outcome = await actor.rollSkillCheck(skill.id, 15, mods.extraMod);
+        if (!outcome?.success) return; // Failure / fumble — chat card already explains.
+
+        // Success — restore by type. Permission may fail for non-owner
+        // non-GM repairers (multi-user without socket delegation).
+        try {
+            if (target.type === "netware" && target.system?.netwareType === "cyberdeck") {
+                await target.update({ "system.programState": "inactive" });
+            } else if (target.type === "cyberware") {
+                const maxSdp = Number(target.system?.structure?.maxSdp) || 0;
+                await target.update({ "system.structure.current": maxSdp });
+            } else {
+                console.warn("Cyberpunk | Repair Request: unknown target type:", target.type);
+                ui.notifications.warn(localize("RepairTargetUnknown"));
+                return;
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add("net-response-btn--used");
+            }
+        } catch (err) {
+            console.warn("Cyberpunk | Repair update failed:", err);
+            ui.notifications.warn(localize("RepairPermissionDenied"));
+        }
     }
 
     /* -------------------------------------------- */
@@ -839,6 +1207,163 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @returns {Object} Expanded damage data with per-location entries, or original if not AoE
      * @private
      */
+    /**
+     * Apply NET defender programs on the target side before the existing
+     * damage pipeline expands AoE / computes preview / applies wounds.
+     * Mutates a copy of `damageData` (never the original).
+     *
+     *   - Shield: nullifies a non-Black-ICE hit and self-derezzes. If a
+     *     Shield is consumed, all aoe entries' damage are zeroed.
+     *   - Armor:  subtracts `defenderValue` (summed across active Armor
+     *     programs) from each aoe entry's damage, floor 0. Applies to
+     *     every NET attack including Black ICE.
+     *
+     * @param {Actor}  actor          Target receiving the hit.
+     * @param {object} damageData     Raw damage data (with possible `aoe` key).
+     * @param {string} attackerSource "netrunner" or "blackIce".
+     * @returns {Promise<object>}     New damageData with defender mods applied.
+     * @private
+     */
+    async _applyNetDefenders(actor, damageData, attackerSource) {
+        if (!damageData?.aoe) return damageData;
+        const { totalActiveArmorValue, consumeOneShield } = await import("./netrun/defenders.js");
+
+        let next = damageData;
+
+        // Shield: only against non-Black-ICE hits.
+        if (attackerSource !== "blackIce") {
+            const shieldConsumed = await consumeOneShield(actor);
+            if (shieldConsumed) {
+                next = { ...next, aoe: next.aoe.map(h => ({ ...h, damage: 0 })) };
+                ui.notifications.info(localize("DefenderShieldAbsorbed", { name: actor.name }));
+                return next; // Shield zeros everything — Armor has nothing to chew on.
+            }
+        }
+
+        // Armor: flat reduction across every NET attack.
+        const armorValue = totalActiveArmorValue(actor);
+        if (armorValue > 0) {
+            const before = next.aoe.reduce((s, h) => s + (Number(h.damage) || 0), 0);
+            next = {
+                ...next,
+                aoe: next.aoe.map(h => ({
+                    ...h,
+                    damage: Math.max(0, (Number(h.damage) || 0) - armorValue)
+                }))
+            };
+            const after = next.aoe.reduce((s, h) => s + (Number(h.damage) || 0), 0);
+            const blocked = before - after;
+            if (blocked > 0) {
+                ui.notifications.info(localize("DefenderArmorReduced", { name: actor.name, blocked }));
+            }
+        }
+        return next;
+    }
+
+    /**
+     * Apply damage to a Black ICE token. Black ICE is a netware-type
+     * Actor (not an item), so damage goes straight to its `system.rez`
+     * and at 0 the token is marked dead. The actor itself stays around
+     * — the GM may revive it for narrative reasons; we don't delete.
+     *
+     * No anti-program random-pick, no Shield/Armor defenders, no AoE
+     * spread, no Backup rescue. Black ICE is a single REZ pool that
+     * just absorbs incoming damage from whatever NET attack landed.
+     */
+    async _applyBlackIceDamage(actor, damage, weaponEffect = null) {
+        const current = Number(actor.system?.rez) || 0;
+        // Already Dead → no further damage matters. Already Disabled
+        // (REZ already 0): the Destroyed effect can still upgrade the
+        // kill from Disabled → Dead, so don't early-return purely on REZ.
+        if (actor.statuses?.has?.("dead")) return;
+        const next = Math.max(0, current - damage);
+        if (next !== current) {
+            await actor.update({ "system.rez": next });
+        }
+        if (next > 0) return; // still alive, no condition swap
+
+        // REZ at 0 — apply the kill condition. Destroyed effect → Dead
+        // (permanent), anything else → Disabled (recoverable by raising
+        // REZ above 0). If Disabled is already on (REZ was already 0 and
+        // a non-Destroyed hit came in), no-op; if a Destroyed hit
+        // arrives on an already-Disabled actor, upgrade to Dead and
+        // clear the Disabled badge so we don't show both.
+        const isDestroyed = weaponEffect === "destroyed";
+        const alreadyDisabled = actor.statuses?.has?.("disabled");
+        if (isDestroyed) {
+            if (alreadyDisabled) await actor.toggleStatusEffect("disabled", { active: false });
+            await actor.toggleStatusEffect("dead", { active: true });
+            ui.notifications.info(localize("BlackIceDestroyed", { name: actor.name }));
+        } else if (!alreadyDisabled) {
+            await actor.toggleStatusEffect("disabled", { active: true });
+        }
+    }
+
+    /**
+     * Apply Anti-Program REZ damage to a single random active booster /
+     * defender on the runner. When REZ hits 0 the program's end-state
+     * depends on the attacker's effect:
+     *   - "destroyed" → programState = "destroyed" (permanent kill)
+     *   - everything else → programState = "derezzed" (recoverable)
+     *
+     * Surfaces a notification either way (or "in vain" if no active
+     * programs exist). Shield + Armor are intentionally bypassed — the
+     * attack never reaches the runner's body.
+     */
+    async _applyAntiProgramDerezz(actor, damage, weaponEffect = null) {
+        const candidates = actor.items.filter(i =>
+            i.type === "netware"
+            && i.system?.netwareType === "program"
+            && (i.system?.programSubtype === "booster" || i.system?.programSubtype === "defender")
+            && i.system?.programState === "active"
+        );
+        if (!candidates.length) {
+            ui.notifications.info(localize("AntiProgramNoTarget", { name: actor.name }));
+            return;
+        }
+        const program = candidates[Math.floor(Math.random() * candidates.length)];
+        const programName = program.name;            // grab before any delete
+        const currentRez = Number(program.system?.rez) || 0;
+        const newRez = Math.max(0, currentRez - damage);
+
+        // REZ to 0 + "destroyed" effect: program would be wiped. If the
+        // parent cyberdeck has a Backup upgrade, the program survives —
+        // detached and dropped into Unslotted (still recoverable). The
+        // detach mirrors the same flag-unset the item-transfer module uses
+        // when severing parent/child links.
+        if (newRez === 0 && weaponEffect === "destroyed") {
+            const parentDeckId = program.getFlag?.("cyberpunk", "attachedTo");
+            const parentDeck = parentDeckId ? actor.items.get(parentDeckId) : null;
+            if (parentDeck && deckHasUpgrade(parentDeck, "backup")) {
+                await program.update({
+                    "system.programState": "inactive",
+                    "system.rez": 1,                                 // restore minimal REZ so it's usable post-rescue
+                    "flags.cyberpunk.-=attachedTo": null
+                });
+                ui.notifications.info(localize("UpgradeBackupSaved", { name: programName }));
+                return;
+            }
+            await program.delete();
+            ui.notifications.info(localize("AntiProgramDestroyed", { name: programName }));
+            return;
+        }
+
+        // REZ to 0 (no destroyed effect): mark Derezzed — recoverable state.
+        // Otherwise: just decrement REZ.
+        const update = { "system.rez": newRez };
+        const derezzed = newRez === 0;
+        if (derezzed) update["system.programState"] = "derezzed";
+        await program.update(update);
+
+        if (derezzed) {
+            ui.notifications.info(localize("AntiProgramDerezzed", { name: programName }));
+        } else {
+            ui.notifications.info(localize("AntiProgramReducedRez", {
+                name: programName, amount: damage, rez: newRez
+            }));
+        }
+    }
+
     _expandAoeDamage(damageData) {
         if (!damageData["aoe"]) return damageData;
 
@@ -854,7 +1379,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 expanded[loc].push({
                     damage: perLoc + (i < remainder ? 1 : 0),
                     formula: hit.formula,
-                    dice: hit.dice
+                    dice: hit.dice,
+                    // Propagate damage-shaping flags through the AoE spread
+                    // so NET attacks keep their `ignoreArmor` + bypass mods.
+                    ignoreArmor: hit.ignoreArmor || false,
+                    bypassesLocationMods: hit.bypassesLocationMods || false
                 });
             });
         }
@@ -986,11 +1515,18 @@ export class CyberpunkChatMessage extends ChatMessage {
                     modifiedDamage = Math.floor(modifiedDamage / 2);
                 }
 
+                // NET attacks skip all per-location modifiers (head doubling,
+                // BTM, min-1 floor) — the damage was already finalised at the
+                // AoE level (single value spread across locations only because
+                // the existing pipeline is per-location). Body-attack rules
+                // don't apply to a cyber-spike to the brain.
+                const bypassesLocationMods = hit.bypassesLocationMods || false;
+
                 // HEAD DOUBLING: Double damage to head (Cyberpunk rule)
                 // Applied after armor reduction but before BTM
                 const isHeadHit = location === 'Head';
                 const damageBeforeHeadDouble = modifiedDamage;
-                if (isHeadHit && modifiedDamage > 0) {
+                if (!bypassesLocationMods && isHeadHit && modifiedDamage > 0) {
                     modifiedDamage *= 2;
                 }
 
@@ -1001,6 +1537,9 @@ export class CyberpunkChatMessage extends ChatMessage {
                 if (modifiedDamage > 0) {
                     if (hasCyberlimb) {
                         // Cyberlimb: no BTM, damage goes to structure
+                        finalDamage = modifiedDamage;
+                    } else if (bypassesLocationMods) {
+                        // NET damage: no BTM, no min-1 floor — pass through.
                         finalDamage = modifiedDamage;
                     } else {
                         // Normal: apply BTM, damage goes to wounds
@@ -1203,8 +1742,10 @@ export class CyberpunkChatMessage extends ChatMessage {
             return;
         }
 
-        // Expand AoE damage into per-location entries
-        damageData = this._expandAoeDamage(damageData);
+        // Keep the raw shape — NET defender logic (per target, below) needs
+        // the pre-expansion aoe entries to apply Shield/Armor cleanly, then
+        // re-expands per target into the existing pipeline.
+        const rawDamageData = damageData;
 
         // Get loaded ammo type and melee damage type
         const ammoType = targetSelector.dataset.ammoType || "standard";
@@ -1216,6 +1757,12 @@ export class CyberpunkChatMessage extends ChatMessage {
         // Exotic weapons with RoF > 1 make the target save multiple times on a
         // single hit — keep rolling until they fail, then the condition lands.
         const effectSaveCount = Math.max(1, Number(targetSelector.dataset.effectSaveCount) || 1);
+
+        // NET attacker source (set by Zap / Attacker programs only) — drives
+        // the per-target Shield + Armor application below. `null` (regular
+        // weapons / melee) short-circuits the defender path entirely.
+        const netAttackerSource = targetSelector.dataset.netAttackerSource || null;
+        const attackerClass     = targetSelector.dataset.attackerClass     || null;
 
         // Get active tab mode
         const activeTab = html.querySelector(".target-selector__tab--active");
@@ -1244,11 +1791,50 @@ export class CyberpunkChatMessage extends ChatMessage {
             const actor = token.actor;
             if (!actor) continue;
 
+            // Black ICE targets: damage applies straight to system.rez.
+            // No body locations, no Shield/Armor netdefenders, no AoE
+            // spread — Black ICE is a single "thing" with REZ as HP.
+            // At REZ 0 the actor is Disabled (recoverable by raising REZ);
+            // the Destroyed effect turns the kill into Dead (permanent,
+            // even if REZ later climbs back up). Other effects are no-ops
+            // on Black ICE — it has no body conditions.
+            if (actor.type === "netware" && actor.system?.subtype === "blackIce") {
+                const rawDmg = Number(rawDamageData?.aoe?.[0]?.damage) || 0;
+                await this._applyBlackIceDamage(actor, rawDmg, weaponEffect);
+                continue;
+            }
+
+            // Anti-Program attackers reroute damage from the netrunner to
+            // a random active booster/defender on them. Shield/Armor are
+            // bypassed entirely (the attack never reaches the runner's
+            // body), the effect still applies normally, and the standard
+            // damage pipeline is skipped.
+            if (attackerClass === "antiProgram" && actor.type !== "drone") {
+                const rawDmg = Number(rawDamageData?.aoe?.[0]?.damage) || 0;
+                await this._applyAntiProgramDerezz(actor, rawDmg, weaponEffect);
+                // "destroyed" is consumed inside the derezz helper above —
+                // it modifies the program's end-state and shouldn't also
+                // route through the generic effect-application switch.
+                if (weaponEffect && weaponEffect !== "destroyed") {
+                    await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
+                }
+                continue;
+            }
+
+            // Per-target damageData copy. NET attacks may mutate via Shield
+            // (nullify) or Armor (subtract) before expansion — drones skip
+            // the defender path entirely.
+            let perTargetData = rawDamageData;
+            if (netAttackerSource && actor.type !== "drone") {
+                perTargetData = await this._applyNetDefenders(actor, perTargetData, netAttackerSource);
+            }
+            perTargetData = this._expandAoeDamage(perTargetData);
+
             // Drone targets: structure-only damage. Exotic effect still applies on hit
             // (drone-specific branches handle stun/microwave; conditions like burning,
             // blinded, immobilized apply directly via toggleStatusEffect).
             if (actor.type === "drone") {
-                await this._applyDroneDamage(actor, damageData, ammoType);
+                await this._applyDroneDamage(actor, perTargetData, ammoType);
                 if (weaponEffect) {
                     await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
                 }
@@ -1256,7 +1842,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             }
 
             // Calculate total damage for this actor (includes per-location breakdown)
-            const preview = this._calculateDamagePreview(actor, damageData, ammoType, damageType);
+            const preview = this._calculateDamagePreview(actor, perTargetData, ammoType, damageType);
             const woundDamage = preview.total;        // Damage to wounds (not cyberlimb)
             const cyberlimbDamage = preview.cyberlimbTotal || 0;  // Damage to cyberlimb structure
 
@@ -1328,7 +1914,7 @@ export class CyberpunkChatMessage extends ChatMessage {
 
             // Ablate armor on penetration
             // For each location that took damage, find equipped armor and increase ablation
-            for (const [location, hits] of Object.entries(damageData)) {
+            for (const [location, hits] of Object.entries(perTargetData)) {
                 if (!Array.isArray(hits)) continue;
                 const hitLocations = actor.system?.hitLocations || {};
                 const locData = hitLocations[location] || {};
@@ -1681,11 +2267,49 @@ export class CyberpunkChatMessage extends ChatMessage {
                 // measured template is dropped.
                 break;
 
-            case "burning":
-                // Apply Burning condition directly (no save)
+            case "burning": {
+                // Insulated upgrade on the jacked-in deck blocks Burning
+                // entirely — the deck shields the runner's wetware from
+                // the energy spike. Only fires while jacked in (the
+                // upgrade is dormant when the deck is unequipped).
+                const insulatedDeck = getEquippedDeck(actor);
+                if (insulatedDeck && deckHasUpgrade(insulatedDeck, "insulated")) {
+                    ui.notifications.info(localize("UpgradeInsulatedBlocked", { name: actor.name }));
+                    break;
+                }
                 await actor.toggleStatusEffect("burning", { active: true });
                 await this._setConditionDuration(actor, "burning", 3);
                 break;
+            }
+
+            // NET attacker programs — effects auto-apply on hit (no save).
+            // Mechanics for each condition (stat penalties, NET-action loss,
+            // etc.) live in the condition's own status effect definition;
+            // we just toggle the flag on the target.
+            case "gridlocked":
+            case "scrambled":
+            case "desynced":
+            case "lagging":
+            case "tagged":
+                await actor.toggleStatusEffect(effect, { active: true });
+                break;
+
+            // "Crashed" forces the target out of the NET — drop their
+            // jacked-in status. The existing jack-in.js hook chain handles
+            // the rest (despawn NET icon, deactivate slotted programs).
+            //
+            // Anti-Crash upgrade on the jacked-in deck absorbs the kick —
+            // the runner stays online. Mirrors Insulated's gating.
+            case "crashed": {
+                if (!actor.statuses?.has?.("jacked-in")) break;
+                const antiCrashDeck = getEquippedDeck(actor);
+                if (antiCrashDeck && deckHasUpgrade(antiCrashDeck, "antiCrash")) {
+                    ui.notifications.info(localize("UpgradeAntiCrashBlocked", { name: actor.name }));
+                    break;
+                }
+                await actor.toggleStatusEffect("jacked-in", { active: false });
+                break;
+            }
 
             case "acid":
                 // Apply Acid condition with hit location
@@ -1895,14 +2519,46 @@ export class CyberpunkChatMessage extends ChatMessage {
                 break;
             }
 
-            case 2:
+            case 2: {
+                // Neuralware. Two independent effects fire on the same roll
+                // when the runner is wired up:
+                //   1. Standard Shorted condition + flavour message (existing).
+                //   2. If the runner owns ANY cyberdeck (regardless of which
+                //      is equipped), one random deck goes Inoperable. The
+                //      headjack is part of Neuralware, so the deck's
+                //      brain-side socket gets fried along with it.
                 if (neuralware.length > 0) {
                     await actor.toggleStatusEffect("shorted", { active: true });
                     effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNeuralware");
                 } else {
                     effectMessage = game.i18n.localize("CYBERPUNK.MicrowaveNoNeuralware");
                 }
+                const allDecks = actor.items.filter(i =>
+                    i.type === "netware"
+                    && i.system?.netwareType === "cyberdeck"
+                    && i.system?.programState !== "inoperable"
+                );
+                // EMP Shielding upgrade on a deck → the deck rides out the
+                // microwave pulse and is never a candidate for Inoperable.
+                // If every functional deck is shielded the case quietly
+                // no-ops (no toast, no chat noise — the shielded survivors
+                // already kept the runner online).
+                const decks = allDecks.filter(d => !deckHasUpgrade(d, "empShielding"));
+                if (decks.length) {
+                    const deck = decks[Math.floor(Math.random() * decks.length)];
+                    const wasEquipped = !!deck.system?.equipped;
+                    await deck.update({ "system.programState": "inoperable" });
+                    // If the runner is jacked in via this specific deck, the
+                    // hardware failure forces them out. The existing
+                    // deleteActiveEffect hook in jack-in.js handles the rest
+                    // (despawn NET icon, deactivate slotted programs).
+                    if (wasEquipped && actor.statuses.has("jacked-in")) {
+                        await actor.toggleStatusEffect("jacked-in", { active: false });
+                    }
+                    ui.notifications.warn(localize("MicrowaveDeckInoperable", { name: deck.name }));
+                }
                 break;
+            }
 
             case 3: {
                 const audioBases = audio.filter(c => c.system.cyberwareSubtype === "base");
@@ -2194,3 +2850,24 @@ export class CyberpunkChatMessage extends ChatMessage {
         this._updateFumbleCardUI(fumbleCard, resultHtml, success, newHint);
     }
 }
+
+/**
+ * Refresh every currently-rendered `.target-selector` card whose active
+ * tab matches `mode`. Walks the live DOM once per broadcast — bounded
+ * work regardless of chat history length, unlike the previous per-render
+ * Hooks.on subscription that piled up one closure per message per
+ * session.
+ */
+function _refreshTargetSelectors(mode) {
+    document.querySelectorAll(".target-selector").forEach(sel => {
+        const activeTab = sel.querySelector(".target-selector__tab--active");
+        if (activeTab?.dataset.mode !== mode) return;
+        const messageEl = sel.closest("[data-message-id]");
+        const messageId = messageEl?.dataset?.messageId;
+        const msg = messageId ? game.messages?.get?.(messageId) : null;
+        if (msg?._updateTargetInfo) msg._updateTargetInfo(messageEl, mode);
+    });
+}
+
+Hooks.on("cyberpunk.targetChanged",    () => _refreshTargetSelectors("targeted"));
+Hooks.on("cyberpunk.selectionChanged", () => _refreshTargetSelectors("selected"));

@@ -177,6 +177,14 @@ export class MedicalHelpDialog extends HandlebarsApplicationMixin(ApplicationV2)
     else if (this._selectedCondition === "hospital") conditionMod = 5;
     const extraMod = conditionMod + this._luckToSpend;
 
+    // Stabilize Bonus — a property that lives on the WOUNDED actor
+    // (via a stabilising drug / dermal patch / med-tech implant they're
+    // wearing). Reduces the DV of the medical help roll, which covers
+    // both stabilisation attempts and day-to-day wound treatment
+    // through the same skill check.
+    const stabilizeBonus = Number(woundedActor?.system?.stabilizeBonus) || 0;
+    const difficulty = Math.max(0, woundCount - stabilizeBonus);
+
     if (this._luckToSpend > 0) {
       const currentSpent = this.actor.system.stats.luck.spent || 0;
       const currentSpentAt = this.actor.system.stats.luck.spentAt;
@@ -187,7 +195,7 @@ export class MedicalHelpDialog extends HandlebarsApplicationMixin(ApplicationV2)
     }
 
     this.close({ animate: false });
-    this.actor.rollSkillCheck(this._selectedSkill.id, woundCount, extraMod);
+    this.actor.rollSkillCheck(this._selectedSkill.id, difficulty, extraMod);
   }
 
   async close(options) {

@@ -1,6 +1,7 @@
-import { RollBundle, EXPLODING_D10 } from "./dice.js";
-import { localize, resolveZoneForTarget, rollLocation, findActorKey } from "./utils.js";
-import { getSkillsForCategory } from "./lookups.js";
+import { RollBundle, EXPLODING_D10, processFormulaRoll } from "./dice.js";
+import { localize, resolveZoneForTarget, rollLocation, findActorKey, renderTemplateCompat } from "./utils.js";
+import { getSkillsForCategory, weaponEffects } from "./lookups.js";
+import { getCurrentGameTime } from "./dialog/game-time-dialog.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
 import { formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
@@ -13,6 +14,50 @@ import { activeBoosterValue } from "./dialog/cyberdeck-action-dialog.js";
  * Custom ChatMessage rendering for the Cyberpunk system.
  */
 export class CyberpunkChatMessage extends ChatMessage {
+
+    /* -------------------------------------------- */
+    /*  Document lifecycle                          */
+    /* -------------------------------------------- */
+
+    /**
+     * V14 does not await async `preCreateChatMessage` hook callbacks —
+     * `Hooks.call` is synchronous, so any `await` inside a Hook body races
+     * against the pending document being persisted. `_preCreate` on the
+     * subclass IS awaited by the framework, so we do the two things that
+     * need async work here:
+     *   1) Stamp the in-game timestamp into cyberpunk flags.
+     *   2) For basic /roll commands (default OTHER-style rolls that arrive
+     *      with content = the numeric total and no HTML), swap the content
+     *      for our formula-roll card and re-anchor the speaker to the
+     *      currently-selected token.
+     * @inheritDoc
+     */
+    async _preCreate(data, options, user) {
+        const allowed = await super._preCreate(data, options, user);
+        if (allowed === false) return false;
+
+        const source = {};
+
+        // (1) Game timestamp stamp.
+        try {
+            source["flags.cyberpunk.gameTimestamp"] = getCurrentGameTime();
+        } catch (e) { /* settings not ready yet */ }
+
+        // (2) /roll restyling. Skip if no rolls, or content already carries
+        // our card (e.g. weapon / skill rolls that render their own template).
+        const roll = this.rolls?.[0];
+        const contentStr = typeof this.content === "string" ? this.content : "";
+        if (roll && !contentStr.includes("cyberpunk-card")) {
+            const templateData = processFormulaRoll(roll);
+            source.content = await renderTemplateCompat(
+                "systems/cyberpunk/templates/chat/formula-roll.hbs",
+                templateData
+            );
+            source.speaker = ChatMessage.getSpeaker();
+        }
+
+        if (Object.keys(source).length) this.updateSource(source);
+    }
 
     /* -------------------------------------------- */
     /*  Rendering                                   */
@@ -867,6 +912,12 @@ export class CyberpunkChatMessage extends ChatMessage {
         const data = tokenDoc.toObject();
         delete data._id;
         data.actorLink = false;
+        // V14 multi-level scenes: the token document from the world
+        // actor's prototype defaults `level` to the scene default, not
+        // the netrunner's NET level. Force it onto the same level as
+        // the summoning NET token so the Black ICE lands on the NET
+        // side of the map, not the meat side.
+        if (netToken.level) data.level = netToken.level;
         data.flags = data.flags ?? {};
         data.flags.cyberpunk = {
             ...(data.flags.cyberpunk ?? {}),
@@ -2210,6 +2261,21 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @private
      */
     async _applyExoticEffect(actor, effect, hitLocation, saveCount = 1) {
+        // Ignore Gas Effects — property (drug / tool / cyberware / etc.)
+        // that fully suppresses save + condition for the RED gas family:
+        // Confusion, Poisoned, Tearing, Unconscious, Nerve Gas. Any
+        // positive accumulated value on the target immunises them; a
+        // notification lets the table see the immunity fire.
+        const GAS_EFFECTS = new Set(["confusion", "poisoned", "tearing", "unconscious", "deathAt0"]);
+        if (GAS_EFFECTS.has(effect) && Number(actor.system?.ignoreGasEffects) > 0) {
+            const effectKey = weaponEffects[effect];
+            const effectLabel = effectKey ? localize(effectKey) : effect;
+            ui.notifications.info(localize("GasEffectIgnored", {
+                name: actor.name, effect: effectLabel
+            }));
+            return;
+        }
+
         // Roll a save up to saveCount times; stop on the first failure (the
         // condition is applied inside the save function).
         const rollUntilFail = async (rollFn) => {
@@ -2265,6 +2331,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 // No per-target effect. The darkness AmbientLight is spawned
                 // once-per-AoE in CyberpunkItem#_fireAreaWeapon when the
                 // measured template is dropped.
+                break;
+
+            case "light":
+                // No per-target effect. Same as smoke — the illumination
+                // AmbientLight is spawned once-per-AoE in _fireAreaWeapon.
                 break;
 
             case "burning": {

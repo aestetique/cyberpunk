@@ -18,8 +18,10 @@ import { CyberpunkCyberwareSheet } from "./item/cyberware-sheet.js";
 import { CyberpunkChatMessage } from "./chat-message.js";
 import { CyberpunkCombat } from "./combat.js";
 import { processFormulaRoll } from "./dice.js";
-import { CYBERPUNK_CONDITIONS, CONDITION_EFFECTS } from "./conditions.js";
+import { CYBERPUNK_CONDITIONS, CONDITION_EFFECTS, HIDDEN_ON_TOKEN_IDS } from "./conditions.js";
 import { CyberpunkTokenRuler } from "./canvas/token-ruler.js";
+import { registerCyberpunkVisionModes } from "./canvas/vision-modes.js";
+import { CyberpunkTokenDocument, registerCyberpunkTokenRefreshHooks } from "./canvas/cyberpunk-token-document.js";
 import { CreateItemDialog } from "./dialog/create-item-dialog.js";
 import { getCurrentGameTime, formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
 
@@ -111,6 +113,15 @@ Hooks.once('init', async function () {
 
     // Register custom token ruler for color-coded movement
     CONFIG.Token.rulerClass = CyberpunkTokenRuler;
+
+    // TokenDocument subclass — translates actor vision grants
+    // (grantLowLight / grantInfrared / grantThermo) into token sight
+    // config via _prepareDetectionModes.
+    CONFIG.Token.documentClass = CyberpunkTokenDocument;
+    registerCyberpunkTokenRefreshHooks();
+
+    // Register cyberpunk-specific vision modes (Low Light, Infrared, Thermo)
+    registerCyberpunkVisionModes();
 
     // V13-namespaced collection / sheet references (the bare globals are
     // deprecated and removed in v15).
@@ -208,9 +219,61 @@ Hooks.once("setup", function() {
 });
 
 /**
- * Ensure condition ActiveEffects are created with localized names.
- * Foundry v13 uses 'name' for display text in status effects.
+ * Force `showIcon: NEVER` on any ActiveEffect whose status ID is in
+ * HIDDEN_ON_TOKEN_IDS. The primary hiding mechanism is `showIcon` on the
+ * CONFIG.statusEffects entries (set at module load in conditions.js) —
+ * newly-created status effects copy it from the config. This hook is a
+ * defensive net for two cases the config-time approach misses:
+ *   1) Effects created by non-status paths (macros, module APIs) that
+ *      don't route through `ActiveEffect.fromStatusEffect`.
+ *   2) Race where our CONFIG mutation lands after another module's
+ *      setup that copied showIcon defaults.
+ * Foundry V13 lacks the constant; the `?? 0` fallback keeps it a no-op
+ * there (showIcon field simply isn't consumed).
  */
+Hooks.on("preCreateActiveEffect", (effect, data) => {
+    const SHOW_ICON_NEVER = CONST.ACTIVE_EFFECT_SHOW_ICON?.NEVER ?? 0;
+    const statuses = data?.statuses ?? [];
+    if (statuses.some(s => HIDDEN_ON_TOKEN_IDS.has(s)) && data.showIcon !== SHOW_ICON_NEVER) {
+        effect.updateSource({ showIcon: SHOW_ICON_NEVER });
+    }
+});
+
+/**
+ * One-shot migration on ready: existing ActiveEffects created BEFORE
+ * an entry was added to HIDDEN_ON_TOKEN_IDS carry the `showIcon: ALWAYS`
+ * value they were minted with. `showIcon` is stored per-effect, so a
+ * CONFIG.statusEffects mutation doesn't retroact. Sweep every actor
+ * (world + unlinked scene tokens) and force the value forward. GM-only
+ * to avoid write storms from every client.
+ */
+Hooks.once("ready", async () => {
+    if (!game.user.isGM) return;
+    const SHOW_ICON_NEVER = CONST.ACTIVE_EFFECT_SHOW_ICON?.NEVER ?? 0;
+
+    const fixActor = async (actor) => {
+        if (!actor?.effects?.size) return;
+        const updates = [];
+        for (const e of actor.effects) {
+            const statuses = e.statuses ?? new Set();
+            const shouldHide = [...statuses].some(s => HIDDEN_ON_TOKEN_IDS.has(s));
+            if (shouldHide && e.showIcon !== SHOW_ICON_NEVER) {
+                updates.push({ _id: e.id, showIcon: SHOW_ICON_NEVER });
+            }
+        }
+        if (updates.length) {
+            await actor.updateEmbeddedDocuments("ActiveEffect", updates);
+        }
+    };
+
+    for (const actor of game.actors) await fixActor(actor);
+    for (const scene of game.scenes) {
+        for (const token of scene.tokens) {
+            if (!token.actorLink) await fixActor(token.actor);
+        }
+    }
+});
+
 /**
  * Shops are shared trading-post actors. Default ownership is OWNER (3) so any
  * connected player can run buy/sell directly — no GM-relay socket needed,
@@ -450,34 +513,13 @@ Hooks.on("dropCanvasData", (canvas, data) => {
     }
 });
 
-/**
- * Single preCreateChatMessage hook that does two things on every new message:
- *   1) Stamp the in-game timestamp into the message's cyberpunk flags.
- *   2) For basic /roll commands, restyle the content with our formula-roll
- *      template and override speaker to the currently-selected token.
- */
-Hooks.on("preCreateChatMessage", async (message, data, options, userId) => {
-    const source = {};
-
-    // (1) Game timestamp stamp.
-    try {
-        const { getCurrentGameTime } = game.cyberpunk._gameTime;
-        source["flags.cyberpunk.gameTimestamp"] = getCurrentGameTime();
-    } catch (e) { /* settings not ready yet */ }
-
-    // (2) /roll restyling. Skip if no rolls, or content already carries our card.
-    const roll = message.rolls?.[0];
-    if (roll && !message.content?.includes("cyberpunk-card")) {
-        const templateData = processFormulaRoll(roll);
-        source.content = await renderTemplateCompat(
-            "systems/cyberpunk/templates/chat/formula-roll.hbs",
-            templateData
-        );
-        source.speaker = ChatMessage.getSpeaker();
-    }
-
-    if (Object.keys(source).length) message.updateSource(source);
-});
+// The former preCreateChatMessage hook has been moved to
+// `CyberpunkChatMessage._preCreate` — V14's `Hooks.call` doesn't await
+// async listeners, so `await renderTemplateCompat(...)` in a Hook body
+// completes after the document has already been persisted and the
+// content update is lost. `_preCreate` on the document subclass IS
+// awaited by the framework, so the same work happens synchronously
+// from the creation flow's perspective. See chat-message.js.
 
 /**
  * Handle combat turn changes - auto-roll saves for Shocked and Mortally Wounded combatants

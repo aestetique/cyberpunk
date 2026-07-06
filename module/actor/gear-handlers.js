@@ -206,6 +206,19 @@ export function bindWeaponAndOrdnanceHandlers(html, sheet) {
         }
     });
 
+    // Parent-weapon rows are drop targets for ammo — paint the yellow
+    // hover marquee so the user sees what they're about to drop on. The
+    // actual attach lives in `handleAmmoDrop` (called from each sheet's
+    // `_onDropItem`); we don't `preventDefault` on the `drop` event so
+    // Foundry's V2 DragDrop pipeline flows through to `_onDropItem`
+    // unchanged. Attached-ammo rows are excluded — dropping onto an
+    // already-attached ammo row would be a no-op.
+    html.find('.gear-row.weapon-row[data-item-id]:not(.attached-ammo)').each((_, rowEl) => {
+        rowEl.addEventListener('dragover',  ev => { ev.preventDefault(); rowEl.classList.add('drag-over'); });
+        rowEl.addEventListener('dragleave', () => rowEl.classList.remove('drag-over'));
+        rowEl.addEventListener('drop',      () => rowEl.classList.remove('drag-over'));
+    });
+
     // Back-compat: ordnance partials still emit .gear-fire-ordnance; route to same dialog.
     html.find('.gear-fire-ordnance').click(ev => {
         ev.stopPropagation();

@@ -215,11 +215,42 @@ export class RealmSwitcher extends HandlebarsApplicationMixin(ApplicationV2) {
         };
     }
 
-    _jumpToToken(tokenId) {
-        const placeable = canvas?.tokens?.get?.(tokenId);
-        if (!placeable) return;
-        placeable.control({ releaseOthers: true });
-        const c = placeable.center;
+    /**
+     * Jump to a token by ID. Handles V14 multi-level scenes:
+     *   • Same-level target → fast path (control + pan), no view swap.
+     *   • Other-level target → consult the token DOCUMENT (which
+     *     survives on `scene.tokens` regardless of viewed level),
+     *     read its `.level`, swap the view via `scene.view({level,
+     *     controlledTokens})`, then pan to the token once the new
+     *     level's placeables are drawn.
+     */
+    async _jumpToToken(tokenId) {
+        const scene = canvas?.scene;
+        if (!scene) return;
+
+        // Fast path: token is already on the viewed level → placeable
+        // exists in `canvas.tokens`.
+        const placeable = canvas.tokens?.get?.(tokenId);
+        if (placeable) {
+            placeable.control({ releaseOthers: true });
+            const c = placeable.center;
+            if (c) canvas.pan({ x: c.x, y: c.y });
+            return;
+        }
+
+        // Cross-level path: the token lives on a different level. Look
+        // up the DOCUMENT (persistent regardless of viewed level) and
+        // switch to its level, controlling it in the same call so the
+        // control state is applied atomically with the view swap.
+        const doc = scene.tokens?.get?.(tokenId);
+        const level = doc?.level;
+        if (!level) return;
+        await scene.view({ level, controlledTokens: [tokenId] });
+
+        // After the view swap the placeable exists on the new level's
+        // token layer; pan to it now.
+        const arrived = canvas.tokens?.get?.(tokenId);
+        const c = arrived?.center;
         if (c) canvas.pan({ x: c.x, y: c.y });
     }
 

@@ -4,7 +4,7 @@ import { buildWeaponsList, buildOrdnanceList, buildAmmoList, buildDroneSkillsLis
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js";
 import { DRONE_CONDITION_TOGGLE_ROW } from "../conditions.js";
 import { CreateItemDialog } from "../dialog/create-item-dialog.js";
-import { shouldTransfer, transferItem } from "./item-transfer.js";
+import { shouldTransfer, transferItem, handleAmmoDrop, handleOrdnanceDrop } from "./item-transfer.js";
 
 /**
  * Static zone metadata: display name, icon, and which shapes show this zone.
@@ -621,6 +621,17 @@ export class CyberpunkDroneSheet extends HandlebarsApplicationMixin(ActorSheetV2
     if (shouldTransfer(item, this.actor)) {
       event.preventDefault();
       await transferItem(item, this.actor);
+      return;
+    }
+    // Ammo drops → attach to a target Ranged weapon row, stack by
+    // sourceUuid, or create a fresh pack. Same helper the character
+    // sheet uses; keeps ammo semantics identical across actor types.
+    if (await handleAmmoDrop(this.actor, event, item)) {
+      event.preventDefault();
+      return;
+    }
+    if (await handleOrdnanceDrop(this.actor, event, item)) {
+      event.preventDefault();
       return;
     }
     return super._onDropItem(event, item);

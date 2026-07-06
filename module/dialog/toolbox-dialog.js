@@ -53,10 +53,17 @@ export class ToolboxDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const sys = actor.system || {};
     const cool = (sys.stats?.cool?.base || 0) + (sys.stats?.cool?.tempMod || 0);
     const body = (sys.stats?.bt?.base   || 0) + (sys.stats?.bt?.tempMod   || 0);
-    const empBase = sys.stats?.emp?.base || 0;
-    const humanityMax = Math.max(0, empBase * 10);
-    const humanityDamage = Math.max(0, Number(sys.stats?.emp?.humanityDamage) || 0);
-    const humanityCurrent = Math.max(0, humanityMax - humanityDamage);
+    // Humanity post-rework (Grimm's Cybertales):
+    //   humanity.base   = 100 - (10 - EMP) * 5 (the practical maximum,
+    //                     what therapy can restore to)
+    //   humanity.total  = base - damage (current humanity — displayed)
+    //   humanity.damage = high-water mark from stored + cyberware sum
+    // The stored `system.stats.emp.humanityDamage` field is what the
+    // toolbox nudges via `invertedAgainst`; the ratchet against
+    // itemsSum lives in actor.prepareDerivedData.
+    const humanity = sys.stats?.emp?.humanity || {};
+    const humanityMax = Math.max(0, Number(humanity.base) || 0);
+    const humanityCurrent = Math.max(0, Math.min(humanityMax, Number(humanity.total) || 0));
 
     return [
       { key: "wounds",   label: localize("Wounds"),

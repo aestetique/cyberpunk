@@ -376,8 +376,14 @@ export const toolBonusProperties = {
     "stunSaveMod": "PropStunSave",
     "deathSaveMod": "PropDeathSave",
     "poisonSaveMod": "PropPoisonSave",
+    "rangedAttackBonus": "PropRangedAttackBonus",
     "unarmedDamageMultiplier": "PropUnarmedMultiplier",
     "healingRateBoost": "PropHealingRateBoost",
+    "stabilizeBonus": "PropStabilizeBonus",
+    "ignoreGasEffects": "PropIgnoreGasEffects",
+    "grantLowLight": "PropGrantLowLight",
+    "grantInfrared": "PropGrantInfrared",
+    "grantThermo": "PropGrantThermo",
     "stayAwakeBonus": "PropStayAwakeBonus",
     "fallAsleepBonus": "PropFallAsleepBonus",
     "bonusActions": "PropBonusActions",
@@ -708,7 +714,8 @@ export const weaponEffects = {
     blindness: "EffBlindness",
     laser: "EffLaser",
     immobilized: "EffImmobilized",
-    smoke: "EffSmoke"
+    smoke: "EffSmoke",
+    light: "EffLight"
 };
 
 export function getStatNames() {

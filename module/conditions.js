@@ -56,9 +56,11 @@ export const HIDDEN_ON_TOKEN_IDS = new Set([
     "mortally-wounded-6",
     // Stress ladder
     "anxious", "tense", "stressed", "cracked",
-    // Fatigue / sleep deprivation ladder
+    // Fatigue ladder
     "tired", "fatigued", "exhausted", "debilitated", "collapse",
-    // Sleep deprivation side-effect
+    // Sleep deprivation ladder (6 levels) + insomnia side-effect
+    "sleep-dep-1", "sleep-dep-2", "sleep-dep-3",
+    "sleep-dep-4", "sleep-dep-5", "sleep-dep-6",
     "insomnia",
     // Baseline + medical
     "fresh", "stabilized"

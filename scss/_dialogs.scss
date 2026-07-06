@@ -20,6 +20,13 @@
   border-radius: 4px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 
+  // V14 gives ApplicationV2 windows `overflow: hidden` on the root so
+  // absolutely-positioned children (like our range-dropdown-list that
+  // extends below its button) get clipped by the dialog frame. The
+  // dropdown carries `z-index: 100`, so once the ancestor stack stops
+  // clipping it renders on top of everything else naturally.
+  overflow: visible !important;
+
   // Remove default window header
   > .window-header {
     display: none;

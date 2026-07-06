@@ -112,6 +112,38 @@ export class CyberpunkItem extends Item {
   }
 
   /**
+   * Enforce a couple of tool-charge invariants at the document layer so
+   * they hold whoever triggered the update (sheet, macro, TAH, etc.):
+   *   • If Is Rechargeable is turned on while Charges Max is 0, bump
+   *     both charges and chargesMax to 1 — a rechargeable tool with 0
+   *     capacity is a nonsense state (spec says "shouldn't be").
+   *   • If Charges Max is lowered below current Charges, clamp Charges
+   *     down so we don't leave a dangling over-cap value.
+   * @inheritDoc
+   */
+  async _preUpdate(changed, options, user) {
+    await super._preUpdate(changed, options, user);
+    if (this.type !== "tool") return;
+    const sys = changed.system;
+    if (!sys) return;
+
+    if (sys.isRechargeable === true) {
+      const currentMax = Number(this.system?.chargesMax) || 0;
+      const nextMax = sys.chargesMax != null ? (Number(sys.chargesMax) || 0) : currentMax;
+      if (nextMax <= 0) {
+        sys.chargesMax = 1;
+        sys.charges = 1;
+      }
+    }
+    if (sys.chargesMax != null) {
+      const nextMax = Math.max(0, Number(sys.chargesMax) || 0);
+      const currentCharges = Number(this.system?.charges) || 0;
+      const nextCharges = sys.charges != null ? (Number(sys.charges) || 0) : currentCharges;
+      if (nextCharges > nextMax) sys.charges = nextMax;
+    }
+  }
+
+  /**
    * Get the weapon data sub-object.
    * For regular weapons (type=weapon), this is `this.system`.
    * For embedded weapons on cyberware OR armor (type=cyberware|armor with
@@ -457,6 +489,14 @@ export class CyberpunkItem extends Item {
       && (range === ranges.close || range === ranges.medium)) {
         terms.push(+3);
     }
+
+    // Actor-side "Ranged Weapons Attack" bonus — accumulated on
+    // `system.rangedAttackBonus` by the toolBonusProperties pipeline
+    // (drugs, cyberware, tools, armor with the RangedAttackBonus
+    // property). Added like any other flat modifier so it stacks
+    // with range, stance and firing-mode terms.
+    const rangedAttackBonus = Number(this.actor?.system?.rangedAttackBonus) || 0;
+    if (rangedAttackBonus) terms.push(rangedAttackBonus);
 
     terms.push(extraMod || 0);
 
@@ -1110,9 +1150,21 @@ export class CyberpunkItem extends Item {
           catch (err) { console.error("CYBERPUNK | Failed to spawn smoke darkness:", err); }
       }
 
-      // Resource cost: Ordnance destroys; Exotic deducts charges; Ranged consumes shotsLeft.
+      // Light effect: same shape as Smoke but the AmbientLight is a
+      // regular illumination source (Is Darkness Source = 0).
+      if (weaponEffect === "light" && attackMods.templateId) {
+          try { await this._spawnAoELight(attackMods.templateId); }
+          catch (err) { console.error("CYBERPUNK | Failed to spawn AoE light:", err); }
+      }
+
+      // Resource cost: Ordnance decrements its Count (drug-style stack);
+      // deletes the row when the last unit fires. Exotic deducts charges;
+      // Ranged consumes shotsLeft.
       if (t === "Ordnance") {
-          await this.delete();
+          const qty = Number(this.system?.quantity);
+          const remaining = (Number.isFinite(qty) && qty > 0 ? qty : 1) - 1;
+          if (remaining > 0) await this.update({ "system.quantity": remaining });
+          else await this.delete();
       } else if (t === "Exotic") {
           const chargesUsed = attackMods.chargesUsed || 1;
           await this.update({[this._weaponUpdatePath("charges")]: (wd.charges || 0) - chargesUsed});
@@ -1125,6 +1177,31 @@ export class CyberpunkItem extends Item {
   }
 
   /**
+   * Resolve a placed AoE template's centre + radius (in grid units) from
+   * either a V14 Region or a V13 MeasuredTemplate. Returns null when the
+   * template can't be located or its shape isn't a circle.
+   * @private
+   */
+  _resolveAoECircle(templateId) {
+      if (!canvas?.scene || !templateId) return null;
+      const region = canvas.scene.regions?.get(templateId);
+      if (region) {
+          const shape = region.shapes[0];
+          if (shape?.type !== "circle") return null;
+          const grid = canvas.scene.grid;
+          const distancePx = grid.size / grid.distance; // pixels per grid unit
+          const radius = Number(shape.radius) / distancePx;
+          if (!radius || radius <= 0) return null;
+          return { x: shape.x, y: shape.y, radius };
+      }
+      const tmpl = canvas.scene.templates?.get(templateId);
+      if (!tmpl || tmpl.t !== "circle") return null;
+      const radius = Number(tmpl.distance) || 0;
+      if (radius <= 0) return null;
+      return { x: tmpl.x, y: tmpl.y, radius };
+  }
+
+  /**
    * Spawn a negative ambient light (darkness source) at the placed AoE template's
    * position, so the affected area becomes a smoke cloud / darkness zone the
    * scene's vision system has to reckon with. Sized to the template footprint.
@@ -1132,40 +1209,9 @@ export class CyberpunkItem extends Item {
    * cannot be located.
    */
   async _spawnSmokeDarkness(templateId) {
-      if (!canvas?.scene || !templateId) return;
-
-      // Resolve circle position + radius (in grid units) from either V14
-      // Regions or V13 MeasuredTemplates.
-      let x, y, radius;
-
-      // V14: read the Region's shape directly. We don't go through
-      // canvas.scene.templates because V14's synthetic MeasuredTemplate
-      // compat layer (BaseRegion → _fromRegion) computes `distance` against
-      // BaseScene.defaultGrid (hardcoded size:100) instead of the actual
-      // scene grid — so `tmpl.distance` is off when scene.grid.size != 100.
-      const region = canvas.scene.regions?.get(templateId);
-      if (region) {
-          const shape = region.shapes[0];
-          if (shape?.type !== "circle") return;
-          const grid = canvas.scene.grid;
-          const distancePx = grid.size / grid.distance; // pixels per grid unit
-          x = shape.x;
-          y = shape.y;
-          radius = Number(shape.radius) / distancePx;
-      } else {
-          const tmpl = canvas.scene.templates?.get(templateId);
-          if (!tmpl) return;
-          // Only circle templates have a single "radius" that translates
-          // cleanly into an ambient-light radius. Cone/beam smoke is a
-          // future enhancement.
-          if (tmpl.t !== "circle") return;
-          x = tmpl.x;
-          y = tmpl.y;
-          radius = Number(tmpl.distance) || 0;
-      }
-
-      if (!radius || radius <= 0) return;
-
+      const circle = this._resolveAoECircle(templateId);
+      if (!circle) return;
+      const { x, y, radius } = circle;
       await canvas.scene.createEmbeddedDocuments("AmbientLight", [{
           x, y,
           rotation: 0,
@@ -1175,6 +1221,31 @@ export class CyberpunkItem extends Item {
               dim: radius,
               bright: radius,
               color: "#000000",
+              alpha: 0.5,
+              animation: { type: "none", speed: 5, intensity: 5 }
+          }
+      }]);
+  }
+
+  /**
+   * Spawn a regular illumination AmbientLight at the placed AoE template's
+   * position — same footprint as Smoke, but a normal light source (Is
+   * Darkness Source = false). Flares, magnesium torches, chem-lights all
+   * come through here.
+   */
+  async _spawnAoELight(templateId) {
+      const circle = this._resolveAoECircle(templateId);
+      if (!circle) return;
+      const { x, y, radius } = circle;
+      await canvas.scene.createEmbeddedDocuments("AmbientLight", [{
+          x, y,
+          rotation: 0,
+          walls: false,
+          config: {
+              negative: false,   // regular illumination (NOT a darkness source)
+              dim: radius,
+              bright: radius / 2,
+              color: "#FFE4A5",  // warm flare-white
               alpha: 0.5,
               animation: { type: "none", speed: 5, intensity: 5 }
           }
@@ -1218,7 +1289,8 @@ export class CyberpunkItem extends Item {
           blindness: "blinded",
           laser: "burning",
           immobilized: "immobilized",
-          smoke: "blinded"
+          smoke: "blinded",
+          light: "blinded"
       };
       return icons[effect] || effect;
   }

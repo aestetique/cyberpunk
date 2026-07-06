@@ -1075,7 +1075,10 @@
 		},
 		"tool": {
 			"templates": ["common"],
-			"bonuses": []
+			"bonuses": [],
+			"isRechargeable": false,
+			"charges": 0,
+			"chargesMax": 0
 		},
 		"drug": {
 			"templates": ["common"],

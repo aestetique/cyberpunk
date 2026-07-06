@@ -4,7 +4,7 @@
   {{> "systems/cyberpunk/templates/actor/parts/weapons-block.hbs" showUnarmed=true weapons=weapons unattachedAmmo=ammoItems isUnlocked=isUnlocked unarmedDamage=unarmedDamage unarmedTooltipFlavor=unarmedTooltipFlavor unarmedTooltipCalc=unarmedTooltipCalc}}
 
   {{!-- 2. ORDNANCE Block --}}
-  {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems}}
+  {{> "systems/cyberpunk/templates/actor/parts/ordnance-block.hbs" ordnanceItems=ordnanceItems isUnlocked=isUnlocked}}
 
   {{!-- 3. OUTFIT Block --}}
   {{#if hasAnyOutfit}}
@@ -171,10 +171,21 @@
             <img src="systems/cyberpunk/img/ui/badge-weight.svg" alt="kg">
           </div>
           <div class="gear-field" style="width: 60px;"></div>
-          <div class="gear-field" style="width: 60px;"></div>
-          <div class="gear-action-btn toggle-tool" data-item-id="{{tool.id}}" data-equipped="{{tool.equipped}}" title="{{#if tool.equipped}}Disable{{else}}Enable{{/if}}">
-            <img src="systems/cyberpunk/img/ui/badge-{{#if tool.equipped}}on{{else}}off{{/if}}.svg" alt="Toggle">
+          <div class="gear-field" style="width: 60px;">
+            {{#if tool.hasCharges}}
+              <span class="field-top">{{tool.chargesDisplay}}</span>
+              <span class="field-bottom">Charges</span>
+            {{/if}}
           </div>
+          {{#if tool.needsCharging}}
+            <div class="gear-action-btn charge-tool" data-item-id="{{tool.id}}" title="Recharge">
+              <img src="systems/cyberpunk/img/ui/badge-charge.svg" alt="Charge">
+            </div>
+          {{else}}
+            <div class="gear-action-btn toggle-tool" data-item-id="{{tool.id}}" data-equipped="{{tool.equipped}}" data-can-toggle-on="{{tool.canToggleOn}}" title="{{#if tool.equipped}}Disable{{else}}{{#if tool.canToggleOn}}Enable{{else}}Out of charges{{/if}}{{/if}}">
+              <img src="systems/cyberpunk/img/ui/badge-{{#if tool.equipped}}on{{else}}off{{#unless tool.canToggleOn}}-broken{{/unless}}{{/if}}.svg" alt="Toggle">
+            </div>
+          {{/if}}
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{tool.id}}" title="View">
               <img src="systems/cyberpunk/img/ui/icon-view.svg" alt="View">

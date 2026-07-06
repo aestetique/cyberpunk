@@ -131,6 +131,12 @@ async function jackIn(actor, userId) {
     if (spawn) {
         data.x = spawn.x;
         data.y = spawn.y;
+        // V14 multi-level scenes: the entry region carries its own Level
+        // assignment. Route the NET token onto that level so the runner
+        // doesn't spawn on the meat side of the map. Falls through to
+        // the physical token's level (already on `data.level` from
+        // `physical.toObject()`) when the region isn't level-scoped.
+        if (spawn.level) data.level = spawn.level;
     } else {
         // No AP placement either — shouldn't happen post-gate, but degrade
         // gracefully to one-cell-right of the meat token.

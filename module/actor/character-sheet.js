@@ -29,7 +29,7 @@ import {
   isSensorOption
 } from "../lookups.js"
 import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js"
-import { shouldTransfer, transferItem } from "./item-transfer.js"
+import { shouldTransfer, transferItem, handleAmmoDrop, handleOrdnanceDrop } from "./item-transfer.js"
 
 // `formatBonusLabel` + `summariseBonuses` live in gear-data.js — imported above.
 
@@ -1494,6 +1494,17 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     sheetData.toolItems = tools.map(t => {
       const sys = t.system;
       const contextParts = ['Tool', ...summariseBonuses(sys.bonuses)];
+      const equipped = sys.equipped ?? false;
+      const chargesMax = Math.max(0, Number(sys.chargesMax) || 0);
+      const charges = Math.max(0, Math.min(chargesMax, Number(sys.charges) || 0));
+      const isRechargeable = !!sys.isRechargeable;
+      const hasCharges = chargesMax > 0;
+      // Rechargeable + empty → the row swaps its action badge to
+      // Charge (same UI as exotic weapon recharge).
+      const needsCharging = hasCharges && isRechargeable && charges === 0;
+      // Non-rechargeable + empty → the On button greys out; no way
+      // back until the item is edited on the item sheet.
+      const canToggleOn = !hasCharges || charges > 0;
 
       return {
         id: t.id,
@@ -1502,7 +1513,13 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         context: contextParts.join(' · '),
         price: sys.cost || 0,
         weight: sys.weight || 0,
-        equipped: sys.equipped ?? false
+        equipped,
+        charges,
+        chargesMax,
+        hasCharges,
+        chargesDisplay: hasCharges ? `${charges} / ${chargesMax}` : '',
+        needsCharging,
+        canToggleOn
       };
     });
 
@@ -1568,11 +1585,30 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       });
 
     // --- Item Effects (State tab) ---
-    // Mirror of equipped items with non-empty bonuses[]. Read-only — clicking
-    // a row opens the source item; no inline action button.
+    // Mirror of items whose bonuses[] are currently contributing to actor
+    // stats. Filter mirrors actor.js prepareDerivedData: cyberware / armor
+    // OPTIONS attached to a base inherit the base's equipped state (they
+    // have no standalone equip toggle), so we check the parent when the
+    // item is an option. Read-only — clicking a row opens the source item.
     const itemEffectSource = this.actor.items.contents.filter(i => {
       if (!Array.isArray(i.system?.bonuses) || i.system.bonuses.length === 0) return false;
-      if (i.type === "tool" || i.type === "weapon" || i.type === "armor" || i.type === "cyberware" || i.type === "netware") {
+      if (i.type === "tool" || i.type === "weapon" || i.type === "netware") {
+        return i.system.equipped === true;
+      }
+      if (i.type === "cyberware") {
+        if (isCyberlimbOption(i) || isSensorOption(i)) {
+          const baseId = i.getFlag("cyberpunk", "attachedTo");
+          const base = baseId ? this.actor.items.get(baseId) : null;
+          return !!(base && base.system.equipped);
+        }
+        return i.system.equipped === true;
+      }
+      if (i.type === "armor") {
+        if (i.system.armorType === "option") {
+          const baseId = i.getFlag("cyberpunk", "attachedTo");
+          const base = baseId ? this.actor.items.get(baseId) : null;
+          return !!(base && base.type === "armor" && base.system.equipped);
+        }
         return i.system.equipped === true;
       }
       return false;
@@ -2851,14 +2887,48 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       }]);
     });
 
-    // Toggle tool on/off (gear tab)
+    // Toggle tool on/off (gear tab). If the tool has a charges cap
+    // (chargesMax > 0), turning it ON consumes a charge; turning OFF
+    // does NOT refund. Blocked when charges = 0 (the badge already
+    // renders `badge-off-broken.svg` in that state).
     html.find('.toggle-tool').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const item = this.actor.items.get(itemId);
       if (!item) return;
 
-      const currentEquipped = item.system.equipped ?? false;
-      await item.update({ "system.equipped": !currentEquipped });
+      const sys = item.system;
+      const currentEquipped = sys.equipped ?? false;
+      const chargesMax = Math.max(0, Number(sys.chargesMax) || 0);
+      const charges = Math.max(0, Number(sys.charges) || 0);
+
+      if (currentEquipped) {
+        // Turning off — no charge refund.
+        await item.update({ "system.equipped": false });
+        return;
+      }
+      // Turning on. Consume a charge if the tool tracks them.
+      if (chargesMax > 0) {
+        if (charges <= 0) {
+          ui.notifications.warn(game.i18n.localize("CYBERPUNK.ToolOutOfCharges"));
+          return;
+        }
+        await item.update({ "system.equipped": true, "system.charges": charges - 1 });
+      } else {
+        await item.update({ "system.equipped": true });
+      }
+    });
+
+    // Recharge a rechargeable tool from empty (gear tab). Restores
+    // charges to chargesMax. Only wired on the row when the tool is
+    // rechargeable AND currently empty — same badge/UX as exotic
+    // weapon recharge.
+    html.find('.charge-tool').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+      const chargesMax = Math.max(0, Number(item.system.chargesMax) || 0);
+      if (chargesMax <= 0) return;
+      await item.update({ "system.charges": chargesMax });
     });
 
     // Use drug — posts a chat card carrying the supply UUID; the player
@@ -3205,24 +3275,9 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       });
     });
 
-    // Parent-weapon rows are drop targets for ammo. Drop logic (attach to the
-    // weapon, top up shotsLeft) is already handled in _onDropItem above; this
-    // block only paints the hover-highlight so the user sees what they're
-    // about to drop on, matching cyberware / armor / netware drop targets.
-    // We do NOT preventDefault on `drop` here — that lets the event flow
-    // through V2's DragDrop pipeline into _onDropItem unchanged.
-    html.find('.gear-row.weapon-row[data-item-id]:not(.attached-ammo)').each((_, rowEl) => {
-      rowEl.addEventListener('dragover', ev => {
-        ev.preventDefault();
-        rowEl.classList.add('drag-over');
-      });
-      rowEl.addEventListener('dragleave', () => {
-        rowEl.classList.remove('drag-over');
-      });
-      rowEl.addEventListener('drop', () => {
-        rowEl.classList.remove('drag-over');
-      });
-    });
+    // Weapon-row drop-target hover marquee lives in gear-handlers.js
+    // now — bindWeaponAndOrdnanceHandlers wires it for both this sheet
+    // and the drone sheet.
 
     // ----- Armor option attach / detach (mirrors cyberware option pattern) -----
 
@@ -3736,77 +3791,15 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       }
     }
 
-    // Handle ammo drops — drop on a weapon row attaches; otherwise stack by source UUID.
-    // Recognises both new (type=weapon, weaponType=Ammo) and legacy (type=ammo) shapes.
-    const isAmmo = item.type === "weapon" && item.system?.weaponType === "Ammo";
-    if (isAmmo) {
-      // Drop on a weapon row → attempt attachment to that Ranged weapon
-      const dropTarget = event?.target?.closest?.('.gear-row[data-item-id]');
-      const targetId = dropTarget?.dataset?.itemId;
-      if (targetId && targetId !== "unarmed") {
-        const targetWeapon = this.actor.items.get(targetId);
-        // Accept both standalone weapons AND cyberware-as-weapon. Use _getWeaponType
-        // to read the discriminator (handles both system.weaponType and
-        // system.weapon.weaponType via the weaponData getter).
-        const isStandaloneRanged = targetWeapon?.type === "weapon"
-            && targetWeapon.system?.weaponType === "Ranged";
-        const isCyberweapon = targetWeapon?.type === "cyberware"
-            && targetWeapon.system?.isWeapon
-            && (targetWeapon.system?.weapon?.weaponType === "Ranged"
-                || (typeof targetWeapon._getWeaponType === "function" && targetWeapon._getWeaponType() === "Ranged"));
-        if ((isStandaloneRanged || isCyberweapon)
-            && typeof targetWeapon._attachAmmo === "function") {
-          // Make sure the ammo lives on the actor first
-          let ammoOnActor = item;
-          if (item.parent?.id !== this.actor.id) {
-            const newData = item.toObject();
-            newData.type = "weapon";
-            newData.system = newData.system || {};
-            newData.system.weaponType = "Ammo";
-            newData.system.quantity = Number(item.system?.packSize) || 20;
-            newData.system.sourceUuid = item.uuid;
-            const [created] = await this.actor.createEmbeddedDocuments("Item", [newData]);
-            ammoOnActor = created;
-          }
-          await targetWeapon._attachAmmo(ammoOnActor);
-          return;
-        }
-      }
+    // Ammo drops — attach to a target weapon row, stack by sourceUuid,
+    // or create a fresh pack. Shared helper keeps character + drone
+    // behaviour in lockstep.
+    if (await handleAmmoDrop(this.actor, event, item)) return;
 
-      // Same-actor reorder → no-op. The stack-by-sourceUuid path below
-      // matches on `sourceUuid`, which points at the COMPENDIUM the ammo
-      // was first dropped from, not at the actor's own item. So when you
-      // drag an existing ammo row onto another spot on the same sheet,
-      // `find()` returns nothing and we'd happily create a brand-new pack —
-      // free ammo every drag. Mirrors the same guard on armor below.
-      if (item.parent?.id === this.actor.id) return;
-
-      // Fall through: stack by source UUID
-      const droppedUuid = item.uuid;
-      const packQty = Number(item.system?.packSize) || 20;
-
-      const existing = this.actor.items.find(i => {
-        if (i.type !== "weapon") return false;
-        if (i.system?.weaponType !== "Ammo") return false;
-        return i.system?.sourceUuid === droppedUuid;
-      });
-      if (existing) {
-        const newQty = (Number(existing.system.quantity) || 0) + packQty;
-        return this.actor.updateEmbeddedDocuments("Item", [{
-          _id: existing.id,
-          "system.quantity": newQty
-        }]);
-      }
-
-      // Create new ammo item on actor (always as type=weapon, weaponType=Ammo)
-      const newData = item.toObject();
-      newData.type = "weapon";
-      newData.system = newData.system || {};
-      newData.system.weaponType = "Ammo";
-      newData.system.quantity = packQty;
-      newData.system.sourceUuid = droppedUuid;
-      return this.actor.createEmbeddedDocuments("Item", [newData]);
-    }
+    // Ordnance drops — stack by identity (compendium source or
+    // name+template+effect) so duplicate grenades increment a Count
+    // instead of spawning duplicate rows.
+    if (await handleOrdnanceDrop(this.actor, event, item)) return;
 
     // Handle role drops - works anywhere on the sheet
     if (item.type === "role") {

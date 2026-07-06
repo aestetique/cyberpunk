@@ -99,7 +99,11 @@ export function nearestCoveringAccessPoint(meatToken, scene = canvas.scene, deck
  * of shape complexity. The token's top-left is offset by half a grid cell
  * so the *token centre* lands on the region centre.
  *
- * Returns `{x, y}` in token-document coords (top-left), or null.
+ * Returns `{x, y, level}` in token-document coords (top-left). `level` is
+ * the Level document ID the entry region is assigned to (V14 multi-level
+ * scenes); undefined when the region is on every level or when levels
+ * aren't in use. The caller uses `level` to route the spawned NET token
+ * onto the NET layer instead of inheriting the runner's physical level.
  */
 export function getEntryRegionSpawn(ap) {
     const uuid = ap?.actor?.system?.entryRegion;
@@ -111,7 +115,18 @@ export function getEntryRegionSpawn(ap) {
     const cx = bounds.x + bounds.width / 2;
     const cy = bounds.y + bounds.height / 2;
     const gridSize = canvas.scene?.grid?.size || 100;
-    return { x: cx - gridSize / 2, y: cy - gridSize / 2 };
+    // Pull the entry region's Level assignment (V14+). `region.levels` is a
+    // Set of Level document IDs; a region can be on many. For a NET map
+    // living on its own level this Set is size 1 — use it directly. Size
+    // 0 means the region is on every level (region.levels absent), and we
+    // fall through so the spawn inherits the caller's default level.
+    let level;
+    const levels = region.levels;
+    if (levels && typeof levels[Symbol.iterator] === "function") {
+        const ids = [...levels];
+        if (ids.length === 1) level = ids[0];
+    }
+    return { x: cx - gridSize / 2, y: cy - gridSize / 2, level };
 }
 
 /**

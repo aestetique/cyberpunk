@@ -280,7 +280,12 @@ export function buildOrdnanceList(actor) {
                 price: sys.cost || 0,
                 weight: sys.weight || 0,
                 damage: sys.damage && sys.damage !== '0' && sys.damage !== 0 ? sys.damage : '–',
-                // Ordnance is 1-shot; expose simple "1" for templates that still render charges
+                // Ordnance now stacks by identity — expose the quantity so
+                // the gear tab renders a Count field (drug-style). Falls
+                // back to 1 for legacy items that pre-date the stacking.
+                quantity: Number(sys.quantity) > 0 ? Number(sys.quantity) : 1,
+                // Legacy per-round display kept for templates that still
+                // reference `chargesDisplay`.
                 charges: 1,
                 chargesMax: 1,
                 chargesDisplay: '1',

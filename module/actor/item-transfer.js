@@ -19,6 +19,7 @@ const TRANSFERRABLE_TYPES = new Set([
 export function isStackable(item) {
   if (item.type === "drug") return true;
   if (item.type === "weapon" && item.system?.weaponType === "Ammo") return true;
+  if (item.type === "weapon" && item.system?.weaponType === "Ordnance") return true;
   return false;
 }
 
@@ -184,6 +185,27 @@ export function findMergeTarget(sourceItem, targetActor) {
       i.type === "drug" && norm(i.name) === srcName
     );
   }
+  if (sourceItem.type === "weapon" && sourceItem.system?.weaponType === "Ordnance") {
+    const srcUuid = sourceItem.system?.sourceUuid;
+    if (srcUuid) {
+      const byUuid = targetActor.items.find(i =>
+        i.type === "weapon" &&
+        i.system?.weaponType === "Ordnance" &&
+        i.system?.sourceUuid === srcUuid
+      );
+      if (byUuid) return byUuid;
+    }
+    const srcName = norm(sourceItem.name);
+    const srcTemplate = sourceItem.system?.templateType || "";
+    const srcEffect = sourceItem.system?.effect || "";
+    return targetActor.items.find(i =>
+      i.type === "weapon" &&
+      i.system?.weaponType === "Ordnance" &&
+      norm(i.name) === srcName &&
+      (i.system?.templateType || "") === srcTemplate &&
+      (i.system?.effect || "") === srcEffect
+    );
+  }
   if (sourceItem.type === "weapon" && sourceItem.system?.weaponType === "Ammo") {
     const srcUuid = sourceItem.system?.sourceUuid;
     if (srcUuid) {
@@ -340,4 +362,135 @@ async function postTransferMessage(sourceActor, targetActor, item, count) {
     speaker: ChatMessage.getSpeaker({ actor: sourceActor }),
     content
   });
+}
+
+/**
+ * Handle an ammo drop on an actor sheet — attaches to a target Ranged
+ * weapon row when the drop landed on one, else stacks with an existing
+ * pack (same `sourceUuid`), else creates a fresh pack. Returns `true`
+ * when the drop was ammo and was handled (caller short-circuits), `false`
+ * when the dropped item wasn't ammo.
+ *
+ * Shared by the character and drone sheets so their ammo semantics stay
+ * in lockstep. `_attachAmmo` lives on the Item class, so both
+ * standalone weapons and cyberweapons handle it identically.
+ *
+ * @param {Actor} actor            The receiving actor.
+ * @param {Event} event            The drop event (used for target row lookup).
+ * @param {Item}  item             The dropped item (probably ammo).
+ * @returns {Promise<boolean>}     True if handled; false if not-ammo.
+ */
+export async function handleAmmoDrop(actor, event, item) {
+  if (!(item?.type === "weapon" && item.system?.weaponType === "Ammo")) return false;
+  if (!actor) return false;
+
+  // Drop landed on a weapon row → try to attach to that Ranged weapon.
+  const dropTarget = event?.target?.closest?.('.gear-row[data-item-id]');
+  const targetId = dropTarget?.dataset?.itemId;
+  if (targetId && targetId !== "unarmed") {
+    const targetWeapon = actor.items.get(targetId);
+    // Accept standalone weapons AND cyberware-as-weapon. `_getWeaponType`
+    // covers cyberware's nested `system.weapon.weaponType` shape.
+    const isStandaloneRanged = targetWeapon?.type === "weapon"
+        && targetWeapon.system?.weaponType === "Ranged";
+    const isCyberweapon = targetWeapon?.type === "cyberware"
+        && targetWeapon.system?.isWeapon
+        && (targetWeapon.system?.weapon?.weaponType === "Ranged"
+            || (typeof targetWeapon._getWeaponType === "function"
+                && targetWeapon._getWeaponType() === "Ranged"));
+    if ((isStandaloneRanged || isCyberweapon)
+        && typeof targetWeapon._attachAmmo === "function") {
+      // The ammo has to live on the receiving actor before attach —
+      // create a pack copy if it came from another actor / compendium.
+      let ammoOnActor = item;
+      if (item.parent?.id !== actor.id) {
+        const newData = item.toObject();
+        newData.type = "weapon";
+        newData.system = newData.system || {};
+        newData.system.weaponType = "Ammo";
+        newData.system.quantity = Number(item.system?.packSize) || 20;
+        newData.system.sourceUuid = item.uuid;
+        const [created] = await actor.createEmbeddedDocuments("Item", [newData]);
+        ammoOnActor = created;
+      }
+      await targetWeapon._attachAmmo(ammoOnActor);
+      return true;
+    }
+  }
+
+  // Same-actor reorder → no-op. The stack-by-sourceUuid fallback below
+  // matches on `sourceUuid` (the COMPENDIUM origin, not the actor's own
+  // item id), so dragging an existing ammo row onto another spot on the
+  // same sheet would happily mint a duplicate pack. Guard against that.
+  if (item.parent?.id === actor.id) return true;
+
+  // Fall through: stack by source UUID (compendium origin) or create fresh.
+  const droppedUuid = item.uuid;
+  const packQty = Number(item.system?.packSize) || 20;
+  const existing = actor.items.find(i =>
+    i.type === "weapon"
+    && i.system?.weaponType === "Ammo"
+    && i.system?.sourceUuid === droppedUuid
+  );
+  if (existing) {
+    await actor.updateEmbeddedDocuments("Item", [{
+      _id: existing.id,
+      "system.quantity": (Number(existing.system.quantity) || 0) + packQty
+    }]);
+    return true;
+  }
+
+  const newData = item.toObject();
+  newData.type = "weapon";
+  newData.system = newData.system || {};
+  newData.system.weaponType = "Ammo";
+  newData.system.quantity = packQty;
+  newData.system.sourceUuid = droppedUuid;
+  await actor.createEmbeddedDocuments("Item", [newData]);
+  return true;
+}
+
+/**
+ * Sidebar / compendium ordnance drop → stack by identity (sourceUuid
+ * for compendium origin, then name + templateType + effect fallback)
+ * so dragging the same grenade twice increments a Count instead of
+ * spawning a duplicate row. Mirrors the drug / ammo stacking pattern.
+ * Returns true when the drop was consumed.
+ */
+export async function handleOrdnanceDrop(actor, event, item) {
+  if (!(item?.type === "weapon" && item.system?.weaponType === "Ordnance")) return false;
+  if (!actor) return false;
+  // Same-actor reorder → no-op. Without this, dragging an existing
+  // ordnance row somewhere else on the same sheet would double the pile.
+  if (item.parent?.id === actor.id) return true;
+
+  const droppedUuid = item.uuid;
+  const norm = (s) => (s ?? "").toString().trim().toLowerCase();
+  const srcName = norm(item.name);
+  const srcTemplate = item.system?.templateType || "";
+  const srcEffect = item.system?.effect || "";
+
+  const existing = actor.items.find(i => {
+    if (!(i.type === "weapon" && i.system?.weaponType === "Ordnance")) return false;
+    if (i.system?.sourceUuid && i.system.sourceUuid === droppedUuid) return true;
+    return norm(i.name) === srcName
+      && (i.system?.templateType || "") === srcTemplate
+      && (i.system?.effect || "") === srcEffect;
+  });
+
+  if (existing) {
+    const currentQty = Number(existing.system?.quantity) || 1;
+    await actor.updateEmbeddedDocuments("Item", [{
+      _id: existing.id,
+      "system.quantity": currentQty + 1
+    }]);
+    return true;
+  }
+
+  const newData = item.toObject();
+  newData.system = newData.system || {};
+  newData.system.quantity = 1;
+  newData.system.sourceUuid = droppedUuid;
+  await actor.createEmbeddedDocuments("Item", [newData]);
+  return true;
 }

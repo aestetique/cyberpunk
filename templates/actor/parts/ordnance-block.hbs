@@ -28,7 +28,14 @@
           <span class="field-top">{{ordnance.damage}}</span>
           <span class="field-bottom">Damage</span>
         </div>
-        <div class="gear-field" style="width: 60px;"></div>
+        <div class="gear-field" style="width: 60px;">
+          {{#if ../isUnlocked}}
+            <input type="number" class="zone-input gear-quantity-input" data-item-id="{{ordnance.id}}" value="{{ordnance.quantity}}" min="0">
+          {{else}}
+            <span class="zone-paired-readonly">{{ordnance.quantity}}</span>
+          {{/if}}
+          <span class="field-bottom">Count</span>
+        </div>
         <div class="gear-action-btn"></div>
         <div class="gear-actions">
           <button class="gear-view" type="button" data-item-id="{{ordnance.id}}" title="View">

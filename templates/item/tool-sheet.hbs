@@ -89,6 +89,9 @@
       <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-action="tabSwitch" data-tab="description">
         <span class="tab-text">{{localize "CYBERPUNK.Description"}}</span>
       </a>
+      <a class="tab-header {{#if (eq activeTab 'tool')}}active{{/if}}" data-action="tabSwitch" data-tab="tool">
+        <span class="tab-text">{{localize "CYBERPUNK.Tool"}}</span>
+      </a>
       <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-action="tabSwitch" data-tab="effect">
         <span class="tab-text">{{localize "CYBERPUNK.Effect"}}</span>
       </a>
@@ -117,6 +120,34 @@
         <div class="source-field">
           <label class="variable-label">{{localize "CYBERPUNK.Source"}}</label>
           <input type="text" class="source-input" name="system.source" value="{{system.source}}" placeholder="Core Rulebook, p.XX" {{#if isLocked}}readonly{{/if}}>
+        </div>
+
+      {{else if (eq activeTab 'tool')}}
+        {{!-- Tool Tab — Charges X of Y + Rechargeable --}}
+        <div class="variables-row">
+          <div class="variable-field dual-field">
+            <label class="variable-label">{{localize "CYBERPUNK.Charges"}}</label>
+            {{#if isLocked}}
+              <span class="dual-value">{{system.charges}}</span>
+            {{else}}
+              <input type="number" class="dual-input" name="system.charges" value="{{system.charges}}" min="0">
+            {{/if}}
+            <span class="dual-separator">of</span>
+            {{#if isLocked}}
+              <span class="dual-value">{{system.chargesMax}}</span>
+            {{else}}
+              <input type="number" class="dual-input" name="system.chargesMax" value="{{system.chargesMax}}" min="0">
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.IsRechargeable"}}</label>
+            {{#if isLocked}}
+              <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.isRechargeable}}checked{{else}}unchecked{{/if}}.svg">
+            {{else}}
+              <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.isRechargeable"
+                   src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.isRechargeable}}checked{{else}}unchecked{{/if}}.svg">
+            {{/if}}
+          </div>
         </div>
 
       {{else}}

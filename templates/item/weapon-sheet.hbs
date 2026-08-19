@@ -306,6 +306,7 @@
                 </div>
               {{/if}}
             </div>
+            {{> "systems/cyberpunk/templates/item/parts/weapon-drug-slot.hbs"}}
           </div>
         {{/if}}
 
@@ -463,6 +464,9 @@
               {{/if}}
             </div>
           </div>
+          <div class="variables-row">
+            {{> "systems/cyberpunk/templates/item/parts/weapon-drug-slot.hbs"}}
+          </div>
         {{/if}}
 
         {{!-- ============================================== --}}
@@ -525,6 +529,9 @@
               {{/if}}
             </div>
           </div>
+          <div class="variables-row">
+            {{> "systems/cyberpunk/templates/item/parts/weapon-drug-slot.hbs"}}
+          </div>
         {{/if}}
 
         {{!-- ============================================ --}}
@@ -585,7 +592,7 @@
             </div>
           </div>
 
-          {{!-- Grenade-only: Template | Effect, then Radius/Width --}}
+          {{!-- Grenade-only: Template | Radius, then Effect | Drug --}}
           {{#if showAmmoAoe}}
           <div class="variables-row">
             <div class="variable-field">
@@ -607,6 +614,16 @@
               {{/if}}
             </div>
             <div class="variable-field">
+              <label class="variable-label">{{radiusLabel}}</label>
+              {{#if isLocked}}
+                <div class="dropdown"><span class="dropdown-text">{{system.radius}}</span></div>
+              {{else}}
+                <input type="number" class="variable-input" name="system.radius" value="{{system.radius}}" min="0">
+              {{/if}}
+            </div>
+          </div>
+          <div class="variables-row">
+            <div class="variable-field">
               <label class="variable-label">{{localize "CYBERPUNK.Effect"}}</label>
               {{#if isLocked}}
                 <div class="dropdown">
@@ -624,17 +641,7 @@
                 </div>
               {{/if}}
             </div>
-          </div>
-          <div class="variables-row">
-            <div class="variable-field">
-              <label class="variable-label">{{radiusLabel}}</label>
-              {{#if isLocked}}
-                <div class="dropdown"><span class="dropdown-text">{{system.radius}}</span></div>
-              {{else}}
-                <input type="number" class="variable-input" name="system.radius" value="{{system.radius}}" min="0">
-              {{/if}}
-            </div>
-            <div class="variable-field"></div>
+            {{> "systems/cyberpunk/templates/item/parts/weapon-drug-slot.hbs"}}
           </div>
           {{/if}}
         {{/if}}

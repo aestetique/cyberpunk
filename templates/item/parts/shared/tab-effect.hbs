@@ -1,10 +1,13 @@
 {{!--
-  Shared Effect-tab bonus list — used by cyberware / outfit / tool.
+  Shared Effect-tab bonus list — used by cyberware / outfit / tool /
+  cyberdeck (netware).
 
   Context provided by the sheet's getData() via prepareEffectTabContext():
-    bonuses          — shaped rows (isAttribute / isProperty / isSkill + label)
+    bonuses          — shaped rows (isAttribute / isProperty / isModifier / isNetBonus / isSkill + label)
     attributeOptions — dropdown options for "Add Attribute" (stats.*)
-    propertyOptions  — dropdown options for "Add Property" (everything else)
+    propertyOptions  — dropdown options for "Add Property" (boolean toggles)
+    modifierOptions  — dropdown options for "Add Modifier" (numeric non-stat)
+    netBonusOptions  — dropdown options for "Add NET Bonus"
     isLocked         — sheet lock flag
 
   Drug has its own copy (parts/drug-bonuses.hbs) because it manages two
@@ -39,7 +42,7 @@
           </div>
         {{/if}}
       {{else if this.isProperty}}
-        {{!-- Property bonus row (non-stat) --}}
+        {{!-- Property bonus row (boolean toggle — presence = 1, no op/value) --}}
         <label class="variable-label">{{localize "CYBERPUNK.Property"}}</label>
         {{#if ../isLocked}}
           <div class="dropdown">
@@ -53,6 +56,75 @@
             <select class="dropdown-select bonus-property-select" data-index="{{@index}}">
               <option value="{{this.property}}" selected>{{this.label}}</option>
               {{#each ../propertyOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      {{else if this.isModifier}}
+        {{!-- Modifier row (numeric non-stat — uses op + value UI) --}}
+        <label class="variable-label">{{localize "CYBERPUNK.Modifier"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select bonus-property-select" data-index="{{@index}}">
+              <option value="{{this.property}}" selected>{{this.label}}</option>
+              {{#each ../modifierOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      {{else if this.isState}}
+        {{!-- State bonus row — Stress/Fright/Fatigue + HL psychosis bonuses --}}
+        <label class="variable-label">{{localize "CYBERPUNK.State"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select bonus-property-select" data-index="{{@index}}">
+              <option value="{{this.property}}" selected>{{this.label}}</option>
+              {{#each ../stateOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{/if}}
+      {{else if this.isNetBonus}}
+        {{!-- NET Bonus row — per-NET-action buff + Cyberdeck Slots --}}
+        <label class="variable-label">{{localize "CYBERPUNK.NetBonus"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select bonus-property-select" data-index="{{@index}}">
+              <option value="{{this.property}}" selected>{{this.label}}</option>
+              {{#each ../netBonusOptions}}
                 <option value="{{this.value}}">{{this.label}}</option>
               {{/each}}
             </select>
@@ -75,28 +147,29 @@
         {{/if}}
       {{/if}}
 
-      {{!-- Operation: + / × / = (same width as the value input) --}}
-      {{#if ../isLocked}}
-        <span class="bonus-op">{{this.op}}</span>
-      {{else}}
-        <div class="dropdown-wrapper op-wrapper">
-          <select class="dropdown-select bonus-op-select" data-index="{{@index}}">
-            {{#each this.opOptions}}
-              <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
-            {{/each}}
-          </select>
-          <div class="dropdown-chevron">
-            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+      {{!-- Op + value: skipped for boolean Property rows (presence = 1). --}}
+      {{#unless this.isProperty}}
+        {{#if ../isLocked}}
+          <span class="bonus-op">{{this.op}}</span>
+        {{else}}
+          <div class="dropdown-wrapper op-wrapper">
+            <select class="dropdown-select bonus-op-select" data-index="{{@index}}">
+              {{#each this.opOptions}}
+                <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron">
+              <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+            </div>
           </div>
-        </div>
-      {{/if}}
+        {{/if}}
 
-      {{!-- Bonus value --}}
-      {{#if ../isLocked}}
-        <span class="bonus-value">{{this.value}}</span>
-      {{else}}
-        <input type="number" class="bonus-value-input" data-index="{{@index}}" value="{{this.value}}">
-      {{/if}}
+        {{#if ../isLocked}}
+          <span class="bonus-value">{{this.value}}</span>
+        {{else}}
+          <input type="number" class="bonus-value-input" data-index="{{@index}}" value="{{this.value}}">
+        {{/if}}
+      {{/unless}}
 
       {{!-- Trash icon --}}
       {{#unless ../isLocked}}
@@ -108,11 +181,17 @@
   {{/each}}
 </div>
 
-{{!-- Action buttons: Attribute → Property → Skill --}}
+{{!-- Action buttons: two rows. Row 1 = Attribute / Property / Modifier;
+     Row 2 = Skill / State / NET Bonus. --}}
 {{#unless isLocked}}
   <div class="effect-actions">
     <button type="button" class="add-attribute">{{localize "CYBERPUNK.AddAttribute"}}</button>
     <button type="button" class="add-property">{{localize "CYBERPUNK.AddProperty"}}</button>
+    <button type="button" class="add-modifier">{{localize "CYBERPUNK.AddModifier"}}</button>
+  </div>
+  <div class="effect-actions">
     <button type="button" class="add-skill">{{localize "CYBERPUNK.AddSkill"}}</button>
+    <button type="button" class="add-state">{{localize "CYBERPUNK.AddState"}}</button>
+    <button type="button" class="add-net-bonus">{{localize "CYBERPUNK.AddNetBonus"}}</button>
   </div>
 {{/unless}}

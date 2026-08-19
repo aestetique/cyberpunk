@@ -482,6 +482,21 @@ Hooks.on("getSceneControlButtons", (controls) => {
             else              dlg.render(true);
         }
     };
+
+    // Drug Design helper — Pharmaceuticals(2) skill roll that produces
+    // a full Drug item on success. Lives on the same token-controls
+    // panel as Netrunning so both helpers sit in one place.
+    controls.tokens.tools["drugDesign"] = {
+        name: "drugDesign",
+        title: "CYBERPUNK.DrugDesignTitle",
+        icon: "fa-solid fa-flask",
+        order: 102,
+        button: true,
+        onChange: async () => {
+            const { openDrugDesignDialog } = await import("./dialog/drug-design-dialog.js");
+            openDrugDesignDialog();
+        }
+    };
 });
 
 /**
@@ -542,7 +557,12 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
         await game.settings.set("cyberpunk", "gameTimeOffset", offset + 3000);
     }
 
-    // Reset and auto-roll all initiative when a new round starts (CP2020: roll every round)
+    // Reset and auto-roll all initiative when a new round starts (CP2020: roll every round).
+    // Black ICE never rolls — matches the same deterministic
+    // `50 + SPD/10` formula the CyberpunkCombat#rollInitiative override
+    // uses on round 1. Skipping it here would leave Black ICE rolling
+    // a plain d10 from round 2 onward, which is why they used to slot
+    // into the initiative order correctly only on the opening round.
     if (current.round > prior.round && current.round > 1) {
         const nullUpdates = combat.combatants.map(c => ({ _id: c.id, initiative: null }));
         await combat.updateEmbeddedDocuments("Combatant", nullUpdates);
@@ -551,8 +571,14 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
         const rollFormula = game.system.initiative;
         const rollUpdates = [];
         for (const combatant of combat.combatants) {
-            if (!combatant?.actor) continue;
-            const roll = await new Roll(rollFormula, combatant.actor.getRollData()).evaluate();
+            const actor = combatant?.actor;
+            if (!actor) continue;
+            if (actor.type === "netware" && actor.system?.subtype === "blackIce") {
+                const spd = Number(actor.system?.spd) || 0;
+                rollUpdates.push({ _id: combatant.id, initiative: 50 + spd / 10 });
+                continue;
+            }
+            const roll = await new Roll(rollFormula, actor.getRollData()).evaluate();
             rollUpdates.push({ _id: combatant.id, initiative: roll.total });
         }
         if (rollUpdates.length) {
@@ -592,71 +618,64 @@ Hooks.on("combatTurnChange", async (combat, prior, current) => {
     // Reset NET Actions used at start of turn
     await actor.unsetFlag("cyberpunk", "netActionsUsed");
 
-    // Reset movement tracking for cumulative distance
-    await actor.unsetFlag("cyberpunk", "movementActionRegistered");
-    await actor.setFlag("cyberpunk", "cumulativeDistance", 0);
-
-    // Store starting position for movement tracking
-    const token = combatant.token?.object;
-    if (token) {
-        await actor.setFlag("cyberpunk", "lastPosition", {
-            x: token.document.x,
-            y: token.document.y
-        });
-    }
-
     // Check if the actor has the Shocked condition (and is not Dead)
     if (actor.statuses.has("shocked") && !actor.statuses.has("dead")) {
-        // Get the modifier from the character sheet
-        const modifier = actor.system.stunSaveMod || 0;
-        // Auto-roll Shock Save at the start of their turn
-        await actor.rollStunSave(modifier);
+        // Auto-roll Shock Save at the start of their turn. stunSaveMod
+        // is baked into `system.stunSave` by prepareDerivedData and
+        // read directly by rollStunSave; passing it here would double-count.
+        await actor.rollStunSave();
     }
 
-    // Check if Mortally Wounded (woundState >= 4) and NOT Stabilized and NOT Dead
+    // Check if Mortally Wounded (woundState >= 4) and NOT Stabilized and NOT Dead.
+    // deathSaveMod is baked into `system.deathSave` — no explicit modifier.
     if (actor.getWoundLevel() >= 4 &&
         !actor.statuses.has("stabilized") &&
         !actor.statuses.has("dead")) {
-        const modifier = actor.system.deathSaveMod || 0;
-        await actor.rollDeathSave(modifier);
+        await actor.rollDeathSave();
     }
 
-    // Handle Burning damage (2d10 first turn, 1d10 second, 1d6 third)
+    // Handle Burning damage (2d10 first turn, 1d10 second, 1d6 third).
+    // Ignore Burning property (bonus rows on cyberware / tool / outfit /
+    // drug / cyberdeck) skips the damage roll + chat post but still
+    // ticks the duration down, so the fire visually burns out on
+    // schedule rather than clinging to a fireproofed character.
     if (actor.statuses.has("burning")) {
         const duration = actor.getFlag("cyberpunk", "burningDuration") || 0;
         if (duration > 0) {
-            // Roll burning damage based on remaining duration
-            let damageFormula;
-            if (duration === 3) damageFormula = "2d10";      // First turn
-            else if (duration === 2) damageFormula = "1d10"; // Second turn
-            else damageFormula = "1d6";                       // Third turn
+            const ignoresBurning = Number(actor.system?.ignoreBurning) > 0;
+            if (!ignoresBurning) {
+                let damageFormula;
+                if (duration === 3) damageFormula = "2d10";      // First turn
+                else if (duration === 2) damageFormula = "1d10"; // Second turn
+                else damageFormula = "1d6";                       // Third turn
 
-            const damageRoll = await new Roll(damageFormula).evaluate();
-            const damage = damageRoll.total;
+                const damageRoll = await new Roll(damageFormula).evaluate();
+                const damage = damageRoll.total;
 
-            // Apply damage (ignores armor)
-            const currentDamage = actor.system.damage || 0;
-            await actor.update({ "system.damage": Math.min(currentDamage + damage, 40) });
+                // Apply damage (ignores armor)
+                const currentDamage = actor.system.damage || 0;
+                await actor.update({ "system.damage": Math.min(currentDamage + damage, 40) });
 
-            // Post to chat with expandable roll details
-            const speaker = ChatMessage.getSpeaker({ actor });
-            const rollData = processFormulaRoll(damageRoll);
-            const content = await renderTemplateCompat("systems/cyberpunk/templates/chat/condition-damage.hbs", {
-                label: game.i18n.localize("CYBERPUNK.BurningDamage"),
-                icon: "fire",
-                formula: rollData.formula,
-                diceGroups: rollData.diceGroups,
-                total: rollData.total,
-                displayValue: damage
-            });
-            ChatMessage.create({
-                speaker,
-                rolls: [damageRoll],
-                sound: "sounds/dice.wav",
-                content
-            });
+                // Post to chat with expandable roll details
+                const speaker = ChatMessage.getSpeaker({ actor });
+                const rollData = processFormulaRoll(damageRoll);
+                const content = await renderTemplateCompat("systems/cyberpunk/templates/chat/condition-damage.hbs", {
+                    label: game.i18n.localize("CYBERPUNK.BurningDamage"),
+                    icon: "fire",
+                    formula: rollData.formula,
+                    diceGroups: rollData.diceGroups,
+                    total: rollData.total,
+                    displayValue: damage
+                });
+                ChatMessage.create({
+                    speaker,
+                    rolls: [damageRoll],
+                    sound: "sounds/dice.wav",
+                    content
+                });
+            }
 
-            // Decrement duration
+            // Decrement duration whether damage landed or not.
             const newDuration = duration - 1;
             if (newDuration <= 0) {
                 await actor.toggleStatusEffect("burning", { active: false });
@@ -828,72 +847,3 @@ Hooks.on("deleteItem", async (item, options, userId) => {
     await item.parent.updateEncumbranceStatus();
 });
 
-/**
- * Track token movement during combat and register as action if exceeds walk distance
- */
-Hooks.on("updateToken", async (tokenDocument, change, options, userId) => {
-    // Only process for GM to avoid duplicate tracking
-    if (!game.user.isGM) return;
-
-    // Only track during combat
-    if (!game.combat) return;
-
-    // Only track position changes
-    if (!change.x && !change.y) return;
-
-    // Get the actor
-    const actor = tokenDocument.actor;
-    if (!actor) return;
-
-    // Only track for current combatant
-    const currentCombatant = game.combat.combatant;
-    if (!currentCombatant || currentCombatant.actorId !== actor.id) return;
-
-    // Get last position from previous move
-    const lastPos = actor.getFlag("cyberpunk", "lastPosition");
-    if (!lastPos) return; // No last position recorded
-
-    // Get current position (after this move)
-    const currentX = change.x ?? tokenDocument.x;
-    const currentY = change.y ?? tokenDocument.y;
-
-    // Get token dimensions for center point
-    const gridSize = canvas.grid.size;
-    const width = tokenDocument.width || 1;
-    const height = tokenDocument.height || 1;
-
-    const lastCenter = {
-        x: lastPos.x + (width * gridSize) / 2,
-        y: lastPos.y + (height * gridSize) / 2
-    };
-    const currentCenter = {
-        x: currentX + (width * gridSize) / 2,
-        y: currentY + (height * gridSize) / 2
-    };
-
-    // Calculate distance of THIS move
-    const path = canvas.grid.measurePath([lastCenter, currentCenter], { gridSpaces: false });
-    const moveDistance = path.distance;
-
-    // Add to cumulative distance
-    const previousCumulative = actor.getFlag("cyberpunk", "cumulativeDistance") || 0;
-    const newCumulative = previousCumulative + moveDistance;
-    await actor.setFlag("cyberpunk", "cumulativeDistance", newCumulative);
-
-    // Update last position for next move
-    await actor.setFlag("cyberpunk", "lastPosition", { x: currentX, y: currentY });
-
-    // Get walk distance from actor
-    const walkDistance = actor.system.stats?.ma?.total ?? 0;
-
-    // Check if we've already registered movement as an action this turn
-    const movementRegistered = actor.getFlag("cyberpunk", "movementActionRegistered");
-
-    // If cumulative distance exceeds walk distance and haven't registered yet, register as action
-    if (newCumulative > walkDistance && !movementRegistered) {
-        const { registerAction } = await import("./action-tracker.js");
-        await registerAction(actor, `movement (${Math.round(newCumulative)}m > ${walkDistance}m walk)`);
-        // Mark that we've registered movement this turn
-        await actor.setFlag("cyberpunk", "movementActionRegistered", true);
-    }
-});

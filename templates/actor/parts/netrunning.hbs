@@ -44,7 +44,9 @@
               <img src="systems/cyberpunk/img/ui/badge-destroyed.svg" alt="Inoperable">
             </div>
           {{else}}
-            <div class="gear-action-btn"></div>
+            <div class="gear-action-btn toggle-deck-equip" data-item-id="{{deck.id}}" data-equipped="{{deck.equipped}}" title="{{#if deck.equipped}}{{loc "Unequip"}}{{else}}{{loc "Equip"}}{{/if}}">
+              <img src="systems/cyberpunk/img/ui/badge-connect-{{#if deck.equipped}}on{{else}}off{{/if}}.svg" alt="Equip">
+            </div>
           {{/if}}
           <div class="gear-actions">
             <button class="gear-view" type="button" data-item-id="{{deck.id}}" title="View">
@@ -118,20 +120,24 @@
                 {{/if}}
               </div>
             {{else if opt.isBlackIceProgram}}
-              {{!-- Display-only state badge for Black ICE programs. The
-                   actual activation happens via the gear-fire-blackice
-                   handler on the icon/name area; the badge just mirrors
-                   programState so the netrunner can see "this is currently
-                   deployed" / "derezzed and locked out" / "inactive". --}}
-              <div class="gear-action-btn" title="{{toTitleCase opt.programState}}">
-                {{#if (eq opt.programState "active")}}
+              {{!-- State badge for Black ICE programs. When Inactive the
+                   badge doubles as an activation trigger — clicking it
+                   fires `gear-fire-blackice` (same handler as the
+                   icon/name area). Active / Derezzed badges are display-
+                   only. --}}
+              {{#if (eq opt.programState "active")}}
+                <div class="gear-action-btn" title="Active">
                   <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="Active">
-                {{else if (eq opt.programState "derezzed")}}
+                </div>
+              {{else if (eq opt.programState "derezzed")}}
+                <div class="gear-action-btn" title="Derezzed">
                   <img src="systems/cyberpunk/img/ui/badge-off-broken.svg" alt="Derezzed">
-                {{else}}
+                </div>
+              {{else}}
+                <div class="gear-action-btn gear-fire-blackice" data-item-id="{{opt.id}}" title="Activate">
                   <img src="systems/cyberpunk/img/ui/badge-off.svg" alt="Inactive">
-                {{/if}}
-              </div>
+                </div>
+              {{/if}}
             {{else}}
               <div class="gear-action-btn"></div>
             {{/if}}

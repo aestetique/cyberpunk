@@ -1023,6 +1023,71 @@
     }
   }
 
+  // Weapon drug slot — visible on gas weapons (effect === "drug").
+  // Sized identically to `.variable-input` / `.dropdown` so the row's
+  // rhythm doesn't change on lock toggle. Both filled and empty
+  // states use the same 126×26 box (same background, no dashed
+  // border) — the only difference is the text inside.
+  .weapon-drug-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 126px;
+    height: 26px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    background: var(--Chat-Front, #26282F);
+    border: none;
+    box-sizing: border-box;
+
+    .weapon-drug-slot-name {
+      flex: 1;
+      min-width: 0;
+      color: var(--Chat-Text, #FFF);
+      font-family: var(--font-blender);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 16px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &:hover { text-decoration: underline; }
+    }
+
+    .placeholder {
+      flex: 1;
+      color: var(--Chat-Gray, #444856);
+      font-family: var(--font-blender);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .weapon-drug-slot-remove {
+      width: 14px;
+      height: 14px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      opacity: 0.6;
+      flex-shrink: 0;
+
+      img { width: 100%; height: 100%; }
+
+      &:hover { opacity: 1; }
+    }
+  }
+
+  &:not(.unlocked) .weapon-drug-slot.filled .weapon-drug-slot-name {
+    color: #808090;
+  }
+
   // Trash button next to a bonus row
   .remove-bonus {
     width: 16px;

@@ -1,0 +1,107 @@
+{{!--
+  Attacker / Black-ICE Effect tab. Restricted variant of the shared
+  Effect tab used for custom target-side debuffs. Two row categories
+  only — Attribute and NET Bonus — with the op selector hidden (op is
+  always `−`, subtraction). Attribute values are text-editable and
+  accept dice formulas (e.g. `1d6`, `2d6+1`) which get rolled at
+  hit-apply time by the netware-effects pipeline; NET Bonus values
+  are plain integers.
+
+  Context populated by `prepareAttackerEffectTabContext`:
+    attackerBonuses     — shaped rows (isAttribute / isNetBonus + label)
+    attackerAttrOptions — Attribute dropdown options (stats.*)
+    attackerNetOptions  — NET Bonus dropdown options
+    isLocked            — sheet lock flag
+--}}
+<div class="effect-bonuses attacker-effect-bonuses">
+  {{#each attackerBonuses}}
+    <div class="bonus-row" data-index="{{@index}}">
+
+      {{#if this.isFlavour}}
+        {{!-- Flavour row — narrative status the effect applies on
+             hit. No op, no value; just the flavour pick. --}}
+        <label class="variable-label">{{localize "CYBERPUNK.Flavour"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select attacker-bonus-flavour-select" data-index="{{@index}}">
+              <option value="{{this.flavour}}" selected>{{this.label}}</option>
+              {{#each ../attackerFlavourOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+          </div>
+        {{/if}}
+      {{else if this.isAttribute}}
+        <label class="variable-label">{{localize "CYBERPUNK.Attribute"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select attacker-bonus-property-select" data-index="{{@index}}">
+              <option value="{{this.property}}" selected>{{this.label}}</option>
+              {{#each ../attackerAttrOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+          </div>
+        {{/if}}
+      {{else}}
+        <label class="variable-label">{{localize "CYBERPUNK.NetBonus"}}</label>
+        {{#if ../isLocked}}
+          <div class="dropdown">
+            <span class="dropdown-text">{{this.label}}</span>
+            <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+          </div>
+        {{else}}
+          <div class="dropdown-wrapper">
+            <select class="dropdown-select attacker-bonus-property-select" data-index="{{@index}}">
+              <option value="{{this.property}}" selected>{{this.label}}</option>
+              {{#each ../attackerNetOptions}}
+                <option value="{{this.value}}">{{this.label}}</option>
+              {{/each}}
+            </select>
+            <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+          </div>
+        {{/if}}
+      {{/if}}
+
+      {{!-- Op + value columns — skipped for Flavour rows (no numeric
+           modifier, just the pick). Attribute/NET Bonus lines still
+           render `−` chip + value input as before. --}}
+      {{#unless this.isFlavour}}
+        <span class="bonus-op">−</span>
+        {{#if ../isLocked}}
+          <span class="bonus-value">{{this.value}}</span>
+        {{else if this.isAttribute}}
+          <input type="text" class="bonus-value-input attacker-bonus-value-input" data-index="{{@index}}" value="{{this.value}}" placeholder="1d6">
+        {{else}}
+          <input type="number" class="bonus-value-input attacker-bonus-value-input" data-index="{{@index}}" value="{{this.value}}" step="1" min="0">
+        {{/if}}
+      {{/unless}}
+
+      {{#unless ../isLocked}}
+        <button type="button" class="attacker-remove-bonus remove-bonus" data-index="{{@index}}" title="Remove">
+          <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
+        </button>
+      {{/unless}}
+    </div>
+  {{/each}}
+</div>
+
+{{#unless isLocked}}
+  <div class="effect-actions">
+    <button type="button" class="attacker-add-attribute">{{localize "CYBERPUNK.AddAttribute"}}</button>
+    <button type="button" class="attacker-add-net">{{localize "CYBERPUNK.AddNetBonus"}}</button>
+    <button type="button" class="attacker-add-flavour">{{localize "CYBERPUNK.AddFlavour"}}</button>
+  </div>
+{{/unless}}

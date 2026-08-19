@@ -1,6 +1,6 @@
-import { buildMartialModifierGroups, meleeAttackTypes, buildRangedModifierGroups, weaponTypes, ammoAbbreviations, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects, upgradeEffects } from "../lookups.js"
+import { buildMartialModifierGroups, meleeAttackTypes, buildRangedModifierGroups, weaponTypes, ammoAbbreviations, meleeDamageBonus, programSubtypes, boosterBonuses, defenderDefences, attackerClasses, attackerEffects, upgradeEffects, getFlavourMeta, cumulativeEffects } from "../lookups.js"
 import { localize, tabBeautifying, toTitleCase, bindHoverTooltips, commitPendingEdits, buildStatButtons, renderTemplateCompat, getFilePickerClass, getImagePopoutClass } from "../utils.js"
-import { processFormulaRoll } from "../dice.js"
+import { processFormulaRoll, RollBundle, isNaturalOne } from "../dice.js"
 import { ModifiersDialog } from "../dialog/modifiers.js"
 import { RangedAttackDialog } from "../dialog/ranged-attack-dialog.js"
 import { RangeSelectionDialog } from "../dialog/range-selection-dialog.js"
@@ -10,6 +10,7 @@ import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
 import { getDrugRemainingSeconds } from "../drug-effects.js"
 import { SortModes } from "./skill-sort.js";
+import { attachRowMenu, delegateEntry } from "../ui/row-context-menu.js";
 import { MedicalHelpDialog } from "../dialog/medical-help-dialog.js"
 import { StressRollDialog } from "../dialog/stress-roll-dialog.js"
 import { FrightRollDialog } from "../dialog/fright-roll-dialog.js"
@@ -601,7 +602,6 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         }
         if (key === "luck" && (s.spent || 0) > 0) parts.push(`Spent \u2212${s.spent}`);
         if (["ref", "int", "cool"].includes(key) && s.woundMod) parts.push(`Wounds ${s.woundMod}`);
-        if (s.scrambledMod) parts.push(`Scrambled ${s.scrambledMod}`);
         if (s.sleepMod) parts.push(`Sleep ${s.sleepMod}`);
         const total = key === "luck" ? (s.effective ?? s.total ?? base) : (s.total ?? base);
         let calc = parts.length > 1 ? `${parts.join(" ")} = ${total}` : `Base ${base}`;
@@ -1009,8 +1009,8 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     // Humanity-driven penalty hint suffix. Appended to Stress / Fright /
     // Fatigue tooltips so a player reading any of them sees the full
     // active-modifier picture from the psychosis brackets.
-    const _hlObsessionMono   = (system.humanityLoss?.obsession ?? 0) >= 51;
-    const _hlParanoia        = system.humanityLoss?.paranoia ?? 0;
+    const _hlObsessionMono   = (system.psychosis?.obsession ?? 0) >= 51;
+    const _hlParanoia        = system.psychosis?.paranoia ?? 0;
     const _hlParanoiaFright  = _hlParanoia >= 41 ? -4 : (_hlParanoia >= 11 ? -2 : 0);
     const _hlParanoiaCool    = _hlParanoia >= 41;
     const _hlHints = [];
@@ -1029,12 +1029,22 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     // Distribution: total humanity damage (Y) is the pool of points that can
     // be spent across the four flavours (X = their sum). Up arrows go inert
     // once X reaches Y, since there are no more points to assign.
+    // Distribution counter reads the stored humanityLoss values (State
+    // bonuses via `stateBonus.<flavour>` never affect what the GM has
+    // spent — they only bump `psychosis.<flavour>` for bracket lookup).
     const HL = system.humanityLoss ?? {};
+    const PS = system.psychosis ?? {};
     const hlValues = {
       alienation: HL.alienation ?? 0,
       egotism:    HL.egotism    ?? 0,
       obsession:  HL.obsession  ?? 0,
       paranoia:   HL.paranoia   ?? 0
+    };
+    const psValues = {
+      alienation: PS.alienation ?? hlValues.alienation,
+      egotism:    PS.egotism    ?? hlValues.egotism,
+      obsession:  PS.obsession  ?? hlValues.obsession,
+      paranoia:   PS.paranoia   ?? hlValues.paranoia
     };
     const hlDistributed = hlValues.alienation + hlValues.egotism + hlValues.obsession + hlValues.paranoia;
     // Pool = EMP-derived base loss + cyberware/event humanity damage. We read
@@ -1046,19 +1056,25 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     const hlFull     = hlDistributed >= hlTotal;
     sheetData.humanityLossCounter = `${hlDistributed} / ${hlTotal}`;
     sheetData.humanityLossBlocks = ["alienation", "egotism", "obsession", "paranoia"].map(flavour => {
-      const value = hlValues[flavour];
-      const bracket = _humanityBracketFor(flavour, value);
+      // Displayed value = effective psychosis (raw HL + active State
+      // bonuses), same rule Stress/Fright/Fatigue follow — the state
+      // tab shows the character's current condition, not the stored
+      // distribution. Up/down arrow-disabled states still track the
+      // raw distributed value since the buttons write to that source.
+      const raw = hlValues[flavour];
+      const effective = psValues[flavour];
+      const bracket = _humanityBracketFor(flavour, effective);
       const label = localize(`HumanityLossPanel.${FLAVOUR_CAP[flavour]}`);
       return {
         label,
-        value,
+        value: effective,
         field: `system.humanityLoss.${flavour}`,
-        upIcon:   (value >= 100 || hlFull) ? "badge-up-disabled.svg"   : "badge-up.svg",
-        downIcon:  value <= 0              ? "badge-down-disabled.svg" : "badge-down.svg",
+        upIcon:   (raw >= 100 || hlFull) ? "badge-up-disabled.svg"   : "badge-up.svg",
+        downIcon:  raw <= 0              ? "badge-down-disabled.svg" : "badge-down.svg",
         status: bracket ? _humanityBracketLabel(flavour, bracket) : "",
         tooltipName: label,
         flavor: bracket ? _humanityBracketFlavor(flavour, bracket) : "",
-        calc: _humanityNextBracketCalc(flavour, value)
+        calc: _humanityNextBracketCalc(flavour, effective)
       };
     });
 
@@ -1540,33 +1556,75 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       return `${Math.floor(s / 86400)} d`;
     };
 
+    // Phase-scoped display / behaviour lookup for drug rows. Keeps the
+    // three parallel ternaries (label / bonus-flag / flavour-flag /
+    // badge / next-action-label) collapsed into one table so a new
+    // phase means one entry, not five edits. `nextLabel` is a callable
+    // because Active's next action depends on whether the drug has
+    // withdrawal bonuses.
+    const DRUG_PHASE_MAP = {
+      onset: {
+        label: "CYBERPUNK.Onset",
+        bonusFlag: null,
+        flavourFlag: null,
+        badge: "badge-onset.svg",
+        nextLabel: () => "CYBERPUNK.Active"
+      },
+      active: {
+        label: "CYBERPUNK.Active",
+        bonusFlag: "activeChanges",
+        flavourFlag: "activeFlavours",
+        badge: "badge-used.svg",
+        nextLabel: (hasWithdrawal) => hasWithdrawal ? "CYBERPUNK.Withdrawal" : "CYBERPUNK.WearOff"
+      },
+      withdrawal: {
+        label: "CYBERPUNK.Withdrawal",
+        bonusFlag: "withdrawalChanges",
+        flavourFlag: "withdrawalFlavours",
+        badge: "badge-withdrawal.svg",
+        nextLabel: () => "CYBERPUNK.WearOff"
+      }
+    };
+
     sheetData.activeDrugRows = (this.actor.effects?.contents || [])
       .filter(e => e.getFlag?.("cyberpunk", "isDrugEffect") === true)
       .map(e => {
         const phase = e.getFlag("cyberpunk", "phase") || "active";
-        const isActive = phase === "active";
-        // Subtext: phase label · effect summary (first two bonuses).
-        const phaseLabel = isActive
-          ? game.i18n.localize("CYBERPUNK.Active")
-          : game.i18n.localize("CYBERPUNK.Withdrawal");
-        const bonusList = isActive
-          ? (e.getFlag("cyberpunk", "activeChanges") || [])
-          : (e.getFlag("cyberpunk", "withdrawalChanges") || []);
-        const effectLabels = summariseBonuses(bonusList);
-        const subtext = [phaseLabel, ...effectLabels].join(" · ");
-        // Drugs with no withdrawal bonuses skip the withdrawal step and
-        // wear off on the first click — so the tooltip should label the
-        // actual next action, not a phase the user can't reach.
+        const p = DRUG_PHASE_MAP[phase] ?? DRUG_PHASE_MAP.active;
+
+        const bonusList = p.bonusFlag ? (e.getFlag("cyberpunk", p.bonusFlag) || []) : [];
+        const subtext = [game.i18n.localize(p.label), ...summariseBonuses(bonusList)].join(" · ");
+
+        // "Next action" tooltip. Active's next step depends on whether
+        // the drug has any withdrawal bonuses — no-withdrawal drugs
+        // skip straight to wear-off on the first click.
         const hasWithdrawal = ((e.getFlag("cyberpunk", "withdrawalChanges") || []).length) > 0;
-        const nextIsWithdrawal = isActive && hasWithdrawal;
-        // Duration / Strength belong to the CURRENT phase. The "Duration"
-        // value is REMAINING seconds against the system's own clock
-        // (gameTimeOffset) — the same clock the auto-advance logic uses,
-        // so display and behaviour can't drift apart.
+        const nextActionLabelKey = p.nextLabel(hasWithdrawal);
+
+        // Duration is REMAINING seconds against the system's own clock
+        // (gameTimeOffset) — the same clock the auto-advance sweep
+        // reads, so display and behaviour can't drift apart. Strength
+        // is the drug's single unified value regardless of phase.
         const durationSeconds = getDrugRemainingSeconds(e);
-        const strength = isActive
-          ? (e.getFlag("cyberpunk", "strength") ?? 0)
-          : (e.getFlag("cyberpunk", "withdrawalStrength") ?? 0);
+        const strength = e.getFlag("cyberpunk", "strength") ?? 0;
+        const actionBadge = p.badge;
+
+        // Phase-scoped flavour hint icons — Onset shows none (bonusFlag
+        // is null); Active / Withdrawal read their own flag list.
+        const flavourIds = p.flavourFlag ? (e.getFlag("cyberpunk", p.flavourFlag) || []) : [];
+        const statusHints = flavourIds.map(id => {
+          const meta = getFlavourMeta(id);
+          if (!meta) return null;
+          return {
+            key:      id,
+            effectId: e.id,
+            icon:     `systems/cyberpunk/img/conditions/${meta.icon}.svg`,
+            label:    game.i18n.localize(`CYBERPUNK.${meta.labelKey}`),
+            flavor:   meta.flavor,
+            calc:     meta.calc,
+            rollable: !!meta.roll
+          };
+        }).filter(Boolean);
         return {
           id: e.id,
           img: e.img || e.icon,
@@ -1575,14 +1633,118 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
           phase,
           durationDisplay: formatDrugDuration(durationSeconds),
           strength,
-          actionLabel: nextIsWithdrawal
-            ? game.i18n.localize("CYBERPUNK.Withdrawal")
-            : game.i18n.localize("CYBERPUNK.WearOff"),
-          // Badge shows the CURRENT phase, not the next action. Tooltip
-          // (`actionLabel`) carries the "click to advance" semantics.
-          actionBadge: isActive ? "badge-used.svg" : "badge-withdrawal.svg"
+          statusHints,
+          actionLabel: game.i18n.localize(nextActionLabelKey),
+          actionBadge
         };
       });
+
+    // --- Netware Effects (State tab) ---
+    // Two row kinds under one section header, distinguished by their
+    // tail chip: active Booster/Defender programs on this actor's
+    // equipped deck (persistent — chip shows REZ), and applied
+    // netware ActiveEffects from Custom attacker/BI hits (temporary —
+    // chip shows time-remaining).
+    // `itemTypes.netware` — Foundry pre-groups items by type; walking
+    // the pre-filtered array avoids two full `items.contents` scans
+    // (deck lookup + attached-program filter) per render.
+    const netwareItems = this.actor.itemTypes.netware ?? [];
+    const equippedDeck = netwareItems.find(i =>
+      i.system?.netwareType === "cyberdeck" && i.system?.equipped
+    );
+    // Localizations that are constant across every row — hoisted so
+    // the netware/program/effect loops don't call `game.i18n` for
+    // each row on every render.
+    const L_DURATION       = game.i18n.localize("CYBERPUNK.Duration");
+    const L_REZ            = game.i18n.localize("CYBERPUNK.REZ");
+    const L_EFFECT_CUSTOM  = game.i18n.localize("CYBERPUNK.EffectCustom");
+    const L_SUB_BOOSTER    = game.i18n.localize("CYBERPUNK.ProgramSubBooster");
+    const L_SUB_DEFENDER   = game.i18n.localize("CYBERPUNK.ProgramSubDefender");
+    // Game-clock snapshot — same value for every "remaining" IIFE
+    // below; read the setting once instead of once per netware row.
+    const nowSec = Math.floor((game.settings.get("cyberpunk", "gameTimeOffset") || 0) / 1000);
+    const netwareRows = [];
+    // Booster / Defender programs on the equipped deck. Same filter
+    // the pipeline uses; only Active programs contribute.
+    if (equippedDeck) {
+      for (const p of netwareItems) {
+        if (p.system?.netwareType !== "program") continue;
+        const sub = p.system?.programSubtype;
+        if (sub !== "booster" && sub !== "defender") continue;
+        if (p.system?.programState !== "active") continue;
+        if (p.getFlag?.("cyberpunk", "attachedTo") !== equippedDeck.id) continue;
+        const rez = Number(p.system?.rez) || 0;
+        // Subtext: "Booster · Scanner +2" (booster) or "Defender · Shield" (defender)
+        let subLabel = "";
+        if (sub === "booster") {
+          const key = p.system?.boosterBonus || "";
+          const val = Number(p.system?.boosterValue) || 0;
+          const bonusI18n = key ? game.i18n.localize(`CYBERPUNK.Booster${key.charAt(0).toUpperCase() + key.slice(1)}`) : "";
+          subLabel = `${L_SUB_BOOSTER} · ${bonusI18n} ${val >= 0 ? "+" : ""}${val}`;
+        } else {
+          const defKey = p.system?.defenderDefence || "";
+          subLabel = `${L_SUB_DEFENDER} · ${defKey.charAt(0).toUpperCase() + defKey.slice(1)}`;
+        }
+        netwareRows.push({
+          id: p.id,
+          img: p.img,
+          name: p.name,
+          subtext: subLabel,
+          chipLabel: L_REZ,
+          chipValue: rez,
+          kind: "program"
+        });
+      }
+    }
+    // Applied netware ActiveEffects (Custom attacker/BI payloads).
+    for (const e of this.actor.effects) {
+      if (e.getFlag?.("cyberpunk", "isNetwareEffect") !== true) continue;
+      const bonuses = e.getFlag("cyberpunk", "activeChanges") || [];
+      // Flavour statuses attached to this effect (e.g. Superglue).
+      // Each renders as a 32×32 hover-hint icon on the row — the
+      // shared "narrative status the effect applied" glyph slot.
+      const flavourIds = e.getFlag("cyberpunk", "flavours") || [];
+      const statusHints = flavourIds.map(id => {
+        const meta = getFlavourMeta(id);
+        if (!meta) return null;
+        // Flavour registry entries carry the exact on-state icon
+        // filename (e.g. `superglue-on`); labels resolve via i18n.
+        return {
+          key:      id,
+          effectId: e.id,
+          icon:     `systems/cyberpunk/img/conditions/${meta.icon}.svg`,
+          label:    game.i18n.localize(`CYBERPUNK.${meta.labelKey}`),
+          flavor:   meta.flavor,
+          calc:     meta.calc,
+          rollable: !!meta.roll
+        };
+      }).filter(Boolean);
+      // Subtext lists everything this effect does — the property-row
+      // summary AND the flavour status labels — so a flavour-only
+      // effect (Superglue with no numeric bonuses) reads as
+      // "Superglue" instead of the placeholder "Custom".
+      const summary = [
+        ...summariseBonuses(bonuses),
+        ...statusHints.map(h => h.label)
+      ].join(" · ");
+      const remaining = (() => {
+        const total = Number(e.getFlag("cyberpunk", "activeDuration")) || 0;
+        if (total <= 0) return null;
+        const startedAt = Number(e.getFlag("cyberpunk", "startedAt") || 0);
+        return Math.max(0, total - Math.max(0, nowSec - startedAt));
+      })();
+      netwareRows.push({
+        id: e.id,
+        img: e.img || e.icon,
+        name: e.name,
+        subtext: summary || L_EFFECT_CUSTOM,
+        chipLabel: L_DURATION,
+        chipValue: remaining == null ? "—" : formatDrugDuration(remaining),
+        statusHints,
+        kind: "effect"
+      });
+    }
+    sheetData.activeNetwareRows = netwareRows;
 
     // --- Item Effects (State tab) ---
     // Mirror of items whose bonuses[] are currently contributing to actor
@@ -1619,6 +1781,29 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       name: i.name,
       subtext: summariseBonuses(i.system.bonuses, 3).join(" · ")
     }));
+
+    // --- Cumulative Effects (State tab) ---
+    // Per-actor persistent counters fed by drugs on Onset→Active. Only
+    // rows with non-zero value render — the GM never authors a "zero"
+    // row directly; a fresh zero comes from row deletion in the sheet
+    // (we set the value to 0, and the row drops out next render).
+    const cumBag = this.actor.system?.cumulative ?? {};
+    sheetData.cumulativeEffectRows = Object.entries(cumulativeEffects)
+      .map(([key, meta]) => {
+        const value = Number(cumBag[key]) || 0;
+        if (value <= 0) return null;
+        const label = game.i18n.localize(`CYBERPUNK.${meta.labelKey}`);
+        return {
+          key,
+          label,
+          value,
+          valueDisplay: (Math.round(value * 10) / 10).toString(),
+          flavor: meta.flavor,
+          calc: meta.calc,
+          rollable: !!meta.roll
+        };
+      })
+      .filter(Boolean);
 
     // Prepare drug data. Drugs in Gear are pure SUPPLY — they don't carry
     // an "applied" state anymore; clicking Use posts the chat card and the
@@ -2061,7 +2246,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       return '';
     };
 
-    // Separate cyberdecks (bases) from programs/upgrades (options)
+    // Separate cyberdecks (bases) from programs/upgrades (options).
     const decks = allNetware.filter(n => n.system.netwareType === 'cyberdeck');
     const options = allNetware.filter(n => n.system.netwareType !== 'cyberdeck');
 
@@ -2138,13 +2323,19 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       // for consistency between slotted and unslotted reads.
       preparedOptions.sort(_netwareTypeSorter);
 
+      // "Cyberdeck Slots" bonus (drug / cyberware / tool / armor
+      // property) inflates the max on every deck the actor owns while
+      // active. Accumulated on `system.cyberdeckSlots` by the standard
+      // toolBonusProperties pipeline.
+      const slotBoost = Math.max(0, Number(this.actor.system?.cyberdeckSlots) || 0);
+      const effectiveSlots = (sys.slots || 0) + slotBoost;
       category.items.push({
         id: deck.id, img: deck.img, name: deck.name,
         context: buildContext(deck),
         price: sys.cost || 0,
-        slots: sys.slots || 0,
+        slots: effectiveSlots,
         usedSlots,
-        slotDisplay: `${usedSlots} / ${sys.slots || 0}`,
+        slotDisplay: `${usedSlots} / ${effectiveSlots}`,
         damage: "1d6",          // Zap's built-in damage — same column as Attacker programs
         equipped: sys.equipped ?? false,
         // `inoperable` flag — drives the action-slot badge + blocks the
@@ -2191,9 +2382,15 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       });
     }
 
-    // Cyberdecks stay alphabetical; programs/upgrades sort by type band
-    // (matches the attached-options order above).
-    category.items.sort((a, b) => a.name.localeCompare(b.name));
+    // Cyberdecks: equipped deck first (the runner's active loadout leads
+    // the tab); everything else alphabetical within its band. Programs/
+    // upgrades sort by type band (matches the attached-options order above).
+    category.items.sort((a, b) => {
+      const ea = a.equipped ? 1 : 0;
+      const eb = b.equipped ? 1 : 0;
+      if (ea !== eb) return eb - ea;
+      return a.name.localeCompare(b.name);
+    });
     category.detachedOptions.sort(_netwareTypeSorter);
 
     sheetData.netwareCategory = category;
@@ -2361,25 +2558,23 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
     // ----- Action Buttons (Stun Save, Poison Save, Death Save) -----
 
-    // Stun Save roll
+    // Stun / Poison / Death saves. The actor's saveMod is baked into
+    // `system.stunSave / poisonSave / deathSave` by prepareDerivedData
+    // and read directly by the roll functions — passing it again
+    // would double-count. No situational modifier from the sheet.
     html.find(".stun-save").click(ev => {
       ev.preventDefault();
-      const modifier = this.actor.system.stunSaveMod || 0;
-      this.actor.rollStunSave(modifier);
+      this.actor.rollStunSave();
     });
 
-    // Poison Save roll
     html.find(".poison-save").click(ev => {
       ev.preventDefault();
-      const modifier = this.actor.system.poisonSaveMod || 0;
-      this.actor.rollPoisonSave(modifier);
+      this.actor.rollPoisonSave();
     });
 
-    // Death Save roll
     html.find(".death-save").click(ev => {
       ev.preventDefault();
-      const modifier = this.actor.system.deathSaveMod || 0;
-      this.actor.rollDeathSave(modifier);
+      this.actor.rollDeathSave();
     });
 
     // If not editable, do nothing further
@@ -2562,20 +2757,6 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       ev.preventDefault();
       const conditionId = ev.currentTarget.dataset.conditionId;
       const isActive = this.actor.statuses.has(conditionId);
-
-      // Scrambled: auto-roll 1d6 penalty on apply, clear on remove
-      if (conditionId === "scrambled") {
-        if (!isActive) {
-          const roll = await new Roll("1d6").evaluate();
-          await this.actor.setFlag("cyberpunk", "scrambledPenalty", roll.total);
-          roll.toMessage({
-            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-            flavor: `<strong>Scrambled!</strong> INT and REF reduced by ${roll.total}`
-          });
-        } else {
-          await this.actor.unsetFlag("cyberpunk", "scrambledPenalty");
-        }
-      }
 
       await this.actor.toggleStatusEffect(conditionId, { active: !isActive });
     });
@@ -2778,7 +2959,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
     });
 
     // Hover tooltips (follow cursor)
-    bindHoverTooltips(html, '.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor], .stabilize-action-btn[data-flavor]');
+    bindHoverTooltips(html, '.skill-row, .role-display, .stat-btn, .stun-save, .poison-save, .death-save, .tracker-row[data-flavor], .info-block[data-flavor], .armor-slot[data-flavor], .unarmed-damage-tooltip, .state-block[data-flavor], .cover-toggle[data-flavor], .cond-toggle[data-flavor], .stabilize-action-btn[data-flavor], .netware-status-hint[data-flavor], .cumulative-row[data-flavor]');
 
     // Generic condition toggle (Stabilized, Fast Draw, Action Surge, etc.)
     html.find(".toggle-condition").change(async (ev) => {
@@ -2978,12 +3159,179 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       await advanceDrugPhase(effect);
     });
 
+    // State-tab Netware Effects: deactivate button.
+    //   kind="program" (Booster / Defender on the equipped deck) — set
+    //     programState to `inactive`; spends 1 NET Action in combat, same
+    //     as the netrunning-tab program toggle.
+    //   kind="effect" (Custom netware ActiveEffect from an attacker/BI
+    //     hit) — delete the effect entirely so the runner is free of the
+    //     debuff before its authored duration would have expired.
+    html.find('.netware-row-toggle').click(async ev => {
+      ev.stopPropagation();
+      const id = ev.currentTarget.dataset.netwareRowId;
+      const kind = ev.currentTarget.dataset.kind;
+      if (kind === "effect") {
+        const effect = this.actor.effects.get(id);
+        if (effect) await effect.delete();
+        return;
+      }
+      if (kind === "program") {
+        const program = this.actor.items.get(id);
+        if (!program) return;
+        if (!await spendNetAction(this.actor, "deactivate program")) return;
+        await program.update({ "system.programState": "inactive" });
+      }
+    });
+
     // State-tab Item Effects: click row to open the source item sheet.
     html.find('.item-effect-row').click(ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const item = this.actor.items.get(itemId);
       if (item) item.sheet.render(true);
     });
+
+    // State-tab Flavour hint icons — clickable when the flavour's
+    // metadata carries `roll`. Non-rollable flavours (no `.rollable`
+    // class) get no click behaviour — the hover tooltip is the whole
+    // interaction. Delegated listener on the sheet root, bound once
+    // per sheet lifetime via `_flavourClickBound` to survive V2 part
+    // re-renders without stacking N duplicate handlers.
+    if (!this._flavourClickBound) {
+    this._flavourClickBound = true;
+    this.element.addEventListener('click', async (ev) => {
+      const el = ev.target.closest('.netware-status-hint.rollable');
+      if (!el || !this.element.contains(el)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const flavourKey = el.dataset.flavourKey;
+      const effectId = el.dataset.effectId;
+      if (!flavourKey || !effectId) return;
+      const effect = this.actor.effects.get(effectId);
+      if (!effect) return;
+      const meta = getFlavourMeta(flavourKey);
+      const roll = meta?.roll;
+      if (!roll) return;
+
+      const strength = Number(effect.getFlag("cyberpunk", "strength")) || 0;
+      const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+      const label = game.i18n.localize(`CYBERPUNK.${meta.labelKey}`);
+
+      // Death Save flavour (Death Risk) delegates to the actor's own
+      // rollDeathSave so we reuse the system's save card and the
+      // Dead-condition-on-failure side effect. Threshold modifier is
+      // −Str + 2 per the flavour spec: at Str 2 the save is neutral,
+      // higher strengths make it progressively harder.
+      if (roll.dv === "death") {
+        await this.actor.rollDeathSave(-strength + 2);
+        return;
+      }
+
+      // Formula + DV per the flavour's roll metadata:
+      //   dv: "str"  → roll `1d10`, DV = drug strength
+      //   dv: "stat" → roll `1d10 − Str × penaltyMul`, DV = character's
+      //                effective stat total (INT / COOL / …)
+      // Success = roll total ≥ DV (Cyberpunk skill-check convention).
+      // Fumbles on nat 1 trigger the standard fumble cascade — no IP
+      // gain either way (resistance saves aren't skill improvement
+      // rolls). Chat card uses the shared NET action template with
+      // the drug section-bar icon.
+      const useStatDV = roll.dv === "stat";
+      const penalty = useStatDV ? (strength * (roll.penaltyMul || 1)) : 0;
+      const dv = useStatDV
+        ? (Number(this.actor.system?.stats?.[roll.stat]?.total) || 0)
+        : strength;
+      const parts = ["1d10", penalty ? `- ${penalty}` : null].filter(Boolean);
+      const r = await new Roll(parts.join(" ")).evaluate();
+      const fumbled = isNaturalOne(r);
+      const success = !fumbled && (Number(r.total) || 0) >= dv;
+      const fumble  = fumbled ? await this.actor.rollFumbleData() : null;
+
+      await new RollBundle(label).addRoll(r)
+        .execute(speaker, "systems/cyberpunk/templates/chat/net-action.hbs", {
+          title: label,
+          actionIcon: "drug",
+          hasDifficulty: true,
+          difficulty: dv,
+          success,
+          hasResponse: false,
+          ipGained: 0,
+          fumble
+        });
+    });
+    }
+
+    // State-tab Cumulative Effects section — value edit, delete, and
+    // rollable click. One delegated listener block on the sheet root
+    // per instance so re-renders don't stack duplicate handlers.
+    if (!this._cumulativeBound) {
+    this._cumulativeBound = true;
+
+    // Rollable click: 1d10 + stat.total vs Math.ceil(value). Uses the
+    // same RollBundle + net-action.hbs card as drug flavours, with the
+    // drug section-bar icon.
+    this.element.addEventListener('click', async (ev) => {
+      // closest() with a descendant combinator is spec-legal but
+      // unreliable in practice — do the two-step manually: hit the
+      // name span first, then check its rollable-row ancestor.
+      const nameEl = ev.target.closest('.cumulative-row-name');
+      if (!nameEl || !this.element.contains(nameEl)) return;
+      const row = nameEl.closest('.cumulative-row.rollable');
+      if (!row) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const key = row.dataset.cumulativeKey;
+      if (!key) return;
+      const meta = cumulativeEffects[key];
+      const roll = meta?.roll;
+      if (!roll) return;
+      const value = Number(this.actor.system?.cumulative?.[key]) || 0;
+      const dv = Math.ceil(value);
+      const statTotal = Number(this.actor.system?.stats?.[roll.stat]?.total) || 0;
+      const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+      const label = game.i18n.localize(`CYBERPUNK.${meta.labelKey}`);
+      const r = await new Roll(`1d10 + ${statTotal}`).evaluate();
+      const fumbled = isNaturalOne(r);
+      const success = !fumbled && (Number(r.total) || 0) >= dv;
+      const fumble = fumbled ? await this.actor.rollFumbleData() : null;
+      await new RollBundle(label).addRoll(r)
+        .execute(speaker, "systems/cyberpunk/templates/chat/net-action.hbs", {
+          title: label,
+          actionIcon: "drug",
+          hasDifficulty: true,
+          difficulty: dv,
+          success,
+          hasResponse: false,
+          ipGained: 0,
+          fumble
+        });
+    });
+
+    // Delete a cumulative row — sets its value to 0. Next render drops
+    // the row (builder filters value <= 0). Trash button only exists in
+    // unlocked mode, so no lock check needed here.
+    this.element.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('.cumulative-row-remove');
+      if (!btn || !this.element.contains(btn)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const row = btn.closest('.cumulative-row');
+      const key = row?.dataset.cumulativeKey;
+      if (!key) return;
+      await this.actor.update({ [`system.cumulative.${key}`]: 0 });
+    });
+
+    // Manual value edit — GM adjustment. Parses to a non-negative
+    // number and writes back on blur / change.
+    this.element.addEventListener('change', async (ev) => {
+      const input = ev.target.closest?.('.cumulative-row-value');
+      if (!input || !this.element.contains(input)) return;
+      const row = input.closest('.cumulative-row');
+      const key = row?.dataset.cumulativeKey;
+      if (!key) return;
+      const v = Math.max(0, Number(input.value) || 0);
+      await this.actor.update({ [`system.cumulative.${key}`]: v });
+    });
+    }
 
     // (.gear-fire-weapon and .gear-fire-ordnance are wired by
     //  bindWeaponAndOrdnanceHandlers above.)
@@ -3402,7 +3750,48 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         ui.notifications.warn(localize("CyberdeckInoperableUseBadge"));
         return;
       }
+      // Only the equipped deck can drive actions. A netrunner with two
+      // decks who clicks the non-equipped row gets a pointer instead of a
+      // silent open onto the wrong deck's boosters / attackers.
+      if (!item.system?.equipped) {
+        ui.notifications.warn(localize("CyberdeckNotEquipped"));
+        return;
+      }
       new CyberdeckActionDialog(this.actor, item).render(true);
+    });
+
+    // Equip / unequip a cyberdeck. Only one deck can be equipped at a
+    // time; equipping deck B unequips whatever was equipped before in the
+    // same write so the actor never briefly has two. An inoperable deck
+    // can't be equipped (the row shows the repair badge instead of this
+    // toggle anyway — guard here for the case where the state changes
+    // between HUD build and click). Unequipping the deck the runner is
+    // currently jacked in through forces a jack-out; the jack-out hook
+    // in jack-in.js handles NET-icon despawn + program deactivation.
+    html.find('.toggle-deck-equip').click(async ev => {
+      const itemId = ev.currentTarget.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item || item.type !== "netware" || item.system?.netwareType !== "cyberdeck") return;
+      const currentEquipped = !!item.system?.equipped;
+      if (!currentEquipped && item.system?.programState === "inoperable") {
+        ui.notifications.warn(localize("CyberdeckInoperableUseBadge"));
+        return;
+      }
+      const updates = [{ _id: itemId, "system.equipped": !currentEquipped }];
+      if (!currentEquipped) {
+        // Equipping — unequip every other deck in the same batch.
+        for (const other of this.actor.items) {
+          if (other.id === itemId) continue;
+          if (other.type !== "netware" || other.system?.netwareType !== "cyberdeck") continue;
+          if (other.system?.equipped) updates.push({ _id: other.id, "system.equipped": false });
+        }
+      } else if (this.actor.statuses?.has?.("jacked-in")) {
+        // Unequipping the currently-jacked-in deck kicks the runner out
+        // of the NET — jack-in.js#jackOut cleans up the NET icon + any
+        // active boosters/defenders on this deck.
+        await this.actor.toggleStatusEffect("jacked-in", { active: false });
+      }
+      await this.actor.updateEmbeddedDocuments("Item", updates);
     });
 
     // Inoperable-badge click: posts a Repair Request chat card. Anyone with
@@ -3436,7 +3825,10 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       await performBlackIceProgramActivate(this.actor, program);
     });
 
-    // Toggle program state (booster/defender: inactive <-> active)
+    // Toggle program state (booster/defender: inactive <-> active).
+    // Derezzed programs recover to Inactive when clicked — costs 1 NET
+    // Action in combat, free outside combat (spendNetAction is a no-op
+    // when combat isn't started). Destroyed programs stay unrecoverable.
     html.find('.toggle-program-state').click(async ev => {
       const itemId = ev.currentTarget.dataset.itemId;
       const item = this.actor.items.get(itemId);
@@ -3444,9 +3836,16 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
       const currentState = item.system.programState || 'inactive';
 
-      // Derezzed/Destroyed cannot be toggled from UI
-      if (currentState === 'derezzed' || currentState === 'destroyed') {
-        ui.notifications.warn(`${item.name} is ${toTitleCase(currentState)} and cannot be toggled.`);
+      // Destroyed is terminal — no way back from the UI.
+      if (currentState === 'destroyed') {
+        ui.notifications.warn(`${item.name} is Destroyed and cannot be toggled.`);
+        return;
+      }
+
+      // Derezzed → Inactive recovery path. Costs a NET Action in combat.
+      if (currentState === 'derezzed') {
+        if (!await spendNetAction(this.actor, "reactivate derezzed program")) return;
+        await item.update({ "system.programState": "inactive" });
         return;
       }
 
@@ -3550,16 +3949,23 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         }
 
         // Validate: deck must be OFF
-        if (deckItem.system.equipped) {
-          ui.notifications.warn("Cannot slot into an active cyberdeck. Jack out first.");
+        // Block slotting into the equipped deck while jacked in — the
+        // active run's booster/defender state would drift under your feet.
+        // Once jacked out, the deck can stay equipped and still be reslotted.
+        if (deckItem.system.equipped && this.actor.statuses?.has?.("jacked-in")) {
+          ui.notifications.warn("Cannot slot into a cyberdeck during a run. Jack out first.");
           return;
         }
 
-        // Validate: check available slots
+        // Validate: check available slots. Actor's `cyberdeckSlots`
+        // bonus (from drugs / cyberware / tools / armor via the
+        // toolBonusProperties pipeline) inflates the deck's max here,
+        // same as it does on the gear-tab display.
         const usedSlots = this.actor.items
           .filter(i => i.type === 'netware' && i.getFlag('cyberpunk', 'attachedTo') === deckItem.id)
           .reduce((sum, i) => sum + (i.system.takesSpace ?? 1), 0);
-        const availableSlots = deckItem.system.slots || 0;
+        const slotBoost = Math.max(0, Number(this.actor.system?.cyberdeckSlots) || 0);
+        const availableSlots = (deckItem.system.slots || 0) + slotBoost;
         const neededSlots = optionItem.system.takesSpace ?? 1;
 
         if (usedSlots + neededSlots > availableSlots) {
@@ -3629,6 +4035,138 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
     // Show/hide the Add Item FAB based on the active tab
     this._updateAddItemFab(html);
+
+    // ----- Right-click context menu on every actionable row -----
+    // Single master menu on `.skill-row, .gear-row` (which covers every
+    // item / effect / stackable in every tab). Each entry uses `visible`
+    // to check for the corresponding action icon inside the row; the
+    // templates already omit icons when the action doesn't apply
+    // (skill without enough IP, unlocked deck without a repair badge,
+    // detached option without a detach chip, etc.), so the menu
+    // inherits those rules with no duplicated logic. Callbacks
+    // synthesise a click on the same icon so both entry paths share
+    // one handler and can't drift apart.
+    this._attachRowContextMenus(html);
+  }
+
+  /**
+   * Register right-click menus on every actionable row on the character
+   * sheet. See notes on the caller — one master menu, entries delegate
+   * to the existing per-row action icons.
+   */
+  _attachRowContextMenus(html) {
+    const iconEye    = '<i class="fas fa-eye"></i>';
+    const iconTrash  = '<i class="fas fa-trash"></i>';
+    const iconDice   = '<i class="fas fa-dice-d10"></i>';
+    const iconFire   = '<i class="fas fa-crosshairs"></i>';
+    const iconReload = '<i class="fas fa-sync"></i>';
+    const iconCharge = '<i class="fas fa-bolt"></i>';
+    const iconPlus   = '<i class="fas fa-plus"></i>';
+    const iconPower  = '<i class="fas fa-power-off"></i>';
+    const iconEquip  = '<i class="fas fa-vest"></i>';
+    const iconLink   = '<i class="fas fa-link"></i>';
+    const iconUnlink = '<i class="fas fa-unlink"></i>';
+    const iconWrench = '<i class="fas fa-wrench"></i>';
+    const iconVial   = '<i class="fas fa-vial"></i>';
+    const iconClock  = '<i class="fas fa-clock"></i>';
+    const iconBrain  = '<i class="fas fa-brain"></i>';
+
+    // Order matters — this is the vertical order in the menu when
+    // multiple entries are visible for a row. Group by "roll → fire →
+    // ammo/charge → state toggle → configure → open/delete".
+    const entries = [
+      // Rolls / one-shot actions
+      delegateEntry(localize("Roll"),            iconDice,   ".skill-roll"),
+      delegateEntry(localize("Fire"),            iconFire,   ".fire-weapon"),
+      delegateEntry(localize("Activate"),        iconPower,  ".gear-fire-attacker"),
+      delegateEntry(localize("Activate"),        iconPower,  ".gear-fire-blackice"),
+      delegateEntry(localize("Use"),             iconPower,  ".gear-fire-cyberdeck"),
+      delegateEntry(localize("Use"),             iconVial,   ".use-drug"),
+      delegateEntry(localize("AdvancePhase"),    iconClock,  ".drug-phase-toggle"),
+      delegateEntry(localize("HumanityLossRoll"), iconBrain, ".humanity-roll-btn"),
+      // IP spend on skills — the `.skill-plus` icon is always in the
+      // DOM but its inner <img> swaps to `icon-plus-disabled.svg` when
+      // the actor doesn't have enough IP. Reading the img src is the
+      // cheapest signal that matches the template's own gate.
+      {
+        label:    localize("Improve"),
+        icon:     iconPlus,
+        visible:  (li) => {
+          const img = li.querySelector(".skill-plus img");
+          return !!img && !img.getAttribute("src")?.includes("icon-plus-disabled");
+        },
+        callback: (li) => li.querySelector(".skill-plus")?.click()
+      },
+      // Reload / charge for weapons
+      delegateEntry(localize("Reload"),          iconReload, ".reload-weapon"),
+      delegateEntry(localize("Charge"),          iconCharge, ".charge-weapon"),
+      delegateEntry(localize("Recharge"),        iconCharge, ".charge-tool"),
+      delegateEntry(localize("RepairRequest"),   iconWrench, ".cyberdeck-repair-request"),
+      // Equip / toggle state — label is dynamic based on the current
+      // state, mirroring the icon's title attribute so the menu reads
+      // "Unequip" when clicking would unequip, "Equip" when equipping.
+      {
+        label:    localize("Equip"),
+        icon:     iconEquip,
+        visible:  (li) => !!li.querySelector(".toggle-equip"),
+        callback: (li) => li.querySelector(".toggle-equip")?.click()
+      },
+      {
+        label:    localize("EnableDisable"),
+        icon:     iconPower,
+        visible:  (li) => !!li.querySelector(".toggle-tool"),
+        callback: (li) => li.querySelector(".toggle-tool")?.click()
+      },
+      {
+        label:    localize("Equip"),
+        icon:     iconEquip,
+        visible:  (li) => !!li.querySelector(".toggle-deck-equip"),
+        callback: (li) => li.querySelector(".toggle-deck-equip")?.click()
+      },
+      {
+        label:    localize("ToggleActive"),
+        icon:     iconPower,
+        visible:  (li) => !!li.querySelector(".toggle-program-state"),
+        callback: (li) => li.querySelector(".toggle-program-state")?.click()
+      },
+      {
+        label:    localize("ToggleCyberware"),
+        icon:     iconPower,
+        visible:  (li) => !!li.querySelector(".toggle-cyberware"),
+        callback: (li) => li.querySelector(".toggle-cyberware")?.click()
+      },
+      // Attach / detach for options
+      delegateEntry(localize("Detach"),          iconUnlink, ".detach-option"),
+      delegateEntry(localize("Detach"),          iconUnlink, ".detach-armor-option"),
+      delegateEntry(localize("Detach"),          iconUnlink, ".detach-netware-option"),
+      // Open source — item-effect rows on State tab have the whole
+      // row clickable rather than a `.gear-view` icon.
+      {
+        label:    localize("View"),
+        icon:     iconEye,
+        visible:  (li) => li.classList.contains("item-effect-row"),
+        callback: (li) => li.click()
+      },
+      // Deactivate — State-tab Netware Effects rows. Delegates to the
+      // action badge's own click handler so both entry paths share one
+      // implementation (NET-Action spend for programs; effect delete
+      // for applied Custom effects). FA `fa-power-off` matches the
+      // action button's badge-on glyph visually and keeps the menu's
+      // icon system consistent (every other entry uses <i class="fas">).
+      {
+        label:    localize("Deactivate"),
+        icon:     iconPower,
+        visible:  (li) => !!li.querySelector(".netware-row-toggle"),
+        callback: (li) => li.querySelector(".netware-row-toggle")?.click()
+      },
+      // View / delete — always last two.
+      delegateEntry(localize("View"),            iconEye,   ".skill-view"),
+      delegateEntry(localize("View"),            iconEye,   ".gear-view"),
+      delegateEntry(localize("Delete"),          iconTrash, ".skill-delete"),
+      delegateEntry(localize("Delete"),          iconTrash, ".gear-delete")
+    ];
+
+    attachRowMenu(html, ".skill-row, .gear-row", () => entries);
   }
 
   /**

@@ -97,7 +97,7 @@ export const ACTION_CONDITIONS = new Set([
  * Netrunning condition IDs.
  */
 export const NETRUNNING_CONDITIONS = new Set([
-    "jacked-in", "scrambled", "desynced", "gridlocked", "lagging", "tagged"
+    "jacked-in", "superglue"
 ]);
 
 /**

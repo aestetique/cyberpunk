@@ -92,6 +92,11 @@
       <a class="tab-header {{#if (eq activeTab 'details')}}active{{/if}}" data-action="tabSwitch" data-tab="details">
         <span class="tab-text">{{localize "CYBERPUNK.Details"}}</span>
       </a>
+      {{#if (or isCyberdeck isCustomEffect)}}
+        <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-action="tabSwitch" data-tab="effect">
+          <span class="tab-text">{{localize "CYBERPUNK.Effect"}}</span>
+        </a>
+      {{/if}}
     </div>
 
     {{!-- Horizontal Divider --}}
@@ -103,6 +108,12 @@
         {{~> "systems/cyberpunk/templates/item/parts/netware/tab-description.hbs"}}
       {{else if (eq activeTab 'details')}}
         {{> "systems/cyberpunk/templates/item/parts/netware/tab-details.hbs"}}
+      {{else if (eq activeTab 'effect')}}
+        {{#if isCustomEffect}}
+          {{> "systems/cyberpunk/templates/item/parts/shared/tab-attacker-effect.hbs"}}
+        {{else}}
+          {{> "systems/cyberpunk/templates/item/parts/shared/tab-effect.hbs"}}
+        {{/if}}
       {{/if}}
     </div>
   </div>

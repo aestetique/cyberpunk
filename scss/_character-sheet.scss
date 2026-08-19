@@ -1340,6 +1340,18 @@ input.skill-value.skill-level-input {
   flex-direction: column;
 }
 
+// State tab: Item Effects grid — same two-column split Skills uses,
+// but on the tab-content wrapper (item-effect rows are `.gear-row`s
+// and need to live inside a grid parent to lay out side-by-side).
+// Overrides the default single-column .gear-content flex.
+.gear-content.item-effects-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  row-gap: 0;
+  align-items: start;
+}
+
 // Empty state container (for "No gear in the inventory")
 .gear-empty-state {
   display: flex;
@@ -1375,6 +1387,121 @@ input.skill-value.skill-level-input {
 
   .invisible {
     visibility: hidden;
+  }
+}
+
+// Netware-effect status-hint icon (State-tab Netware Effects row).
+// One 32×32 gold-tinted glyph per flavour status the effect applies
+// — Superglue today, room for more. Sits between .gear-info and the
+// Duration chip; the row's flex gap (4px) doubles as the "standard
+// spacer" separating it from siblings. Cursor + hover ready — the
+// tooltip surfaces the condition's flavor + calc via Foundry's
+// data-tooltip infrastructure.
+.netware-status-hint {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  // 12px extra margin between adjacent hints on top of the row's
+  // own `gap: 4px` yields 16px total between two flavour icons.
+  // Elements around the hint group keep the row baseline spacing.
+  & + & {
+    margin-left: 12px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+// Cumulative Effects section on the State tab. 2-column grid matches
+// the Skills and Item-Effects panels — a single row sits at a
+// column's width instead of stretching full-page.
+.cumulative-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  row-gap: 0;
+  align-items: start;
+}
+
+// Cumulative Effects rows on the State tab. Chrome mirrors .skill-row
+// minus IP counter / plus button / stat icon / parameter label. Layout
+// is a single flex line: name expands, value + trash sit tight right.
+.cumulative-row {
+  width: 100%;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  column-gap: 8px;
+  border-bottom: 1px dashed #26282F;
+
+  .cumulative-row-name {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    line-height: 24px;
+    font-family: var(--font-blender);
+    font-weight: 300;
+    font-size: 16px;
+    color: #FFFFFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Only the four rollable cumulatives (Amnesia, Flashbacks, Physical
+  // Addiction, Suicidal) get the pointer + hover underline — matches
+  // the skill-name interaction so it reads as clickable.
+  &.rollable .cumulative-row-name {
+    cursor: pointer;
+    &:hover { text-decoration: underline; }
+  }
+
+  .cumulative-row-value {
+    width: 40px;
+    height: 24px;
+    line-height: 24px;
+    font-family: var(--font-blender);
+    font-weight: 500;
+    font-size: 16px;
+    color: #B9B29D;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  input.cumulative-row-value {
+    background: transparent;
+    border: 1px solid #26282F;
+    padding: 0 4px;
+    color: #FFFFFF;
+  }
+
+  .cumulative-row-remove {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+    }
   }
 }
 

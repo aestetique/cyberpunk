@@ -762,10 +762,43 @@
 				"obsession": 0,
 				"paranoia": 0
 			},
+			"stateBonus": {
+				"alienation": 0,
+				"egotism": 0,
+				"obsession": 0,
+				"paranoia": 0
+			},
+			"allRollBonus": 0,
+			"cumulative": {
+				"alienation": 0,
+				"egotism": 0,
+				"obsession": 0,
+				"paranoia": 0,
+				"brainDegeneration": 0,
+				"nerveDegeneration": 0,
+				"insomnia": 0,
+				"carcinogen": 0,
+				"amnesia": 0,
+				"flashbacks": 0,
+				"physicalAddiction": 0,
+				"suicidal": 0
+			},
 			"activeCover": null,
 			"skillsSortedBy": "Name",
 			"CombatSenseMod": 0,
-			"initiativeMod": 0
+			"initiativeMod": 0,
+			"netBonuses": {
+				"scanner": 0,
+				"cloak": 0,
+				"eyedee": 0,
+				"slide": 0,
+				"backdoor": 0,
+				"control": 0,
+				"detect": 0,
+				"speed": 0,
+				"pathfinder": 0,
+				"zap": 0
+			}
 		},
 		"drone": {
 			"shape": "6zones",
@@ -824,6 +857,7 @@
 			"subtype": "accessPoint",
 			"radius": 6,
 			"dv": 0,
+			"amount": 0,
 			"entryRegion": "",
 			"droneLink": "",
 			"doorLink": "",
@@ -836,7 +870,8 @@
 			"def": 0,
 			"attackerClass": "antiProgram",
 			"attackerDamage": "2d6",
-			"attackerEffect": "none"
+			"attackerEffect": "none",
+			"effectDuration": 3600
 		}
 	},
 	"Item": {
@@ -894,11 +929,13 @@
 			"attackerClass": "antiProgram",
 			"attackerDamage": "2d6",
 			"attackerEffect": "none",
+			"effectDuration": 3600,
 			"upgradeEffect": "none",
 			"upgradeValue": 0,
 			"actorLink": "",
 			"deployedTokenUuid": "",
-			"programState": "inactive"
+			"programState": "inactive",
+			"bonuses": []
 		},
 		"weapon": {
 			"templates": ["common"],
@@ -920,6 +957,7 @@
 			"charges": 0,
 			"chargesMax": 0,
 			"effect": "",
+			"drugUuid": "",
 			"templateType": "",
 			"radius": 0,
 			"caliber": "medium",
@@ -962,6 +1000,7 @@
 				"charges": 0,
 				"chargesMax": 0,
 				"effect": "",
+				"drugUuid": "",
 				"templateType": "",
 				"radius": 0,
 				"caliber": "medium",
@@ -1015,6 +1054,7 @@
 				"charges": 0,
 				"chargesMax": 0,
 				"effect": "",
+				"drugUuid": "",
 				"templateType": "",
 				"radius": 0,
 				"caliber": "medium",
@@ -1086,10 +1126,13 @@
 			"phase": "active",
 			"duration": 3600,
 			"strength": 1,
-			"withdrawalDuration": 3600,
-			"withdrawalStrength": 1,
+			"onsetDuration": 0,
+			"methodTaken": "ingested",
+			"detection": "noticeable",
+			"residue": "normal",
 			"bonuses": [],
-			"withdrawal": []
+			"withdrawal": [],
+			"cumulative": []
 		}
 	}
 }

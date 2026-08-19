@@ -5,6 +5,7 @@ import { bindWeaponAndOrdnanceHandlers } from "./gear-handlers.js";
 import { DRONE_CONDITION_TOGGLE_ROW } from "../conditions.js";
 import { CreateItemDialog } from "../dialog/create-item-dialog.js";
 import { shouldTransfer, transferItem, handleAmmoDrop, handleOrdnanceDrop } from "./item-transfer.js";
+import { attachRowMenu, delegateEntry } from "../ui/row-context-menu.js";
 
 /**
  * Static zone metadata: display name, icon, and which shapes show this zone.
@@ -608,6 +609,49 @@ export class CyberpunkDroneSheet extends HandlebarsApplicationMixin(ActorSheetV2
         statIcon: statName
       }).render(true);
     });
+
+    // Right-click context menu on drone gear/skill rows. Uses the
+    // shared master-entry list; entries with no matching action icon
+    // on a row simply don't appear (drones expose fewer actions than
+    // the character sheet, e.g. no cyberdeck actions).
+    this._attachRowContextMenus(html);
+  }
+
+  _attachRowContextMenus(html) {
+    const iconEye    = '<i class="fas fa-eye"></i>';
+    const iconTrash  = '<i class="fas fa-trash"></i>';
+    const iconDice   = '<i class="fas fa-dice-d10"></i>';
+    const iconFire   = '<i class="fas fa-crosshairs"></i>';
+    const iconReload = '<i class="fas fa-sync"></i>';
+    const iconCharge = '<i class="fas fa-bolt"></i>';
+    const iconPower  = '<i class="fas fa-power-off"></i>';
+    const iconEquip  = '<i class="fas fa-vest"></i>';
+    const iconUnlink = '<i class="fas fa-unlink"></i>';
+    const entries = [
+      delegateEntry(localize("Roll"),   iconDice,   ".skill-roll"),
+      delegateEntry(localize("Fire"),   iconFire,   ".fire-weapon"),
+      delegateEntry(localize("Reload"), iconReload, ".reload-weapon"),
+      delegateEntry(localize("Charge"), iconCharge, ".charge-weapon"),
+      {
+        label:    localize("Equip"),
+        icon:     iconEquip,
+        visible:  (li) => !!li.querySelector(".toggle-equip"),
+        callback: (li) => li.querySelector(".toggle-equip")?.click()
+      },
+      {
+        label:    localize("ToggleCyberware"),
+        icon:     iconPower,
+        visible:  (li) => !!li.querySelector(".toggle-cyberware"),
+        callback: (li) => li.querySelector(".toggle-cyberware")?.click()
+      },
+      delegateEntry(localize("Detach"), iconUnlink, ".detach-option"),
+      delegateEntry(localize("Detach"), iconUnlink, ".detach-armor-option"),
+      delegateEntry(localize("View"),   iconEye,    ".skill-view"),
+      delegateEntry(localize("View"),   iconEye,    ".gear-view"),
+      delegateEntry(localize("Delete"), iconTrash,  ".skill-delete"),
+      delegateEntry(localize("Delete"), iconTrash,  ".gear-delete")
+    ];
+    attachRowMenu(html, ".skill-row, .gear-row", () => entries);
   }
 
   /**

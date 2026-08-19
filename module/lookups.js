@@ -359,42 +359,141 @@ export const ordnanceTemplateTypes = {
     beam: "TemplateBeam"
 };
 
-/** Tool bonus properties — actor property paths a tool can modify.
- *  Stat targets are the stat key itself (e.g. "stats.int"); the unified
- *  op pipeline applies + / × / = to stat.total.  */
+/**
+ * Boolean-toggle Properties — presence on a bonus list means the target
+ * is set to 1; absence means 0. No op / value UI, no stacking maths.
+ * Reserved for capability flags where scaling doesn't make sense
+ * (either you can see in the dark or you can't).
+ */
+export const toolBooleanProperties = {
+    "ignoreGasEffects":   "PropIgnoreGasEffects",
+    "ignoreBurning":      "PropIgnoreBurning",
+    "ignoreStressFright": "PropIgnoreStressFright",
+    "ignoreFatigue":      "PropIgnoreFatigue",
+    "ignoreWounds":       "PropIgnoreWounds",
+    "grantLowLight":      "PropGrantLowLight",
+    "grantInfrared":      "PropGrantInfrared",
+    "grantThermo":        "PropGrantThermo"
+};
+
+/**
+ * Numeric Modifier properties — take a value + operator (+ / − / × / ÷ / =)
+ * and flow through the standard actor property pipeline the same way
+ * Attribute rows do. Rendered under a dedicated "Modifier" dropdown so
+ * boolean toggles above don't compete for the same list.
+ */
+export const toolModifierProperties = {
+    "initiativeMod":           "PropInitiative",
+    "stunSaveMod":             "PropStunSave",
+    "deathSaveMod":            "PropDeathSave",
+    "poisonSaveMod":           "PropPoisonSave",
+    "rangedAttackBonus":       "PropRangedAttackBonus",
+    "unarmedDamageMultiplier": "PropUnarmedMultiplier",
+    "healingRateBoost":        "PropHealingRateBoost",
+    "stabilizeBonus":          "PropStabilizeBonus",
+    "sleepRollBonus":          "PropSleepRollBonus",
+    "allRollBonus":            "PropAllRollBonus",
+    "bonusActions":            "PropBonusActions"
+};
+
+/**
+ * State bonuses — additive-only tweaks to the character's condition
+ * bars (Stress / Fright / Fatigue) and to the psychosis bracket
+ * calculators for the four Humanity Loss flavours. Bonuses stack while
+ * their carrier item is active and clamp at 0 on the low end.
+ *
+ * Path routing:
+ *   - `stress` / `fright` / `fatigue` write directly to `system.<key>`.
+ *     Every downstream consumer already reads that field, so the bumped
+ *     value shows up in rolls, thresholds, and the sheet automatically.
+ *   - `stateBonus.<flavour>` writes to a dedicated container that never
+ *     touches `system.humanityLoss.<flavour>`. The derived
+ *     `system.psychosis.<flavour>` (built later in prepareDerivedData
+ *     as `max(0, humanityLoss.<flavour> + stateBonus.<flavour>)`) is
+ *     what bracket / penalty consumers read; overall Humanity Loss and
+ *     EMP calcs stay on the raw humanityLoss values.
+ */
+export const toolStateProperties = {
+    "stress":                "PropStateStress",
+    "fright":                "PropStateFright",
+    "fatigue":               "PropStateFatigue",
+    "stateBonus.alienation": "PropStateAlienation",
+    "stateBonus.egotism":    "PropStateEgotism",
+    "stateBonus.obsession":  "PropStateObsession",
+    "stateBonus.paranoia":   "PropStateParanoia"
+};
+
+/**
+ * Union of everything a bonus row's `property` field can point at
+ * OUTSIDE the NET bonus bucket: stats.*, numeric Modifiers, boolean
+ * Properties, and State bonuses. Used by prepareBonuses for label
+ * lookup regardless of category; UI dropdowns iterate the per-category
+ * maps instead.
+ */
 export const toolBonusProperties = {
-    "stats.int": "PropINT",
-    "stats.ref": "PropREF",
+    "stats.int":  "PropINT",
+    "stats.ref":  "PropREF",
     "stats.tech": "PropTECH",
     "stats.cool": "PropCOOL",
     "stats.attr": "PropATTR",
     "stats.luck": "PropLUCK",
-    "stats.ma": "PropMA",
-    "stats.bt": "PropBT",
-    "stats.emp": "PropEMP",
-    "initiativeMod": "PropInitiative",
-    "stunSaveMod": "PropStunSave",
-    "deathSaveMod": "PropDeathSave",
-    "poisonSaveMod": "PropPoisonSave",
-    "rangedAttackBonus": "PropRangedAttackBonus",
-    "unarmedDamageMultiplier": "PropUnarmedMultiplier",
-    "healingRateBoost": "PropHealingRateBoost",
-    "stabilizeBonus": "PropStabilizeBonus",
-    "ignoreGasEffects": "PropIgnoreGasEffects",
-    "grantLowLight": "PropGrantLowLight",
-    "grantInfrared": "PropGrantInfrared",
-    "grantThermo": "PropGrantThermo",
-    "stayAwakeBonus": "PropStayAwakeBonus",
-    "fallAsleepBonus": "PropFallAsleepBonus",
-    "bonusActions": "PropBonusActions",
-    "ignoreStressFright": "PropIgnoreStressFright",
-    "ignoreFatigue": "PropIgnoreFatigue",
-    "ignoreWounds": "PropIgnoreWounds"
+    "stats.ma":   "PropMA",
+    "stats.bt":   "PropBT",
+    "stats.emp":  "PropEMP",
+    ...toolModifierProperties,
+    ...toolBooleanProperties,
+    ...toolStateProperties
 };
 
 /** True if a `toolBonusProperties` key targets a Key Attribute (stats.*). */
 export function isAttributeProperty(key) {
     return typeof key === "string" && key.startsWith("stats.");
+}
+
+/** True if a key is a boolean toggle Property (presence → 1). */
+export function isBooleanProperty(key) {
+    return Object.prototype.hasOwnProperty.call(toolBooleanProperties, key);
+}
+
+/** True if a key is a numeric Modifier (uses op / value UI). */
+export function isModifierProperty(key) {
+    return Object.prototype.hasOwnProperty.call(toolModifierProperties, key);
+}
+
+/** True if a key is a State bonus (Stress / Fright / Fatigue / HL flavours). */
+export function isStateProperty(key) {
+    return Object.prototype.hasOwnProperty.call(toolStateProperties, key);
+}
+
+/**
+ * NET bonus properties — one-per-NET-action buffs (plus Cyberdeck Slots,
+ * which lives in this bucket because it's netrunning-adjacent). Rendered
+ * in the Effect tab under a dedicated "Add a NET bonus" button, separate
+ * from ordinary Property bonuses so the list doesn't drown a runner's
+ * dropdown in NET keys they don't need.
+ *
+ * All values feed the same actor-side aggregation the ordinary property
+ * pipeline uses; nested `netBonuses.<key>` paths get walked automatically
+ * by the pipeline (see actor.js#prepareDerivedData).
+ */
+export const netBonusProperties = {
+    "netBonuses.scanner":    "PropNetBonusScanner",
+    "netBonuses.cloak":      "PropNetBonusCloak",
+    "netBonuses.eyedee":     "PropNetBonusEyeDee",
+    "netBonuses.slide":      "PropNetBonusSlide",
+    "netBonuses.backdoor":   "PropNetBonusBackdoor",
+    "netBonuses.control":    "PropNetBonusControl",
+    "netBonuses.detect":     "PropNetBonusDetect",
+    "netBonuses.speed":      "PropNetBonusSpeed",
+    "netBonuses.pathfinder": "PropNetBonusPathfinder",
+    "netBonuses.zap":        "PropNetBonusZap",
+    "netBonuses.actions":    "PropNetBonusActions",
+    "cyberdeckSlots":        "PropCyberdeckSlots"
+};
+
+/** True if a key belongs to the NET bonus bucket (dropdown categorisation). */
+export function isNetBonusProperty(key) {
+    return Object.prototype.hasOwnProperty.call(netBonusProperties, key);
 }
 
 /** Netware types */
@@ -409,6 +508,7 @@ export const netwareActorSubtypes = {
     accessPoint:  "NetActorSubAccessPoint",
     password:     "NetActorSubPassword",
     file:         "NetActorSubFile",
+    account:      "NetActorSubAccount",
     controlPoint: "NetActorSubControlPoint",
     blackIce:     "NetActorSubBlackIce"
 };
@@ -421,17 +521,24 @@ export const programSubtypes = {
     blackIce: "ProgramSubBlackIce"
 };
 
-/** Booster bonus types */
+/**
+ * Booster bonus types — the eight NET actions boosters can enhance.
+ * Zap was previously in this list but has been dropped: no booster in
+ * the system boosts Zap; the built-in Zap attack of the cyberdeck now
+ * receives inherent-deck bonuses through the same `activeBoosterValue`
+ * pathway (see the deck's `cyberdeckBonuses` object on template.json).
+ */
 export const boosterBonuses = {
-    scanner: "BoosterScanner",
-    backdoor: "BoosterBackdoor",
-    cloak: "BoosterCloak",
-    control: "BoosterControl",
-    eyedee: "BoosterEyeDee",
-    detect: "BoosterDetect",
-    slide: "BoosterSlide",
-    speed: "BoosterSpeed",
-    zap: "BoosterZap"
+    scanner:    "BoosterScanner",
+    backdoor:   "BoosterBackdoor",
+    cloak:      "BoosterCloak",
+    control:    "BoosterControl",
+    eyedee:     "BoosterEyeDee",
+    detect:     "BoosterDetect",
+    slide:      "BoosterSlide",
+    speed:      "BoosterSpeed",
+    pathfinder: "BoosterPathfinder",
+    zap:        "BoosterZap"
 };
 
 /** Defender defence types */
@@ -471,17 +578,299 @@ export const upgradeEffects = {
     range: "UpgradeRange"
 };
 
-/** Attacker effect types */
+/**
+ * Attacker / Black-ICE primary effect. All are one-shot side-effects at
+ * apply time:
+ *   - none      — no primary side-effect
+ *   - superglue — apply the Superglue status (movement lock)
+ *   - burning   — apply the Burning status (3-turn 2d10/1d10/1d6 tick)
+ *   - crashed   — force jack-out (gated by Anti-Crash upgrade)
+ *   - destroyed — anti-program mode: on hit, destroy target program
+ *                 instead of derezz
+ *   - custom    — no primary side-effect on its own; instead, the
+ *                 item's Effect-tab bonus rows are spawned as a
+ *                 timed ActiveEffect on the target (effectDuration
+ *                 controls lifetime). Attribute rows may carry dice
+ *                 formulas that are rolled at apply time.
+ * Op on Effect-tab rows is always subtraction; no op selector rendered.
+ */
 export const attackerEffects = {
     none: "EffectNone",
-    gridlocked: "EffectGridlocked",
-    scrambled: "EffectScrambled",
-    desynced: "EffectDesynced",
-    lagging: "EffectLagging",
-    tagged: "EffectTagged",
     burning: "EffectBurning",
     crashed: "EffectCrashed",
-    destroyed: "EffectDestroyed"
+    derezz: "EffectDerezz",
+    destroyed: "EffectDestroyed",
+    custom: "EffectCustom"
+};
+
+/**
+ * Netware "flavour" statuses — narrative-only conditions authored on a
+ * Custom effect's Effect tab as Flavour rows. Each one applies a
+ * status condition (via the spawned ActiveEffect's `statuses` array)
+ * and surfaces as a 32×32 status-hint icon on the State-tab netware
+ * effect row for at-a-glance recognition + hover text.
+ *
+ * Kept intentionally small — flavour statuses aren't the everyday
+ * combat conditions (burn / acid / shock / unconscious live on the
+ * mental-works cond-toggle row). Only rare netware-induced statuses
+ * belong here so the mental works row stays uncluttered.
+ */
+/**
+ * Netware Flavour registry. Value shape:
+ *   labelKey — i18n key (prefixed by "CYBERPUNK.")
+ *   flavor   — hover-tooltip description (English literal — narrative
+ *              descriptions are hard to translate mechanically; kept
+ *              inline for editability)
+ *   calc     — hover-tooltip mechanics summary
+ *   icon     — filename in `img/conditions/`, without extension. The
+ *              `-on` variant convention is baked in per icon.
+ *   roll     — optional roll metadata { stat, penaltyMul?, kind?,
+ *              label }. Presence makes the state-tab hint icon
+ *              clickable → posts a resistance-roll chat card
+ *              auto-modified by the applied effect's strength.
+ */
+export const netwareFlavours = {
+    superglue: {
+        labelKey: "FlavourSuperglue",
+        flavor:   "Locked in place on the NET by a hostile program. Cannot progress deeper into the architecture or Jack Out safely.",
+        calc:     "",
+        icon:     "superglue-on"
+    }
+};
+
+/**
+ * Drug Flavour registry. Same shape as netwareFlavours.
+ *
+ * `roll` metadata forms (character-sheet click handler consumes):
+ *   { dv: "stat", stat: "int"|"cool"|"ref", penaltyMul: 1|2 }
+ *     → post: 1d10 − (strength × penaltyMul) vs the actor's stat total
+ *   { dv: "str" }
+ *     → post: 1d10 vs the drug's strength (no penalty term)
+ *   { dv: "death" }
+ *     → dispatches to actor.rollDeathSave(-strength + 2). Reuses the
+ *       system's Death Save card + auto-applies Dead on failure.
+ *   omit `roll` entirely → passive flavour, hint only (no click).
+ */
+export const drugFlavours = {
+    contraceptive: {
+        labelKey: "FlavourContraceptive",
+        flavor:   "The character's reproductive system is quelled. Only a 1% chance of inducing or becoming pregnant while the drug is effective.",
+        calc:     "",
+        icon:     "contraceptive-on"
+    },
+    hypnotic: {
+        labelKey: "FlavourHypnotic",
+        flavor:   "The character feels like going along with whatever is asked of them; their inhibitions are lowered. Failing the resist means they comply with the request (+5 for an unreasonable one).",
+        calc:     "1d10 − Str vs INT",
+        icon:     "hypnotic-on",
+        roll:     { dv: "stat", stat: "int", penaltyMul: 1 }
+    },
+    psychedelic: {
+        labelKey: "FlavourPsychedelic",
+        flavor:   "The character hallucinates. The hallucinations tend to be pleasant and rarely result in \"bad trips\".",
+        calc:     "1d10 vs Str",
+        icon:     "psychedelic-on",
+        roll:     { dv: "str" }
+    },
+    aggressive: {
+        labelKey: "FlavourAggressive",
+        flavor:   "The character becomes very aggressive and combative. Strength is subtracted from all Restraint checks (Heat Waves). Failing the resist means they attack anyone who provokes them.",
+        calc:     "1d10 − Str vs COOL",
+        icon:     "aggressive-on",
+        roll:     { dv: "stat", stat: "cool", penaltyMul: 1 }
+    },
+    blackout: {
+        labelKey: "FlavourBlackout",
+        flavor:   "The character struggles to remember what happened during the drug's duration. GMs should enforce failure as heavily as possible.",
+        calc:     "1d10 − Str vs INT",
+        icon:     "blackout-on",
+        roll:     { dv: "stat", stat: "int", penaltyMul: 1 }
+    },
+    catatonic: {
+        labelKey: "FlavourCatatonic",
+        flavor:   "The character sometimes goes catatonic. Every 5 minutes or whenever anything stressful happens, failing the resist means they go catatonic for 5 minutes (then roll again).",
+        calc:     "1d10 − Str vs COOL",
+        icon:     "catatonic-on",
+        roll:     { dv: "stat", stat: "cool", penaltyMul: 1 }
+    },
+    delusions: {
+        labelKey: "FlavourDelusions",
+        flavor:   "The character begins to imagine falsehoods are true (they're immortal, the lamppost is following them, their gun talks, etc.). Failing the resist means the delusion holds.",
+        calc:     "1d10 − Str × 2 vs INT",
+        icon:     "delusions-on",
+        roll:     { dv: "stat", stat: "int", penaltyMul: 2 }
+    },
+    disorientation: {
+        labelKey: "FlavourDisorientation",
+        flavor:   "The character loses their bearings; failing the resist means they get lost after any movement. At strength 4+ they also need REF checks every standing turn or fall down (−2 at strength 6).",
+        calc:     "1d10 − Str vs INT",
+        icon:     "disorientation-on",
+        roll:     { dv: "stat", stat: "int", penaltyMul: 1 }
+    },
+    hallucination: {
+        labelKey: "FlavourHallucination",
+        flavor:   "The character hallucinates in increasing degrees. Often unpleasant \"bad trips\".",
+        calc:     "1d10 vs Str",
+        icon:     "hallucination-on",
+        roll:     { dv: "str" }
+    },
+    "time-distortion": {
+        labelKey: "FlavourTimeDistortion",
+        flavor:   "The character's perception of time is slowed or accelerated at random. The distortion factor is strength + 1d6, direction chosen randomly. Doesn't help in combat.",
+        calc:     "",
+        icon:     "time-distortion-on"
+    },
+    hunger: {
+        labelKey: "FlavourHunger",
+        flavor:   "The character experiences extreme hunger. Failing the resist means they immediately seek food; otherwise they act as Drowsy at the same strength.",
+        calc:     "1d10 − Str vs INT",
+        icon:     "hunger-on",
+        roll:     { dv: "stat", stat: "int", penaltyMul: 1 }
+    },
+    addiction: {
+        labelKey: "FlavourAddiction",
+        flavor:   "The character must make an Addiction check every time the drug is taken. Failure means they need one dose every 12 hours or take 1d6 Stress per missed 12-hour period; the addiction ends after 7 days clean.",
+        calc:     "1d10 − Str vs COOL",
+        icon:     "addiction-on",
+        roll:     { dv: "stat", stat: "cool", penaltyMul: 1 }
+    },
+    "death-risk": {
+        labelKey: "FlavourDeathRisk",
+        flavor:   "This drug is very dangerous — and almost certainly illegal. The character must make a Death Save modified by −Strength + 2 or die.",
+        calc:     "Death Save − Str + 2",
+        icon:     "dead-on",
+        roll:     { dv: "death" }
+    }
+};
+
+/**
+ * Unified flavour lookup — returns whichever registry holds `key`, or
+ * null. Consumers wanting a hint icon / label / roll metadata read
+ * through this one call site regardless of domain.
+ */
+export function getFlavourMeta(key) {
+    return drugFlavours[key] ?? netwareFlavours[key] ?? null;
+}
+
+/**
+ * Cumulative Effects registry.
+ *
+ * A cumulative is a per-actor persistent counter that ticks up when a
+ * drug carrying that key transitions into its Active phase (either from
+ * Onset expiry, or directly on apply if the drug has no onset). The
+ * increment scales with the drug's strength via CUMULATIVE_STRENGTH_MUL.
+ * Values never decay automatically — the GM edits or deletes rows on
+ * the State tab.
+ *
+ * Row shape:
+ *   labelKey — CYBERPUNK i18n suffix
+ *   flavor   — hover-tooltip description (matches Flavour hint pattern)
+ *   calc     — hover-tooltip calc line (formula for rollables, mechanic
+ *              summary for stat-modifiers)
+ *   roll?    — same shape family as flavour `roll`:
+ *              { kind: "check", stat: "int"|"cool"|"body" }
+ *                → 1d10 + stat.total vs Math.ceil(value), higher = pass
+ *              omit → no click roll (pure flavour or auto-applied
+ *              stat/state modifier)
+ *   derive?  — declarative derive-time application, iterated by the
+ *              actor's stat pipeline. Two shapes:
+ *              { statBonus: "alienation"|"egotism"|"obsession"|"paranoia" }
+ *                → adds `⌊value⌋` into `system.stateBonus.<key>` before
+ *                psychosis composition.
+ *              { statSub: "int"|"ref"|... , floor?: number = 2 }
+ *                → subtracts `⌊value⌋` from `stats.<key>.total` with a
+ *                `Math.max(floor, ...)` clamp.
+ *              { fieldSub: "sleepRollBonus" }
+ *                → subtracts `⌊value⌋` from `system.<field>`.
+ *              omit → no derive-time effect (pure flavour like
+ *              Carcinogen, or a rollable that only matters on click).
+ */
+export const cumulativeEffects = {
+    alienation: {
+        labelKey: "CumulativeAlienation",
+        flavor:   "The drug alienates the character from society. Alienation Humanity points are gained, equal to the Strength Multiplier per dose taken.",
+        calc:     "+Value floor → Alienation state",
+        derive:   { statBonus: "alienation" }
+    },
+    egotism: {
+        labelKey: "CumulativeEgotism",
+        flavor:   "The drug pushes the character to think of themselves as superior to others. Egotism Humanity points are gained, equal to the Strength Multiplier per dose taken.",
+        calc:     "+Value floor → Egotism state",
+        derive:   { statBonus: "egotism" }
+    },
+    obsession: {
+        labelKey: "CumulativeObsession",
+        flavor:   "The drug fixates the character on obsessive thought patterns. Obsession Humanity points are gained, equal to the Strength Multiplier per dose taken.",
+        calc:     "+Value floor → Obsession state",
+        derive:   { statBonus: "obsession" }
+    },
+    paranoia: {
+        labelKey: "CumulativeParanoia",
+        flavor:   "The drug erodes the character's trust in others. Paranoia Humanity points are gained, equal to the Strength Multiplier per dose taken.",
+        calc:     "+Value floor → Paranoia state",
+        derive:   { statBonus: "paranoia" }
+    },
+    brainDegeneration: {
+        labelKey: "CumulativeBrainDegeneration",
+        flavor:   "The drug causes brain damage. The character's INT is reduced by the Strength Multiplier per dose taken.",
+        calc:     "−Value floor → INT",
+        derive:   { statSub: "int", floor: 2 }
+    },
+    nerveDegeneration: {
+        labelKey: "CumulativeNerveDegeneration",
+        flavor:   "The drug causes nerve damage. The character's REF is reduced by the Strength Multiplier per dose taken.",
+        calc:     "−Value floor → REF",
+        derive:   { statSub: "ref", floor: 2 }
+    },
+    insomnia: {
+        labelKey: "CumulativeInsomnia",
+        flavor:   "The drug makes the character restless and unable to sleep. The character develops Insomnia (minus strength to checks). Even if the check is made, the character only gets 1d6 hours of sleep.",
+        calc:     "−Value floor → Sleep Roll Bonus",
+        derive:   { fieldSub: "sleepRollBonus" }
+    },
+    carcinogen: {
+        labelKey: "CumulativeCarcinogen",
+        flavor:   "The drug is a carcinogen. The character takes Rad points equal to the Strength Multiplier ×5 per dose taken. Excessive carcinogens can have nasty effects.",
+        calc:     ""
+    },
+    amnesia: {
+        labelKey: "CumulativeAmnesia",
+        flavor:   "The character begins to forget things rapidly. Any time the character wants to remember something, make an INT check against the DL determined by the Strength Multiplier Total. If failed, the character cannot remember that information or incident.",
+        calc:     "1d10 + INT vs Value",
+        roll:     { kind: "check", stat: "int" }
+    },
+    flashbacks: {
+        labelKey: "CumulativeFlashbacks",
+        flavor:   "The character experiences vivid memories of the time spent under the influence. In a stressful situation, make a COOL check against the DL determined by the Strength Multiplier Total. If failed, the character has a flashback for 1d10 Turns during which no action is possible, and for 1d6 hours after their COOL is reduced by −2.",
+        calc:     "1d10 + COOL vs Value",
+        roll:     { kind: "check", stat: "cool" }
+    },
+    physicalAddiction: {
+        labelKey: "CumulativePhysicalAddiction",
+        flavor:   "The drug is physically addictive. Every use requires a BODY check against the DL determined by the Strength Multiplier Total. If failed, the character becomes physically addicted: a dose is needed every 8 hours or the character must make a Death Save (minus strength +2) every 24 hours for 1d6 days.",
+        calc:     "1d10 + BODY vs Value",
+        roll:     { kind: "check", stat: "bt" }
+    },
+    suicidal: {
+        labelKey: "CumulativeSuicidal",
+        flavor:   "The character begins to feel suicidal. Every use, make a COOL check against the DL determined by the Strength Multiplier Total. If failed, the character attempts suicide (GM adjudicates the outcome).",
+        calc:     "1d10 + COOL vs Value",
+        roll:     { kind: "check", stat: "cool" }
+    }
+};
+
+/**
+ * Drug strength → cumulative-value increment lookup. Applied once per
+ * Onset→Active (or direct-apply→Active) transition, per cumulative key
+ * carried by the drug.
+ */
+export const CUMULATIVE_STRENGTH_MUL = {
+    1: 0.1,
+    2: 0.2,
+    3: 0.5,
+    4: 1.0,
+    5: 1.5,
+    6: 2.0
 };
 
 /**
@@ -698,6 +1087,14 @@ export function isPlacementRequired(cyberwareType, cyberwareSubtype) {
  */
 export const weaponEffects = {
     none: "EffNone",
+    // Unified drug applicator — replaces the three fixed gas conditions
+    // (confusion / poisoned / tearing). When selected the weapon shows
+    // a drop slot for an inhaled/contact drug item; on a failed Poison
+    // Save the drug is applied to the target with its own onset /
+    // duration / bonuses. Ignore-Gas-Effects still suppresses the save.
+    // The three legacy keys are kept below so unmigrated compendium
+    // weapons keep firing their old behaviour until the follow-up pass.
+    drug: "EffDrug",
     confusion: "EffConfusion",
     poisoned: "EffPoisoned",
     tearing: "EffTearing",
@@ -783,6 +1180,33 @@ export let availability = {
     limited: "Limited",
     exclusive: "Exclusive",
     iconic: "Iconic"
+};
+
+/**
+ * Drug flavour enums — pure roleplay/GM-info dropdowns on the Drug tab.
+ * No mechanical effect; the values feed labels only.
+ */
+export const drugMethods = {
+    ingested: "DrugMethodIngested",
+    injected: "DrugMethodInjected",
+    inhaled:  "DrugMethodInhaled",
+    contact:  "DrugMethodContact"
+};
+
+export const drugDetections = {
+    distinctive: "DrugDetectionDistinctive",
+    noticeable:  "DrugDetectionNoticeable",
+    faint:       "DrugDetectionFaint",
+    veryFaint:   "DrugDetectionVeryFaint",
+    invisible:   "DrugDetectionInvisible"
+};
+
+export const drugResidues = {
+    ample:     "DrugResidueAmple",
+    normal:    "DrugResidueNormal",
+    little:    "DrugResidueLittle",
+    onlyTrace: "DrugResidueOnlyTrace",
+    noTrace:   "DrugResidueNoTrace"
 };
 
 export let reliability = {

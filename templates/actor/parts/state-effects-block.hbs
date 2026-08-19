@@ -27,6 +27,10 @@
           <span class="gear-name">{{row.name}}</span>
           <span class="gear-context">{{row.subtext}}</span>
         </div>
+        {{!-- Phase-scoped flavour hint icons — one per flavour the
+             drug's currently-active phase applies. Rollable ones
+             carry `.rollable` so the click handler picks them out. --}}
+        {{> "systems/cyberpunk/templates/actor/parts/status-hints.hbs" hints=row.statusHints}}
         <div class="gear-field" style="width: 60px;">
           <span class="field-top">{{row.durationDisplay}}</span>
           <span class="field-bottom">{{localize "CYBERPUNK.Duration"}}</span>
@@ -44,13 +48,49 @@
 </div>
 {{/if}}
 
+{{#if activeNetwareRows.length}}
+<div class="section-block">
+  <header class="tab-header">
+    <span class="tab-title">{{localize "CYBERPUNK.NetwareEffects"}}</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-netware.svg" alt="">
+  </header>
+  <div class="tab-content gear-content">
+    {{#each activeNetwareRows as |row|}}
+      <div class="gear-row" data-netware-row-id="{{row.id}}" data-kind="{{row.kind}}">
+        <div class="gear-icon">
+          <img src="{{row.img}}" alt="{{row.name}}">
+        </div>
+        <div class="gear-info">
+          <span class="gear-name">{{row.name}}</span>
+          <span class="gear-context">{{row.subtext}}</span>
+        </div>
+        {{!-- Flavour status hint icons — one per status the effect
+             applies. Reusable slot (drug rows use it too). Sits
+             between the info column and the Duration chip. Uses the
+             shared `data-tooltip-name / -flavor / -calc` attributes
+             so `bindHoverTooltips` styles the popup the same way it
+             does mental-works cond-toggles. --}}
+        {{> "systems/cyberpunk/templates/actor/parts/status-hints.hbs" hints=row.statusHints}}
+        <div class="gear-field" style="width: 60px;">
+          <span class="field-top">{{row.chipValue}}</span>
+          <span class="field-bottom">{{row.chipLabel}}</span>
+        </div>
+        <div class="gear-action-btn netware-row-toggle" data-netware-row-id="{{row.id}}" data-kind="{{row.kind}}" title="{{localize "CYBERPUNK.Deactivate"}}">
+          <img src="systems/cyberpunk/img/ui/badge-on.svg" alt="{{localize "CYBERPUNK.Deactivate"}}">
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</div>
+{{/if}}
+
 {{#if itemEffectRows.length}}
 <div class="section-block">
   <header class="tab-header">
     <span class="tab-title">{{localize "CYBERPUNK.ItemEffects"}}</span>
     <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-item-effect.svg" alt="">
   </header>
-  <div class="tab-content gear-content">
+  <div class="tab-content gear-content item-effects-content">
     {{#each itemEffectRows as |row|}}
       <div class="gear-row item-effect-row" data-item-id="{{row.id}}">
         <div class="gear-icon">

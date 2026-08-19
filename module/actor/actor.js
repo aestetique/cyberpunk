@@ -1,6 +1,6 @@
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes } from "./skill-sort.js";
-import { bodyTypeModifier, isCyberlimbBase, isCyberlimbOption, isSensorOption } from "../lookups.js";
+import { bodyTypeModifier, isCyberlimbBase, isCyberlimbOption, isSensorOption, isBooleanProperty, isNetBonusProperty, isStateProperty, cumulativeEffects } from "../lookups.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
@@ -11,6 +11,14 @@ import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, F
  * Internal zone keys mirror character keys (head/torso/lArm/rArm/lLeg/rLeg) so a future damage
  * pipeline can be unified across actor types.
  */
+/**
+ * The six primary attributes that never drop below 2 from bonus-driven
+ * modifications. LUCK / MA / EMP intentionally excluded — LUCK is a
+ * spendable pool that goes to 0, MA fluctuates from encumbrance
+ * without a floor, EMP tracks humanity down to 0.
+ */
+const FLOOR2_STATS = new Set(["int", "ref", "tech", "cool", "attr", "bt"]);
+
 export const DRONE_SHAPE_HIT_LOCATIONS = {
   "6zones": {
     head:  { location: [1] },
@@ -232,6 +240,15 @@ export class CyberpunkActor extends Actor {
         }
         return i.system.equipped;
       }
+      // Cyberdecks are the only netware type carrying Effect-tab bonuses;
+      // they apply while the runner has this deck equipped (the Equip/
+      // Unequip badge on the Netrunning tab). Boosters / defenders /
+      // attackers / upgrades don't broadcast property bonuses — their
+      // effects are consumed at NET-action roll time via activeBoosterValue
+      // and the defenders/attackers helpers.
+      if (i.type === "netware") {
+        return i.system.netwareType === "cyberdeck" && i.system.equipped;
+      }
       return false;
     });
     // Group property bonuses by target so we can apply × → + → = per target.
@@ -251,39 +268,59 @@ export class CyberpunkActor extends Actor {
       else if (op === "=") bucket.set.push(entry);
       else                 bucket.add.push(entry); // "+" and unknown
     };
+    // Boolean-toggle properties (grantLowLight, ignoreFatigue, …) are
+    // presence-only: any single bonus row for them collapses to an
+    // implicit `= 1`, no scaling. Stored op / value are ignored so
+    // legacy rows with weird ops (× 2, etc.) don't break the semantics.
+    const pushBonus = (bonus, source) => {
+      if (bonus.type !== "property" || !bonus.property) return;
+      if (isBooleanProperty(bonus.property)) {
+        pushOp(bucketFor(bonus.property), "=", { value: 1, source });
+        return;
+      }
+      let op = bonus.op || "+";
+      // NET Bonuses and State bonuses are additive-only — any legacy
+      // `×` / `÷` / `=` op saved on a row before the restriction lands
+      // as a plain "+" instead of skewing the stat with unintended
+      // scaling. Clamping at 0 happens later, per-target.
+      const restricted = isNetBonusProperty(bonus.property) || isStateProperty(bonus.property);
+      if (restricted && op !== "+" && op !== "−") op = "+";
+      const value = Number(bonus.value) || 0;
+      pushOp(bucketFor(bonus.property), op, { value, source });
+    };
     equippedWithBonuses.forEach(item => {
-      const bonuses = item.system.bonuses || [];
-      bonuses.forEach(bonus => {
-        if (bonus.type !== "property" || !bonus.property) return;
-        const op = bonus.op || "+";
-        const value = Number(bonus.value) || 0;
-        pushOp(bucketFor(bonus.property), op, { value, source: item.name });
-      });
+      for (const bonus of (item.system.bonuses || [])) pushBonus(bonus, item.name);
     });
 
-    // Drug ActiveEffects on this actor — same pipeline, source attribution
-    // by effect name. The effect carries BOTH active and withdrawal bonus
-    // lists in flags; pick the one matching its current phase.
+    // Drug + Netware ActiveEffects — one walk covers both. Reads the
+    // cyberpunk flag bag once per effect (short-circuits on missing
+    // bag) and picks the phase-scoped bonus list for drugs vs the
+    // frozen `activeChanges` list for netware.
     for (const effect of this.effects) {
       if (effect.disabled) continue;
-      if (effect.getFlag("cyberpunk", "isDrugEffect") !== true) continue;
-      const phase = effect.getFlag("cyberpunk", "phase") || "active";
-      const bonuses = (phase === "withdrawal"
-        ? effect.getFlag("cyberpunk", "withdrawalChanges")
-        : effect.getFlag("cyberpunk", "activeChanges")) || [];
-      for (const bonus of bonuses) {
-        if (bonus.type !== "property" || !bonus.property) continue;
-        const op = bonus.op || "+";
-        const value = Number(bonus.value) || 0;
-        pushOp(bucketFor(bonus.property), op, { value, source: effect.name });
+      const flags = effect.flags?.cyberpunk;
+      if (!flags) continue;
+      let bonuses = null;
+      if (flags.isDrugEffect) {
+        const phase = flags.phase || "active";
+        bonuses = (phase === "withdrawal" ? flags.withdrawalChanges : flags.activeChanges) || [];
+      } else if (flags.isNetwareEffect) {
+        bonuses = flags.activeChanges || [];
       }
+      if (!bonuses) continue;
+      for (const bonus of bonuses) pushBonus(bonus, effect.name);
     }
 
     // Apply collected ops to each target. Universal order:
-    //   start → × multipliers → ÷ dividers → + additives → − subtractives → = last-wins.
-    // Multiplicative first, additive second, override last — keeps the math
-    // invariant when the user mixes ops on the same target. Division by 0
-    // is a no-op (skip the divisor) so a typo doesn't NaN the sheet.
+    //   start → + additives → − subtractives → × multipliers → ÷ dividers → = last-wins.
+    // "Combine everything, then multiply" — the multiplier scales the
+    // accumulated total (including the base value), not just the base.
+    // Consistent across stats and derived properties: "+1 REF ×2" means
+    // "(base + 1) × 2", not "(base × 2) + 1". Also fixes the bug where
+    // an × op on a zero-base accumulator (healingRateBoost, initMod,
+    // saveMods) was consumed by the zero start before the additives
+    // could feed it. Division by 0 is skipped so a typo doesn't NaN
+    // the sheet. `=` still wins last-writes.
     for (const [path, ops] of Object.entries(propertyOps)) {
       const parts = path.split('.');
       let current;
@@ -299,19 +336,48 @@ export class CyberpunkActor extends Actor {
         current = system[path] || 0;
         writeBack = (v) => { system[path] = v; };
       } else {
-        continue;
+        // Nested dotted path (e.g. `netBonuses.scanner`). Create the
+        // intermediate objects on the fly so a bonus whose group isn't
+        // in the schema still writes cleanly.
+        let obj = system;
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (obj[parts[i]] == null || typeof obj[parts[i]] !== "object") obj[parts[i]] = {};
+          obj = obj[parts[i]];
+        }
+        const leaf = parts[parts.length - 1];
+        current = Number(obj[leaf]) || 0;
+        writeBack = (v) => { obj[leaf] = v; };
       }
 
-      for (const m of ops.mul) current *= m.value;
-      for (const d of ops.div) if (d.value !== 0) current /= d.value;
       for (const a of ops.add) current += a.value;
       for (const s of ops.sub) current -= s.value;
+      for (const m of ops.mul) current *= m.value;
+      for (const d of ops.div) if (d.value !== 0) current /= d.value;
       if (ops.set.length) {
         if (ops.set.length > 1) {
           console.warn(`CYBERPUNK | multiple "=" bonuses on ${path}; using last (${ops.set[ops.set.length - 1].value})`);
         }
         current = ops.set[ops.set.length - 1].value;
         if (statKey) stats[statKey].overridden = true;
+      }
+
+      // Stress / Fright / Fatigue never go below 0 even when a `−` op
+      // would otherwise push them there. `stateBonus.*` is bookkeeping
+      // that gets clamped later in the psychosis calc, so we leave it
+      // unclamped here — a negative accumulator is what lets an item
+      // reduce a currently-elevated psychosis flavour.
+      if (isStateProperty(path) && !path.startsWith("stateBonus.")) {
+        current = Math.max(0, current);
+      }
+
+      // Hard floor of 2 on the six primary attributes — a system
+      // invariant. No accumulated bonus (drug penalty, netware debuff,
+      // cyberware minus, tool modifier) can push INT / REF / TECH /
+      // COOL / ATTR / BT below 2. Wound + sleep-deprivation math still
+      // has its own separate floors downstream; this clamp only guards
+      // the bonus-pipeline write.
+      if (statKey && FLOOR2_STATS.has(statKey)) {
+        current = Math.max(2, current);
       }
 
       writeBack(current);
@@ -439,10 +505,9 @@ export class CyberpunkActor extends Actor {
     if (this.statuses.has("immobilized") || this.statuses.has("prone")) {
       move.total = 0;
     }
-    // Desynced: MOVE -1 (min 2)
-    if (this.statuses.has("desynced")) {
-      move.total = Math.max(2, move.total - 1);
-    }
+    // (Desynced MOVE -1 removed — now a Custom netware effect that
+    // authors `stats.ma -1` in its Effect tab; the property pipeline
+    // applies the bonus via the standard stat pathway.)
     move.run = move.total * 3;
     move.leap = Math.floor(move.run / 4); 
 
@@ -482,16 +547,11 @@ export class CyberpunkActor extends Actor {
       woundStat(stats.ref, total => total - 2);
     }
 
-    // Scrambled: reduce INT and REF by stored penalty (min 2)
-    if (this.statuses.has("scrambled")) {
-      const scramblePenalty = this.getFlag("cyberpunk", "scrambledPenalty") || 0;
-      if (scramblePenalty > 0) {
-        stats.int.scrambledMod = -scramblePenalty;
-        stats.ref.scrambledMod = -scramblePenalty;
-        stats.int.total = Math.max(2, stats.int.total - scramblePenalty);
-        stats.ref.total = Math.max(2, stats.ref.total - scramblePenalty);
-      }
-    }
+    // (Scrambled INT/REF penalty removed — the effect is now a Custom
+    // netware effect authored on the attacker item's Effect tab, which
+    // spawns an ActiveEffect on the target with `stats.int -1d6` and
+    // `stats.ref -1d6` rolls frozen at hit time. The property pipeline
+    // above applies those bonuses to the totals directly.)
 
     // Save thresholds (stored for Monk's Token Bar accessibility). Uses the
     // same `effectiveWoundState` as the stat-penalty block above so the
@@ -531,6 +591,33 @@ export class CyberpunkActor extends Actor {
     // would silently wipe those out (was a real bug for EMP-boosting drugs).
     emp.total -= Math.floor(humanityDamage / 10);
 
+    // Cumulative Effects — persistent per-actor counters fed by drug
+    // Onset→Active transitions. Applied here (post-propertyOps, pre-
+    // sleep-deprivation) so sleep penalties pile on top of the
+    // already-reduced baseline. Each key's `derive` shape in
+    // `cumulativeEffects` drives where its floor lands; `statBonus`
+    // entries feed the psychosis composition below (separate loop so
+    // the `system.stateBonus` map is fully written before psychosis
+    // reads it). Adding a new cumulative is data-only — declare its
+    // `derive` shape in the registry.
+    const CUM = system.cumulative ?? {};
+    const cumFloor = (k) => Math.floor(Number(CUM[k]) || 0);
+    const cumStateBonus = { alienation: 0, egotism: 0, obsession: 0, paranoia: 0 };
+    for (const [key, meta] of Object.entries(cumulativeEffects)) {
+      const d = meta.derive;
+      if (!d) continue;
+      const v = cumFloor(key);
+      if (!v) continue;
+      if (d.statBonus) {
+        cumStateBonus[d.statBonus] = (cumStateBonus[d.statBonus] || 0) + v;
+      } else if (d.statSub) {
+        const s = stats[d.statSub];
+        if (s) s.total = Math.max(d.floor ?? 0, s.total - v);
+      } else if (d.fieldSub) {
+        system[d.fieldSub] = (Number(system[d.fieldSub]) || 0) - v;
+      }
+    }
+
     // Sleep deprivation: escalating stat penalties (min 2 for REF/INT/COOL, min 0 for EMP)
     const sleepLevel = this.getSleepDeprivationLevel();
     if (sleepLevel >= 2) {
@@ -550,10 +637,33 @@ export class CyberpunkActor extends Actor {
       }
     }
 
+    // Effective psychosis levels for bracket / penalty lookups. The
+    // stored `humanityLoss.<flavour>` values track the distribution the
+    // GM has spent — they feed the "X / Y" counter and are the only
+    // input to the overall Humanity Loss and EMP calc. On top of that,
+    // temporary State bonuses (via item Effect rows targeting
+    // `stateBonus.<flavour>`) shift what psychosis bracket the character
+    // is currently in without changing the stored distribution. Every
+    // bracket / penalty consumer reads from `psychosis.<flavour>`,
+    // not from `humanityLoss.<flavour>`, so bumping the bracket via
+    // items reflects everywhere at once.
+    const HL = system.humanityLoss ?? {};
+    const SB = system.stateBonus ?? {};
+    // `cumStateBonus` from the cumulative-derive loop above carries
+    // the drug-driven contribution — kept out of the raw stateBonus
+    // map so GM-only "cumulative" and item-only "state bonus" edits
+    // stay separable.
+    system.psychosis = {
+      alienation: Math.max(0, (Number(HL.alienation) || 0) + (Number(SB.alienation) || 0) + cumStateBonus.alienation),
+      egotism:    Math.max(0, (Number(HL.egotism)    || 0) + (Number(SB.egotism)    || 0) + cumStateBonus.egotism),
+      obsession:  Math.max(0, (Number(HL.obsession)  || 0) + (Number(SB.obsession)  || 0) + cumStateBonus.obsession),
+      paranoia:   Math.max(0, (Number(HL.paranoia)   || 0) + (Number(SB.paranoia)   || 0) + cumStateBonus.paranoia)
+    };
+
     // Paranoia at Paranoid+ (41) drops current COOL by 1 (min 2). Matches the
     // sleep-deprivation floor so we never bottom-out the stat past its
     // gameplay minimum.
-    if ((system.humanityLoss?.paranoia ?? 0) >= 41) {
+    if (system.psychosis.paranoia >= 41) {
       stats.cool.total = Math.max(2, stats.cool.total - 1);
     }
 
@@ -726,15 +836,24 @@ export class CyberpunkActor extends Actor {
         ifaceValue >= 10 ? 5 :
         ifaceValue >= 7  ? 4 :
         ifaceValue >= 4  ? 3 : 2;
-      const lagging = this.statuses.has("lagging");
-      const disabled = lagging ? Math.min(1, Math.max(0, baseTotal - 2)) : 0;
+      // `netBonuses.actions` is the runner-side NET Actions delta.
+      // Signed: negative disables slots (e.g. former Lagging effect →
+      // `-1`); positive grants extras. Total is floored at 2 so a
+      // stack of negatives can't put the runner below the game's
+      // baseline of 2 actions.
+      const actionsBonus = Math.floor(Number(system.netBonuses?.actions) || 0);
+      const total = Math.max(2, baseTotal + actionsBonus);
+      // `disabled` retained on the output for the HUD/tokenaction row
+      // that already reads it — non-zero when a negative bonus shrank
+      // the pool below the natural baseTotal.
+      const disabled = Math.max(0, baseTotal - total);
       const used = this.getFlag("cyberpunk", "netActionsUsed") ?? 0;
-      const usedClamped = Math.min(used, baseTotal - disabled);
+      const usedClamped = Math.min(used, total);
       system.netActions = {
-        total: baseTotal,
+        total,
         disabled,
         used: usedClamped,
-        available: Math.max(0, baseTotal - disabled - usedClamped)
+        available: Math.max(0, total - usedClamped)
       };
     }
   }
@@ -917,11 +1036,13 @@ export class CyberpunkActor extends Actor {
   shouldBeInsane() {
     if (this.getStressLevel?.() >= 4) return true;
     if (this.getFrightLevel?.() >= 5) return true;
-    const hl = this.system.humanityLoss ?? {};
-    return ((hl.alienation ?? 0) >= 51)
-        || ((hl.egotism    ?? 0) >= 51)
-        || ((hl.obsession  ?? 0) >= 51)
-        || ((hl.paranoia   ?? 0) >= 51);
+    // Effective psychosis level (raw HL + active State bonuses) drives
+    // Insane the same way it drives every other bracket consequence.
+    const ps = this.system.psychosis ?? {};
+    return ((ps.alienation ?? 0) >= 51)
+        || ((ps.egotism    ?? 0) >= 51)
+        || ((ps.obsession  ?? 0) >= 51)
+        || ((ps.paranoia   ?? 0) >= 51);
   }
 
   /** Apply/remove the Insane status to match `shouldBeInsane()`. Idempotent. */
@@ -1352,7 +1473,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all skill rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1464,7 +1585,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all skill rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1535,7 +1656,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all stat rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1580,7 +1701,7 @@ export class CyberpunkActor extends Actor {
 
     // Action Surge: -3 penalty on all skill rolls
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
 
     // Fast Draw: -3 penalty on all rolls
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
@@ -1612,11 +1733,13 @@ export class CyberpunkActor extends Actor {
     const { value: skillValue, overridden: isOverridden } = this._resolveSkillValue(skill);
 
     // Build roll formula parts
+    const allRollBonus = Number(this.system.allRollBonus) || 0;
     const parts = [
       skillValue,
       skill.system.stat ? `@stats.${skill.system.stat}.total` : null,
       skill.name === localize("SkillAwarenessNotice") ? "@CombatSenseMod" : null,
       extraMod || null,
+      allRollBonus || null,
       actionSurgePenalty || null,
       monomaniaPenalty || null,
       fastDrawPenalty || null,
@@ -1724,7 +1847,7 @@ export class CyberpunkActor extends Actor {
 
     const stat = bonus.skillStat || 'ref';
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
@@ -1734,10 +1857,12 @@ export class CyberpunkActor extends Actor {
     // Virtual-skill value: unified pipeline (chip "=" stamp + any additive boosters).
     const { value: skillValue } = this._resolveSkillValue(null, skillName);
 
+    const allRollBonus = Number(this.system.allRollBonus) || 0;
     const rollParts = [
       skillValue,
       `@stats.${stat}.total`,
       extraMod || null,
+      allRollBonus || null,
       actionSurgePenalty || null,
       monomaniaPenalty || null,
       fastDrawPenalty || null,
@@ -1775,13 +1900,14 @@ export class CyberpunkActor extends Actor {
   async rollStatCheck(statName, difficulty, extraMod = 0) {
     const fullStatName = localize(toTitleCase(statName) + "Full");
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
     const fatiguePenalty = this.getFatiguePenalty();
     const stressPenalty = this.getStressPenalty(statName === "cool");
 
+    const allRollBonus = Number(this.system.allRollBonus) || 0;
     const parts = [`@stats.${statName}.total`];
     if (actionSurgePenalty) parts.push(actionSurgePenalty);
     if (monomaniaPenalty) parts.push(monomaniaPenalty);
@@ -1790,6 +1916,7 @@ export class CyberpunkActor extends Actor {
     if (grapplingPenalty) parts.push(grapplingPenalty);
     if (fatiguePenalty) parts.push(fatiguePenalty);
     if (stressPenalty) parts.push(stressPenalty);
+    if (allRollBonus) parts.push(allRollBonus);
     if (extraMod) parts.push(extraMod);
 
     const roll = buildD10Roll(parts, this.system);
@@ -1824,7 +1951,10 @@ export class CyberpunkActor extends Actor {
     const dv = this.system.stats.int.total;
 
     const parts = ["@stats.int.total"];
-    const itemBonus = this.system[isStayAwake ? "stayAwakeBonus" : "fallAsleepBonus"] || 0;
+    // Single unified Sleep Roll Bonus feeds both directions of the check —
+    // the mode already dictates whether success means "stay up" or "fall
+    // asleep", so a positive bonus is a positive nudge either way.
+    const itemBonus = this.system.sleepRollBonus || 0;
     if (itemBonus) parts.push(itemBonus);
     if (extraMod) parts.push(extraMod);
 
@@ -1869,14 +1999,14 @@ export class CyberpunkActor extends Actor {
    */
   async rollFrightCheck(difficulty, extraMod = 0) {
     const actionSurgePenalty = this.statuses.has("action-surge") ? -3 : 0;
-    const monomaniaPenalty = (this.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
     const fastDrawPenalty = this.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.statuses.has("grappling") ? -2 : 0;
     const fatiguePenalty = this.getFatiguePenalty();
     const stressPenalty = this.getStressPenalty(true); // COOL-based roll
     // Paranoia: -2 on Fright checks at Nervous+ (11), upgraded to -4 at Paranoid+ (41).
-    const paranoia = this.system.humanityLoss?.paranoia ?? 0;
+    const paranoia = this.system.psychosis?.paranoia ?? 0;
     const paranoiaFrightPenalty = paranoia >= 41 ? -4 : (paranoia >= 11 ? -2 : 0);
 
     const parts = ["@stats.cool.total"];
@@ -1957,8 +2087,14 @@ export class CyberpunkActor extends Actor {
     if (this.type === "drone") {
       return this._rollDroneStunSave(-modifier);
     }
-    const threshold = this.getStunThreshold();
-    const roll = await new Roll(modifier ? `1d10 + ${-modifier}` : "1d10").evaluate();
+    // CP2020 saves: roll 1d10, must be strictly UNDER the threshold on
+    // the sheet. `system.stunSave` already includes the actor's
+    // stunSaveMod (baked in during prepareDerivedData). The `modifier`
+    // param is a SITUATIONAL adjustment to the threshold — positive
+    // eases the save, negative (e.g. stun strength -2 / -4 from an
+    // exotic hit) makes it harder. The roll itself stays clean.
+    const threshold = (this.system.stunSave || this.getStunThreshold()) + modifier;
+    const roll = await new Roll("1d10").evaluate();
     const success = roll.total < threshold;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
@@ -2016,14 +2152,20 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
-   * Roll a Poison Save
-   * Must roll UNDER the threshold to succeed
-   * On failure, applies the Poisoned condition (-4 REF)
-   * @param {number} modifier - Optional modifier to the roll
+   * Roll a Poison Save.
+   * Must roll UNDER the threshold to succeed. On failure applies the
+   * Unconscious condition — a failed default Poison Save now knocks
+   * the target out (the legacy Poisoned/Confused/Tearing conditions
+   * were retired; weapon-driven Poison Saves that need a specific
+   * drug outcome go through `_applyExoticEffect`'s `drug` case).
    */
   async rollPoisonSave(modifier = 0) {
-    const threshold = this.getStunThreshold(); // Same threshold as Stun (BT-based)
-    const roll = await new Roll(modifier ? `1d10 + ${modifier}` : "1d10").evaluate();
+    // CP2020 saves: 1d10 clean, must be strictly UNDER the sheet
+    // threshold. `system.poisonSave` bakes in poisonSaveMod already.
+    // `modifier` is a situational threshold adjustment (positive =
+    // easier, negative = harder). Roll formula never sees the mod.
+    const threshold = (this.system.poisonSave || this.getStunThreshold()) + modifier;
+    const roll = await new Roll("1d10").evaluate();
     const success = roll.total < threshold;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
@@ -2038,15 +2180,8 @@ export class CyberpunkActor extends Actor {
         hint: localize("UnderThresholdMessage")
       });
 
-    // Apply or remove Poisoned condition based on result
-    if (success) {
-      // Remove Poisoned condition on success
-      if (this.statuses.has("poisoned")) {
-        await this.toggleStatusEffect("poisoned", { active: false });
-      }
-    } else {
-      // Apply Poisoned condition on failure
-      await this.toggleStatusEffect("poisoned", { active: true });
+    if (!success) {
+      await this.toggleStatusEffect("unconscious", { active: true });
     }
     return success;
   }
@@ -2058,8 +2193,13 @@ export class CyberpunkActor extends Actor {
    * @param {number} modifier - Optional modifier to the roll
    */
   async rollDeathSave(modifier = 0) {
-    const threshold = this.getDeathThreshold();
-    const roll = await new Roll(modifier ? `1d10 + ${modifier}` : "1d10").evaluate();
+    // CP2020 saves: 1d10 clean, must be strictly UNDER the sheet
+    // threshold. `system.deathSave` bakes in deathSaveMod already —
+    // a drug like Death Save +10 shows the +10 in the sheet AND uses
+    // it as the effective DC; the roll stays clean. `modifier` is a
+    // situational threshold adjustment (positive = easier).
+    const threshold = (this.system.deathSave || this.getDeathThreshold()) + modifier;
+    const roll = await new Roll("1d10").evaluate();
     const success = roll.total < threshold;
 
     const speaker = ChatMessage.getSpeaker({ actor: this });

@@ -331,7 +331,7 @@ export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     // Status penalties
     if (this.actor.statuses.has("fast-draw")) attackTerms.push(-3);
     if (this.actor.statuses.has("action-surge")) attackTerms.push(-3);
-    if ((this.actor.system.humanityLoss?.obsession ?? 0) >= 51) attackTerms.push(-4);
+    if ((this.actor.system.psychosis?.obsession ?? 0) >= 51) attackTerms.push(-4);
 
     // Grappling/Restrained penalties don't apply to grappling actions
     const grapplingActions = ["Hold", "Break", "Choke", "Crush", "Throw"];
@@ -552,7 +552,7 @@ export class PunchDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this.actor.statuses.has("restrained")) attackTerms.push(-2);
     if (this.actor.statuses.has("grappling")) attackTerms.push(-2);
     if (this.actor.statuses.has("prone")) attackTerms.push(-2);
-    if ((this.actor.system.humanityLoss?.obsession ?? 0) >= 51) attackTerms.push(-4);
+    if ((this.actor.system.psychosis?.obsession ?? 0) >= 51) attackTerms.push(-4);
 
     const attackRoll = await buildD10Roll(attackTerms, system).evaluate();
 

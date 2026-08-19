@@ -1,0 +1,20 @@
+{{!--
+  Reusable status-hint icon row. Consumers pass a `hints` array of
+  { key, effectId, label, flavor, calc, icon, rollable } entries —
+  each renders as a 32×32 `.netware-status-hint`. Rollable ones carry
+  `.rollable` so the sheet's delegated click handler picks them out.
+
+  Kept generic (state-effects rows use it for both drug and netware
+  sections); no wrapper container so callers control the enclosing
+  flex context.
+--}}
+{{#each hints}}
+  <div class="netware-status-hint{{#if this.rollable}} rollable{{/if}}"
+       data-flavour-key="{{this.key}}"
+       data-effect-id="{{this.effectId}}"
+       data-tooltip-name="{{this.label}}"
+       data-flavor="{{this.flavor}}"
+       data-calc="{{this.calc}}">
+    <img src="{{this.icon}}" alt="">
+  </div>
+{{/each}}

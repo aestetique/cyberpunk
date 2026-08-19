@@ -5,7 +5,7 @@ import { getCurrentGameTime } from "./dialog/game-time-dialog.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
 import { formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
-import { applyDrugToActor } from "./drug-effects.js";
+import { applyDrugToActor, spawnDrugEffect } from "./drug-effects.js";
 import { deckHasUpgrade, getEquippedDeck } from "./netrun/upgrades.js";
 import { NetActionRollDialog, commitLuckSpend } from "./dialog/net-action-roll-dialog.js";
 import { activeBoosterValue } from "./dialog/cyberdeck-action-dialog.js";
@@ -1263,26 +1263,42 @@ export class CyberpunkChatMessage extends ChatMessage {
      * damage pipeline expands AoE / computes preview / applies wounds.
      * Mutates a copy of `damageData` (never the original).
      *
-     *   - Shield: nullifies a non-Black-ICE hit and self-derezzes. If a
-     *     Shield is consumed, all aoe entries' damage are zeroed.
+     *   - Shield: fires ONLY when Armor alone can't fully absorb the
+     *     incoming damage. On fire it nullifies the whole hit (all aoe
+     *     entries zeroed) and self-derezzes. Applies against every NET
+     *     attacker including Black ICE.
      *   - Armor:  subtracts `defenderValue` (summed across active Armor
      *     programs) from each aoe entry's damage, floor 0. Applies to
-     *     every NET attack including Black ICE.
+     *     every NET attack including Black ICE. Only runs when Shield
+     *     didn't already consume the hit.
+     *
+     * Priority: Shield is the last-line-of-defense — a trivial hit that
+     * Armor can eat by itself won't waste a Shield charge. A hit that
+     * would leak through Armor triggers the Shield.
      *
      * @param {Actor}  actor          Target receiving the hit.
      * @param {object} damageData     Raw damage data (with possible `aoe` key).
-     * @param {string} attackerSource "netrunner" or "blackIce".
+     * @param {string} _attackerSource "netrunner" or "blackIce" (kept for
+     *                                signature compatibility; both are
+     *                                treated identically now).
      * @returns {Promise<object>}     New damageData with defender mods applied.
      * @private
      */
-    async _applyNetDefenders(actor, damageData, attackerSource) {
+    async _applyNetDefenders(actor, damageData, _attackerSource) {
         if (!damageData?.aoe) return damageData;
         const { totalActiveArmorValue, consumeOneShield } = await import("./netrun/defenders.js");
 
         let next = damageData;
 
-        // Shield: only against non-Black-ICE hits.
-        if (attackerSource !== "blackIce") {
+        const totalDamage = next.aoe.reduce((s, h) => s + (Number(h.damage) || 0), 0);
+        const armorValue = totalActiveArmorValue(actor);
+
+        // Shield fires only if Armor alone can't fully absorb the hit,
+        // so a small hit that Armor could kill by itself doesn't waste
+        // a Shield charge. Works against every NET attacker (including
+        // Black ICE — the previous "non-Black-ICE only" gate has been
+        // removed).
+        if (totalDamage > armorValue) {
             const shieldConsumed = await consumeOneShield(actor);
             if (shieldConsumed) {
                 next = { ...next, aoe: next.aoe.map(h => ({ ...h, damage: 0 })) };
@@ -1291,10 +1307,10 @@ export class CyberpunkChatMessage extends ChatMessage {
             }
         }
 
-        // Armor: flat reduction across every NET attack.
-        const armorValue = totalActiveArmorValue(actor);
+        // Armor: flat reduction across every NET attack. Runs when
+        // Shield didn't fire (either no charge left, or the hit was
+        // small enough that Armor alone covers it).
         if (armorValue > 0) {
-            const before = next.aoe.reduce((s, h) => s + (Number(h.damage) || 0), 0);
             next = {
                 ...next,
                 aoe: next.aoe.map(h => ({
@@ -1303,7 +1319,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                 }))
             };
             const after = next.aoe.reduce((s, h) => s + (Number(h.damage) || 0), 0);
-            const blocked = before - after;
+            const blocked = totalDamage - after;
             if (blocked > 0) {
                 ui.notifications.info(localize("DefenderArmorReduced", { name: actor.name, blocked }));
             }
@@ -1808,6 +1824,12 @@ export class CyberpunkChatMessage extends ChatMessage {
         // Exotic weapons with RoF > 1 make the target save multiple times on a
         // single hit — keep rolling until they fail, then the condition lands.
         const effectSaveCount = Math.max(1, Number(targetSelector.dataset.effectSaveCount) || 1);
+        // Source UUID for `custom` netware effect — attacker item or
+        // Black ICE actor. Empty for anything else.
+        const effectSourceUuid = targetSelector.dataset.effectSourceUuid || null;
+        // Drug uuid attached to the weapon when its effect is "drug" —
+        // resolved at fire time and threaded through the target-selector.
+        const effectDrugUuid = targetSelector.dataset.effectDrugUuid || null;
 
         // NET attacker source (set by Zap / Attacker programs only) — drives
         // the per-target Shield + Armor application below. `null` (regular
@@ -1867,7 +1889,7 @@ export class CyberpunkChatMessage extends ChatMessage {
                 // it modifies the program's end-state and shouldn't also
                 // route through the generic effect-application switch.
                 if (weaponEffect && weaponEffect !== "destroyed") {
-                    await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
+                    await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount, effectSourceUuid, effectDrugUuid);
                 }
                 continue;
             }
@@ -1887,7 +1909,7 @@ export class CyberpunkChatMessage extends ChatMessage {
             if (actor.type === "drone") {
                 await this._applyDroneDamage(actor, perTargetData, ammoType);
                 if (weaponEffect) {
-                    await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
+                    await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount, effectSourceUuid, effectDrugUuid);
                 }
                 continue;
             }
@@ -1945,7 +1967,7 @@ export class CyberpunkChatMessage extends ChatMessage {
 
             // Apply exotic weapon effect FIRST (always applies on hit, regardless of damage)
             if (weaponEffect) {
-                await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount);
+                await this._applyExoticEffect(actor, weaponEffect, hitLocation, effectSaveCount, effectSourceUuid, effectDrugUuid);
             }
 
             // Skip damage processing if no damage to apply
@@ -2023,10 +2045,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 await actor.toggleStatusEffect("stabilized", { active: false });
             }
 
-            // Roll Shock Save only if actor is NOT already shocked (any damage triggers this)
+            // Roll Shock Save only if actor is NOT already shocked (any damage triggers this).
+            // stunSaveMod is baked into `system.stunSave` by prepareDerivedData
+            // and read directly by rollStunSave — no explicit modifier here.
             if ((woundDamage > 0 || cyberlimbDamage > 0) && !actor.statuses.has("shocked")) {
-                const modifier = actor.system.stunSaveMod || 0;
-                await actor.rollStunSave(modifier);
+                await actor.rollStunSave();
             }
 
             // Check for limb loss (8+ wound damage to a non-cyberlimb limb)
@@ -2058,11 +2081,12 @@ export class CyberpunkChatMessage extends ChatMessage {
                 needsDeathSave = true;
             }
 
-            // Roll Death Save once if needed (limb loss, cyberlimb destruction, or entering mortal state)
-            // But NOT if already dead from head trauma
+            // Roll Death Save once if needed (limb loss, cyberlimb destruction, or entering mortal state).
+            // But NOT if already dead from head trauma. deathSaveMod is baked
+            // into `system.deathSave` by prepareDerivedData and read directly
+            // by rollDeathSave — no explicit modifier here.
             if (needsDeathSave && !actor.statuses.has("dead")) {
-                const modifier = actor.system.deathSaveMod || 0;
-                await actor.rollDeathSave(modifier);
+                await actor.rollDeathSave();
             }
         }
 
@@ -2258,18 +2282,27 @@ export class CyberpunkChatMessage extends ChatMessage {
      * @param {string} effect - The effect key (confusion, poisoned, etc.)
      * @param {string} hitLocation - The hit location (for acid)
      * @param {number} [saveCount=1] - Max save attempts before the effect lands
+     * @param {string} [sourceUuid] - UUID of the attacker item or Black
+     *   ICE actor authoring the Custom effect payload (`custom` only)
      * @private
      */
-    async _applyExoticEffect(actor, effect, hitLocation, saveCount = 1) {
+    async _applyExoticEffect(actor, effect, hitLocation, saveCount = 1, sourceUuid = null, drugUuid = null) {
         // Ignore Gas Effects — property (drug / tool / cyberware / etc.)
         // that fully suppresses save + condition for the RED gas family:
-        // Confusion, Poisoned, Tearing, Unconscious, Nerve Gas. Any
-        // positive accumulated value on the target immunises them; a
-        // notification lets the table see the immunity fire.
-        const GAS_EFFECTS = new Set(["confusion", "poisoned", "tearing", "unconscious", "deathAt0"]);
+        // Confusion, Poisoned, Tearing, Unconscious, Nerve Gas, and the
+        // unified Drug applicator. Any positive accumulated value on the
+        // target immunises them; a notification lets the table see the
+        // immunity fire.
+        const GAS_EFFECTS = new Set(["confusion", "poisoned", "tearing", "unconscious", "deathAt0", "drug"]);
         if (GAS_EFFECTS.has(effect) && Number(actor.system?.ignoreGasEffects) > 0) {
-            const effectKey = weaponEffects[effect];
-            const effectLabel = effectKey ? localize(effectKey) : effect;
+            let effectLabel;
+            if (effect === "drug" && drugUuid) {
+                const drug = fromUuidSync(drugUuid);
+                effectLabel = drug?.name || localize("EffDrug");
+            } else {
+                const effectKey = weaponEffects[effect];
+                effectLabel = effectKey ? localize(effectKey) : effect;
+            }
             ui.notifications.info(localize("GasEffectIgnored", {
                 name: actor.name, effect: effectLabel
             }));
@@ -2301,6 +2334,27 @@ export class CyberpunkChatMessage extends ChatMessage {
             case "unconscious":
                 await rollUntilFail(() => this._rollEffectSave(actor, "poison", "unconscious"));
                 break;
+
+            case "drug": {
+                // Unified gas-drug applicator. Resolves the drug from
+                // the weapon's stored uuid, rolls a Poison Save, and
+                // on failure spawns the drug as an ActiveEffect on the
+                // target (its own Onset → Active → Withdrawal flow
+                // takes over from there). A missing / stale uuid drops
+                // to a warning — the weapon was fired without a loaded
+                // payload.
+                const drug = drugUuid ? await fromUuid(drugUuid) : null;
+                if (!drug || drug.type !== "drug") {
+                    ui.notifications.warn(localize("DrugSlotMissing"));
+                    break;
+                }
+                await rollUntilFail(async () => {
+                    const success = await this._rollEffectSave(actor, "poison", null);
+                    if (!success) await spawnDrugEffect(drug, actor);
+                    return success;
+                });
+                break;
+            }
 
             case "stunAt0":
                 await rollUntilFail(() => actor.rollStunSave(0));
@@ -2353,17 +2407,52 @@ export class CyberpunkChatMessage extends ChatMessage {
                 break;
             }
 
-            // NET attacker programs — effects auto-apply on hit (no save).
-            // Mechanics for each condition (stat penalties, NET-action loss,
-            // etc.) live in the condition's own status effect definition;
-            // we just toggle the flag on the target.
-            case "gridlocked":
-            case "scrambled":
-            case "desynced":
-            case "lagging":
-            case "tagged":
-                await actor.toggleStatusEffect(effect, { active: true });
+            // (Superglue is no longer a primary effect — authored as a
+            // Flavour row on a Custom effect's Effect tab; spawned as
+            // a netware ActiveEffect with `statuses: ["superglue"]`.)
+
+            // Derezz — randomly derezz one currently-active program on
+            // the target netrunner. Scoped to the runner's equipped
+            // deck (dormant programs on other decks aren't in the run
+            // anyway), and to the four program subtypes so cyberdeck /
+            // upgrade items can't be picked. No-op with a notice if
+            // the runner has nothing active to derezz.
+            case "derezz": {
+                const equippedDeck = actor.items.find(i =>
+                    i.type === "netware"
+                    && i.system?.netwareType === "cyberdeck"
+                    && i.system?.equipped
+                );
+                if (!equippedDeck) break;
+                const active = actor.items.contents.filter(i =>
+                    i.type === "netware"
+                    && i.system?.netwareType === "program"
+                    && i.system?.programState === "active"
+                    && i.getFlag?.("cyberpunk", "attachedTo") === equippedDeck.id
+                );
+                if (active.length === 0) {
+                    ui.notifications.info(localize("DerezzNoActivePrograms", { name: actor.name }));
+                    break;
+                }
+                const picked = active[Math.floor(Math.random() * active.length)];
+                await picked.update({ "system.programState": "derezzed" });
+                ui.notifications.info(localize("DerezzApplied", { program: picked.name, actor: actor.name }));
                 break;
+            }
+
+            // Custom — the attacker/BI item authored its own Effect
+            // payload on its Effect tab. Look up the source by UUID
+            // (passed through the target-selector dataset by the
+            // strike callers), freeze its bonuses (roll any Attribute
+            // formulas), and spawn an ActiveEffect on the target.
+            case "custom": {
+                if (!sourceUuid) break;
+                const source = await fromUuid(sourceUuid).catch(() => null);
+                if (!source) break;
+                const { applyNetwareEffectToTarget } = await import("./netrun/netware-effects.js");
+                await applyNetwareEffectToTarget(actor, source);
+                break;
+            }
 
             // "Crashed" forces the target out of the NET — drop their
             // jacked-in status. The existing jack-in.js hook chain handles
@@ -2507,8 +2596,10 @@ export class CyberpunkChatMessage extends ChatMessage {
                 hint: localize("UnderThresholdMessage")
             });
 
-        // Apply condition on failure
-        if (!success) {
+        // Apply condition on failure. `conditionId` may be null when
+        // the caller only wants the save + card (drug applicator side-
+        // effects live outside this helper).
+        if (!success && conditionId) {
             await actor.toggleStatusEffect(conditionId, { active: true });
         }
         return success;
@@ -2618,11 +2709,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 if (decks.length) {
                     const deck = decks[Math.floor(Math.random() * decks.length)];
                     const wasEquipped = !!deck.system?.equipped;
-                    await deck.update({ "system.programState": "inoperable" });
-                    // If the runner is jacked in via this specific deck, the
-                    // hardware failure forces them out. The existing
-                    // deleteActiveEffect hook in jack-in.js handles the rest
-                    // (despawn NET icon, deactivate slotted programs).
+                    // Hardware failure — inoperable and forcibly unequipped
+                    // (an inoperable deck can't be the runner's selected
+                    // deck; the Equip badge on the gear row won't accept
+                    // it back until repaired).
+                    await deck.update({ "system.programState": "inoperable", "system.equipped": false });
                     if (wasEquipped && actor.statuses.has("jacked-in")) {
                         await actor.toggleStatusEffect("jacked-in", { active: false });
                     }

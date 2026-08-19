@@ -9,6 +9,10 @@ import {
 } from "../lookups.js";
 import { calibers as CALIBERS, getValidAmmoTypesForCaliber, getDamageForCaliber } from "../calibers.js";
 import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
+import { localize } from "../utils.js";
+
+/** Drug methods that can be delivered as a gas weapon payload. */
+const GAS_DELIVERY_METHODS = new Set(["inhaled", "contact"]);
 
 /**
  * Sensible defaults when the user switches weaponType.
@@ -28,7 +32,11 @@ const DEFAULT_CLASS_BY_TYPE = {
 export class CyberpunkWeaponSheet extends CyberpunkItemSheetV2 {
 
   static DEFAULT_OPTIONS = {
-    classes: ["weapon-sheet"]
+    classes: ["weapon-sheet"],
+    // Enables the drug drop slot on gas weapons (effect === "drug").
+    // The slot itself carries `data-drop-target="weapon-drug"` and the
+    // sheet's `_onDrop` validates method + writes `system.drugUuid`.
+    dragDrop: [{ dropSelector: "[data-drop-target='weapon-drug']" }]
   };
 
   static PARTS = {
@@ -195,6 +203,18 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheetV2 {
       ctx.selectedAmmoTypeLabel = game.i18n.localize(`CYBERPUNK.${selAT}`);
     }
 
+    // Drug-effect slot — visible only when the weapon's effect is
+    // "drug". Resolves the attached drug (if any) synchronously so we
+    // can render name + icon in the drop area.
+    ctx.isDrugEffect = ctx.system.effect === "drug";
+    ctx.attachedDrug = null;
+    if (ctx.isDrugEffect && ctx.system.drugUuid) {
+        const doc = fromUuidSync(ctx.system.drugUuid);
+        if (doc && doc.type === "drug") {
+            ctx.attachedDrug = { uuid: doc.uuid, name: doc.name, img: doc.img };
+        }
+    }
+
     return ctx;
   }
 
@@ -270,5 +290,44 @@ export class CyberpunkWeaponSheet extends CyberpunkItemSheetV2 {
       else if (!item.system.damage) updates["system.damage"] = dmg;
       await item.update(updates);
     });
+
+    // Drug slot — remove button (unslot the drug) and open on click.
+    html.find('.weapon-drug-slot-remove').on('click', async ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      await item.update({ "system.drugUuid": "" });
+    });
+    html.find('.weapon-drug-slot.filled .weapon-drug-slot-open').on('click', async ev => {
+      ev.preventDefault();
+      const uuid = ev.currentTarget.dataset.uuid;
+      const doc = uuid ? await fromUuid(uuid) : null;
+      if (doc) doc.sheet.render(true);
+    });
+  }
+
+  /**
+   * Gas weapons accept a single drug via drag-drop. Only inhaled or
+   * contact methods make sense as a gas payload — anything else is
+   * rejected at drop time with a warning.
+   */
+  async _onDrop(event) {
+    event.preventDefault();
+    if (this._isLocked) return;
+
+    let data;
+    try { data = JSON.parse(event.dataTransfer.getData('text/plain')); } catch { return; }
+    if (data.type !== "Item") return;
+
+    const dropped = await Item.implementation.fromDropData(data);
+    if (!dropped || dropped.type !== "drug") {
+      ui.notifications.warn(localize("DrugSlotOnlyGasWarning"));
+      return;
+    }
+    const method = dropped.system?.methodTaken;
+    if (!GAS_DELIVERY_METHODS.has(method)) {
+      ui.notifications.warn(localize("DrugSlotOnlyGasWarning"));
+      return;
+    }
+    await this.document.update({ "system.drugUuid": dropped.uuid });
   }
 }

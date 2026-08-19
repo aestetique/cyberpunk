@@ -18,6 +18,7 @@ import {
   buildCommodityContext
 } from "./gear-data.js";
 import { buyItem, sellItem, isSellable } from "./shop-trade.js";
+import { attachRowMenu, delegateEntry } from "../ui/row-context-menu.js";
 import { ShopSettingsDialog } from "../dialog/shop-settings-dialog.js";
 
 /** Item type → which section-block category it lands in, with badge + label. */
@@ -801,5 +802,30 @@ export class CyberpunkShopSheet extends HandlebarsApplicationMixin(ActorSheetV2B
       ev.preventDefault();
       new ShopSettingsDialog(this.actor).render(true);
     });
+
+    // Right-click on any shop line item — Buy / Sell / View / Delete.
+    // Entries collapse when the corresponding badge isn't present or is
+    // disabled (buy-btn/sell-btn get a `.disabled` class when the
+    // buyer/seller side can't complete the trade).
+    const iconEye   = '<i class="fas fa-eye"></i>';
+    const iconTrash = '<i class="fas fa-trash"></i>';
+    const iconCoin  = '<i class="fas fa-coins"></i>';
+    const entries = [
+      {
+        label:    localize("Buy"),
+        icon:     iconCoin,
+        visible:  (li) => !!li.querySelector(".buy-btn:not(.disabled)"),
+        callback: (li) => li.querySelector(".buy-btn:not(.disabled)")?.click()
+      },
+      {
+        label:    localize("Sell"),
+        icon:     iconCoin,
+        visible:  (li) => !!li.querySelector(".sell-btn:not(.disabled)"),
+        callback: (li) => li.querySelector(".sell-btn:not(.disabled)")?.click()
+      },
+      delegateEntry(localize("View"),   iconEye,   ".gear-view"),
+      delegateEntry(localize("Delete"), iconTrash, ".gear-delete")
+    ];
+    attachRowMenu(html, ".gear-row", () => entries);
   }
 }

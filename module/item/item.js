@@ -217,11 +217,60 @@ export class CyberpunkItem extends Item {
    * the effect comes from the ammo; otherwise from the weapon.
    */
   _getEffectiveEffect() {
+    return this._getEffectiveEffectSource().effect || "";
+  }
+
+  /**
+   * Effective drug uuid for the "drug" effect — read from the same
+   * source `_getEffectiveEffect` picked. Empty when there's no drug
+   * loaded (the "drug" effect renders with a generic label in that
+   * case; the save path bails at fire time).
+   */
+  _getEffectiveDrugUuid() {
+    return this._getEffectiveEffectSource().drugUuid || "";
+  }
+
+  /**
+   * Resolve which system holds the effective effect data — the ammo
+   * (Ranged with grenade loaded) or the weapon itself. Returns the
+   * chosen `system` object so callers can pull both `.effect` and
+   * `.drugUuid` from one read.
+   */
+  _getEffectiveEffectSource() {
     if (this._getWeaponType() === "Ranged") {
       const ammo = this._getAttachedAmmo();
-      if (ammo?.system?.effect) return ammo.system.effect;
+      if (ammo?.system?.effect) return ammo.system;
     }
-    return this.weaponData?.effect || "";
+    return this.weaponData || {};
+  }
+
+  /**
+   * One-shot descriptor bundle for every weapon fire path — resolves
+   * the effect key, its display label / icon / drug img path, and the
+   * drug uuid in a single pass with one `fromUuidSync` for the drug
+   * (was called twice per shot when `_getEffectLabel` and the img
+   * lookup ran back-to-back). All fields are pre-shaped for the chat
+   * templateData; sites just spread this bundle into their templateData.
+   */
+  _getEffectDescriptor() {
+    const raw = this._getEffectiveEffect();
+    const weaponEffect = (raw && raw !== "none") ? raw : null;
+    if (!weaponEffect) {
+      return { weaponEffect: null, effectDrugUuid: "", effectLabel: null, effectIcon: null, effectImgPath: null };
+    }
+    const effectDrugUuid = weaponEffect === "drug" ? this._getEffectiveDrugUuid() : "";
+    // Resolve the drug once; feed both label and img path.
+    const drug = (weaponEffect === "drug" && effectDrugUuid) ? fromUuidSync(effectDrugUuid) : null;
+    const effectLabel = weaponEffect === "drug" && drug?.name
+      ? drug.name
+      : this._getEffectLabel(weaponEffect);
+    return {
+      weaponEffect,
+      effectDrugUuid: effectDrugUuid || "",
+      effectLabel,
+      effectIcon: this._getEffectIcon(weaponEffect),
+      effectImgPath: drug?.img || null
+    };
   }
 
   /**
@@ -643,7 +692,7 @@ export class CyberpunkItem extends Item {
     if(this.actor.statuses.has("restrained")) attackTerms.push(-2);
     if(this.actor.statuses.has("grappling")) attackTerms.push(-2);
     if(!isRanged && this.actor.statuses.has("prone")) attackTerms.push(-2);
-    if((this.actor.system.humanityLoss?.obsession ?? 0) >= 51) attackTerms.push(-4);
+    if((this.actor.system.psychosis?.obsession ?? 0) >= 51) attackTerms.push(-4);
 
     const minBodyPenalty = this._getMinBodyPenalty();
     if (minBodyPenalty.accuracyPenalty) {
@@ -675,11 +724,10 @@ export class CyberpunkItem extends Item {
 
       // Resolve effect once for the whole burst; the per-card template data
       // below picks it up so the chat-card Apply path can fire the save loop.
-      const effectiveEffect = this._getEffectiveEffect();
+      // One descriptor per shot resolves effect / label / icon / drug-
+      // img in a single pass with one `fromUuidSync` for the drug.
+      const { weaponEffect, effectDrugUuid, effectLabel, effectIcon, effectImgPath } = this._getEffectDescriptor();
       const isExoticAuto = this._getWeaponType() === "Exotic";
-      const weaponEffect = (effectiveEffect && effectiveEffect !== "none") ? effectiveEffect : null;
-      const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
-      const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
       const effectSaveCount = (weaponEffect && isExoticAuto) ? Math.max(1, Number(wd.rof) || 1) : 1;
 
       let rolls = [];
@@ -758,9 +806,11 @@ export class CyberpunkItem extends Item {
               loadedAmmoType: ammoTypeKey,
               damageType: wd.damageType || "",
               weaponEffect: weaponEffect,
+              effectDrugUuid: effectDrugUuid || "",
               hasEffect: !!weaponEffect,
               effectLabel: effectLabel,
               effectIcon: effectIcon,
+              effectImgPath: effectImgPath,
               effectSaveCount: effectSaveCount,
               hasDamage: true,
               ipGained: ipGained,
@@ -837,12 +887,8 @@ export class CyberpunkItem extends Item {
       // Surface the weapon's effect on the chat card so the Apply path
       // dispatches the save loop. Exotic burst fires N rounds → N save
       // attempts (stop on first failure, same rule as RoF in _fireSingle).
-      const effectiveEffect = this._getEffectiveEffect();
-      const tBurst = this._getWeaponType();
-      const isExoticBurst = tBurst === "Exotic";
-      const weaponEffect = (effectiveEffect && effectiveEffect !== "none") ? effectiveEffect : null;
-      const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
-      const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
+      const { weaponEffect, effectDrugUuid, effectLabel, effectIcon, effectImgPath } = this._getEffectDescriptor();
+      const isExoticBurst = this._getWeaponType() === "Exotic";
       const effectSaveCount = (weaponEffect && isExoticBurst) ? Math.max(1, Number(wd.rof) || 1) : 1;
 
       let templateData = {
@@ -861,9 +907,11 @@ export class CyberpunkItem extends Item {
           loadedAmmoType: ammoTypeKey,
           damageType: wd.damageType || "",
           weaponEffect: weaponEffect,
+          effectDrugUuid: effectDrugUuid || "",
           hasEffect: !!weaponEffect,
           effectLabel: effectLabel,
           effectIcon: effectIcon,
+          effectImgPath: effectImgPath,
           effectSaveCount: effectSaveCount,
           hasDamage: true,
           ipGained: ipGained,
@@ -879,12 +927,11 @@ export class CyberpunkItem extends Item {
       const wd = this.weaponData;
       const resolvedSkill = this._resolveAttackSkill();
       const damageFormula = this._getEffectiveDamage();
-      const effectiveEffect = this._getEffectiveEffect();
       const ammoTypeKey = this._getEffectiveAmmoType();
 
       const t = this._getWeaponType();
       const isExotic = t === "Exotic";
-      const weaponEffect = effectiveEffect && effectiveEffect !== "none" ? effectiveEffect : null;
+      const { weaponEffect, effectDrugUuid, effectLabel, effectIcon, effectImgPath } = this._getEffectDescriptor();
       const hasDamage = damageFormula && damageFormula !== "0" && damageFormula !== "";
 
       let DC = rangeDCs[attackMods.range];
@@ -940,8 +987,6 @@ export class CyberpunkItem extends Item {
           }
       }
 
-      const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
-      const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
       // Exotic weapons make the target save as many times as their RoF on a
       // hit (the user keeps rolling until they fail, then the condition
       // applies). All other weapon types stay at a single save attempt.
@@ -963,10 +1008,12 @@ export class CyberpunkItem extends Item {
           loadedAmmoType: ammoTypeKey,
           damageType: wd.damageType || "",
           weaponEffect: weaponEffect,
+          effectDrugUuid: effectDrugUuid || "",
           hasEffect: !!weaponEffect,
           hasDamage: hasDamage,
           effectLabel: effectLabel,
           effectIcon: effectIcon,
+          effectImgPath: effectImgPath,
           hitLocation: hitLocation,
           effectSaveCount: effectSaveCount,
           ipGained: ipGained,
@@ -996,11 +1043,10 @@ export class CyberpunkItem extends Item {
       const wd = this.weaponData;
       const t = this._getWeaponType();
 
-      const effectiveEffect = this._getEffectiveEffect();
       const damageFormula = this._getEffectiveDamage();
       const tmpl = this._getEffectiveTemplate();
 
-      const weaponEffect = (effectiveEffect && effectiveEffect !== "none") ? effectiveEffect : null;
+      const { weaponEffect, effectDrugUuid, effectLabel, effectIcon, effectImgPath } = this._getEffectDescriptor();
       const hasDamage = damageFormula && damageFormula !== "0" && damageFormula !== "";
 
       // Ordnance is always usable as long as it exists; Exotic needs charges
@@ -1106,9 +1152,6 @@ export class CyberpunkItem extends Item {
           areaDamages["aoe"] = [ordnanceDamage];
       }
 
-      const effectLabel = weaponEffect ? this._getEffectLabel(weaponEffect) : null;
-      const effectIcon = weaponEffect ? this._getEffectIcon(weaponEffect) : null;
-
       // Exotic area weapons (e.g. RoF>1 microwavers) make the target save
       // RoF times per hit; ordnance keeps the single-save behaviour.
       const isExoticHere = t === "Exotic";
@@ -1129,10 +1172,12 @@ export class CyberpunkItem extends Item {
           weaponType: this.getWeaponLineType(),
           damageType: "",
           weaponEffect: weaponEffect,
+          effectDrugUuid: effectDrugUuid || "",
           hasEffect: !!weaponEffect,
           hasDamage: hasDamage,
           effectLabel: effectLabel,
           effectIcon: effectIcon,
+          effectImgPath: effectImgPath,
           effectSaveCount: effectSaveCount,
           isCircle: isCircle,
           scatterDistance: scatterDistance,
@@ -1258,24 +1303,37 @@ export class CyberpunkItem extends Item {
   }
 
   /**
-   * Get localized label for an exotic effect.
-   * Uses the weaponEffects map (loc keys) — falls back to the raw key.
+   * Get localized label for a weapon effect. For the "drug" effect the
+   * attached drug's own name replaces the generic label so the chat
+   * card reads "Ordnance · Neodust" instead of "Ordnance · Drug". Falls
+   * back to the generic label when the slot is empty.
+   *
+   * @param {string} effect     Effect key from the enum
+   * @param {string} [drugUuid] Optional uuid of the attached drug item
    */
-  _getEffectLabel(effect) {
+  _getEffectLabel(effect, drugUuid = "") {
+      if (effect === "drug" && drugUuid) {
+          const drug = fromUuidSync(drugUuid);
+          if (drug?.name) return drug.name;
+      }
       const key = weaponEffects[effect];
       if (key) return localize(key);
       return effect;
   }
 
   /**
-   * Get icon name for an exotic effect (maps to condition icon filename).
-   * Icons are filenames, not localized strings.
+   * Get icon name for a weapon effect (maps to condition icon
+   * filename). The "drug" effect reuses the poisoned icon since chat
+   * templates hardcode the `conditions/{icon}.svg` path prefix; the
+   * per-drug image is surfaced via `effectImgPath` at the call site
+   * instead.
    */
   _getEffectIcon(effect) {
       const icons = {
           confusion: "confused",
           poisoned: "poisoned",
           tearing: "tearing",
+          drug: "poisoned",
           unconscious: "unconscious",
           stunAt0: "shocked",
           stunAt1: "shocked",
@@ -1307,14 +1365,14 @@ export class CyberpunkItem extends Item {
       // Ordnance
       if (t === "Ordnance") {
           const eff = wd.effect;
-          const effectLabel = (eff && eff !== "none") ? this._getEffectLabel(eff) : "";
+          const effectLabel = (eff && eff !== "none") ? this._getEffectLabel(eff, wd.drugUuid || "") : "";
           const base = localize("OrdnanceAction");
           return effectLabel ? `${base} · ${effectLabel}` : base;
       }
 
       // Exotic
       if (t === "Exotic") {
-          const effectLabel = (wd.effect && wd.effect !== "none") ? this._getEffectLabel(wd.effect) : "";
+          const effectLabel = (wd.effect && wd.effect !== "none") ? this._getEffectLabel(wd.effect, wd.drugUuid || "") : "";
           const label = localize("WeaponTypeExotic");
           return effectLabel ? `${label} · ${effectLabel}` : label;
       }

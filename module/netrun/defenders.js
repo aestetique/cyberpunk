@@ -5,9 +5,12 @@
  * calls the read helpers + consumeOneShield.
  *
  * Defender classes (from `lookups.js#defenderDefences`):
- *   - "shield"  — nullifies one incoming non-Black-ICE NET hit, then
- *                 self-derezzes. Stacking = multiple charges (each hit
- *                 consumes one shield).
+ *   - "shield"  — nullifies one incoming NET hit and self-derezzes.
+ *                 Fires only when Armor alone can't fully absorb the
+ *                 hit, so a trivial attack doesn't burn a Shield
+ *                 charge. Applies against every NET attacker,
+ *                 including Black ICE. Stacking = multiple charges
+ *                 (each qualifying hit consumes one shield).
  *   - "flak"    — suppresses the attacker's ATK / Zap bonus on the
  *                 incoming attack roll. Stays active afterwards.
  *   - "armor"   — flat damage reduction. `system.defenderValue` is the
@@ -15,15 +18,28 @@
  *                 to every NET hit including Black ICE. Stays active.
  */
 
-/** All active defenders on `actor` matching `defenceType`. Empty array if none. */
+/**
+ * All active defenders on `actor` matching `defenceType`, restricted to
+ * programs slotted on the actor's currently-equipped cyberdeck. Defenders
+ * on an unequipped deck contribute nothing (same rule as boosters — only
+ * the equipped deck's attached netware affects stats). Empty array if
+ * nothing equipped or no matching defender is active.
+ */
 export function getActiveDefenders(actor, defenceType) {
     if (!actor?.items) return [];
+    const equippedDeck = actor.items.find(i =>
+        i.type === "netware"
+        && i.system?.netwareType === "cyberdeck"
+        && i.system?.equipped
+    );
+    if (!equippedDeck) return [];
     return actor.items.filter(i =>
         i.type === "netware"
         && i.system?.netwareType === "program"
         && i.system?.programSubtype === "defender"
         && i.system?.defenderDefence === defenceType
         && i.system?.programState === "active"
+        && i.getFlag?.("cyberpunk", "attachedTo") === equippedDeck.id
     );
 }
 

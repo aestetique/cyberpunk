@@ -65,3 +65,35 @@
   align-items: center;
   gap: 10px;
 }
+
+// Action buttons on the Black ICE conditions row (Attack / Speed).
+// Reuse the `.condition-toggle` chrome (60×60 column, 36 px icon, orbitron
+// label, hover-brighten) but skip the toggle-state colour split — these
+// are always-active click targets, so label/icon stay in the "active"
+// hue continuously and the .active class never gets added.
+.netware-actor-card .condition-toggle.black-ice-action {
+  .condition-toggle-label {
+    color: #B9B29D;
+  }
+}
+
+// Vertical separator between the action buttons and condition toggles.
+// Height matches the .condition-toggle column so the rule spans the row's
+// full visible height.
+.netware-actor-card .black-ice-conditions-sep {
+  width: 1px;
+  height: 44px;
+  background: #444856;
+  margin: 0 4px;
+}
+
+// Black ICE inline Effect block — shown only when the primary effect
+// is Custom. Bonus rows list directly below the Effect dropdown; no
+// heading/divider (kept consistent with how attacker-item Effect tab
+// renders — the tab header there is heading enough).
+.netware-actor-card .black-ice-effect-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: stretch;
+}

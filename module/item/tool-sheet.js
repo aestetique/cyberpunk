@@ -1,4 +1,4 @@
-import { availability, toolBonusProperties, isAttributeProperty } from "../lookups.js";
+import { availability, toolBonusProperties, toolBooleanProperties, toolModifierProperties, toolStateProperties, isAttributeProperty, netBonusProperties } from "../lookups.js";
 import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
 import { prepareEffectTabContext } from "./embedded-helpers.js";
 
@@ -40,10 +40,10 @@ export class CyberpunkToolSheet extends CyberpunkItemSheetV2 {
     const html = $(this.element);
     const item = this.document;
 
-    const addPropertyBonus = async filterFn => {
+    const addPropertyBonus = async (keyPool, filterFn) => {
       const bonuses = [...(item.system.bonuses || [])];
       const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
-      const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
+      const firstAvailable = Object.keys(keyPool).find(k => !used.has(k) && filterFn(k));
       if (!firstAvailable) {
         ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
         return;
@@ -51,8 +51,11 @@ export class CyberpunkToolSheet extends CyberpunkItemSheetV2 {
       bonuses.push({ type: "property", property: firstAvailable, op: "+", value: 0 });
       await item.update({ "system.bonuses": bonuses });
     };
-    html.find('.add-attribute').on('click', ev => { ev.preventDefault(); addPropertyBonus(isAttributeProperty); });
-    html.find('.add-property').on('click', ev => { ev.preventDefault(); addPropertyBonus(k => !isAttributeProperty(k)); });
+    html.find('.add-attribute').on('click', ev => { ev.preventDefault(); addPropertyBonus(toolBonusProperties, isAttributeProperty); });
+    html.find('.add-property').on('click', ev => { ev.preventDefault(); addPropertyBonus(toolBooleanProperties, () => true); });
+    html.find('.add-modifier').on('click', ev => { ev.preventDefault(); addPropertyBonus(toolModifierProperties, () => true); });
+    html.find('.add-state').on('click', ev => { ev.preventDefault(); addPropertyBonus(toolStateProperties, () => true); });
+    html.find('.add-net-bonus').on('click', ev => { ev.preventDefault(); addPropertyBonus(netBonusProperties, () => true); });
 
     html.find('.add-skill').on('click', async ev => {
       ev.preventDefault();

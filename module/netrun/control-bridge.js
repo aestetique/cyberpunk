@@ -45,6 +45,33 @@ function _findNetIcon(netrunner) {
 }
 
 /**
+ * Jump to a token document handling V14 multi-level scenes: if the
+ * target lives on a different level than the current view, swap the
+ * view via `scene.view({level, controlledTokens})` and pan once the
+ * new-level canvas is drawn. Same pattern as the realm-switcher's
+ * `_jumpToToken`.
+ */
+async function _jumpToTokenDoc(tokenDoc) {
+    if (!tokenDoc || !canvas?.scene) return;
+    // Fast path: token is on the currently viewed level → placeable
+    // is on `canvas.tokens`.
+    const placeable = canvas.tokens?.get?.(tokenDoc.id);
+    if (placeable) {
+        placeable.control({ releaseOthers: true });
+        const c = placeable.center;
+        if (c) canvas.pan({ x: c.x, y: c.y });
+        return;
+    }
+    // Cross-level path: swap view + control in one call, then pan.
+    if (tokenDoc.level) {
+        await canvas.scene.view({ level: tokenDoc.level, controlledTokens: [tokenDoc.id] });
+        const arrived = canvas.tokens?.get?.(tokenDoc.id);
+        const c = arrived?.center;
+        if (c) canvas.pan({ x: c.x, y: c.y });
+    }
+}
+
+/**
  * Switch the local user's view to the drone token, open the drone's
  * sheet, and arm a one-shot `actionRegistered` listener on the drone
  * actor so the view snaps back to the netrunner's NET icon after the
@@ -64,26 +91,16 @@ export async function engageDrone(netrunner, droneTokenUuid) {
         return;
     }
 
-    const dronePlaceable = canvas.tokens?.get?.(droneTokenDoc.id);
-    if (dronePlaceable) {
-        dronePlaceable.control({ releaseOthers: true });
-        const c = dronePlaceable.center;
-        if (c) canvas.pan({ x: c.x, y: c.y });
-    }
+    await _jumpToTokenDoc(droneTokenDoc);
     try { droneActor.sheet?.render(true); } catch { /* ignore */ }
 
     ui.notifications.info(localize("ControlEngaged"));
 
-    const handler = (actingActor) => {
+    const handler = async (actingActor) => {
         if (actingActor?.id !== droneActor.id) return;
         Hooks.off("cyberpunk.actionRegistered", handler);
         const netIconDoc = _findNetIcon(netrunner);
-        const netIconPlaceable = netIconDoc?.id ? canvas.tokens?.get(netIconDoc.id) : null;
-        if (netIconPlaceable) {
-            netIconPlaceable.control({ releaseOthers: true });
-            const c = netIconPlaceable.center;
-            if (c) canvas.pan({ x: c.x, y: c.y });
-        }
+        if (netIconDoc) await _jumpToTokenDoc(netIconDoc);
         ui.notifications.info(localize("ControlReleased"));
     };
     Hooks.on("cyberpunk.actionRegistered", handler);

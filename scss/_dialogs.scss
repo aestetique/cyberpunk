@@ -92,7 +92,9 @@
 .application.unarmed-attack-dialog,
 .application.sleep-roll-dialog,
 .application.ordnance-attack-dialog,
-.application.realm-switcher-dialog {
+.application.realm-switcher-dialog,
+.application.drug-design-dialog,
+.application.drug-effect-picker {
   @include dialog-chrome-reset;
 }
 
@@ -112,7 +114,9 @@
 .move-items-wrapper,
 .shop-settings-wrapper,
 .toolbox-wrapper,
-.realm-switcher-wrapper {
+.realm-switcher-wrapper,
+.drug-design-wrapper,
+.drug-effect-picker-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -827,4 +831,248 @@
 // Hide TAH's default tooltips — we use our own cursor-following tooltips
 #tooltip.tah-tooltip {
   display: none !important;
+}
+
+// --- Drug Design helper (main dialog) ---
+.drug-design-wrapper {
+  .drug-design-nowarn {
+    padding: 4px 8px 8px;
+    color: #B9B29D;
+    font-family: var(--font-blender);
+    font-size: 13px;
+  }
+
+  // Effect row = [tier chip] [name+value bar] [trash button]. All
+  // three panels share the same 36px height & 2px radius as luck
+  // controls so vertical rhythm on the sheet stays uniform. The
+  // parent wrapper's column-flex would shrink each row by default
+  // once several are stacked — pin flex-shrink to keep every row
+  // at 36px.
+  .dd-effect-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  .dd-effect-tier {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #26282F;
+    border-radius: 2px;
+    font-family: var(--font-blender);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--chat-text, #FFF);
+  }
+
+  .dd-effect-label {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    background: #26282F;
+    border-radius: 2px;
+    @include dialog-text;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dd-effect-remove {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover { background: #4F5464; }
+
+    img {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      border: none;
+    }
+  }
+
+  // Add Effect button — same grey/slate as the luck +/- buttons.
+  .dd-add-effect-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chat-gray, #444856);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    @include dialog-text;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+
+    &:hover { background: #4F5464; }
+  }
+
+  // Feature / Onset dropdowns rendered as a purple bar with a chevron
+  // via native <select> + appearance:none + inline SVG chevron. Same
+  // visual weight as the luck buttons so the whole sheet reads as
+  // one grid.
+  .dd-select-wrap {
+    position: relative;
+  }
+
+  .dd-select {
+    width: 100%;
+    height: 36px;
+    padding: 0 32px 0 12px;
+    background: var(--chat-gray, #444856);
+    color: var(--chat-text, #FFF);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+
+    @include dialog-text;
+    // Closed-state (the button) uses caps to match the rest of the
+    // dialog chrome; individual <option> nodes below override this
+    // back to their natural case so the open dropdown list stays
+    // readable (per user preference).
+    text-transform: uppercase;
+    text-align-last: center;
+
+    option {
+      text-transform: none;
+    }
+
+    &:hover { background: #4F5464; }
+
+    // Suppress native focus ring — dialog-chrome-reset already zeroes
+    // it on generic <button>s but <select> needs its own kill line.
+    &:focus, &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  .dd-select-wrap::after {
+    // Down-chevron rendered as SVG background so it works
+    // dark/light theme agnostic — pure white, positioned on the right.
+    content: "";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path fill='none' stroke='%23FFF' stroke-width='2' d='M2 4l4 4 4-4'/></svg>") center / contain no-repeat;
+  }
+
+  // Read-only Cost + Difficulty plank. No fill so the result reads
+  // as computed output, distinguished from input rows by a subtle
+  // 1px internal stroke. `box-sizing: border-box` keeps the plank
+  // height at 36px whether the border is on or off.
+  .dd-result-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 12px;
+    background: transparent;
+    border: 1px solid var(--chat-stroke, #252730);
+    border-radius: 2px;
+    @include dialog-text;
+    color: var(--chat-text, #FFF);
+    text-transform: uppercase;
+  }
+}
+
+// --- Add Effect sub-dialog ---
+.drug-effect-picker-wrapper {
+  .dep-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 6px;
+  }
+
+  .dep-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    background: transparent;
+    color: var(--chat-text, #FFF);
+    border: 1px solid var(--chat-gray, #444856);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+    @include dialog-text;
+
+    &:hover:not(.active) {
+      background: #26282F;
+    }
+
+    // Active tab: solid grey fill (same slate as the effect buttons
+    // below) with the standard white label — reads as "selected"
+    // without breaking the tier row's neutral palette.
+    &.active {
+      background: var(--chat-gray, #444856);
+      border-color: var(--chat-gray, #444856);
+      color: var(--chat-text, #FFF);
+    }
+  }
+
+  // Single-column list of grey effect buttons. 10px row gap so the
+  // list feels the same weight as the main dialog's stacked sections.
+  // No max-height / scroll — the window grows to fit every entry
+  // (SECN's 17 rows and all).
+  .dep-effect-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .dep-effect-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    // Flex children shrink by default when the container overflows;
+    // long tiers (SECN has 17 entries) would squash rows without this.
+    flex-shrink: 0;
+    padding: 0 12px;
+    background: var(--chat-gray, #444856);
+    color: var(--chat-text, #FFF);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    @include dialog-text;
+    text-transform: uppercase;
+
+    &:hover { background: #4F5464; }
+  }
 }

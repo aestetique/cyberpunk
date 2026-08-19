@@ -81,6 +81,14 @@
     </div>
     {{/if}}
 
+    {{!-- Eye-Dee success on an Account: amount transferred to netrunner --}}
+    {{#if hasAmountTransferred}}
+    {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Transferred")}}
+    <div class="net-file-contents">
+        <p>{{amountTransferred}} eb</p>
+    </div>
+    {{/if}}
+
     {{!-- Control success: Target row (drone link) + GM-only Apply button --}}
     {{#if hasTargetSection}}
     {{> (sysPath "chat/partials/section-bar.hbs") label=(loc "Target")}}

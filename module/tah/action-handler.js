@@ -139,7 +139,6 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
             }
             if (key === "luck" && (s.spent || 0) > 0) parts.push(`Spent \u2212${s.spent}`);
             if (["ref", "int", "cool"].includes(key) && s.woundMod) parts.push(`Wounds ${s.woundMod}`);
-            if (s.scrambledMod) parts.push(`Scrambled ${s.scrambledMod}`);
             if (s.sleepMod) parts.push(`Sleep ${s.sleepMod}`);
             const total = key === "luck" ? (s.effective ?? s.total ?? base) : (s.total ?? base);
             let calc = parts.length > 1 ? `${parts.join(" ")} = ${total}` : `Base ${base}`;
@@ -316,15 +315,14 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
         _buildNetwareActions(actor) {
             if (!actor || actor.type !== "character") return;
 
-            // Deck resolution: prefer equipped (jacked-in one), else any
-            // non-inoperable cyberdeck. Matches RealmSwitcher / phantom
-            // dispatcher expectations.
-            const decks = actor.items.filter(i =>
-                i.type === "netware" && i.system?.netwareType === "cyberdeck"
-            );
-            const deck = decks.find(d => d.system?.equipped)
-                ?? decks.find(d => d.system?.programState !== "inoperable")
-                ?? null;
+            // Deck resolution: only the currently-equipped deck feeds
+            // the HUD. Matches RealmSwitcher / phantom dispatcher — with
+            // no deck equipped the netrunning group stays empty.
+            const deck = actor.items.find(i =>
+                i.type === "netware"
+                && i.system?.netwareType === "cyberdeck"
+                && i.system?.equipped
+            ) ?? null;
             if (!deck) return;
 
             const jackedIn = actor.statuses?.has?.("jacked-in") ?? false;

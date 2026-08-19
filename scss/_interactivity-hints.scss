@@ -52,17 +52,12 @@
   }
 
   .tooltip-desc {
-    overflow: hidden;
     color: #808090;
-    text-overflow: ellipsis;
     font-family: "Blender Pro";
     font-size: 12px;
     font-weight: 400;
-    line-height: 12px;
+    line-height: 14px;
     margin-top: 4px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
   }
 
   .tooltip-calc {

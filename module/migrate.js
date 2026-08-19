@@ -62,6 +62,19 @@ export async function migrateWorld(targetVersion) {
     // is no longer read.
     await _migrateCyberwareTypeSubtype();
 
+    // Merge legacy Stay Awake Bonus + Fall Asleep Bonus rows into the
+    // unified Sleep Roll Bonus. Rewrites both keys on every bonus list
+    // (item bonuses[], drug withdrawal[], drug active/withdrawal effect
+    // flag payloads on actors).
+    await _mergeSleepRollBonus();
+
+    // Netware Effect refactor: shrink attackerEffects enum, migrate
+    // legacy scrambled/desynced/lagging/tagged/gridlocked settings on
+    // attacker items + Black ICE actors into the new Custom bonus-row
+    // model. Also strips any lingering statuses of the same names off
+    // character actors, plus the scrambledPenalty flag.
+    await _migrateNetwareEffects();
+
     for (const actor of game.actors.contents) {
         await processDocument(actor);
         for (const item of actor.items) await processDocument(item);
@@ -1377,6 +1390,231 @@ async function _migrateCyberwareTypeSubtype() {
 
     if (itemsTouched || meatLimbsDeleted) {
         console.log(`CYBERPUNK | Migrated ${itemsTouched} cyberware item(s) across ${actorsTouched} actor(s); deleted ${meatLimbsDeleted} redundant meatLimb item(s).`);
+    }
+}
+
+// ============================================================================
+// Merge Stay Awake Bonus + Fall Asleep Bonus → Sleep Roll Bonus.
+// Both were numeric Modifier property keys on the Effect tab; the
+// combined field is used by both directions of the sleep check.
+// Rewrites bonus rows on item.system.bonuses, drug.system.withdrawal,
+// and the flag payload on any applied drug ActiveEffect (activeChanges /
+// withdrawalChanges) so runs-in-progress don't stall on the rename.
+// ============================================================================
+const _SLEEP_LEGACY = new Set(["stayAwakeBonus", "fallAsleepBonus"]);
+
+function _rewriteSleepBonusList(list) {
+    if (!Array.isArray(list)) return null;
+    let changed = false;
+    const next = list.map(b => {
+        if (b?.type === "property" && _SLEEP_LEGACY.has(b.property)) {
+            changed = true;
+            return { ...b, property: "sleepRollBonus" };
+        }
+        return b;
+    });
+    return changed ? next : null;
+}
+
+async function _mergeSleepRollBonus() {
+    async function _updateItem(item, parent) {
+        const sys = item.system || {};
+        const updates = {};
+        const newBonuses = _rewriteSleepBonusList(sys.bonuses);
+        if (newBonuses) updates["system.bonuses"] = newBonuses;
+        if (item.type === "drug") {
+            const newWd = _rewriteSleepBonusList(sys.withdrawal);
+            if (newWd) updates["system.withdrawal"] = newWd;
+        }
+        if (foundry.utils.isEmpty(updates)) return false;
+        try {
+            if (parent === "world") await item.update(updates);
+            else await parent.updateEmbeddedDocuments("Item", [{ _id: item.id, ...updates }]);
+            return true;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to merge Sleep Roll Bonus on "${item.name}":`, err);
+            migrationSuccess = false;
+            return false;
+        }
+    }
+
+    async function _updateEffect(effect, actor) {
+        const flags = effect.flags?.cyberpunk;
+        if (!flags) return false;
+        const updates = {};
+        const newActive = _rewriteSleepBonusList(flags.activeChanges);
+        const newWd     = _rewriteSleepBonusList(flags.withdrawalChanges);
+        if (newActive) updates["flags.cyberpunk.activeChanges"]     = newActive;
+        if (newWd)     updates["flags.cyberpunk.withdrawalChanges"] = newWd;
+        if (foundry.utils.isEmpty(updates)) return false;
+        try {
+            await actor.updateEmbeddedDocuments("ActiveEffect", [{ _id: effect.id, ...updates }]);
+            return true;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to merge Sleep Roll Bonus on drug effect "${effect.name}":`, err);
+            migrationSuccess = false;
+            return false;
+        }
+    }
+
+    let touched = 0;
+    for (const item of game.items.contents) {
+        if (await _updateItem(item, "world")) touched++;
+    }
+    for (const actor of game.actors.contents) {
+        for (const item of actor.items) {
+            if (await _updateItem(item, actor)) touched++;
+        }
+        for (const effect of actor.effects) {
+            if (await _updateEffect(effect, actor)) touched++;
+        }
+    }
+    if (touched) console.log(`CYBERPUNK | Merged Sleep Roll Bonus across ${touched} bonus source(s).`);
+}
+
+// ============================================================================
+// Netware Effect refactor. Rewrites legacy attacker-effect enum values
+// on attacker items + Black ICE actors into the new Custom + bonuses[]
+// model, adds `effectDuration: 3600` where migrated. Also renames
+// `gridlocked` → `superglue` on any existing item/actor still carrying
+// it, strips the four removed statuses off character actors, and
+// clears the deprecated `scrambledPenalty` flag if present.
+// ============================================================================
+const _LEGACY_EFFECT_MAP = {
+    scrambled: {
+        bonuses: [
+            { type: "property", property: "stats.int", op: "−", value: "1d6" },
+            { type: "property", property: "stats.ref", op: "−", value: "1d6" }
+        ]
+    },
+    desynced: {
+        bonuses: [
+            { type: "property", property: "stats.ma", op: "−", value: 1 }
+        ]
+    },
+    lagging: {
+        bonuses: [
+            { type: "property", property: "netBonuses.actions", op: "−", value: 1 }
+        ]
+    },
+    tagged: {
+        bonuses: [
+            { type: "property", property: "netBonuses.slide", op: "−", value: 2 }
+        ]
+    },
+    // Superglue moved out of the Details-tab dropdown; now authored
+    // as a Flavour row inside a Custom effect. Migration appends a
+    // flavour row (deduped) and switches the enum to `custom`.
+    superglue: {
+        bonuses: [
+            { type: "flavour", flavour: "superglue" }
+        ]
+    }
+};
+
+function _migrateAttackerEffectValue(sys) {
+    // Returns an update-map for the doc if migration applies, else null.
+    if (!sys) return null;
+    const legacy = sys.attackerEffect;
+    if (!legacy) return null;
+    // Legacy `gridlocked` → `superglue` (rename) → then the switch
+    // below picks up the superglue preset and converts to Custom +
+    // flavour row.
+    const normalised = legacy === "gridlocked" ? "superglue" : legacy;
+    const preset = _LEGACY_EFFECT_MAP[normalised];
+    if (!preset) return null;
+    // Preserve any pre-existing rows; append the migrated preset,
+    // deduped by property key (for property rows) or flavour key (for
+    // flavour rows) so re-running the migration is idempotent.
+    const existing = Array.isArray(sys.bonuses) ? sys.bonuses : [];
+    const seenProperty = new Set(existing.filter(b => b.type === "property").map(b => b.property));
+    const seenFlavour  = new Set(existing.filter(b => b.type === "flavour").map(b => b.flavour));
+    const additions = preset.bonuses.filter(b =>
+        b.type === "flavour" ? !seenFlavour.has(b.flavour) : !seenProperty.has(b.property)
+    );
+    return {
+        "system.attackerEffect": "custom",
+        "system.bonuses": [...existing, ...additions],
+        "system.effectDuration": Math.max(3600, Number(sys.effectDuration) || 0)
+    };
+}
+
+async function _migrateNetwareEffects() {
+    let itemsTouched = 0;
+    let actorsTouched = 0;
+    let statusesCleaned = 0;
+
+    // World-level attacker/BI netware items.
+    for (const item of game.items.contents) {
+        if (item.type !== "netware") continue;
+        if (item.system?.programSubtype !== "attacker") continue;
+        const updates = _migrateAttackerEffectValue(item.system);
+        if (!updates) continue;
+        try {
+            await item.update(updates);
+            itemsTouched++;
+        } catch (err) {
+            console.error(`CYBERPUNK | Failed to migrate netware effect on world item "${item.name}":`, err);
+            migrationSuccess = false;
+        }
+    }
+
+    // Actor-owned attacker items + Black ICE actors themselves. Also
+    // clean stray legacy statuses on character actors, plus the
+    // scrambledPenalty flag.
+    const STALE_STATUSES = ["scrambled", "desynced", "lagging", "tagged", "gridlocked"];
+    for (const actor of game.actors.contents) {
+        // Black ICE actor primary-effect migration
+        if (actor.type === "netware" && actor.system?.subtype === "blackIce") {
+            const updates = _migrateAttackerEffectValue(actor.system);
+            if (updates) {
+                try {
+                    await actor.update(updates);
+                    actorsTouched++;
+                } catch (err) {
+                    console.error(`CYBERPUNK | Failed to migrate Black ICE effect on "${actor.name}":`, err);
+                    migrationSuccess = false;
+                }
+            }
+        }
+
+        // Actor-owned attacker items
+        for (const item of actor.items) {
+            if (item.type !== "netware") continue;
+            if (item.system?.programSubtype !== "attacker") continue;
+            const updates = _migrateAttackerEffectValue(item.system);
+            if (!updates) continue;
+            try {
+                await actor.updateEmbeddedDocuments("Item", [{ _id: item.id, ...updates }]);
+                itemsTouched++;
+            } catch (err) {
+                console.error(`CYBERPUNK | Failed to migrate netware effect on "${item.name}" (actor ${actor.name}):`, err);
+                migrationSuccess = false;
+            }
+        }
+
+        // Stale statuses on character actors — the four removed
+        // conditions can't be re-applied via the sheet anymore, so
+        // strip them off any actor still carrying them.
+        if (actor.type === "character") {
+            for (const sid of STALE_STATUSES) {
+                if (actor.statuses?.has?.(sid)) {
+                    try {
+                        await actor.toggleStatusEffect(sid, { active: false });
+                        statusesCleaned++;
+                    } catch (err) {
+                        console.warn(`CYBERPUNK | Could not strip stale ${sid} status from ${actor.name}:`, err);
+                    }
+                }
+            }
+            if (actor.getFlag?.("cyberpunk", "scrambledPenalty") != null) {
+                try { await actor.unsetFlag("cyberpunk", "scrambledPenalty"); } catch (_) { /* no-op */ }
+            }
+        }
+    }
+
+    if (itemsTouched || actorsTouched || statusesCleaned) {
+        console.log(`CYBERPUNK | Netware effect refactor: migrated ${itemsTouched} item(s), ${actorsTouched} Black ICE actor(s); stripped ${statusesCleaned} stale status(es).`);
     }
 }
 

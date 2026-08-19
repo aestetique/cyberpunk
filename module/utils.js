@@ -252,6 +252,19 @@ export function clamp(x, min, max) {
     return x < min ? min : x > max ? max : x;
 }
 
+/**
+ * "+2" / "0" / "−4" — leading sign preserved for negatives (Unicode
+ * minus so it matches the tooltip calc lines and picker buttons).
+ * Shared by Drug Design + Drug Effect Picker dialogs; drop-in for any
+ * signed-integer display where the sign carries meaning.
+ */
+export function fmtSigned(n) {
+    const v = Number(n) || 0;
+    if (v > 0) return `+${v}`;
+    if (v < 0) return `−${Math.abs(v)}`;
+    return "0";
+}
+
 // --- Armor SP stacking ---
 
 // Layered armor modifier table (CP2020 rules)

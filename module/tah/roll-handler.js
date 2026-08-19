@@ -303,15 +303,15 @@ Hooks.once("tokenActionHudCoreApiReady", async (coreModule) => {
             const payload = actionId.slice(idx + 1);
 
             if (subtype === "deck") {
-                // Re-resolve the deck at click time (state may have changed
-                // between HUD build and click: another deck equipped,
-                // repair completed, etc.).
-                const decks = actor.items.filter(i =>
-                    i.type === "netware" && i.system?.netwareType === "cyberdeck"
-                );
-                const deck = decks.find(d => d.system?.equipped)
-                    ?? decks.find(d => d.system?.programState !== "inoperable")
-                    ?? null;
+                // Only the currently-equipped deck can fire NET actions.
+                // Re-resolve at click time so state changes between HUD
+                // build and click (equip swap, repair completed) are
+                // reflected.
+                const deck = actor.items.find(i =>
+                    i.type === "netware"
+                    && i.system?.netwareType === "cyberdeck"
+                    && i.system?.equipped
+                ) ?? null;
                 if (!deck) return;
                 return runCyberdeckAction(actor, deck, payload);
             }

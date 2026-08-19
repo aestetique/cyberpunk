@@ -74,19 +74,19 @@ export class RealmSwitcher extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     /**
-     * Pick the deck to drive Menu / Programs off. Preference: equipped
-     * (the one they're jacked in via), else any non-inoperable cyberdeck,
-     * else null. The "not jacked in" Menu offers Jack In / Scanner — both
-     * only meaningful with SOME deck available.
+     * The one cyberdeck driving the helper — the user's currently-equipped
+     * deck. Only the equipped deck's boosters / defenders / attackers
+     * count during a run, so we never fall back to another deck; if
+     * nothing is equipped the menu just shows nothing (the actor is a
+     * netrunner-in-name-only until they equip a deck on the gear row).
      */
     _getActiveDeck(actor) {
         if (!actor) return null;
-        const decks = actor.items.filter(i =>
-            i.type === "netware" && i.system?.netwareType === "cyberdeck"
-        );
-        return decks.find(d => d.system?.equipped)
-            ?? decks.find(d => d.system?.programState !== "inoperable")
-            ?? null;
+        return actor.items.find(i =>
+            i.type === "netware"
+            && i.system?.netwareType === "cyberdeck"
+            && i.system?.equipped
+        ) ?? null;
     }
 
     /**
@@ -132,10 +132,10 @@ export class RealmSwitcher extends HandlebarsApplicationMixin(ApplicationV2) {
         const jackedInList = [
             { key: "cyberdeckJackOut",  label: localize("JackOut"),  needs: null },
             { key: "cyberdeckCloak",    label: localize("Cloak"),    needs: null },
-            { key: "cyberdeckSlide",    label: localize("Slide"),    needs: ["blackIce"] },
-            { key: "cyberdeckSpeed",    label: localize("Speed"),    needs: ["blackIce"] },
+            { key: "cyberdeckSlide",      label: localize("Slide"),      needs: ["blackIce"] },
+            { key: "cyberdeckPathfinder", label: localize("Pathfinder"), needs: null },
             { key: "cyberdeckControl",  label: localize("Control"),  needs: ["controlPoint"] },
-            { key: "cyberdeckEyeDee",   label: localize("EyeDee"),   needs: ["file"] },
+            { key: "cyberdeckEyeDee",   label: localize("EyeDee"),   needs: ["file", "account"] },
             { key: "cyberdeckBackdoor", label: localize("Backdoor"), needs: ["password"] },
             { key: "cyberdeckZap",      label: localize("Zap"),      needs: ["netIcon", "blackIce"] }
         ];

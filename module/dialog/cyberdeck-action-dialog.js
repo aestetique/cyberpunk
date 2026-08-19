@@ -23,14 +23,24 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const NET_ACTION_TEMPLATE = "systems/cyberpunk/templates/chat/net-action.hbs";
 
 /**
- * Sum the `boosterValue` of every active `bonusKey` booster slotted on
- * `deck`. Null-safe: no deck → 0 (used by Detect responder whose actor
- * might not be jacked in and has no equipped deck to slot Detect boosters
- * onto).
+ * Total NET bonus for `bonusKey` on `actor` — sum of two sources:
+ *   • Actor-side Effect bonus (`actor.system.netBonuses[bonusKey]`)
+ *     accumulated by the standard property pipeline from any equipped
+ *     cyberware / tool / outfit / drug carrying a NET Bonus in its
+ *     Effect tab. Personal augmentation applies regardless of deck.
+ *   • Slotted-booster bonus: sum of every active booster program
+ *     attached to `deck` whose `boosterBonus` matches this key. No
+ *     contribution without a deck (Detect on a not-jacked-in runner
+ *     still picks up the actor bonus, but not any booster contribution).
+ *
+ * Both sources stack additively. All 10 NET actions (scanner, cloak,
+ * eyedee, slide, backdoor, control, detect, speed, pathfinder, zap)
+ * route their roll-time bonus through this single accumulator.
  */
 export function activeBoosterValue(actor, deck, bonusKey) {
-    if (!deck) return 0;
-    return actor.items
+    const actorBonus = Number(actor?.system?.netBonuses?.[bonusKey]) || 0;
+    if (!deck) return actorBonus;
+    const slottedBoosters = actor.items
         .filter(i =>
             i.type === "netware"
             && i.system?.netwareType === "program"
@@ -40,6 +50,7 @@ export function activeBoosterValue(actor, deck, bonusKey) {
             && i.getFlag("cyberpunk", "attachedTo") === deck.id
         )
         .reduce((sum, p) => sum + (Number(p.system?.boosterValue) || 0), 0);
+    return actorBonus + slottedBoosters;
 }
 
 /** Find the actor's meat token on the active scene (the non-NET-icon one). */
@@ -74,8 +85,8 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
             cyberdeckJackOut:  CyberdeckActionDialog._onJackOut,
             cyberdeckScanner:  CyberdeckActionDialog._onScanner,
             cyberdeckCloak:    CyberdeckActionDialog._onCloak,
-            cyberdeckSlide:    CyberdeckActionDialog._onSlide,
-            cyberdeckSpeed:    CyberdeckActionDialog._onSpeed,
+            cyberdeckSlide:      CyberdeckActionDialog._onSlide,
+            cyberdeckPathfinder: CyberdeckActionDialog._onPathfinder,
             cyberdeckControl:  CyberdeckActionDialog._onControl,
             cyberdeckEyeDee:   CyberdeckActionDialog._onEyeDee,
             cyberdeckBackdoor: CyberdeckActionDialog._onBackdoor,
@@ -95,8 +106,8 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
             ? [
                 { key: "cyberdeckJackOut",  label: localize("JackOut") },
                 { key: "cyberdeckCloak",    label: localize("Cloak") },
-                { key: "cyberdeckSlide",    label: localize("Slide") },
-                { key: "cyberdeckSpeed",    label: localize("Speed") },
+                { key: "cyberdeckSlide",      label: localize("Slide") },
+                { key: "cyberdeckPathfinder", label: localize("Pathfinder") },
                 { key: "cyberdeckControl",  label: localize("Control") },
                 { key: "cyberdeckEyeDee",   label: localize("EyeDee") },
                 { key: "cyberdeckBackdoor", label: localize("Backdoor") },
@@ -128,29 +139,26 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
 
     static async _onJackIn(event, _target) {
         event?.preventDefault?.();
-        // Validate: no other deck already active.
-        const activeDeck = this.actor.items.find(i =>
-            i.type === "netware"
-            && i.system?.netwareType === "cyberdeck"
-            && i.id !== this.deck.id
-            && i.system?.equipped
-        );
-        if (activeDeck) {
-            ui.notifications.error(game.i18n.format("CYBERPUNK.CannotJackInDeckActive", { name: activeDeck.name }));
+        // Gate: the deck the runner is jacking in through must be the
+        // currently-equipped one. Equip is user-driven (Equip/Unequip
+        // badge on the gear row), so jack-in never toggles it — it just
+        // requires it to already be set. Also enforces the one-deck-at-
+        // a-time rule via the equip toggle's mutual exclusion.
+        if (!this.deck.system?.equipped) {
+            ui.notifications.warn(game.i18n.localize("CYBERPUNK.CannotJackInNotEquipped"));
             return;
         }
         // Pre-gate: must be inside the (Range-upgrade-extended) radius of at
         // least one Access Point. Pass `this.deck` so Range upgrades on the
         // deck the runner's about to jack in WITH push every AP's effective
         // radius outward. Refuses client-side before spending the NET action
-        // / equipping the deck, so the player sees the warning directly.
+        // so the player sees the warning directly.
         const meat = findMeatToken(this.actor);
         if (!meat || !nearestCoveringAccessPoint(meat, canvas.scene, this.deck)) {
             ui.notifications.warn(game.i18n.localize("CYBERPUNK.JackInNoAccessPoint"));
             return;
         }
         if (!await spendNetAction(this.actor, "jack in")) return;
-        await this.deck.update({ "system.equipped": true });
         await this.actor.toggleStatusEffect("jacked-in", { active: true });
         this.close({ animate: false });
     }
@@ -158,7 +166,9 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
     static async _onJackOut(event, _target) {
         event?.preventDefault?.();
         if (!await spendNetAction(this.actor, "jack out")) return;
-        // Deactivate every booster/defender attached to this deck.
+        // Deactivate every booster/defender attached to this deck — the
+        // run's over, they power down. Equipped state stays put (user
+        // controls it via the Equip badge, not the jack-in flow).
         const programs = this.actor.items.filter(i =>
             i.type === "netware"
             && i.system?.netwareType === "program"
@@ -170,7 +180,6 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
             const updates = programs.map(p => ({ _id: p.id, "system.programState": "inactive" }));
             await this.actor.updateEmbeddedDocuments("Item", updates);
         }
-        await this.deck.update({ "system.equipped": false });
         await this.actor.toggleStatusEffect("jacked-in", { active: false });
         this.close({ animate: false });
     }
@@ -416,96 +425,31 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
     }
 
     /**
-     * Speed — opposed roll against the Black ICE's SPD. On success: pure
-     * pass card. On failure: the Black ICE's stored attackerDamage +
-     * attackerEffect are bundled onto the same chat card with an Apply
-     * button so the GM can land the "free hit" the failure costs.
-     *
-     * The damage routes through the standard zap-hit Apply pipeline with
-     * `netAttackerSource: "blackIce"` and the Black ICE's own
-     * attackerClass — same path as a Black ICE Attack action would use.
+     * Pathfinder — untargeted exploration roll. Just Interface (+ mods)
+     * against no fixed DV; the GM reads the total and narrates what the
+     * netrunner discovers. Grants Combat IP and runs the fumble cascade
+     * on a nat-1, same shape as Scanner minus the AP-detection stage.
      */
-    static async _onSpeed(event, _target) {
+    static async _onPathfinder(event, _target) {
         event?.preventDefault?.();
-        const target = this._resolveBlackIceTarget();
-        if (!target) return;
-        const mods = await NetActionRollDialog.prompt(this.actor, { title: localize("Speed") });
+        const mods = await NetActionRollDialog.prompt(this.actor, { title: localize("Pathfinder") });
         if (!mods) return;
-        if (!await spendNetAction(this.actor, "speed")) return;
+        if (!await spendNetAction(this.actor, "pathfinder")) return;
         await commitLuckSpend(this.actor, mods.luckToSpend);
 
-        // Netrunner attack: 1d10x10 + Interface + Σ active Speed boosters + mods.
         const iface = this.actor.resolveSkillTotal("Interface");
-        const bonus = activeBoosterValue(this.actor, this.deck, "speed");
+        const bonus = activeBoosterValue(this.actor, this.deck, "pathfinder");
         const parts = [EXPLODING_D10, iface ? String(iface) : null, bonus ? String(bonus) : null, mods.extraMod ? String(mods.extraMod) : null].filter(Boolean);
-        const attackRoll = await new Roll(parts.join(" + ")).evaluate();
-        const fumbled = isNaturalOne(attackRoll);
-        const ipGained = fumbled ? 0 : await this.actor.grantCombatIP(attackRoll, "Interface");
-        const attackTotal = Number(attackRoll.total) || 0;
-
-        // Black ICE defence: 1d10x10 + SPD.
-        const spd = Number(target.actor.system?.spd) || 0;
-        const defParts = [EXPLODING_D10, spd ? String(spd) : null].filter(Boolean);
-        const defenceRoll = await new Roll(defParts.join(" + ")).evaluate();
-        const defenceTotal = Number(defenceRoll.total) || 0;
-
-        const success = !fumbled && attackTotal >= defenceTotal;
-
-        // Failure → roll Black ICE's stored damage + effect, bundle them
-        // onto the chat card with an Apply button. The Black ICE never
-        // gets a defence roll here (it just lands the free hit), but its
-        // damage and effect feed the standard apply pipeline as if it
-        // had used its own Attack action.
-        let damage = null;
-        let effectKey = "none";
-        if (!success) {
-            damage = await rollAttackerDamage(target.actor.system?.attackerDamage);
-            effectKey = target.actor.system?.attackerEffect || "none";
-        }
-        const hasEffect = effectKey !== "none";
-        const effectLabel = effectLabelFor(effectKey);
-        const effectIcon  = !hasEffect ? null : (effectKey === "crashed" ? "jacked-in" : effectKey);
-
-        const attackerClass = target.actor.system?.attackerClass || "antiPersonnel";
-        const classKey   = attackerClasses[attackerClass];
-        const classLabel = classKey ? localize(classKey) : localize("NetAttack");
-
-        const isAntiProgram = attackerClass === "antiProgram";
-        const damageLabel = localize(isAntiProgram ? "Derezz" : "Damage");
-        const damageAndEffectLabel = localize(isAntiProgram ? "DerezzAndEffect" : "DamageAndEffect");
-        const damageIcon = isAntiProgram ? "derezz" : "damage";
+        const roll = await new Roll(parts.join(" + ")).evaluate();
+        const fumbled = isNaturalOne(roll);
+        const ipGained = fumbled ? 0 : await this.actor.grantCombatIP(roll, "Interface");
 
         const fumble = fumbled ? await this.actor.rollFumbleData() : null;
         const speaker = ChatMessage.getSpeaker({ actor: this.actor });
-        await new RollBundle(localize("Speed"))
-            .addRoll(attackRoll)
-            .execute(speaker, "systems/cyberpunk/templates/chat/zap-hit.hbs", {
-                actionIcon:    "net-action",
-                fireModeLabel: localize("Speed"),
-                attackRoll,
-                defenceTotal,
-                success,
-                hasDamage:   !!damage,
-                hasApply:    !!damage,
-                areaDamages: damage?.areaDamages ?? {},
-                damageTotal: damage?.total ?? 0,
-                damageLabel,
-                damageAndEffectLabel,
-                damageIcon,
-                hasEffect,
-                effectIcon,
-                effectLabel,
-                weaponEffect: hasEffect ? effectKey : "",
-                effectSaveCount: 1,
-                // Weapon line carries the Black ICE identity ONLY on
-                // failure — on success there's nothing to attribute, the
-                // header section bar already labels the card "Speed".
-                weaponName:  success ? "" : target.actor.name,
-                weaponImage: success ? "" : target.actor.img,
-                weaponType:  success ? "" : classLabel,
-                damageType:  "burn",
-                netAttackerSource: "blackIce",
-                attackerClass,
+        await new RollBundle(localize("Pathfinder")).addRoll(roll)
+            .execute(speaker, NET_ACTION_TEMPLATE, {
+                title: localize("Pathfinder"),
+                actionIcon: "net-action",
                 ipGained,
                 fumble
             });
@@ -692,9 +636,11 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
     /* ----------------------------------- */
 
     /**
-     * Resolve a single targeted File NET object — the only valid Eye-Dee
-     * target. Unlike Control there's no persistent state to track; each
-     * Eye-Dee is a fresh read attempt against the same DV.
+     * Resolve a single targeted File or Account NET object — both valid
+     * Eye-Dee targets. Unlike Control there's no persistent state to
+     * track for a File; each Eye-Dee is a fresh read attempt against
+     * the same DV. Accounts differ: a successful Eye-Dee transfers the
+     * Amount into the netrunner's eurobucks and drains the account.
      */
     _resolveEyeDeeTarget() {
         const targets = Array.from(game.user.targets ?? []);
@@ -704,7 +650,8 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
         }
         const token = targets[0].document ?? targets[0];
         const actor = token.actor;
-        if (actor?.type !== "netware" || actor.system?.subtype !== "file") {
+        const sub = actor?.system?.subtype;
+        if (actor?.type !== "netware" || (sub !== "file" && sub !== "account")) {
             ui.notifications.warn(localize("EyeDeeTargetMustBeFile"));
             return null;
         }
@@ -732,8 +679,22 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
 
         // File contents are revealed only on success — no state persists,
         // no field is rewritten. Each Eye-Dee is an independent read.
-        const fileContent = success ? (target.actor.system?.description || "") : "";
+        const isAccount = target.actor.system?.subtype === "account";
+        const fileContent = (success && !isAccount) ? (target.actor.system?.description || "") : "";
         const fileContentLines = fileContent.split("\n");
+
+        // Account payout: on success, add the Account's Amount to the
+        // netrunner's eurobucks and drain the account so it can't be
+        // looted twice. Failure leaves it untouched.
+        let amountTransferred = 0;
+        if (success && isAccount) {
+            amountTransferred = Number(target.actor.system?.amount) || 0;
+            if (amountTransferred > 0) {
+                const current = Number(this.actor.system?.gear?.eurobucks) || 0;
+                await this.actor.update({ "system.gear.eurobucks": current + amountTransferred });
+                await target.actor.update({ "system.amount": 0 });
+            }
+        }
 
         const fumble = fumbled ? await this.actor.rollFumbleData() : null;
         const speaker = ChatMessage.getSpeaker({ actor: this.actor });
@@ -746,6 +707,8 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
                 success,
                 hasFileContents: success && !!fileContent,
                 fileContentLines,
+                hasAmountTransferred: success && isAccount,
+                amountTransferred,
                 ipGained,
                 fumble
             });
@@ -792,14 +755,12 @@ export class CyberdeckActionDialog extends HandlebarsApplicationMixin(Applicatio
         if (!await spendNetAction(this.actor, "zap")) return;
         await commitLuckSpend(this.actor, mods.luckToSpend);
 
-        // Attack roll: 1d10x10 + effective Interface + Σ active Zap bonuses
-        // + mods (Conditions + Luck — defender's modifier dialog handles
-        // their own side). Target's active Flak (non-Black-ICE defender)
-        // suppresses the Zap booster bonus — Zap itself is not Black ICE.
+        // Attack roll: 1d10x10 + effective Interface + Σ active Zap
+        // bonus (deck-attached Zap boosters + actor-side Effect NET
+        // Bonus for "zap") + mods.
         const atkIface = this.actor.resolveSkillTotal("Interface");
-        const flakActive = targetHasActiveFlak(target.actor);
-        const atkBonus = flakActive ? 0 : activeBoosterValue(this.actor, this.deck, "zap");
-        const atkParts = [EXPLODING_D10, atkIface ? String(atkIface) : null, atkBonus ? String(atkBonus) : null, mods.extraMod ? String(mods.extraMod) : null].filter(Boolean);
+        const zapBonus = activeBoosterValue(this.actor, this.deck, "zap");
+        const atkParts = [EXPLODING_D10, atkIface ? String(atkIface) : null, zapBonus ? String(zapBonus) : null, mods.extraMod ? String(mods.extraMod) : null].filter(Boolean);
         const attackRoll = await new Roll(atkParts.join(" + ")).evaluate();
         const fumbled = isNaturalOne(attackRoll);
         const ipGained = fumbled ? 0 : await this.actor.grantCombatIP(attackRoll, "Interface");

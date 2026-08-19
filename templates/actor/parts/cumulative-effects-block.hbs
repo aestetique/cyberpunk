@@ -1,0 +1,41 @@
+{{!--
+  State-tab Cumulative Effects section.
+
+  Rendered below the Humanity Loss block. One row per cumulative
+  effect with a non-zero value (rows self-remove by setting value to 0
+  in unlocked mode). Row chrome deliberately mirrors the skills list
+  minus IP counter / plus button / stat icon / parameter label.
+
+  Data comes from `cumulativeEffectRows` — [{key, label, valueDisplay,
+  value, flavor, calc, rollable}]. Rollable rows carry `.rollable` on
+  the row and the delegated click handler on the sheet root triggers a
+  1d10 + stat check vs Math.ceil(value) via the same chat card the
+  drug flavours use.
+--}}
+{{#if cumulativeEffectRows.length}}
+<div class="section-block">
+  <header class="tab-header">
+    <span class="tab-title">{{localize "CYBERPUNK.CumulativeEffects"}}</span>
+    <img class="tab-badge" src="systems/cyberpunk/img/ui/badge-drug.svg" alt="">
+  </header>
+  <div class="tab-content cumulative-content">
+    {{#each cumulativeEffectRows as |row|}}
+      <div class="cumulative-row{{#if row.rollable}} rollable{{/if}}"
+           data-cumulative-key="{{row.key}}"
+           data-tooltip-name="{{row.label}}"
+           data-flavor="{{row.flavor}}"
+           data-calc="{{row.calc}}">
+        <span class="cumulative-row-name">{{row.label}}</span>
+        {{#if ../isLocked}}
+          <span class="cumulative-row-value">{{row.valueDisplay}}</span>
+        {{else}}
+          <input type="number" class="cumulative-row-value" value="{{row.value}}" min="0" step="0.1">
+          <button class="cumulative-row-remove" type="button" title="{{localize "CYBERPUNK.Delete"}}">
+            <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Delete">
+          </button>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+</div>
+{{/if}}

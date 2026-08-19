@@ -46,6 +46,7 @@
   {{/if}}
 </div>
 
+
 {{!-- Upgrade-specific rows --}}
 {{#if isUpgrade}}
   {{!-- Row 2: Effect (+ Value when Range) --}}
@@ -276,7 +277,10 @@
       </div>
     </div>
 
-    {{!-- Row 5: Effect --}}
+    {{!-- Row 5: Effect (+ Duration when Custom).
+         Duration is authored only for the Custom path — the built-in
+         primary effects (superglue / burning / crashed / destroyed)
+         carry their own duration semantics in the apply pipeline. --}}
     <div class="variables-row">
       <div class="variable-field">
         <label class="variable-label">{{localize "CYBERPUNK.AttackerEffect"}}</label>
@@ -300,6 +304,17 @@
           </div>
         {{/if}}
       </div>
+
+      {{#if isCustomEffect}}
+        <div class="variable-field">
+          <label class="variable-label">{{localize "CYBERPUNK.EffectDuration"}}</label>
+          {{#if isLocked}}
+            <div class="dropdown"><span class="dropdown-text">{{system.effectDuration}}</span></div>
+          {{else}}
+            <input type="number" class="variable-input" name="system.effectDuration" value="{{system.effectDuration}}" step="1" min="0">
+          {{/if}}
+        </div>
+      {{/if}}
     </div>
   {{/if}}
 {{/if}}

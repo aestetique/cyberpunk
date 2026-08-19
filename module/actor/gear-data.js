@@ -16,6 +16,8 @@ import {
     getOrdnanceSubtypeLabelKey,
     resolveWeaponDiscriminator,
     toolBonusProperties,
+    netBonusProperties,
+    isBooleanProperty,
     surgeryCodes,
     getCyberwareSubtypes,
     SENSOR_TYPES,
@@ -96,8 +98,17 @@ export function buildWeaponContextString({ sys, wType, wClass, attachedAmmo }) {
         return bits.concat([rel, conc, range]).filter(Boolean).join(' · ');
     }
     if (wType === "Exotic") {
-        const effectKey = (sys.effect && sys.effect !== "none") ? weaponEffects[sys.effect] : null;
-        const effect = effectKey ? localizeKey(effectKey) : '';
+        // Drug-effect gas weapons read the loaded drug's name so the
+        // gear row shows what the weapon actually deploys, not the
+        // generic "Drug" label.
+        let effect = '';
+        if (sys.effect === "drug" && sys.drugUuid) {
+            const drug = fromUuidSync(sys.drugUuid);
+            effect = drug?.name || localizeKey("EffDrug");
+        } else if (sys.effect && sys.effect !== "none") {
+            const effectKey = weaponEffects[sys.effect];
+            if (effectKey) effect = localizeKey(effectKey);
+        }
         return [localizeKey("WeaponTypeExotic"), effect, rel, conc, range].filter(Boolean).join(' · ');
     }
     return '';
@@ -115,9 +126,13 @@ export function buildAmmoContext(ammoSys) {
     if (ammoSys.ammoType !== "grenade") {
         return [calLabel, atLabel].filter(Boolean).join(' · ');
     }
-    const effectLabel = (ammoSys.effect && ammoSys.effect !== "none" && weaponEffects[ammoSys.effect])
-        ? localizeKey(weaponEffects[ammoSys.effect])
-        : '';
+    let effectLabel = '';
+    if (ammoSys.effect === "drug" && ammoSys.drugUuid) {
+        const drug = fromUuidSync(ammoSys.drugUuid);
+        effectLabel = drug?.name || localizeKey("EffDrug");
+    } else if (ammoSys.effect && ammoSys.effect !== "none" && weaponEffects[ammoSys.effect]) {
+        effectLabel = localizeKey(weaponEffects[ammoSys.effect]);
+    }
     const templateLabel = ammoSys.templateType && ordnanceTemplateTypes[ammoSys.templateType]
         ? localizeKey(ordnanceTemplateTypes[ammoSys.templateType])
         : '';
@@ -341,9 +356,11 @@ export function formatBonusLabel(label, op, value) {
 
 /**
  * Summarise the first `limit` bonus rows on a bonuses array as display
- * strings ("INT +2", "Stealth ×2", ...). Property bonuses get localized
- * through `toolBonusProperties`; skill bonuses use the stored name.
- * Empty / unrecognised rows are filtered out.
+ * strings ("INT +2", "Stealth ×2", "NET Bonus: Speed +4", ...). Property
+ * bonuses resolve their label through the toolBonusProperties union
+ * first, then netBonusProperties for the NET-bonus bucket (which lives
+ * in its own map). Boolean-toggle properties render as just the label —
+ * they're presence-only, no op or value to display.
  *
  * Single source of truth for the bonus-summary subtext used across the
  * gear tab, the state tab, the chat cards, etc.
@@ -352,8 +369,11 @@ export function summariseBonuses(bonuses, limit = 2) {
     return (bonuses || []).slice(0, limit).map(b => {
         const op = b.op || "+";
         if (b.type === "property") {
-            const propKey = toolBonusProperties[b.property];
+            const propKey = toolBonusProperties[b.property] ?? netBonusProperties[b.property];
             const propLabel = propKey ? game.i18n.localize(`CYBERPUNK.${propKey}`) : b.property;
+            // Boolean rows have no op/value UI on the item sheet — matching
+            // that on read, we drop the ` +1` suffix and show the label alone.
+            if (isBooleanProperty(b.property)) return propLabel;
             return formatBonusLabel(propLabel, op, b.value);
         }
         if (b.skillName) return formatBonusLabel(b.skillName, op, b.value);

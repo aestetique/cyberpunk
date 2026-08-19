@@ -1,0 +1,130 @@
+{{!--
+  Drug Design dialog. Matches the mockup: section-bar dividers,
+  three-panel Strength + Luck controls, single-row Effect entries
+  (tier chip | label bar | trash), purple bar dropdowns for
+  Features + Onset/Duration, dark result bars for Cost + Difficulty,
+  and a full-width red ROLL button.
+
+  State is centralised on the JS side — every input triggers a full
+  re-render so Cost / Difficulty stay in sync.
+--}}
+<div class="drug-design-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{title}}</span>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
+  </header>
+
+  {{#unless hasSkill}}
+    <div class="drug-design-nowarn">
+      <p>{{localize "CYBERPUNK.DrugDesignNoSkill"}}</p>
+    </div>
+  {{else}}
+
+  {{!-- Strength --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/ref.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.DrugStrength"}}</span>
+  </div>
+  <div class="luck-controls">
+    <button type="button" class="luck-btn{{#unless canStrengthMinus}} disabled{{/unless}}" data-action="strengthMinus">
+      <img src="systems/cyberpunk/img/chat/{{#if canStrengthMinus}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+    </button>
+    <div class="luck-display"><span class="luck-value">{{strength}}</span></div>
+    <button type="button" class="luck-btn{{#unless canStrengthPlus}} disabled{{/unless}}" data-action="strengthPlus">
+      <img src="systems/cyberpunk/img/chat/{{#if canStrengthPlus}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+    </button>
+  </div>
+
+  {{!-- Effects --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/drug.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.DrugDesignEffects"}}</span>
+  </div>
+  {{#each effects}}
+    <div class="dd-effect-row">
+      <div class="dd-effect-tier">{{tierChip}}</div>
+      <div class="dd-effect-label">{{labelLine}}</div>
+      <button type="button" class="dd-effect-remove" data-action="removeEffect" data-tier="{{tier}}" data-effect-key="{{key}}" title="{{localize "CYBERPUNK.Delete"}}">
+        <img src="systems/cyberpunk/img/chat/delete.svg" alt="">
+      </button>
+    </div>
+  {{/each}}
+  <button type="button" class="dd-add-effect-btn" data-action="addEffect">
+    {{localize "CYBERPUNK.DrugDesignAddEffect"}}
+  </button>
+
+  {{!-- Features --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/glass.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.DrugDesignFeatures"}}</span>
+  </div>
+  <div class="dd-select-wrap">
+    <select class="dd-select dd-method">
+      {{#each methodOptions}}
+        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <div class="dd-select-wrap">
+    <select class="dd-select dd-detection">
+      {{#each detectionOptions}}
+        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <div class="dd-select-wrap">
+    <select class="dd-select dd-residue">
+      {{#each residueOptions}}
+        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  {{!-- Onset / Duration --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/clock.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.DrugDesignOnsetDuration"}}</span>
+  </div>
+  <div class="dd-select-wrap">
+    <select class="dd-select dd-onset">
+      {{#each onsetOptions}}
+        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  {{!-- Cost --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/sell.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.DrugDesignCost"}}</span>
+  </div>
+  <div class="dd-result-bar">{{costDisplay}}</div>
+
+  {{!-- Difficulty --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/range.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.Difficulty"}}</span>
+  </div>
+  <div class="dd-result-bar">{{difficultyLine}}</div>
+
+  {{!-- Luck --}}
+  <div class="fire-mode-section">
+    <img src="systems/cyberpunk/img/chat/luck.svg" alt="">
+    <span class="fire-mode-label">{{localize "CYBERPUNK.LuckFull"}}</span>
+  </div>
+  <div class="luck-controls{{#unless hasAnyLuck}} disabled{{/unless}}">
+    <button type="button" class="luck-btn luck-minus-btn{{#unless canDecreaseLuck}} disabled{{/unless}}" data-action="luckMinus">
+      <img src="systems/cyberpunk/img/chat/{{#if canDecreaseLuck}}minus{{else}}minus-disabled{{/if}}.svg" alt="-">
+    </button>
+    <div class="luck-display"><span class="luck-value">{{luckToSpend}}</span></div>
+    <button type="button" class="luck-btn luck-plus-btn{{#unless canIncreaseLuck}} disabled{{/unless}}" data-action="luckPlus">
+      <img src="systems/cyberpunk/img/chat/{{#if canIncreaseLuck}}plus{{else}}plus-disabled{{/if}}.svg" alt="+">
+    </button>
+  </div>
+
+  <button type="button" class="reload-apply-btn roll-btn" data-action="roll">
+    {{localize "CYBERPUNK.Roll"}}
+  </button>
+
+  {{/unless}}
+</div>

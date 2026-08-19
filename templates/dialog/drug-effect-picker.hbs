@@ -1,0 +1,31 @@
+{{!--
+  Add-Effect picker — 4 top tabs (PRIM / SECN / AFTR / CUML) with the
+  active one highlighted, single-column list of purple buttons below.
+  Clicking a button hands the choice to the parent via the constructor
+  callback and dismisses.
+--}}
+<div class="drug-effect-picker-wrapper">
+  <header class="reload-header">
+    <span class="reload-title">{{title}}</span>
+    <a class="header-control close" data-action="closeDialog"><i class="fas fa-times"></i></a>
+  </header>
+
+  <div class="dep-tabs">
+    {{#each tabs}}
+      <button type="button"
+              class="dep-tab{{#if active}} active{{/if}}"
+              data-action="switchTab"
+              data-tab="{{key}}">{{label}}</button>
+    {{/each}}
+  </div>
+
+  <div class="dep-effect-list">
+    {{#each entries}}
+      <button type="button"
+              class="dep-effect-btn"
+              data-action="pickEffect"
+              data-tier="{{tier}}"
+              data-effect-key="{{key}}">{{labelLine}}</button>
+    {{/each}}
+  </div>
+</div>

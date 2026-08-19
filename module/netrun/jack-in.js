@@ -201,7 +201,10 @@ async function jackOut(actor, userId) {
         const updates = activePrograms.map(p => ({ _id: p.id, "system.programState": "inactive" }));
         await actor.updateEmbeddedDocuments("Item", updates);
     }
-    await deck.update({ "system.equipped": false });
+    // Equip state is user-controlled via the gear-row Equip badge — jack
+    // out doesn't touch it, so the same deck stays selected for the next
+    // run. Unequipping while jacked in forces a jack-out via the toggle
+    // handler; that path is what clears equipped when the user asks.
 }
 
 /**

@@ -33,7 +33,27 @@ export function registerSystemSettings() {
     default: 0,
     onChange: async () => {
       const { checkDrugEffectExpiration } = await import("./drug-effects.js");
-      await checkDrugEffectExpiration();
+      const { checkNetwareEffectExpiration } = await import("./netrun/netware-effects.js");
+      await Promise.all([checkDrugEffectExpiration(), checkNetwareEffectExpiration()]);
+      // Refresh any open actor sheet with a live drug row so the
+      // remaining-time chip in the State tab ticks with the clock,
+      // not only when a phase actually swaps. Fires on every client
+      // (the setting is world-scoped, so onChange runs everywhere) so
+      // each player's open sheet reflects the new time.
+      for (const app of Object.values(ui.windows)) {
+        if (app?.actor?.effects?.some?.(e => (e.getFlag?.("cyberpunk", "isDrugEffect") === true || e.getFlag?.("cyberpunk", "isNetwareEffect") === true))) {
+          app.render(false);
+        }
+      }
+      const v2Registry = foundry.applications?.instances;
+      if (v2Registry) {
+        for (const app of v2Registry.values()) {
+          const actor = app?.document?.documentName === "Actor" ? app.document : null;
+          if (actor?.effects?.some?.(e => (e.getFlag?.("cyberpunk", "isDrugEffect") === true || e.getFlag?.("cyberpunk", "isNetwareEffect") === true))) {
+            app.render(false);
+          }
+        }
+      }
     }
   });
 }

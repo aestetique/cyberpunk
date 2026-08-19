@@ -15,6 +15,8 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/actor/parts/cover-row.hbs",
         "systems/cyberpunk/templates/actor/parts/conditions-block.hbs",
         "systems/cyberpunk/templates/actor/parts/state-effects-block.hbs",
+        "systems/cyberpunk/templates/actor/parts/cumulative-effects-block.hbs",
+        "systems/cyberpunk/templates/actor/parts/status-hints.hbs",
         "systems/cyberpunk/templates/actor/parts/cyberware.hbs",
         "systems/cyberpunk/templates/actor/parts/armor-display.hbs",
         "systems/cyberpunk/templates/actor/parts/netrunning.hbs",
@@ -76,6 +78,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/item/parts/cyberware/tab-armor.hbs",
         // Shared item partials (used by cyberware and armor/outfit)
         "systems/cyberpunk/templates/item/parts/shared/tab-effect.hbs",
+        "systems/cyberpunk/templates/item/parts/shared/tab-attacker-effect.hbs",
         "systems/cyberpunk/templates/item/parts/shared/tab-weapon.hbs",
         // Vehicle
         "systems/cyberpunk/templates/item/parts/vehicle/summary.hbs",
@@ -95,6 +98,8 @@ export const preloadHandlebarsTemplates = async function() {
         // Weapon settings dialog
         "systems/cyberpunk/templates/dialog/modifiers.hbs",
         "systems/cyberpunk/templates/dialog/skill-roll.hbs",
+        "systems/cyberpunk/templates/dialog/drug-design.hbs",
+        "systems/cyberpunk/templates/dialog/drug-effect-picker.hbs",
         "systems/cyberpunk/templates/dialog/net-action-roll.hbs",
         "systems/cyberpunk/templates/dialog/initiative-roll.hbs",
         "systems/cyberpunk/templates/dialog/melee-attack.hbs",
@@ -113,6 +118,10 @@ export const preloadHandlebarsTemplates = async function() {
 
         // Drug
         "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs",
+        "systems/cyberpunk/templates/item/parts/drug-cumulative.hbs",
+
+        // Weapon
+        "systems/cyberpunk/templates/item/parts/weapon-drug-slot.hbs",
 
         // Role
         "systems/cyberpunk/templates/item/role-sheet.hbs",

@@ -206,7 +206,7 @@ export class DefenceRollDialog extends HandlebarsApplicationMixin(ApplicationV2)
     const fastDrawPenalty = this.actor.statuses.has("fast-draw") ? -3 : 0;
     const restrainedPenalty = this.actor.statuses.has("restrained") ? -2 : 0;
     const grapplingPenalty = this.actor.statuses.has("grappling") ? -2 : 0;
-    const monomaniaPenalty = (this.actor.system.humanityLoss?.obsession ?? 0) >= 51 ? -4 : 0;
+    const monomaniaPenalty = (this.actor.system.psychosis?.obsession ?? 0) >= 51 ? -4 : 0;
     const skillValue = this._selectedSkill.value;
     const martialBonus = this._selectedSkill.martialBonus;
     const parts = [

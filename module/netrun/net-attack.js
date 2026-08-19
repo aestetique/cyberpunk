@@ -19,6 +19,8 @@ import { spendNetAction } from "../action-tracker.js";
 import { RollBundle, EXPLODING_D10, isNaturalOne } from "../dice.js";
 import { attackerEffects, attackerClasses } from "../lookups.js";
 import { targetHasActiveFlak } from "./defenders.js";
+import { activeBoosterValue } from "../dialog/cyberdeck-action-dialog.js";
+import { compactNetwareEffectSummary } from "./netware-effects.js";
 
 /**
  * Resolve a single targeted token for an attacker class. Returns
@@ -140,7 +142,28 @@ export async function performAttackerStrike(actor, program) {
     const target = resolveAttackerTarget(program.system?.attackerClass);
     if (!target) return;
 
+    // Round-cooldown: each attacker program can only fire ONCE per
+    // combat round, regardless of the runner's remaining NET Actions.
+    // A stored flag holds the round of the last firing; the check
+    // `flag === current round` naturally becomes stale as the round
+    // advances (no cleanup needed). Only enforced when combat is
+    // actually started — out of combat there's no "round" to guard.
+    const currentRound = game.combat?.started ? game.combat.round : null;
+    if (currentRound != null) {
+        const lastRound = program.getFlag?.("cyberpunk", "lastActivatedRound");
+        if (lastRound === currentRound) {
+            ui.notifications.warn(localize("AttackerAlreadyFiredThisRound"));
+            return;
+        }
+    }
+
     if (!await spendNetAction(actor, `attacker: ${program.name}`)) return;
+
+    // Stamp the round so subsequent fires this round are blocked.
+    // Skipped when out of combat (no round to stamp).
+    if (currentRound != null) {
+        await program.setFlag("cyberpunk", "lastActivatedRound", currentRound);
+    }
 
     // Attack roll: 1d10x10 + effective Interface + program's ATK. Target's
     // active Flak (non-Black-ICE defender) suppresses the program's ATK
@@ -176,11 +199,27 @@ export async function performAttackerStrike(actor, program) {
 
     const effectKey   = success ? (program.system?.attackerEffect || "none") : "none";
     const hasEffect   = effectKey !== "none";
-    const effectLabel = effectLabelFor(effectKey);
+    // For Custom effects the chat card shows a compact one-line
+    // summary of the authored bonus rows (e.g. "INT −1d6 REF −1d6")
+    // in place of the generic "Custom" label. Formulas render verbatim
+    // — chat is posted before rolls freeze per target.
+    const effectLabel = effectKey === "custom"
+        ? (compactNetwareEffectSummary(program.system?.bonuses) || effectLabelFor(effectKey))
+        : effectLabelFor(effectKey);
     // "crashed" jacks the target out — visualise it with the jacked-in
     // condition icon (the icon stays the same — we use it both for "you
     // are jacked in" and "this program is about to remove that").
-    const effectIcon  = !hasEffect ? null : (effectKey === "crashed" ? "jacked-in" : effectKey);
+    // A few effect keys borrow another condition's icon:
+    //   crashed → jacked-in  (the status it flips off)
+    //   derezz  → destroyed  (per the design brief)
+    //   custom  → scrambled  (shared "custom NET debuff" glyph, same as
+    //                        the ActiveEffect icon on the State tab)
+    const effectIcon  = !hasEffect
+        ? null
+        : effectKey === "crashed" ? "jacked-in"
+        : effectKey === "derezz"  ? "destroyed"
+        : effectKey === "custom"  ? "scrambled"
+        : effectKey;
 
     // Weapon line shows the attacker's class (Anti-Personnel / Anti-Program)
     // — more specific than a generic "NET Attack" label.
@@ -220,6 +259,10 @@ export async function performAttackerStrike(actor, program) {
             effectLabel,
             weaponEffect: hasEffect ? effectKey : "",
             effectSaveCount: 1,
+            // Source uuid — attacker program authored the Custom effect
+            // payload; the Apply pipeline uses it to look up `bonuses[]`
+            // + `effectDuration` at target-apply time (per-target roll).
+            effectSourceUuid: effectKey === "custom" ? program.uuid : "",
             weaponName:  program.name,
             weaponImage: program.img,
             weaponType:  classLabel,
@@ -322,6 +365,122 @@ export async function performBlackIceProgramActivate(actor, program) {
  *
  * @param {Actor} blackIce  The netware actor (subtype "blackIce") firing.
  */
+/**
+ * Speed action fired from a Black ICE sheet — the same opposed roll the
+ * netrunner-side Speed used, with the sides swapped. Black ICE attacks
+ * with SPD, the targeted netrunner NET icon defends with Interface. On
+ * Black-ICE success (attackTotal ≥ defenceTotal), the ICE's stored
+ * `attackerDamage` + `attackerEffect` are bundled onto the chat card
+ * with an Apply button — routed through the same zap-hit pipeline
+ * `performBlackIceStrike` uses. No NET action is spent on either side.
+ */
+export async function performBlackIceSpeed(blackIce) {
+    if (blackIce?.type !== "netware" || blackIce.system?.subtype !== "blackIce") return;
+    if ((Number(blackIce.system?.rez) || 0) <= 0 || blackIce.statuses?.has?.("dead")) {
+        ui.notifications.warn(localize("BlackIceAttackDestroyed"));
+        return;
+    }
+
+    // Target must be a single netrunner NET icon (character + isNetIcon).
+    const targets = Array.from(game.user.targets ?? []);
+    if (targets.length !== 1) {
+        ui.notifications.warn(localize("BlackIceSpeedNeedsNetrunner"));
+        return;
+    }
+    const token = targets[0].document ?? targets[0];
+    const targetActor = token.actor;
+    const isNetIcon = token.getFlag?.("cyberpunk", "isNetIcon") === true;
+    if (!(isNetIcon && targetActor?.type === "character")) {
+        ui.notifications.warn(localize("BlackIceSpeedNeedsNetrunner"));
+        return;
+    }
+
+    // Black ICE attack: 1d10x10 + SPD. Netrunner defence: 1d10x10 +
+    // Interface. Nat-1 on the ICE side just misses — no fumble cascade.
+    const spd = Number(blackIce.system?.spd) || 0;
+    const atkParts = [EXPLODING_D10, spd ? String(spd) : null].filter(Boolean);
+    const attackRoll = await new Roll(atkParts.join(" + ")).evaluate();
+    const fumbled = isNaturalOne(attackRoll);
+    const attackTotal = Number(attackRoll.total) || 0;
+
+    // Netrunner defence: 1d10x10 + Interface + Σ Speed bonuses from the
+    // currently-equipped deck (deck-inherent + slotted Speed boosters).
+    // An unequipped deck's boosters contribute nothing — same rule
+    // enforced across all NET-side lookups.
+    const iface = targetActor.resolveSkillTotal("Interface");
+    const equippedDeck = targetActor.items.find(i =>
+        i.type === "netware" && i.system?.netwareType === "cyberdeck" && i.system?.equipped
+    ) ?? null;
+    const speedBonus = equippedDeck ? activeBoosterValue(targetActor, equippedDeck, "speed") : 0;
+    const defParts = [EXPLODING_D10, iface ? String(iface) : null, speedBonus ? String(speedBonus) : null].filter(Boolean);
+    const defenceRoll = await new Roll(defParts.join(" + ")).evaluate();
+    const defenceTotal = Number(defenceRoll.total) || 0;
+
+    const success = !fumbled && attackTotal >= defenceTotal;
+
+    let damage = null;
+    if (success) damage = await rollAttackerDamage(blackIce.system?.attackerDamage);
+
+    const effectKey   = success ? (blackIce.system?.attackerEffect || "none") : "none";
+    const hasEffect   = effectKey !== "none";
+    const effectLabel = effectKey === "custom"
+        ? (compactNetwareEffectSummary(blackIce.system?.bonuses) || effectLabelFor(effectKey))
+        : effectLabelFor(effectKey);
+    // A few effect keys borrow another condition's icon:
+    //   crashed → jacked-in  (the status it flips off)
+    //   derezz  → destroyed  (per the design brief)
+    //   custom  → scrambled  (shared "custom NET debuff" glyph, same as
+    //                        the ActiveEffect icon on the State tab)
+    const effectIcon  = !hasEffect
+        ? null
+        : effectKey === "crashed" ? "jacked-in"
+        : effectKey === "derezz"  ? "destroyed"
+        : effectKey === "custom"  ? "scrambled"
+        : effectKey;
+
+    const attackerClass = blackIce.system?.attackerClass;
+    const classKey   = attackerClasses[attackerClass];
+    const classLabel = classKey ? localize(classKey) : localize("NetAttack");
+    const isAntiProgram = attackerClass === "antiProgram";
+    const damageLabel = localize(isAntiProgram ? "Derezz" : "Damage");
+    const damageAndEffectLabel = localize(isAntiProgram ? "DerezzAndEffect" : "DamageAndEffect");
+    const damageIcon = isAntiProgram ? "derezz" : "damage";
+
+    const speaker = ChatMessage.getSpeaker({ actor: blackIce });
+    await new RollBundle(localize("Speed"))
+        .addRoll(attackRoll)
+        .addRoll(defenceRoll)
+        .execute(speaker, "systems/cyberpunk/templates/chat/zap-hit.hbs", {
+            actionIcon:    "net-action",
+            fireModeLabel: localize("Speed"),
+            attackRoll,
+            defenceTotal,
+            success,
+            hasDamage:   !!damage,
+            hasApply:    success,
+            areaDamages: damage?.areaDamages ?? {},
+            damageTotal: damage?.total ?? 0,
+            damageLabel,
+            damageAndEffectLabel,
+            damageIcon,
+            hasEffect,
+            effectIcon,
+            effectLabel,
+            weaponEffect: hasEffect ? effectKey : "",
+            effectSaveCount: 1,
+            // Source uuid — Black ICE actor authored the Custom effect
+            // payload; Apply pipeline reads bonuses/duration from it.
+            effectSourceUuid: effectKey === "custom" ? blackIce.uuid : "",
+            weaponName:  "",
+            weaponImage: "",
+            weaponType:  classLabel,
+            damageType:  "burn",
+            netAttackerSource: "blackIce",
+            attackerClass,
+            fumble: null
+        });
+}
+
 export async function performBlackIceStrike(blackIce) {
     if (blackIce?.type !== "netware" || blackIce.system?.subtype !== "blackIce") return;
 
@@ -362,8 +521,20 @@ export async function performBlackIceStrike(blackIce) {
 
     const effectKey   = success ? (blackIce.system?.attackerEffect || "none") : "none";
     const hasEffect   = effectKey !== "none";
-    const effectLabel = effectLabelFor(effectKey);
-    const effectIcon  = !hasEffect ? null : (effectKey === "crashed" ? "jacked-in" : effectKey);
+    const effectLabel = effectKey === "custom"
+        ? (compactNetwareEffectSummary(blackIce.system?.bonuses) || effectLabelFor(effectKey))
+        : effectLabelFor(effectKey);
+    // A few effect keys borrow another condition's icon:
+    //   crashed → jacked-in  (the status it flips off)
+    //   derezz  → destroyed  (per the design brief)
+    //   custom  → scrambled  (shared "custom NET debuff" glyph, same as
+    //                        the ActiveEffect icon on the State tab)
+    const effectIcon  = !hasEffect
+        ? null
+        : effectKey === "crashed" ? "jacked-in"
+        : effectKey === "derezz"  ? "destroyed"
+        : effectKey === "custom"  ? "scrambled"
+        : effectKey;
 
     const attackerClass = blackIce.system?.attackerClass;
     const classKey   = attackerClasses[attackerClass];
@@ -404,6 +575,7 @@ export async function performBlackIceStrike(blackIce) {
             effectLabel,
             weaponEffect: hasEffect ? effectKey : "",
             effectSaveCount: 1,
+            effectSourceUuid: effectKey === "custom" ? blackIce.uuid : "",
             weaponName:  "",
             weaponImage: "",
             weaponType:  "",

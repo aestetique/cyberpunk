@@ -3,7 +3,7 @@
   "title": "Cyberpunk",
   "description": "An unofficial fan-made interpretation of the Cyberpunk game systems by R. Talsorian Games for Foundry Virtual Tabletop.",
   "background": "systems/cyberpunk/img/ui/system-background.webp",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -98,6 +98,13 @@
       "system": "cyberpunk",
       "type": "Item",
       "path": "packs/cyberware"
+    },
+    {
+      "name": "drugs",
+      "label": "Drugs",
+      "system": "cyberpunk",
+      "type": "Item",
+      "path": "packs/drugs"
     }
   ],
   "initiative": "1d10 + @stats.ref.total + @CombatSenseMod + @initiativeMod + @fastDrawMod + @surprisedMod",

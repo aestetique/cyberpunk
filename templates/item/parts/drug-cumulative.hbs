@@ -1,0 +1,49 @@
+{{!--
+  Cumulative tab UI for drug items.
+
+  Caller passes:
+    cumulativeRows — [{ index, cumulative, label, options: [{value, label, selected}] }]
+    isLocked       — sheet lock state
+
+  Each row is just a key picker (dropdown of the 12 cumulative effects)
+  and a trash button. No op / value fields — the per-dose increment is
+  driven by drug strength via CUMULATIVE_STRENGTH_MUL at apply time.
+--}}
+<div class="effect-bonuses cumulative-list">
+  {{#each cumulativeRows}}
+    <div class="bonus-row" data-index="{{index}}">
+      <label class="variable-label">{{localize "CYBERPUNK.Cumulative"}}</label>
+      {{#if ../isLocked}}
+        <div class="dropdown">
+          <span class="dropdown-text">{{label}}</span>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{else}}
+        <div class="dropdown-wrapper">
+          <select class="dropdown-select cumulative-select" data-index="{{index}}">
+            {{#each options}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+          </select>
+          <div class="dropdown-chevron">
+            <img src="systems/cyberpunk/img/ui/icon-down.svg" alt="">
+          </div>
+        </div>
+      {{/if}}
+
+      {{#unless ../isLocked}}
+        <button type="button" class="cumulative-remove remove-bonus" data-index="{{index}}" title="Remove">
+          <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="Remove">
+        </button>
+      {{/unless}}
+    </div>
+  {{/each}}
+</div>
+
+{{#unless isLocked}}
+  <div class="effect-actions">
+    <button type="button" class="add-cumulative">{{localize "CYBERPUNK.AddCumulative"}}</button>
+  </div>
+{{/unless}}

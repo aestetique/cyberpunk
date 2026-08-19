@@ -18,7 +18,17 @@ import {
     getRangedClassesForSkill,
     resolveWeaponDiscriminator,
     toolBonusProperties,
-    isAttributeProperty
+    toolBooleanProperties,
+    toolModifierProperties,
+    toolStateProperties,
+    isAttributeProperty,
+    isBooleanProperty,
+    isStateProperty,
+    netBonusProperties,
+    isNetBonusProperty,
+    netwareFlavours,
+    drugFlavours,
+    getFlavourMeta
 } from "../lookups.js";
 import { calibers as CALIBERS, getDamageForCaliber } from "../calibers.js";
 
@@ -49,29 +59,62 @@ export const DEFAULT_CLASS_BY_TYPE = {
  * working without migration.
  */
 export function prepareBonuses(rawBonuses) {
+    // Full op set for stats / modifiers / skills.
+    const fullOps = ["+", "−", "×", "÷", "="];
+    // NET Bonuses and State bonuses are additive-only — no scaling, no
+    // override. Legacy rows that saved a `×` / `÷` / `=` op collapse to
+    // "+" in both the display and the pipeline (see actor.js pushBonus).
+    const addSubOps = ["+", "−"];
+    const mkOpOptions = (op, allowed) => allowed.map(v => ({
+        value: v, label: v, selected: op === v
+    }));
+
     return (rawBonuses || []).map(bonus => {
-        const op = bonus.op || "+";
-        const opOptions = [
-            { value: "+", label: "+", selected: op === "+" },
-            { value: "−", label: "−", selected: op === "−" },
-            { value: "×", label: "×", selected: op === "×" },
-            { value: "÷", label: "÷", selected: op === "÷" },
-            { value: "=", label: "=", selected: op === "=" }
-        ];
-        if (bonus.type === "property") {
-            const labelKey = toolBonusProperties[bonus.property];
-            const attribute = isAttributeProperty(bonus.property);
+        if (bonus.type === "flavour") {
+            // Flavour rows apply a status/narrative flavour when the
+            // effect spawns. No op, no value; just a picker + hint.
+            // Metadata carries the label i18n key + hover text.
+            const meta = getFlavourMeta(bonus.flavour);
             return {
                 ...bonus,
-                op, opOptions,
+                isFlavour: true,
+                label: meta?.labelKey
+                    ? game.i18n.localize(`CYBERPUNK.${meta.labelKey}`)
+                    : (bonus.flavour || "")
+            };
+        }
+        if (bonus.type === "property") {
+            const netBonus  = isNetBonusProperty(bonus.property);
+            const state     = !netBonus && isStateProperty(bonus.property);
+            const attribute = !netBonus && !state && isAttributeProperty(bonus.property);
+            const boolean   = !netBonus && !state && !attribute && isBooleanProperty(bonus.property);
+            // Anything that isn't stat / boolean / State / NET Bonus falls
+            // into the numeric Modifier bucket (uses op + value UI). This
+            // keeps legacy rows whose key predates the split renderable.
+            const modifier  = !netBonus && !state && !attribute && !boolean;
+            const labelKey  = netBonus
+                ? netBonusProperties[bonus.property]
+                : toolBonusProperties[bonus.property];
+            const rawOp = bonus.op || "+";
+            const allowed = (netBonus || state) ? addSubOps : fullOps;
+            const op = allowed.includes(rawOp) ? rawOp : "+";
+            return {
+                ...bonus,
+                op,
+                opOptions: mkOpOptions(op, allowed),
                 isAttribute: attribute,
-                isProperty: !attribute,
+                isProperty:  boolean,
+                isModifier:  modifier,
+                isState:     state,
+                isNetBonus:  netBonus,
                 label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : bonus.property
             };
         }
+        const op = bonus.op || "+";
         return {
             ...bonus,
-            op, opOptions,
+            op,
+            opOptions: mkOpOptions(op, fullOps),
             isSkill: true,
             hasFilled: !!(bonus.skillUuid),
             label: bonus.skillName || ""
@@ -86,15 +129,23 @@ export function prepareBonuses(rawBonuses) {
  */
 export function getAvailablePropertyOptions(bonuses) {
     const used = new Set((bonuses || []).filter(b => b.type === "property").map(b => b.property));
-    const attributes = [];
-    const properties = [];
-    for (const [key, labelKey] of Object.entries(toolBonusProperties)) {
-        if (used.has(key)) continue;
-        const opt = { value: key, label: game.i18n.localize(`CYBERPUNK.${labelKey}`) };
-        if (isAttributeProperty(key)) attributes.push(opt);
-        else properties.push(opt);
-    }
-    return { attributes, properties };
+    const mkOpts = (source) =>
+        Object.entries(source)
+            .filter(([key]) => !used.has(key))
+            .map(([value, labelKey]) => ({ value, label: game.i18n.localize(`CYBERPUNK.${labelKey}`) }));
+    // Attributes still come from the toolBonusProperties union — stats.*
+    // isn't in the split subsets. Modifier / Property (boolean) / NET
+    // each draws from its own dedicated map.
+    const attributes = Object.entries(toolBonusProperties)
+        .filter(([key]) => !used.has(key) && isAttributeProperty(key))
+        .map(([value, labelKey]) => ({ value, label: game.i18n.localize(`CYBERPUNK.${labelKey}`) }));
+    return {
+        attributes,
+        properties: mkOpts(toolBooleanProperties),
+        modifiers:  mkOpts(toolModifierProperties),
+        states:     mkOpts(toolStateProperties),
+        netBonuses: mkOpts(netBonusProperties)
+    };
 }
 
 /** Convenience: stuff both prepared bonuses and split-options into sheetData. */
@@ -103,6 +154,176 @@ export function prepareEffectTabContext(data, rawBonuses) {
     const opts = getAvailablePropertyOptions(rawBonuses);
     data.attributeOptions = opts.attributes;
     data.propertyOptions  = opts.properties;
+    data.modifierOptions  = opts.modifiers;
+    data.stateOptions     = opts.states;
+    data.netBonusOptions  = opts.netBonuses;
+}
+
+/**
+ * Attacker / Black-ICE Effect tab context. A stripped variant of the
+ * shared Effect tab restricted to Attribute + NET Bonus categories,
+ * with op forced to `−` (no selector rendered) and Attribute values
+ * treated as string-editable so a GM can author formulas (`1d6`,
+ * `2d6+1`) that get rolled at apply time.
+ *
+ * The `bonuses` payload retains the standard row shape — the pipeline
+ * on the actor side never runs for these (they're spawned only when
+ * the attacker hits a target), so schema consistency is one-way: we
+ * store like everyone else, but the sheet + apply pipeline treat
+ * these rows specially.
+ */
+export function prepareAttackerEffectTabContext(data, rawBonuses) {
+    const rows = (rawBonuses || []).map(b => {
+        // Flavour rows are a new bonus type; they carry a `flavour`
+        // key rather than a `property` key and produce no numeric
+        // change — they just apply a status when the effect spawns.
+        // Kept in the same `bonuses[]` array so persistence, apply,
+        // and remove all share one pipeline.
+        if (b?.type === "flavour") {
+            const flavourKey = b.flavour || "";
+            const meta = netwareFlavours[flavourKey];
+            return {
+                ...b,
+                isFlavour: true,
+                label: meta?.labelKey ? game.i18n.localize(`CYBERPUNK.${meta.labelKey}`) : flavourKey
+            };
+        }
+        const property = b.property || "";
+        const isNetBonus = isNetBonusProperty(property);
+        const isAttribute = !isNetBonus && isAttributeProperty(property);
+        const labelKey = isNetBonus
+            ? netBonusProperties[property]
+            : toolBonusProperties[property];
+        return {
+            ...b,
+            // Persisted rows may have `value` as either a number or a
+            // formula string. For the Attribute editor input, show
+            // whatever was stored verbatim so `"1d6"` round-trips.
+            value: b.value ?? 0,
+            isAttribute,
+            isNetBonus,
+            label: labelKey ? game.i18n.localize(`CYBERPUNK.${labelKey}`) : property
+        };
+    });
+    const usedProperties = new Set(rows.filter(r => r.property).map(r => r.property));
+    const usedFlavours   = new Set(rows.filter(r => r.isFlavour).map(r => r.flavour));
+    // Property maps carry a raw labelKey string per entry; flavour
+    // maps carry a metadata object with a `labelKey` field. One helper
+    // that reads either shape covers both — the caller doesn't care.
+    const mkOpts = (source, usedSet, extraFilter = null) =>
+        Object.entries(source)
+            .filter(([key]) => !usedSet.has(key) && (!extraFilter || extraFilter(key)))
+            .map(([value, entry]) => ({
+                value,
+                label: game.i18n.localize(`CYBERPUNK.${typeof entry === "string" ? entry : entry.labelKey}`)
+            }));
+    const attributeOptions = mkOpts(toolBonusProperties, usedProperties, isAttributeProperty);
+
+    data.attackerBonuses       = rows;
+    data.attackerAttrOptions   = attributeOptions;
+    data.attackerNetOptions    = mkOpts(netBonusProperties, usedProperties);
+    data.attackerFlavourOptions = mkOpts(netwareFlavours, usedFlavours);
+}
+
+/**
+ * Wire the Attacker Effect tab listeners. Add-attribute stamps op
+ * `−`, value `"1d6"` as the default authoring shape (matches the
+ * migrated Scrambled effect); add-net-bonus stamps op `−`, value `1`.
+ * Value + property changes write back through the standard bonuses
+ * array on `system.bonuses`.
+ */
+export function bindAttackerEffectTabListeners(html, item, { isLocked = false } = {}) {
+    if (isLocked) return;
+
+    const addAttrRow = async () => {
+        const bonuses = [...(item.system.bonuses || [])];
+        const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
+        const firstFree = Object.keys(toolBonusProperties).find(k => !used.has(k) && isAttributeProperty(k));
+        if (!firstFree) {
+            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+            return;
+        }
+        bonuses.push({ type: "property", property: firstFree, op: "−", value: "1d6" });
+        await item.update({ "system.bonuses": bonuses });
+    };
+    const addNetRow = async () => {
+        const bonuses = [...(item.system.bonuses || [])];
+        const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
+        const firstFree = Object.keys(netBonusProperties).find(k => !used.has(k));
+        if (!firstFree) {
+            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+            return;
+        }
+        bonuses.push({ type: "property", property: firstFree, op: "−", value: 1 });
+        await item.update({ "system.bonuses": bonuses });
+    };
+
+    const addFlavourRow = async () => {
+        const bonuses = [...(item.system.bonuses || [])];
+        const used = new Set(bonuses.filter(b => b.type === "flavour").map(b => b.flavour));
+        const firstFree = Object.keys(netwareFlavours).find(k => !used.has(k));
+        if (!firstFree) {
+            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+            return;
+        }
+        bonuses.push({ type: "flavour", flavour: firstFree });
+        await item.update({ "system.bonuses": bonuses });
+    };
+
+    html.find('.attacker-add-attribute').click(ev => { ev.preventDefault(); addAttrRow(); });
+    html.find('.attacker-add-net').click(ev => { ev.preventDefault(); addNetRow(); });
+    html.find('.attacker-add-flavour').click(ev => { ev.preventDefault(); addFlavourRow(); });
+
+    html.find('.attacker-bonus-flavour-select').change(async ev => {
+        const index = parseInt(ev.currentTarget.dataset.index);
+        const newFlavour = ev.currentTarget.value;
+        const bonuses = [...(item.system.bonuses || [])];
+        if (bonuses.some((b, i) => i !== index && b.type === "flavour" && b.flavour === newFlavour)) {
+            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+            item.sheet.render(false);
+            return;
+        }
+        bonuses[index] = { ...bonuses[index], flavour: newFlavour };
+        await item.update({ "system.bonuses": bonuses });
+    });
+
+    html.find('.attacker-remove-bonus').click(async ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const index = parseInt(ev.currentTarget.dataset.index);
+        const bonuses = [...(item.system.bonuses || [])];
+        bonuses.splice(index, 1);
+        await item.update({ "system.bonuses": bonuses });
+    });
+
+    html.find('.attacker-bonus-property-select').change(async ev => {
+        const index = parseInt(ev.currentTarget.dataset.index);
+        const newProperty = ev.currentTarget.value;
+        const bonuses = [...(item.system.bonuses || [])];
+        if (bonuses.some((b, i) => i !== index && b.type === "property" && b.property === newProperty)) {
+            ui.notifications.warn(game.i18n.localize("CYBERPUNK.DuplicateBonus"));
+            item.sheet.render(false);
+            return;
+        }
+        bonuses[index] = { ...bonuses[index], property: newProperty };
+        await item.update({ "system.bonuses": bonuses });
+    });
+
+    html.find('.attacker-bonus-value-input').on('change blur', async ev => {
+        const index = parseInt(ev.currentTarget.dataset.index);
+        const raw = ev.currentTarget.value;
+        const bonuses = [...(item.system.bonuses || [])];
+        if (!bonuses[index]) return;
+        const isAttribute = isAttributeProperty(bonuses[index].property);
+        // Attribute rows accept a formula string; NET Bonus rows are
+        // integer-only. For NET Bonus, coerce whatever the user typed
+        // into an integer so downstream math never sees a string.
+        const value = isAttribute ? String(raw).trim() : (parseInt(raw) || 0);
+        if (bonuses[index].value !== value) {
+            bonuses[index] = { ...bonuses[index], value };
+            await item.update({ "system.bonuses": bonuses });
+        }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -250,12 +471,14 @@ export function prepareWeaponTabContext(data, weapon) {
 export function bindEffectTabListeners(html, item, { isLocked = false } = {}) {
     if (isLocked) return;
 
-    // Add Attribute → property bonus targeting the first unused Key Attribute
-    // (stats.*); Add Property → targets the first unused non-stat property.
-    const addPropertyBonus = async (filterFn, warnKey) => {
+    // Property-add helpers. `keyPool` picks the enum to draw the first
+    // unused key from; `filterFn` narrows within it. Attribute + Property
+    // share the same toolBonusProperties pool (split by isAttributeProperty);
+    // NET Bonus draws from netBonusProperties.
+    const addPropertyBonus = async (keyPool, filterFn, warnKey) => {
         const bonuses = [...(item.system.bonuses || [])];
         const used = new Set(bonuses.filter(b => b.type === "property").map(b => b.property));
-        const firstAvailable = Object.keys(toolBonusProperties).find(k => !used.has(k) && filterFn(k));
+        const firstAvailable = Object.keys(keyPool).find(k => !used.has(k) && filterFn(k));
         if (!firstAvailable) {
             ui.notifications.warn(game.i18n.localize(warnKey));
             return;
@@ -265,11 +488,23 @@ export function bindEffectTabListeners(html, item, { isLocked = false } = {}) {
     };
     html.find('.add-attribute').click(ev => {
         ev.preventDefault();
-        addPropertyBonus(isAttributeProperty, "CYBERPUNK.DuplicateBonus");
+        addPropertyBonus(toolBonusProperties, isAttributeProperty, "CYBERPUNK.DuplicateBonus");
     });
     html.find('.add-property').click(ev => {
         ev.preventDefault();
-        addPropertyBonus(k => !isAttributeProperty(k), "CYBERPUNK.DuplicateBonus");
+        addPropertyBonus(toolBooleanProperties, () => true, "CYBERPUNK.DuplicateBonus");
+    });
+    html.find('.add-modifier').click(ev => {
+        ev.preventDefault();
+        addPropertyBonus(toolModifierProperties, () => true, "CYBERPUNK.DuplicateBonus");
+    });
+    html.find('.add-state').click(ev => {
+        ev.preventDefault();
+        addPropertyBonus(toolStateProperties, () => true, "CYBERPUNK.DuplicateBonus");
+    });
+    html.find('.add-net-bonus').click(ev => {
+        ev.preventDefault();
+        addPropertyBonus(netBonusProperties, () => true, "CYBERPUNK.DuplicateBonus");
     });
 
     html.find('.add-skill').click(async ev => {

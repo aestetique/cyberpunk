@@ -6,6 +6,10 @@ import {
   upgradeEffects
 } from "../lookups.js";
 import { CyberpunkItemSheetV2 } from "./item-sheet-base-v2.js";
+import {
+  prepareEffectTabContext, bindEffectTabListeners,
+  prepareAttackerEffectTabContext, bindAttackerEffectTabListeners
+} from "./embedded-helpers.js";
 
 /**
  * Netware Item Sheet with conditional fields.
@@ -130,6 +134,7 @@ export class CyberpunkNetwareSheet extends CyberpunkItemSheetV2 {
       const effect = sys.attackerEffect || "none";
       const allowEffect = (key) => {
         if (key === "crashed")   return cls === "antiPersonnel" || effect === key;
+        if (key === "derezz")    return cls === "antiPersonnel" || effect === key;
         if (key === "destroyed") return cls === "antiProgram"   || effect === key;
         return true;
       };
@@ -142,6 +147,21 @@ export class CyberpunkNetwareSheet extends CyberpunkItemSheetV2 {
         }));
       const selectedEffKey = attackerEffects[effect] || "EffectNone";
       ctx.selectedAttackerEffectLabel = game.i18n.localize(`CYBERPUNK.${selectedEffKey}`);
+      // `custom` gates two things: the Duration input next to the
+      // Effect dropdown, and the Effect tab itself (attacker-effect
+      // bonus rows are meaningful only when this is Custom).
+      ctx.isCustomEffect = effect === "custom";
+      // Attacker-scoped Effect tab data prep — always populate so the
+      // tab renders correctly on switch, even before the user picks
+      // Custom (the tab header only appears when Custom is selected).
+      prepareAttackerEffectTabContext(ctx, sys.bonuses || []);
+    }
+
+    if (ctx.isCyberdeck) {
+      // Effect tab — same shape as cyberware / tool / outfit. Bonuses
+      // apply to the runner only while the deck is equipped (filtered
+      // in the actor's property pipeline).
+      prepareEffectTabContext(ctx, sys.bonuses || []);
     }
 
     if (ctx.isUpgrade) {
@@ -166,6 +186,16 @@ export class CyberpunkNetwareSheet extends CyberpunkItemSheetV2 {
 
     const html = $(this.element);
     const item = this.document;
+
+    // Effect-tab listeners — only cyberdecks render the Effect tab, but
+    // the binder is a no-op when its selectors don't match, so a gate
+    // isn't strictly required. Kept explicit for clarity.
+    if (context?.isCyberdeck) {
+      bindEffectTabListeners(html, item, { isLocked: this._isLocked });
+    }
+    if (context?.isAttacker) {
+      bindAttackerEffectTabListeners(html, item, { isLocked: this._isLocked });
+    }
 
     html.find('select[name="system.netwareType"]').on('change', async ev => {
       const newType = ev.currentTarget.value;

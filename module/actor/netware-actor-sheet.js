@@ -12,7 +12,9 @@
 
 import { commitPendingEdits, localize, getFilePickerClass, getImagePopoutClass } from "../utils.js";
 import { netwareActorSubtypes, attackerClasses, attackerEffects } from "../lookups.js";
-import { performBlackIceStrike } from "../netrun/net-attack.js";
+import { performBlackIceStrike, performBlackIceSpeed } from "../netrun/net-attack.js";
+import { attachRowMenu } from "../ui/row-context-menu.js";
+import { prepareAttackerEffectTabContext, bindAttackerEffectTabListeners } from "../item/embedded-helpers.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const ActorSheetV2Base = foundry.applications.sheets.ActorSheetV2;
@@ -50,6 +52,7 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
             configureToken:         CyberpunkNetwareActorSheet._onConfigureToken,
             configureSheet:         CyberpunkNetwareActorSheet._onConfigureSheet,
             blackIceAttack:         CyberpunkNetwareActorSheet._onBlackIceAttack,
+            blackIceSpeed:          CyberpunkNetwareActorSheet._onBlackIceSpeed,
             toggleBlackIceCondition: CyberpunkNetwareActorSheet._onToggleBlackIceCondition
         }
     };
@@ -74,6 +77,7 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
         ctx.isAccessPoint  = subtype === "accessPoint";
         ctx.isPassword     = subtype === "password";
         ctx.isFile         = subtype === "file";
+        ctx.isAccount      = subtype === "account";
         ctx.isControlPoint = subtype === "controlPoint";
         ctx.isBlackIce     = subtype === "blackIce";
         // Per-subtype "Row 2" field flags — each non-Black-ICE subtype gets
@@ -84,7 +88,7 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
         // Row 1 right-column: Radius (AP), DV (other gated subtypes), or REZ
         // (Black ICE). All three share the existing slot in the template.
         ctx.showRadius = ctx.isAccessPoint;
-        ctx.showDV     = ctx.isPassword || ctx.isFile || ctx.isControlPoint;
+        ctx.showDV     = ctx.isPassword || ctx.isFile || ctx.isAccount || ctx.isControlPoint;
         ctx.showRez    = ctx.isBlackIce;
 
         ctx.subtypeOptions = Object.entries(netwareActorSubtypes).map(([value, key]) => ({
@@ -122,6 +126,7 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
             const effect = sys.attackerEffect || "none";
             const allowEffect = (key) => {
                 if (key === "crashed")   return cls === "antiPersonnel";
+                if (key === "derezz")    return cls === "antiPersonnel";
                 if (key === "destroyed") return cls === "antiProgram";
                 return true;
             };
@@ -133,6 +138,13 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
                     selected: value === effect
                 }));
             ctx.selectedAttackerEffectLabel = loc(attackerEffects[effect] ?? "EffectNone");
+
+            // Custom effect gates both the Duration input and the
+            // inline Effect block below the details. Always populate
+            // the attacker-effect context so the render is stable
+            // regardless of the current selection.
+            ctx.isCustomEffect = effect === "custom";
+            prepareAttackerEffectTabContext(ctx, sys.bonuses || []);
         }
 
         ctx.descriptionLines = (sys.description || "").split("\n");
@@ -167,6 +179,66 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
                 if (stale) await this.document.update({ "system.attackerEffect": "none" });
             });
         }
+
+        // Attacker-effect bonus row handlers (Custom mode). Selectors
+        // scoped under the inline `.black-ice-effect-block`; when
+        // Custom isn't selected the block isn't rendered and the
+        // find() calls no-op.
+        bindAttackerEffectTabListeners($(root), this.document, { isLocked: this._isLocked });
+
+        // Right-click on the card body opens a context menu with the
+        // netware actor's primary actions. Delegates to the same
+        // data-action buttons the header/body already expose so both
+        // entry paths converge on one handler set.
+        this._attachCardContextMenu(root);
+    }
+
+    _attachCardContextMenu(root) {
+        const actor = this.document;
+        const isBlackIce = actor?.system?.subtype === "blackIce";
+        const clickAction = (name) => root.querySelector(`[data-action="${name}"]`)?.click();
+        const entries = [
+            {
+                label: localize("Attack"),
+                icon:  '<i class="fas fa-crosshairs"></i>',
+                visible: () => isBlackIce,
+                callback: () => performBlackIceStrike(actor)
+            },
+            {
+                label: localize("Speed"),
+                icon:  '<i class="fas fa-tachometer-alt"></i>',
+                visible: () => isBlackIce,
+                callback: () => performBlackIceSpeed(actor)
+            },
+            {
+                label: localize("Conditions.Disabled"),
+                icon:  '<i class="fas fa-power-off"></i>',
+                visible: () => isBlackIce,
+                callback: () => root.querySelector('[data-condition="disabled"]')?.click()
+            },
+            {
+                label: localize("Conditions.Dead"),
+                icon:  '<i class="fas fa-skull"></i>',
+                visible: () => isBlackIce,
+                callback: () => root.querySelector('[data-condition="dead"]')?.click()
+            },
+            {
+                label: localize("ConfigureToken"),
+                icon:  '<i class="fas fa-user-circle"></i>',
+                callback: () => clickAction("configureToken")
+            },
+            {
+                label: localize("ConfigureSheet"),
+                icon:  '<i class="fas fa-cog"></i>',
+                callback: () => clickAction("configureSheet")
+            },
+            {
+                label: localize("CopyUUID"),
+                icon:  '<i class="fas fa-passport"></i>',
+                callback: () => clickAction("copyUuid")
+            }
+        ];
+        attachRowMenu(root, ".netware-actor-card", () => entries);
     }
 
     static async _onLockToggle(event, _target) {
@@ -225,6 +297,18 @@ export class CyberpunkNetwareActorSheet extends HandlebarsApplicationMixin(Actor
     static _onBlackIceAttack(event, _target) {
         event?.preventDefault?.();
         performBlackIceStrike(this.document);
+    }
+
+    /**
+     * Black ICE Speed button. Opposed roll against a targeted netrunner
+     * NET icon — Black ICE rolls SPD, netrunner defends with Interface.
+     * On success the ICE's stored damage + effect land as a free hit
+     * (same zap-hit Apply pipeline the Attack button uses). No NET
+     * action is spent on the netrunner side.
+     */
+    static _onBlackIceSpeed(event, _target) {
+        event?.preventDefault?.();
+        performBlackIceSpeed(this.document);
     }
 
     /**

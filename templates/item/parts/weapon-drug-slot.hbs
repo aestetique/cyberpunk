@@ -1,0 +1,30 @@
+{{!--
+  Drug drop slot for gas weapons. Sized exactly like `.variable-input`
+  (126×26) in both locked and unlocked modes so it doesn't disturb the
+  row's rhythm on lock toggle. Filled state shows the drug name
+  (click opens the drug sheet, unlocked mode gets a trash button);
+  empty state is a drop target with a placeholder.
+
+  Only inhaled / contact drugs are accepted — validation lives in
+  `weapon-sheet.js:_onDrop`. Self-gates on `isDrugEffect` so callers
+  can include unconditionally.
+--}}
+{{#if isDrugEffect}}
+  <div class="variable-field weapon-drug-slot-field">
+    <label class="variable-label">{{localize "CYBERPUNK.EffDrug"}}</label>
+    {{#if attachedDrug}}
+      <div class="weapon-drug-slot filled" data-drop-target="weapon-drug">
+        <span class="weapon-drug-slot-name weapon-drug-slot-open" data-uuid="{{attachedDrug.uuid}}">{{attachedDrug.name}}</span>
+        {{#unless isLocked}}
+          <button type="button" class="weapon-drug-slot-remove" title="{{localize "CYBERPUNK.Delete"}}">
+            <img src="systems/cyberpunk/img/ui/icon-trash.svg" alt="">
+          </button>
+        {{/unless}}
+      </div>
+    {{else}}
+      <div class="weapon-drug-slot empty" data-drop-target="weapon-drug">
+        <span class="placeholder">{{#if isLocked}}{{localize "CYBERPUNK.DrugSlotPlaceholderLocked"}}{{else}}{{localize "CYBERPUNK.DrugSlotPlaceholderEmpty"}}{{/if}}</span>
+      </div>
+    {{/if}}
+  </div>
+{{/if}}

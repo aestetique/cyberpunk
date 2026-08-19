@@ -89,11 +89,17 @@
       <a class="tab-header {{#if (eq activeTab 'description')}}active{{/if}}" data-action="tabSwitch" data-tab="description">
         <span class="tab-text">{{localize "CYBERPUNK.Description"}}</span>
       </a>
+      <a class="tab-header {{#if (eq activeTab 'drug')}}active{{/if}}" data-action="tabSwitch" data-tab="drug">
+        <span class="tab-text">{{localize "CYBERPUNK.Drug"}}</span>
+      </a>
       <a class="tab-header {{#if (eq activeTab 'effect')}}active{{/if}}" data-action="tabSwitch" data-tab="effect">
         <span class="tab-text">{{localize "CYBERPUNK.Effect"}}</span>
       </a>
       <a class="tab-header {{#if (eq activeTab 'withdrawal')}}active{{/if}}" data-action="tabSwitch" data-tab="withdrawal">
         <span class="tab-text">{{localize "CYBERPUNK.Withdrawal"}}</span>
+      </a>
+      <a class="tab-header {{#if (eq activeTab 'cumulative')}}active{{/if}}" data-action="tabSwitch" data-tab="cumulative">
+        <span class="tab-text">{{localize "CYBERPUNK.Cumulative"}}</span>
       </a>
     </div>
 
@@ -122,18 +128,13 @@
           <input type="text" class="source-input" name="system.source" value="{{system.source}}" placeholder="Core Rulebook, p.XX" {{#if isLocked}}readonly{{/if}}>
         </div>
 
-      {{else if (eq activeTab 'effect')}}
-        {{!-- Duration + Strength row (Effect phase) — matches the Damage
-             input shape on the weapon sheet (.variable-input, 126px). --}}
+      {{else if (eq activeTab 'drug')}}
+        {{!-- Drug tab — three rows of core stats. Strength / Duration are
+             shared across every lifecycle stage; Method / Detection /
+             Residue are pure flavour dropdowns for GM prompts; Onset
+             Time governs how long the drug sits inactive before its
+             bonuses come online. --}}
         <div class="variables-row">
-          <div class="variable-field">
-            <label class="variable-label">{{localize "CYBERPUNK.DrugDuration"}}</label>
-            {{#if isLocked}}
-              <div class="dropdown"><span class="dropdown-text">{{system.duration}}</span></div>
-            {{else}}
-              <input type="number" class="variable-input drug-meta-input" name="system.duration" value="{{system.duration}}" step="1" min="0">
-            {{/if}}
-          </div>
           <div class="variable-field">
             <label class="variable-label">{{localize "CYBERPUNK.DrugStrength"}}</label>
             {{#if isLocked}}
@@ -142,29 +143,97 @@
               <input type="number" class="variable-input drug-meta-input" name="system.strength" value="{{system.strength}}" step="1" min="0">
             {{/if}}
           </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugMethodTaken"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown">
+                <span class="dropdown-text">{{selectedDrugMethodLabel}}</span>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{else}}
+              <div class="dropdown-wrapper">
+                <select class="dropdown-select" name="system.methodTaken">
+                  {{#each drugMethodOptions}}
+                    <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                  {{/each}}
+                </select>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{/if}}
+          </div>
         </div>
-        {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=bonuses propertyOptions=propertyOptions bonusSet="bonuses" isLocked=isLocked}}
-      {{else}}
-        {{!-- Duration + Strength row (Withdrawal phase) --}}
+
         <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugDetection"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown">
+                <span class="dropdown-text">{{selectedDrugDetectionLabel}}</span>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{else}}
+              <div class="dropdown-wrapper">
+                <select class="dropdown-select" name="system.detection">
+                  {{#each drugDetectionOptions}}
+                    <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                  {{/each}}
+                </select>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{/if}}
+          </div>
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugOnsetTime"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown"><span class="dropdown-text">{{system.onsetDuration}}</span></div>
+            {{else}}
+              <input type="number" class="variable-input drug-meta-input" name="system.onsetDuration" value="{{system.onsetDuration}}" step="1" min="0">
+            {{/if}}
+          </div>
+        </div>
+
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugResidue"}}</label>
+            {{#if isLocked}}
+              <div class="dropdown">
+                <span class="dropdown-text">{{selectedDrugResidueLabel}}</span>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{else}}
+              <div class="dropdown-wrapper">
+                <select class="dropdown-select" name="system.residue">
+                  {{#each drugResidueOptions}}
+                    <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                  {{/each}}
+                </select>
+                <div class="dropdown-chevron"><img src="systems/cyberpunk/img/ui/icon-down.svg" alt=""></div>
+              </div>
+            {{/if}}
+          </div>
           <div class="variable-field">
             <label class="variable-label">{{localize "CYBERPUNK.DrugDuration"}}</label>
             {{#if isLocked}}
-              <div class="dropdown"><span class="dropdown-text">{{system.withdrawalDuration}}</span></div>
+              <div class="dropdown"><span class="dropdown-text">{{system.duration}}</span></div>
             {{else}}
-              <input type="number" class="variable-input drug-meta-input" name="system.withdrawalDuration" value="{{system.withdrawalDuration}}" step="1" min="0">
-            {{/if}}
-          </div>
-          <div class="variable-field">
-            <label class="variable-label">{{localize "CYBERPUNK.DrugStrength"}}</label>
-            {{#if isLocked}}
-              <div class="dropdown"><span class="dropdown-text">{{system.withdrawalStrength}}</span></div>
-            {{else}}
-              <input type="number" class="variable-input drug-meta-input" name="system.withdrawalStrength" value="{{system.withdrawalStrength}}" step="1" min="0">
+              <input type="number" class="variable-input drug-meta-input" name="system.duration" value="{{system.duration}}" step="1" min="0">
             {{/if}}
           </div>
         </div>
-        {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=withdrawal propertyOptions=withdrawalPropertyOptions bonusSet="withdrawal" isLocked=isLocked}}
+
+      {{else if (eq activeTab 'effect')}}
+        {{!-- Effect bonus rows only — Duration / Strength moved to the
+             Drug tab and are single-authored across all phases. --}}
+        {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=bonuses propertyOptions=propertyOptions modifierOptions=modifierOptions stateOptions=stateOptions flavourOptions=flavourOptions bonusSet="bonuses" isLocked=isLocked}}
+      {{else if (eq activeTab 'withdrawal')}}
+        {{!-- Withdrawal bonus rows only — duration is always rolled 2d6h
+             at the Active → Withdrawal transition. --}}
+        {{> "systems/cyberpunk/templates/item/parts/drug-bonuses.hbs" bonusList=withdrawal propertyOptions=withdrawalPropertyOptions modifierOptions=withdrawalModifierOptions stateOptions=withdrawalStateOptions flavourOptions=withdrawalFlavourOptions bonusSet="withdrawal" isLocked=isLocked}}
+      {{else}}
+        {{!-- Cumulative tab — a plain list of keys the drug feeds on
+             Onset→Active. No op / value fields (fixed by drug strength
+             via CUMULATIVE_STRENGTH_MUL). Add / delete only. --}}
+        {{> "systems/cyberpunk/templates/item/parts/drug-cumulative.hbs" cumulativeRows=cumulativeRows isLocked=isLocked}}
       {{/if}}
     </div>
   </div>

@@ -1330,9 +1330,6 @@ export class CyberpunkItem extends Item {
    */
   _getEffectIcon(effect) {
       const icons = {
-          confusion: "confused",
-          poisoned: "poisoned",
-          tearing: "tearing",
           drug: "poisoned",
           unconscious: "unconscious",
           stunAt0: "shocked",

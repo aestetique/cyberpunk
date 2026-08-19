@@ -2289,11 +2289,11 @@ export class CyberpunkChatMessage extends ChatMessage {
     async _applyExoticEffect(actor, effect, hitLocation, saveCount = 1, sourceUuid = null, drugUuid = null) {
         // Ignore Gas Effects — property (drug / tool / cyberware / etc.)
         // that fully suppresses save + condition for the RED gas family:
-        // Confusion, Poisoned, Tearing, Unconscious, Nerve Gas, and the
-        // unified Drug applicator. Any positive accumulated value on the
-        // target immunises them; a notification lets the table see the
+        // Unconscious, Nerve Gas (deathAt0), and the unified Drug
+        // applicator. Any positive accumulated value on the target
+        // immunises them; a notification lets the table see the
         // immunity fire.
-        const GAS_EFFECTS = new Set(["confusion", "poisoned", "tearing", "unconscious", "deathAt0", "drug"]);
+        const GAS_EFFECTS = new Set(["unconscious", "deathAt0", "drug"]);
         if (GAS_EFFECTS.has(effect) && Number(actor.system?.ignoreGasEffects) > 0) {
             let effectLabel;
             if (effect === "drug" && drugUuid) {
@@ -2319,18 +2319,6 @@ export class CyberpunkChatMessage extends ChatMessage {
         };
 
         switch (effect) {
-            case "confusion":
-                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "confused"));
-                break;
-
-            case "poisoned":
-                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "poisoned"));
-                break;
-
-            case "tearing":
-                await rollUntilFail(() => this._rollEffectSave(actor, "poison", "tearing"));
-                break;
-
             case "unconscious":
                 await rollUntilFail(() => this._rollEffectSave(actor, "poison", "unconscious"));
                 break;

@@ -1087,17 +1087,13 @@ export function isPlacementRequired(cyberwareType, cyberwareSubtype) {
  */
 export const weaponEffects = {
     none: "EffNone",
-    // Unified drug applicator — replaces the three fixed gas conditions
-    // (confusion / poisoned / tearing). When selected the weapon shows
+    // Unified drug applicator — the three fixed gas conditions
+    // (confusion / poisoned / tearing) it replaced were retired after
+    // the 2.7.0 compendium migration. When selected the weapon shows
     // a drop slot for an inhaled/contact drug item; on a failed Poison
     // Save the drug is applied to the target with its own onset /
     // duration / bonuses. Ignore-Gas-Effects still suppresses the save.
-    // The three legacy keys are kept below so unmigrated compendium
-    // weapons keep firing their old behaviour until the follow-up pass.
     drug: "EffDrug",
-    confusion: "EffConfusion",
-    poisoned: "EffPoisoned",
-    tearing: "EffTearing",
     unconscious: "EffUnconscious",
     stunAt0: "EffStunAt0",
     stunAt1: "EffStunAt1",

@@ -1,0 +1,50 @@
+{{!--
+  Drug reaction chat card — one per Drug Mixing reaction or Overdose.
+
+  Posted by evaluateDrugIntake (module/drug-effects.js) right after a dose
+  lands. The target actor and each button's action live in the message's
+  `flags.cyberpunk.drugReaction`; buttons only carry their action index.
+
+  Visual layout:
+    [section-bar]  "Mixing Drugs" / "Overdose" with the drug icon
+    [drug-line ×N] what caused it: both drugs (mixing) or the last dose (overdose)
+    [section-bar]  the exact result name, no icon
+    [rows]         what happens, in the standard chat styles: effect rows
+                   (drug changes, unconsciousness, coma, death save, illness)
+                   and the damage roll; GM-only Apply under the rows that
+                   need one
+--}}
+<div class="cyberpunk-card cyberpunk-card--drug-reaction">
+
+    {{> (sysPath "chat/partials/section-bar.hbs") label=sectionLabel icon="drug"}}
+
+    {{#each drugs}}
+    <div class="weapon-line">
+        <div class="weapon-line__icon">
+            <img src="{{img}}" alt="{{name}}">
+        </div>
+        <div class="weapon-line__info">
+            <div class="weapon-line__name">{{name}}</div>
+            <div class="weapon-line__type">{{subtext}}</div>
+        </div>
+    </div>
+    {{/each}}
+
+    {{> (sysPath "chat/partials/section-bar.hbs") label=resultLabel}}
+
+    {{#each rows}}
+    {{#if damage}}
+    {{> (sysPath "chat/partials/damage-roll.hbs") formula=damage.formula diceGroups=damage.diceGroups displayValue=damage.total}}
+    {{else}}
+    <div class="effect-row">
+        <img src="{{icon}}" alt="">
+        <span class="effect-row__label">{{label}}</span>
+    </div>
+    {{/if}}
+    {{#if hasAction}}
+    <div class="drug-reaction__actions gm-only">
+        <button type="button" class="drug-reaction-btn" data-action-index="{{actionIndex}}">{{loc "Apply"}}</button>
+    </div>
+    {{/if}}
+    {{/each}}
+</div>

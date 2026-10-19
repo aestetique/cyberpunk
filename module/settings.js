@@ -56,4 +56,41 @@ export function registerSystemSettings() {
       }
     }
   });
+
+  /** Drug Mixing automation — a reaction roll whenever a drug meets another one in the system. */
+  game.settings.register("cyberpunk", "drugMixing", {
+    name: "SETTINGS.DrugMixing",
+    hint: "SETTINGS.DrugMixingHint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  /** Overdose automation — a roll on the Overdose table at 30 / Strength doses. */
+  game.settings.register("cyberpunk", "drugOverdose", {
+    name: "SETTINGS.DrugOverdose",
+    hint: "SETTINGS.DrugOverdoseHint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  /**
+   * Remembered drug reactions — the rules repeat a pair's mixing result and
+   * a drug's overdose result for everyone. Hidden; written by the active
+   * GM's client (see persistReactionMemory in drug-effects.js).
+   * Shape: { pairs: { "black lace|boost": { band, winner } }, overdoses: { "boost": band } }
+   */
+  game.settings.register("cyberpunk", "drugReactions", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { pairs: {}, overdoses: {} },
+    onChange: async (value) => {
+      const { syncPendingDrugMemory } = await import("./drug-effects.js");
+      syncPendingDrugMemory(value);
+    }
+  });
 }

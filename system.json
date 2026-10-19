@@ -3,7 +3,7 @@
   "title": "New Renaissance",
   "description": "New Renaissance is unofficial content provided under the Homebrew Content Policy of R. Talsorian Games and is not approved or endorsed by RTG. This content references materials that are the property of R. Talsorian Games and its licensees.",
   "background": "systems/cyberpunk/img/ui/system-background.webp",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -14,8 +14,8 @@
       "url": "https://t.me/ttrpg"
     },
     {
-      "name": "Svetlana Korobtseva",
-      "url": "https://t.me/lovedeathdnd"
+      "name": "wizzzjer",
+      "url": "https://github.com/wizzzjer"
     },
     {
       "name": "Tilt",
@@ -24,7 +24,8 @@
     },
     {
       "name": "OctarineSourceror",
-      "discord": "octarinesorcerer"
+      "discord": "octarinesorcerer",
+      "url": "https://discord.gg/xPQcDZYDMU"
     }
   ],
   "scripts": [],
@@ -116,5 +117,5 @@
   "secondaryTokenAttribute": null,
   "url": "https://github.com/aestetique/cyberpunk",
   "manifest": "https://raw.githubusercontent.com/aestetique/cyberpunk/main/system.json",
-  "download": "https://github.com/aestetique/cyberpunk/archive/refs/tags/release-1.0.4.zip"
+  "download": "https://github.com/aestetique/cyberpunk/archive/refs/tags/release-2.7.3.zip"
 }

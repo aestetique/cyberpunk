@@ -812,11 +812,11 @@ export const CONDITION_TOGGLE_ROWS = [
         { id: "frightened",  label: "Frightened", icon: "frightened",  flavor: "Terrified and frozen in place, unable to act.", calc: "Cannot act" },
         { id: "fleeing",     label: "Fleeing",    icon: "fleeing",     flavor: "Overcome with terror, running from the source of fright.", calc: "Must flee" },
         { id: "insomnia",    label: "Insomnia",   icon: "insomnia",    flavor: "Accumulated stress prevents restful sleep.", calc: "Must check to fall asleep" },
-        { id: "insane",      label: "Insane",     icon: "insane",      flavor: "Pushed Over the Edge — must roll on the Insanity table.", calc: "Roll on Insanity table" }
+        { id: "insane",      label: "Insane",     icon: "insane",      flavor: "Pushed Over the Edge. Must roll on the Insanity table.", calc: "Roll on Insanity table" }
     ],
     [
         { id: "jacked-in",       label: "Jacked In", icon: "jacked-in",       flavor: "Mind plugged directly into cyberspace.", calc: "Connected to the Net" },
-        { id: "burning",         label: "Burning",   icon: "burning",         flavor: "Engulfed in flames, taking escalating damage each turn.", calc: "2d10 → 1d10 → 1d6 over 3 turns" },
+        { id: "burning",         label: "Burning",   icon: "burning",         flavor: "Engulfed in flames, taking escalating damage each turn.", calc: "2d10, then 1d10, then 1d6 over 3 turns" },
         { id: "acid",            label: "Acid",      icon: "acid",            flavor: "Corrosive substance eating through protective gear.", calc: "Armor −1d6 SP/round for 3 rounds" },
         { id: "shorted",         label: "Shorted",   icon: "microwave",       flavor: "Neural circuits disrupted by electromagnetic pulse.", calc: "REF −3" },
         { id: "lost-left-arm",   label: "Left Arm",  icon: "lost-left-arm",   flavor: "Limb severed or rendered completely nonfunctional.", calc: "Left arm destroyed" },
@@ -833,9 +833,9 @@ export const DRONE_CONDITION_TOGGLE_ROW = [
     { id: "restrained",  label: "Restrained",  icon: "restrained",  flavor: "Bound or held in place by physical restraints.", calc: "−2 on all checks" },
     { id: "immobilized", label: "Immobilized", icon: "immobilized", flavor: "Unable to move from current position.", calc: "MA = 0" },
     { id: "prone",       label: "Prone",       icon: "prone",       flavor: "Knocked down or lying flat on the ground.", calc: "MA = 0" },
-    { id: "burning",     label: "Burning",     icon: "burning",     flavor: "Engulfed in flames, taking escalating damage each turn.", calc: "2d10 → 1d10 → 1d6 over 3 turns" },
+    { id: "burning",     label: "Burning",     icon: "burning",     flavor: "Engulfed in flames, taking escalating damage each turn.", calc: "2d10, then 1d10, then 1d6 over 3 turns" },
     { id: "acid",        label: "Acid",        icon: "acid",        flavor: "Corrosive substance eating through protective gear.", calc: "Armor −1d6 SP/round for 3 rounds" },
-    { id: "blinded",     label: "Blinded",     icon: "blinded",     flavor: "Sensors compromised — unable to see surroundings.", calc: "Cannot see | −4 Awareness" },
+    { id: "blinded",     label: "Blinded",     icon: "blinded",     flavor: "Sensors compromised, unable to see surroundings.", calc: "Cannot see | −4 Awareness" },
     { id: "disabled",    label: "Disabled",    icon: "disabled",    flavor: "Drone is offline and cannot act.", calc: "Cannot act" },
     { id: "dead",        label: "Dead",        icon: "dead",        flavor: "Wrecked beyond recovery.", calc: "Cannot act" }
 ];

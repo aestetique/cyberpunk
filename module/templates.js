@@ -48,6 +48,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/item-transfer.hbs",
         "systems/cyberpunk/templates/chat/item-trade.hbs",
         "systems/cyberpunk/templates/chat/drug-use.hbs",
+        "systems/cyberpunk/templates/chat/drug-reaction.hbs",
         "systems/cyberpunk/templates/actor/shop-sheet.hbs",
 
         // Chat card partials
@@ -58,6 +59,7 @@ export const preloadHandlebarsTemplates = async function() {
         "systems/cyberpunk/templates/chat/partials/roll-details.hbs",
         "systems/cyberpunk/templates/chat/partials/result-row.hbs",
         "systems/cyberpunk/templates/chat/partials/damage-grid.hbs",
+        "systems/cyberpunk/templates/chat/partials/damage-roll.hbs",
         "systems/cyberpunk/templates/chat/partials/fumble-section.hbs",
 
         // Item sheet

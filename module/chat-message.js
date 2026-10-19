@@ -5,7 +5,7 @@ import { getCurrentGameTime } from "./dialog/game-time-dialog.js";
 import { DefenceRollDialog } from "./dialog/defence-roll-dialog.js";
 import { MedicalHelpDialog } from "./dialog/medical-help-dialog.js";
 import { formatGameTimeShort, parseCampaignStartDate } from "./dialog/game-time-dialog.js";
-import { applyDrugToActor, spawnDrugEffect } from "./drug-effects.js";
+import { applyDrugToActor, spawnDrugEffect, drugReactionDuration } from "./drug-effects.js";
 import { deckHasUpgrade, getEquippedDeck } from "./netrun/upgrades.js";
 import { NetActionRollDialog, commitLuckSpend } from "./dialog/net-action-roll-dialog.js";
 import { activeBoosterValue } from "./dialog/cyberdeck-action-dialog.js";
@@ -405,6 +405,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                 }
             }
         }
+
+        // Drug reaction card (Mixing Drugs / Overdose) — GM-only Apply
+        // buttons; the .gm-only pass above already hid them for players.
+        const reactionCard = html.querySelector(".cyberpunk-card--drug-reaction");
+        if (reactionCard) this._activateDrugReaction(reactionCard);
 
         // Medical Help button
         const medicalCard = html.querySelector(".cyberpunk-card--medical-help");
@@ -1629,11 +1634,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                     const cyberHeadDoubleStr = isHeadHit && damageBeforeHeadDouble > 0 ? ` ×2` : '';
 
                     if (damageType === "spike" && afterArmor > 0) {
-                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} → ⌊${afterArmor}/2⌋${cyberHeadDoubleStr} = ${finalDamage} SDP`);
+                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${afterArmor}, ⌊${afterArmor}/2⌋${cyberHeadDoubleStr} = ${finalDamage} SDP`);
                     } else if (ammoType === "armorPiercing") {
-                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} → ⌊${afterArmor}/2⌋${cyberHeadDoubleStr} = ${finalDamage} SDP`);
+                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${afterArmor}, ⌊${afterArmor}/2⌋${cyberHeadDoubleStr} = ${finalDamage} SDP`);
                     } else if (ammoType === "hollowPoint") {
-                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} → ⌊${afterArmor}×1.5⌋${cyberHeadDoubleStr} = ${finalDamage} SDP`);
+                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${afterArmor}, ⌊${afterArmor}×1.5⌋${cyberHeadDoubleStr} = ${finalDamage} SDP`);
                     } else if (isHeadHit && damageBeforeHeadDouble > 0) {
                         // Cyber-head hit without special ammo type - show the doubling
                         hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${damageBeforeHeadDouble} ×2 = ${finalDamage} SDP`);
@@ -1650,11 +1655,11 @@ export class CyberpunkChatMessage extends ChatMessage {
                     const btmStr = btm ? ` - ${btm} BTM` : '';
 
                     if (damageType === "spike" && afterArmor > 0) {
-                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} → ⌊${afterArmor}/2⌋${headDoubleStr}${btmStr} = ${finalDamage}`);
+                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${afterArmor}, ⌊${afterArmor}/2⌋${headDoubleStr}${btmStr} = ${finalDamage}`);
                     } else if (ammoType === "armorPiercing") {
-                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} → ⌊${afterArmor}/2⌋${headDoubleStr}${btmStr} = ${finalDamage}`);
+                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${afterArmor}, ⌊${afterArmor}/2⌋${headDoubleStr}${btmStr} = ${finalDamage}`);
                     } else if (ammoType === "hollowPoint") {
-                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} → ⌊${afterArmor}×1.5⌋${headDoubleStr}${btmStr} = ${finalDamage}`);
+                        hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${afterArmor}, ⌊${afterArmor}×1.5⌋${headDoubleStr}${btmStr} = ${finalDamage}`);
                     } else if (isHeadHit && damageBeforeHeadDouble > 0) {
                         // Head hit without special ammo type - show the doubling
                         hintParts.push(`${location}: ${rawDamage} - ${spLabel} = ${damageBeforeHeadDouble} ×2${btmStr} = ${finalDamage}`);
@@ -2198,6 +2203,105 @@ export class CyberpunkChatMessage extends ChatMessage {
         if (content) {
             await this.setFlag("cyberpunk", "appliedTargetHtml", content.innerHTML);
         }
+    }
+
+    /**
+     * Wire a drug reaction card's Apply buttons. Each button runs the action
+     * at its index in `flags.cyberpunk.drugReaction.actions`; what happened
+     * is stored in `applied[index]`, so a re-render (or another GM's client)
+     * shows the button locked instead of offering it again.
+     * @param {HTMLElement} card
+     * @private
+     */
+    _activateDrugReaction(card) {
+        const data = this.getFlag("cyberpunk", "drugReaction");
+        if (!data) return;
+        for (const btn of card.querySelectorAll(".drug-reaction-btn")) {
+            const index = Number(btn.dataset.actionIndex);
+            const result = data.applied?.[index];
+            if (result) {
+                this._markDrugReactionApplied(card, btn, index, result);
+            } else if (game.user.isGM) {
+                btn.addEventListener("click", (event) => this._onDrugReactionApply(event, card, btn, index));
+            }
+        }
+    }
+
+    /**
+     * Lock an applied button and, for a survived death save, add the coma
+     * line it led to.
+     * @private
+     */
+    _markDrugReactionApplied(card, btn, index, result) {
+        btn.disabled = true;
+        const labelKey = result.outcome === "survived" ? "Survived"
+            : result.outcome === "died" ? "Died" : "Applied";
+        btn.textContent = localize(labelKey);
+        if (result.outcome !== "survived" || card.querySelector(`.drug-reaction__coma[data-for="${index}"]`)) return;
+
+        // Same effect-row markup the template uses for a rolled coma.
+        const row = document.createElement("div");
+        row.className = "effect-row drug-reaction__coma";
+        row.dataset.for = String(index);
+        const icon = document.createElement("img");
+        icon.src = "systems/cyberpunk/img/conditions/unconscious.svg";
+        icon.alt = "";
+        const label = document.createElement("span");
+        label.className = "effect-row__label";
+        label.textContent = `${localize("DrugReactionComa")} · ${drugReactionDuration(result.comaDays, "Day")}`;
+        row.append(icon, label);
+        (btn.closest(".drug-reaction__actions") ?? btn).after(row);
+    }
+
+    /**
+     * Run one drug reaction action against the card's character:
+     *   damage      → internal damage (no armor / BTM) + the usual saves
+     *   unconscious → the Unconscious status (hours / days are narrative)
+     *   deathSave   → Death Save with the band's modifier; failure applies
+     *                 Dead (inside rollDeathSave), success means a coma —
+     *                 2d6 days, Unconscious applied.
+     * @private
+     */
+    async _onDrugReactionApply(event, card, btn, index) {
+        event.preventDefault();
+        if (!game.user.isGM) return;
+        const data = this.getFlag("cyberpunk", "drugReaction");
+        const action = data?.actions?.[index];
+        if (!action || data.applied?.[index]) return;
+
+        const actor = await fromUuid(data.actorUuid);
+        if (!actor) {
+            ui.notifications.warn(localize("DrugReactionNoTarget"));
+            return;
+        }
+
+        // Lock before the saves roll so a double click can't apply twice.
+        btn.disabled = true;
+        let result = { outcome: "applied" };
+        try {
+            if (action.type === "damage") {
+                await actor.applyInternalDamage(action.amount);
+            } else if (action.type === "unconscious") {
+                await actor.toggleStatusEffect("unconscious", { active: true });
+            } else if (action.type === "deathSave") {
+                const survived = await actor.rollDeathSave(Number(action.modifier) || 0);
+                if (survived) {
+                    const comaRoll = await new Roll(action.comaDays || "2d6").evaluate();
+                    if (game.dice3d) await game.dice3d.showForRoll(comaRoll, game.user, true);
+                    await actor.toggleStatusEffect("unconscious", { active: true });
+                    result = { outcome: "survived", comaDays: comaRoll.total };
+                } else {
+                    result = { outcome: "died" };
+                }
+            }
+        } catch (err) {
+            console.error("CYBERPUNK | Drug reaction apply failed:", err);
+            btn.disabled = false;
+            return;
+        }
+
+        this._markDrugReactionApplied(card, btn, index, result);
+        await this.setFlag("cyberpunk", `drugReaction.applied.${index}`, result);
     }
 
     /**

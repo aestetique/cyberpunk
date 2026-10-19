@@ -23,6 +23,13 @@
  */
 
 import { CUMULATIVE_STRENGTH_MUL, effectiveBonusOp } from "./lookups.js";
+import {
+    MIXING_TABLE, OVERDOSE_TABLE, MAX_STACKED_DOSES,
+    bandFor, bandByKey, drugIdentity, pairKey, isOverdose,
+    mixChangeFor, mixFlagPatch, drugRowsFromFlags, effectiveStrengthFromFlags
+} from "./drug-interactions.js";
+import { renderTemplateCompat, actorsWithOwnEffects } from "./utils.js";
+import { processFormulaRoll } from "./dice.js";
 
 const DRUG_EFFECT_FLAG = "isDrugEffect";
 
@@ -58,7 +65,8 @@ async function bumpCumulatives(actor, keys, strength) {
 async function bumpCumulativesFromEffect(effectOrData, actor) {
     const flags = effectOrData?.flags?.cyberpunk;
     if (!flags) return;
-    await bumpCumulatives(actor, flags.cumulativeKeys || [], flags.strength || 0);
+    // Effective strength — a Partially Compatible mix halves the bump too.
+    await bumpCumulatives(actor, flags.cumulativeKeys || [], effectiveStrengthFromFlags(flags));
 }
 
 /**
@@ -220,7 +228,16 @@ export function buildDrugEffectData(supply) {
                 // Withdrawal duration is rolled 2d6h at the Active →
                 // Withdrawal transition. Stored as 0 until then.
                 withdrawalDuration: 0,
-                strength: Math.max(0, Math.floor(Number(sys.strength) || 0))
+                strength: Math.max(0, Math.floor(Number(sys.strength) || 0)),
+                // Mixing / multiple-dose state, filled in by
+                // evaluateDrugIntake right after the effect is created.
+                // `safeToMix` is copied here because the supply item may
+                // be used up before the drug meets another one.
+                safeToMix: sys.safeToMix === true,
+                dose: 1,
+                potency: 1,
+                nullify: null,
+                mixedWith: []
             }
         }
     };
@@ -232,17 +249,13 @@ export function isDrugEffect(effect) {
 }
 
 /**
- * Bonuses currently in force for `effect`, based on its phase flag. Used by
- * the bonus pipeline to feed drug contributions into the per-stat × → + → =
- * machinery alongside item bonuses. Onset returns an empty list — no
- * effects apply until the drug takes hold.
+ * Bonuses currently in force for `effect`: its phase's rows after mixing
+ * potency and nullify. Onset returns an empty list — no effects apply
+ * until the drug takes hold.
  */
 export function activeDrugBonuses(effect) {
     if (!isDrugEffect(effect)) return [];
-    const phase = effect.getFlag("cyberpunk", "phase") || "active";
-    if (phase === "onset") return [];
-    const key = phase === "withdrawal" ? "withdrawalChanges" : "activeChanges";
-    return effect.getFlag("cyberpunk", key) || [];
+    return drugRowsFromFlags(effect.flags.cyberpunk);
 }
 
 /**
@@ -268,11 +281,21 @@ export async function spawnDrugEffect(source, targetActor) {
 
     const effectData = buildDrugEffectData(source);
     const [effect] = await targetActor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+    if (!effect) return null;
 
-    if (effectData?.flags?.cyberpunk?.phase === "active") {
-        await bumpCumulativesFromEffect(effectData, targetActor);
+    // Multiple doses / mixing / overdose run before the cumulative bump
+    // so a Partially Compatible mix halves the bump as well. A failure
+    // here must not lose the dose itself.
+    try {
+        await evaluateDrugIntake(targetActor, effect);
+    } catch (err) {
+        console.error("CYBERPUNK | Drug interaction check failed:", err);
     }
-    return effect ?? null;
+
+    if (effect.getFlag("cyberpunk", "phase") === "active") {
+        await bumpCumulativesFromEffect(effect, targetActor);
+    }
+    return effect;
 }
 
 export async function applyDrugToActor(supply, targetActor) {
@@ -371,7 +394,7 @@ export async function checkDrugEffectExpiration() {
     if (game.user?.id !== game.users?.activeGM?.id) return;
     if (!game.actors) return;
     const pending = [];
-    for (const actor of game.actors) {
+    for (const actor of actorsWithOwnEffects()) {
         for (const effect of actor.effects) {
             if (!isDrugEffect(effect)) continue;
             if (getDrugRemainingSeconds(effect) > 0) continue;
@@ -380,3 +403,316 @@ export async function checkDrugEffectExpiration() {
     }
     await Promise.all(pending);
 }
+
+/* -------------------------------------------- */
+/*  Multiple doses, mixing and overdose          */
+/* -------------------------------------------- */
+
+/** Phases in which a drug counts as "in the system" for mixing and dose counting. */
+const PRESENT_PHASES = new Set(["onset", "active"]);
+
+/**
+ * Reactions rolled on this client that the GM hasn't saved to the world
+ * setting yet, so a second dose moments later doesn't re-roll a pair the
+ * setting hasn't caught up with. Cleared entry by entry as they persist.
+ */
+const pendingMemory = { pairs: {}, overdoses: {} };
+
+const L = (key) => game.i18n.localize(`CYBERPUNK.${key}`);
+const F = (key, data) => game.i18n.format(`CYBERPUNK.${key}`, data);
+
+function reactionMemory() {
+    try { return game.settings.get("cyberpunk", "drugReactions") || {}; }
+    catch { return {}; }
+}
+
+function rememberedPair(key) {
+    return pendingMemory.pairs[key] ?? reactionMemory().pairs?.[key] ?? null;
+}
+
+function rememberedOverdose(identity) {
+    return pendingMemory.overdoses[identity] ?? reactionMemory().overdoses?.[identity] ?? null;
+}
+
+function automationEnabled(settingKey) {
+    try { return game.settings.get("cyberpunk", settingKey) !== false; }
+    catch { return true; }
+}
+
+function drugPhase(effect) {
+    return effect.getFlag("cyberpunk", "phase") || "active";
+}
+
+function identityOf(effect) {
+    return drugIdentity(effect.getFlag("cyberpunk", "sourceName") || effect.name);
+}
+
+/** `{ potency: … }` → `{ "flags.cyberpunk.potency": … }` for an effect update. */
+function flagUpdate(patch) {
+    return Object.fromEntries(Object.entries(patch).map(([k, v]) => [`flags.cyberpunk.${k}`, v]));
+}
+
+/**
+ * Rules check for every new dose — the drug card and gas weapons both
+ * land here through spawnDrugEffect:
+ *   - counts doses of the same drug still in onset / active; past the
+ *     2nd, a dose is nullified (the rules' doubling cap);
+ *   - mixes the dose with every other drug in onset / active, unless
+ *     either side is Safe to mix;
+ *   - checks the overdose threshold (30 / Strength doses).
+ * Changes to the drugs land immediately; consequences (damage,
+ * unconsciousness, a death save) go to chat cards with GM-only Apply
+ * buttons, one card per reaction.
+ */
+async function evaluateDrugIntake(actor, effect) {
+    if (actor?.type !== "character") return;
+    const flags = effect.flags.cyberpunk;
+    const identity = identityOf(effect);
+    const present = actor.effects.filter(e =>
+        e.id !== effect.id && isDrugEffect(e) && PRESENT_PHASES.has(drugPhase(e)));
+
+    const dose = present.filter(e => identityOf(e) === identity).length + 1;
+    let own = { dose, potency: 1, nullify: dose > MAX_STACKED_DOSES ? "all" : null, mixedWith: [] };
+
+    const cards = [];
+    if (automationEnabled("drugMixing") && !flags.safeToMix) {
+        const others = new Map();
+        for (const e of present) {
+            const id = identityOf(e);
+            if (id === identity) continue;
+            if (!others.has(id)) others.set(id, []);
+            others.get(id).push(e);
+        }
+        for (const [otherId, otherEffects] of others) {
+            if (otherEffects.some(e => e.getFlag("cyberpunk", "safeToMix") === true)) continue;
+            const reaction = await resolveMixing(identity, flags, otherId, otherEffects[0].flags.cyberpunk);
+            const ownPatch = mixFlagPatch(own, mixChangeFor(reaction.band, identity, reaction.winner),
+                otherId, reaction.band.key);
+            if (ownPatch) own = { ...own, ...ownPatch };
+            for (const other of otherEffects) {
+                const patch = mixFlagPatch(other.flags.cyberpunk, mixChangeFor(reaction.band, otherId, reaction.winner),
+                    identity, reaction.band.key);
+                if (patch) await other.update(flagUpdate(patch));
+            }
+            cards.push(await mixingCard(actor, effect, otherEffects[0], reaction));
+        }
+    }
+    await effect.update(flagUpdate(own));
+
+    if (automationEnabled("drugOverdose") && isOverdose(dose, flags.strength)) {
+        cards.push(await overdoseCard(actor, effect, identity, dose));
+    }
+    for (const card of cards) await ChatMessage.create(card);
+}
+
+/**
+ * Mixing result for a pair: the remembered band if the world has seen this
+ * pair before, otherwise a fresh d100 + both drugs' effective Strength.
+ * Single Dominance picks its winner at random once; it's remembered too.
+ */
+async function resolveMixing(identity, flags, otherId, otherFlags) {
+    const key = pairKey(identity, otherId);
+    const known = rememberedPair(key);
+    const knownBand = known && bandByKey(MIXING_TABLE, known.band);
+    if (knownBand) return { band: knownBand, winner: known.winner ?? null, rolls: [], remember: null };
+
+    const roll = await new Roll("1d100").evaluate();
+    const total = roll.total + effectiveStrengthFromFlags(flags) + effectiveStrengthFromFlags(otherFlags);
+    const band = bandFor(MIXING_TABLE, total);
+    const winner = band.nullify === "loser" ? (Math.random() < 0.5 ? identity : otherId) : null;
+    const entry = { band: band.key, winner };
+    pendingMemory.pairs[key] = entry;
+    return { band, winner, rolls: [roll], remember: { pairs: [{ key, ...entry }] } };
+}
+
+/** Overdose result for a drug: remembered band, or a fresh d100 + Strength. */
+async function resolveOverdose(identity, strength) {
+    const known = bandByKey(OVERDOSE_TABLE, rememberedOverdose(identity));
+    if (known) return { band: known, rolls: [], remember: null };
+
+    const roll = await new Roll("1d100").evaluate();
+    const band = bandFor(OVERDOSE_TABLE, roll.total + strength);
+    pendingMemory.overdoses[identity] = band.key;
+    return { band, rolls: [roll], remember: { overdoses: [{ id: identity, band: band.key }] } };
+}
+
+function strengthOf(flags) {
+    return Math.max(0, Math.floor(Number(flags?.strength) || 0));
+}
+
+function drugRow(effect, subtext) {
+    return { img: effect.img, name: effect.name, subtext };
+}
+
+/** Condition icon path — the same glyphs the hit cards' effect rows use. */
+function conditionIcon(id) {
+    return `systems/cyberpunk/img/conditions/${id}.svg`;
+}
+
+/** "1 day" / "9 days", "7 hours" — `unit` is "Day" or "Hour". */
+export function drugReactionDuration(n, unit) {
+    return F(`DrugReaction${unit}${n === 1 ? "" : "s"}`, { n });
+}
+
+/**
+ * What a mixing band does to the two drugs, as effect rows. Fully
+ * Compatible changes nothing, so it has none — the result name says it.
+ */
+function mixingDrugRows(band, sides, winner) {
+    const row = (side, key) => ({ icon: side.effect.img, label: F(key, { drug: side.effect.name }) });
+    if ((band.potency ?? 1) !== 1) return sides.map(s => row(s, "DrugReactionHalfStrength"));
+    if (band.nullify === "all") return sides.map(s => row(s, "DrugReactionNullified"));
+    if (band.nullify === "positive") return sides.map(s => row(s, "DrugReactionPositivesNullified"));
+    if (band.nullify === "loser") {
+        return sides.filter(s => s.identity !== winner).map(s => row(s, "DrugReactionNullified"));
+    }
+    return [];
+}
+
+/**
+ * What a band does to the character, as card rows — a damage roll or an
+ * effect row — plus the actions their Apply buttons run. Damage, hours
+ * and days are rolled now (every time — only the band is remembered); a
+ * death save's coma days are rolled when the save succeeds. Nausea needs
+ * no row of its own: the result name already says it.
+ */
+async function consequenceRows(band, rolls) {
+    const rows = [];
+    const actions = [];
+    const roll = async (formula) => {
+        const r = await new Roll(formula).evaluate();
+        rolls.push(r);
+        return r;
+    };
+    // `hasAction` because Handlebars reads action index 0 as falsy.
+    const withAction = (row, action) => {
+        actions.push(action);
+        return { ...row, hasAction: true, actionIndex: actions.length - 1 };
+    };
+
+    if (band.damage) {
+        const r = await roll(band.damage);
+        rows.push(withAction({ damage: processFormulaRoll(r) }, { type: "damage", amount: r.total }));
+    }
+    if (band.illness) {
+        const days = (await roll(band.illDays)).total;
+        const name = band.illness === "extreme" ? "DrugReactionExtremelyIll" : "DrugReactionSeverelyIll";
+        rows.push({ icon: conditionIcon("poisoned"), label: `${L(name)} · ${drugReactionDuration(days, "Day")}` });
+    }
+    if (band.unconsciousHours) {
+        const hours = (await roll(band.unconsciousHours)).total;
+        rows.push(withAction(
+            { icon: conditionIcon("unconscious"), label: `${L("DrugReactionUnconscious")} · ${drugReactionDuration(hours, "Hour")}` },
+            { type: "unconscious" }));
+    }
+    if (band.deathSave) {
+        rows.push(withAction(
+            { icon: conditionIcon("dead"), label: `${L("DrugReactionDeathSave")} −${Math.abs(band.deathSave)}` },
+            { type: "deathSave", modifier: band.deathSave, comaDays: band.comaDays }));
+    } else if (band.comaDays) {
+        const days = (await roll(band.comaDays)).total;
+        rows.push(withAction(
+            { icon: conditionIcon("unconscious"), label: `${L("DrugReactionComa")} · ${drugReactionDuration(days, "Day")}` },
+            { type: "unconscious" }));
+    }
+    return { rows, actions };
+}
+
+/** Chat-message data for one reaction card. */
+async function reactionCard(actor, { kind, drugs, band, rolls, rows, actions, remember }) {
+    const content = await renderTemplateCompat("systems/cyberpunk/templates/chat/drug-reaction.hbs", {
+        sectionLabel: L(kind === "overdose" ? "Overdose" : "MixingDrugs"),
+        drugs,
+        resultLabel: L(band.labelKey),
+        rows
+    });
+    const drugReaction = { kind, band: band.key, actorUuid: actor.uuid, actions, applied: {} };
+    if (remember) drugReaction.remember = remember;
+    return {
+        speaker: ChatMessage.getSpeaker({ actor }),
+        content,
+        rolls,
+        flags: { cyberpunk: { drugReaction } }
+    };
+}
+
+async function mixingCard(actor, effect, otherEffect, reaction) {
+    const sides = [
+        { identity: identityOf(effect), effect },
+        { identity: identityOf(otherEffect), effect: otherEffect }
+    ];
+    const rolls = [...reaction.rolls];
+    const consequences = await consequenceRows(reaction.band, rolls);
+    return reactionCard(actor, {
+        kind: "mixing",
+        drugs: sides.map(s => drugRow(s.effect, `${L("DrugStrength")} ${strengthOf(s.effect.flags.cyberpunk)}`)),
+        band: reaction.band,
+        rolls,
+        rows: [...mixingDrugRows(reaction.band, sides, reaction.winner), ...consequences.rows],
+        actions: consequences.actions,
+        remember: reaction.remember
+    });
+}
+
+async function overdoseCard(actor, effect, identity, dose) {
+    const strength = strengthOf(effect.flags.cyberpunk);
+    const od = await resolveOverdose(identity, strength);
+    const rolls = [...od.rolls];
+    const consequences = await consequenceRows(od.band, rolls);
+    return reactionCard(actor, {
+        kind: "overdose",
+        drugs: [drugRow(effect, `${L("DrugStrength")} ${strength} · ${F("DrugReactionDose", { n: dose })}`)],
+        band: od.band,
+        rolls,
+        rows: consequences.rows,
+        actions: consequences.actions,
+        remember: od.remember
+    });
+}
+
+/**
+ * Save newly rolled reactions to the world setting. Only Assistant GM and
+ * up may write world settings, so the rolling client ships them in the
+ * card's flags and the active GM's client persists them. The first roll
+ * of a pair wins; existing entries are never overwritten.
+ */
+async function persistReactionMemory(remember) {
+    const memory = foundry.utils.deepClone(reactionMemory());
+    memory.pairs ??= {};
+    memory.overdoses ??= {};
+    let changed = false;
+    for (const { key, band, winner } of remember.pairs ?? []) {
+        if (!key || memory.pairs[key]) continue;
+        memory.pairs[key] = { band, winner: winner ?? null };
+        changed = true;
+    }
+    for (const { id, band } of remember.overdoses ?? []) {
+        if (!id || memory.overdoses[id]) continue;
+        memory.overdoses[id] = band;
+        changed = true;
+    }
+    if (changed) await game.settings.set("cyberpunk", "drugReactions", memory);
+}
+
+/**
+ * Drop this client's pending entries once they're in the world setting —
+ * called from the setting's onChange, so a GM forgetting a reaction later
+ * isn't masked by a stale local copy.
+ */
+export function syncPendingDrugMemory(memory) {
+    for (const key of Object.keys(pendingMemory.pairs)) {
+        if (memory?.pairs?.[key]) delete pendingMemory.pairs[key];
+    }
+    for (const id of Object.keys(pendingMemory.overdoses)) {
+        if (memory?.overdoses?.[id]) delete pendingMemory.overdoses[id];
+    }
+}
+
+// Singleton, registered at module load like the chat-message hooks.
+Hooks.on("createChatMessage", (message) => {
+    const remember = message.flags?.cyberpunk?.drugReaction?.remember;
+    if (!remember) return;
+    if (game.user?.id !== game.users?.activeGM?.id) return;
+    persistReactionMemory(remember)
+        .catch(err => console.error("CYBERPUNK | Could not save drug reaction memory:", err));
+});

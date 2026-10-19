@@ -20,6 +20,8 @@
  * op was stored and let the actor pipeline apply it faithfully.
  */
 
+import { actorsWithOwnEffects } from "../utils.js";
+
 const NETWARE_EFFECT_FLAG = "isNetwareEffect";
 
 /**
@@ -194,7 +196,7 @@ export async function checkNetwareEffectExpiration() {
     if (game.user?.id !== game.users?.activeGM?.id) return;
     if (!game.actors) return;
     const pending = [];
-    for (const actor of game.actors) {
+    for (const actor of actorsWithOwnEffects()) {
         for (const effect of actor.effects) {
             if (!isNetwareEffect(effect)) continue;
             if (getNetwareEffectRemainingSeconds(effect) > 0) continue;

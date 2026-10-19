@@ -397,6 +397,21 @@ export function getImagePopoutClass() {
 }
 
 /**
+ * Every actor that can carry its own effects: world actors, plus the
+ * synthetic actors of unlinked tokens on every scene. Unlinked tokens
+ * (most NPCs) keep their effects on the token, not the world actor, so
+ * an expiry sweep over `game.actors` alone would never reach them.
+ */
+export function* actorsWithOwnEffects() {
+    yield* game.actors ?? [];
+    for (const scene of game.scenes ?? []) {
+        for (const token of scene.tokens) {
+            if (!token.actorLink && token.actor) yield token.actor;
+        }
+    }
+}
+
+/**
  * Render a Handlebars template in a V13/V14-compatible way.
  *
  * V14 relocated `renderTemplate` under `foundry.applications.handlebars`

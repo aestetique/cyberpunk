@@ -850,7 +850,7 @@ export const drugFlavours = {
     },
     "death-risk": {
         labelKey: "FlavourDeathRisk",
-        flavor:   "This drug is very dangerous — and almost certainly illegal. The character must make a Death Save modified by −Strength + 2 or die.",
+        flavor:   "This drug is very dangerous, and almost certainly illegal. The character must make a Death Save modified by −Strength + 2 or die.",
         calc:     "Death Save − Str + 2",
         icon:     "dead-on",
         roll:     { dv: "death" }
@@ -880,7 +880,9 @@ export function getFlavourMeta(key) {
  *   labelKey — CYBERPUNK i18n suffix
  *   flavor   — hover-tooltip description (matches Flavour hint pattern)
  *   calc     — hover-tooltip calc line (formula for rollables, mechanic
- *              summary for stat-modifiers)
+ *              summary for stat-modifiers). `{floor}` / `{ceil}` are
+ *              replaced with the actor's current value rounded down / up
+ *              on the State tab, so the hint shows the actual effect.
  *   roll?    — same shape family as flavour `roll`:
  *              { kind: "check", stat: "int"|"cool"|"body" }
  *                → 1d10 + stat.total vs Math.ceil(value), higher = pass
@@ -894,7 +896,7 @@ export function getFlavourMeta(key) {
  *              { statSub: "int"|"ref"|... , floor?: number = 2 }
  *                → subtracts `⌊value⌋` from `stats.<key>.total` with a
  *                `Math.max(floor, ...)` clamp.
- *              { fieldSub: "sleepRollBonus" }
+ *              { fieldSub: "fallAsleepBonus" }
  *                → subtracts `⌊value⌋` from `system.<field>`.
  *              omit → no derive-time effect (pure flavour like
  *              Carcinogen, or a rollable that only matters on click).
@@ -903,44 +905,47 @@ export const cumulativeEffects = {
     alienation: {
         labelKey: "CumulativeAlienation",
         flavor:   "The drug alienates the character from society. Alienation Humanity points are gained, equal to the Strength Multiplier per dose taken.",
-        calc:     "+Value floor → Alienation state",
+        calc:     "+{floor} to Alienation state",
         derive:   { statBonus: "alienation" }
     },
     egotism: {
         labelKey: "CumulativeEgotism",
         flavor:   "The drug pushes the character to think of themselves as superior to others. Egotism Humanity points are gained, equal to the Strength Multiplier per dose taken.",
-        calc:     "+Value floor → Egotism state",
+        calc:     "+{floor} to Egotism state",
         derive:   { statBonus: "egotism" }
     },
     obsession: {
         labelKey: "CumulativeObsession",
         flavor:   "The drug fixates the character on obsessive thought patterns. Obsession Humanity points are gained, equal to the Strength Multiplier per dose taken.",
-        calc:     "+Value floor → Obsession state",
+        calc:     "+{floor} to Obsession state",
         derive:   { statBonus: "obsession" }
     },
     paranoia: {
         labelKey: "CumulativeParanoia",
         flavor:   "The drug erodes the character's trust in others. Paranoia Humanity points are gained, equal to the Strength Multiplier per dose taken.",
-        calc:     "+Value floor → Paranoia state",
+        calc:     "+{floor} to Paranoia state",
         derive:   { statBonus: "paranoia" }
     },
     brainDegeneration: {
         labelKey: "CumulativeBrainDegeneration",
         flavor:   "The drug causes brain damage. The character's INT is reduced by the Strength Multiplier per dose taken.",
-        calc:     "−Value floor → INT",
+        calc:     "−{floor} to INT",
         derive:   { statSub: "int", floor: 2 }
     },
     nerveDegeneration: {
         labelKey: "CumulativeNerveDegeneration",
         flavor:   "The drug causes nerve damage. The character's REF is reduced by the Strength Multiplier per dose taken.",
-        calc:     "−Value floor → REF",
+        calc:     "−{floor} to REF",
         derive:   { statSub: "ref", floor: 2 }
     },
     insomnia: {
         labelKey: "CumulativeInsomnia",
         flavor:   "The drug makes the character restless and unable to sleep. The character develops Insomnia (minus strength to checks). Even if the check is made, the character only gets 1d6 hours of sleep.",
-        calc:     "−Value floor → Sleep Roll Bonus",
-        derive:   { fieldSub: "sleepRollBonus" }
+        // Fall Asleep checks only — the unified Sleep Roll Bonus also feeds
+        // Stay Awake, where an insomniac shouldn't be worse off. Any
+        // Insomnia also forces the Fall Asleep check (actor.hasInsomnia).
+        calc:     "−{floor} to Fall Asleep checks",
+        derive:   { fieldSub: "fallAsleepBonus" }
     },
     carcinogen: {
         labelKey: "CumulativeCarcinogen",
@@ -950,25 +955,25 @@ export const cumulativeEffects = {
     amnesia: {
         labelKey: "CumulativeAmnesia",
         flavor:   "The character begins to forget things rapidly. Any time the character wants to remember something, make an INT check against the DL determined by the Strength Multiplier Total. If failed, the character cannot remember that information or incident.",
-        calc:     "1d10 + INT vs Value",
+        calc:     "1d10 + INT vs {ceil}",
         roll:     { kind: "check", stat: "int" }
     },
     flashbacks: {
         labelKey: "CumulativeFlashbacks",
         flavor:   "The character experiences vivid memories of the time spent under the influence. In a stressful situation, make a COOL check against the DL determined by the Strength Multiplier Total. If failed, the character has a flashback for 1d10 Turns during which no action is possible, and for 1d6 hours after their COOL is reduced by −2.",
-        calc:     "1d10 + COOL vs Value",
+        calc:     "1d10 + COOL vs {ceil}",
         roll:     { kind: "check", stat: "cool" }
     },
     physicalAddiction: {
         labelKey: "CumulativePhysicalAddiction",
         flavor:   "The drug is physically addictive. Every use requires a BODY check against the DL determined by the Strength Multiplier Total. If failed, the character becomes physically addicted: a dose is needed every 8 hours or the character must make a Death Save (minus strength +2) every 24 hours for 1d6 days.",
-        calc:     "1d10 + BODY vs Value",
+        calc:     "1d10 + BODY vs {ceil}",
         roll:     { kind: "check", stat: "bt" }
     },
     suicidal: {
         labelKey: "CumulativeSuicidal",
         flavor:   "The character begins to feel suicidal. Every use, make a COOL check against the DL determined by the Strength Multiplier Total. If failed, the character attempts suicide (GM adjudicates the outcome).",
-        calc:     "1d10 + COOL vs Value",
+        calc:     "1d10 + COOL vs {ceil}",
         roll:     { kind: "check", stat: "cool" }
     }
 };

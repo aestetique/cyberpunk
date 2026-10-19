@@ -1,6 +1,7 @@
 import { buildD10Roll, RollBundle } from "../dice.js";
 import { SortModes } from "./skill-sort.js";
 import { bodyTypeModifier, isCyberlimbBase, isCyberlimbOption, isSensorOption, isBooleanProperty, isStateProperty, effectiveBonusOp, PER_LIMB_MAX_PROPERTIES, perLimbFactor, cumulativeEffects } from "../lookups.js";
+import { drugRowsFromFlags } from "../drug-interactions.js";
 import { toTitleCase, localize, stackArmorSP, buildHitLocationIndex } from "../utils.js"
 import { HealDialog } from "../dialog/heal-dialog.js"
 import { WOUND_CONDITION_IDS, WOUND_STATE_TO_CONDITION, FATIGUE_CONDITION_IDS, FATIGUE_LEVEL_TO_CONDITION, FATIGUE_PENALTIES, STRESS_CONDITION_IDS, STRESS_LEVEL_TO_CONDITION, STRESS_COOL_PENALTIES, STRESS_GENERAL_PENALTIES, COVER_TYPES, COVER_CONDITION_IDS, COVER_KEY_TO_CONDITION, SLEEP_CONDITION_IDS, SLEEP_LEVEL_TO_CONDITION, SLEEP_SKILL_PENALTIES } from "../conditions.js"
@@ -204,6 +205,8 @@ export class CyberpunkActor extends Actor {
     // Initialize unarmed combat properties BEFORE applying bonuses
     system.unarmedBaseDamage = "1d3";
     system.unarmedDamageMultiplier = 1;
+    // Fall Asleep-only modifier, fed by the Insomnia cumulative.
+    system.fallAsleepBonus = 0;
     system.kickDamageMultiplier = 1;
 
     // Apply bonuses from equipped tools, drugs, cyberware, and armor.
@@ -304,16 +307,15 @@ export class CyberpunkActor extends Actor {
 
     // Drug + Netware ActiveEffects — one walk covers both. Reads the
     // cyberpunk flag bag once per effect (short-circuits on missing
-    // bag) and picks the phase-scoped bonus list for drugs vs the
-    // frozen `activeChanges` list for netware.
+    // bag). Drugs go through `drugRowsFromFlags` (phase, potency and
+    // mixing nullify); netware uses its frozen `activeChanges` list.
     for (const effect of this.effects) {
       if (effect.disabled) continue;
       const flags = effect.flags?.cyberpunk;
       if (!flags) continue;
       let bonuses = null;
       if (flags.isDrugEffect) {
-        const phase = flags.phase || "active";
-        bonuses = (phase === "withdrawal" ? flags.withdrawalChanges : flags.activeChanges) || [];
+        bonuses = drugRowsFromFlags(flags);
       } else if (flags.isNetwareEffect) {
         bonuses = flags.activeChanges || [];
       }
@@ -1436,15 +1438,12 @@ export class CyberpunkActor extends Actor {
     }
     // Drug ActiveEffects contribute skill bonuses via their phase-tagged
     // flag payload (skill bonuses don't have a clean ActiveEffect change
-    // mapping, so we read them from `activeChanges` / `withdrawalChanges`).
+    // mapping) — same reader as the property pipeline.
     for (const effect of this.effects) {
       if (effect.disabled) continue;
-      if (effect.getFlag("cyberpunk", "isDrugEffect") !== true) continue;
-      const phase = effect.getFlag("cyberpunk", "phase") || "active";
-      const bonuses = (phase === "withdrawal"
-        ? effect.getFlag("cyberpunk", "withdrawalChanges")
-        : effect.getFlag("cyberpunk", "activeChanges")) || [];
-      for (const bonus of bonuses) pushBonus(bonus);
+      const flags = effect.flags?.cyberpunk;
+      if (flags?.isDrugEffect !== true) continue;
+      for (const bonus of drugRowsFromFlags(flags)) pushBonus(bonus);
     }
 
     let current = baseline;
@@ -1959,6 +1958,15 @@ export class CyberpunkActor extends Actor {
   }
 
   /**
+   * True when falling asleep takes a check: the Insomnia status (from
+   * stress) or any Insomnia cumulative from drugs.
+   */
+  hasInsomnia() {
+    if (this.statuses.has("insomnia")) return true;
+    return Math.floor(Number(this.system.cumulative?.insomnia) || 0) >= 1;
+  }
+
+  /**
    * Roll a sleep check (Stay Awake or Fall Asleep).
    * Uses 1d10 + INT vs INT as DV. No fumble on natural 1.
    * @param {string} mode - "stayAwake" or "fallAsleep"
@@ -1976,6 +1984,9 @@ export class CyberpunkActor extends Actor {
     // asleep", so a positive bonus is a positive nudge either way.
     const itemBonus = this.system.sleepRollBonus || 0;
     if (itemBonus) parts.push(itemBonus);
+    // Insomnia only works against falling asleep.
+    const fallAsleepBonus = isStayAwake ? 0 : (this.system.fallAsleepBonus || 0);
+    if (fallAsleepBonus) parts.push(fallAsleepBonus);
     if (extraMod) parts.push(extraMod);
 
     const roll = buildD10Roll(parts, this.system);
@@ -2239,6 +2250,33 @@ export class CyberpunkActor extends Actor {
       await this.toggleStatusEffect("dead", { active: true });
     }
     return success;
+  }
+
+  /**
+   * Internal damage with no attacker — drug poisoning, overdoses. Goes
+   * straight to wounds (no armor, no hit location, no BTM; capped at 40
+   * like the burning tick), then runs the same aftermath as attack damage
+   * in `_onApplyDamage`: drop Stabilized, Stun Save unless already
+   * shocked, Death Save on entering Mortal.
+   * @param {number} amount
+   */
+  async applyInternalDamage(amount) {
+    const damage = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!damage || this.type !== "character") return;
+
+    const previousWoundState = this.getWoundLevel();
+    const current = Number(this.system.damage) || 0;
+    await this.update({ "system.damage": Math.min(current + damage, 40) });
+
+    if (this.statuses.has("stabilized")) {
+      await this.toggleStatusEffect("stabilized", { active: false });
+    }
+    if (!this.statuses.has("shocked")) {
+      await this.rollStunSave();
+    }
+    if (this.getWoundLevel() >= 4 && previousWoundState < 4 && !this.statuses.has("dead")) {
+      await this.rollDeathSave();
+    }
   }
 
   /**

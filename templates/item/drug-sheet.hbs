@@ -221,6 +221,21 @@
           </div>
         </div>
 
+        {{!-- Safe to mix: drugs with it never roll on the Drug Mixing
+             table (medical supplies). Standard checkbox, toggled by the
+             base sheet's checkboxToggle action. --}}
+        <div class="variables-row">
+          <div class="variable-field">
+            <label class="variable-label">{{localize "CYBERPUNK.DrugSafeToMix"}}</label>
+            {{#if isLocked}}
+              <img class="checkbox-img" src="systems/cyberpunk/img/ui/checkbox-inactive-{{#if system.safeToMix}}checked{{else}}unchecked{{/if}}.svg">
+            {{else}}
+              <img class="checkbox-img checkbox-toggle" data-action="checkboxToggle" data-field="system.safeToMix"
+                   src="systems/cyberpunk/img/ui/checkbox-active-{{#if system.safeToMix}}checked{{else}}unchecked{{/if}}.svg">
+            {{/if}}
+          </div>
+        </div>
+
       {{else if (eq activeTab 'effect')}}
         {{!-- Effect bonus rows only — Duration / Strength moved to the
              Drug tab and are single-authored across all phases. --}}

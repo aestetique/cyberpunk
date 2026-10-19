@@ -9,6 +9,7 @@ import { OrdnanceAttackDialog } from "../dialog/ordnance-attack-dialog.js"
 import { UnarmedAttackDialog } from "../dialog/unarmed-attack-dialog.js"
 import { SkillRollDialog } from "../dialog/skill-roll-dialog.js"
 import { getDrugRemainingSeconds } from "../drug-effects.js"
+import { drugRowsFromFlags, drugFlavoursFromFlags, effectiveStrengthFromFlags, potencyOf } from "../drug-interactions.js"
 import { SortModes } from "./skill-sort.js";
 import { attachRowMenu, delegateEntry } from "../ui/row-context-menu.js";
 import { MedicalHelpDialog } from "../dialog/medical-help-dialog.js"
@@ -913,8 +914,8 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       if (btm > 0) {
         const btTotal = stats.bt?.total ?? stats.bt?.base ?? 0;
         sheetData.armorBlocks.btmTooltipName = 'BTM';
-        sheetData.armorBlocks.btmFlavor = 'Body Type Modifier — subtracted from all damage taken.';
-        sheetData.armorBlocks.btmCalc = `BT ${btTotal} → BTM −${btm}`;
+        sheetData.armorBlocks.btmFlavor = 'Body Type Modifier, subtracted from all damage taken.';
+        sheetData.armorBlocks.btmCalc = `BT ${btTotal}: BTM −${btm}`;
       }
     }
 
@@ -1538,31 +1539,25 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       return `${Math.floor(s / 86400)} d`;
     };
 
-    // Phase-scoped display / behaviour lookup for drug rows. Keeps the
-    // three parallel ternaries (label / bonus-flag / flavour-flag /
-    // badge / next-action-label) collapsed into one table so a new
-    // phase means one entry, not five edits. `nextLabel` is a callable
-    // because Active's next action depends on whether the drug has
-    // withdrawal bonuses.
+    // Phase-scoped display / behaviour lookup for drug rows (label /
+    // badge / next-action label) in one table so a new phase means one
+    // entry. Bonus rows and flavours come from drug-interactions.js,
+    // which also applies mixing. `nextLabel` is a callable because
+    // Active's next action depends on whether the drug has withdrawal
+    // bonuses.
     const DRUG_PHASE_MAP = {
       onset: {
         label: "CYBERPUNK.Onset",
-        bonusFlag: null,
-        flavourFlag: null,
         badge: "badge-onset.svg",
         nextLabel: () => "CYBERPUNK.Active"
       },
       active: {
         label: "CYBERPUNK.Active",
-        bonusFlag: "activeChanges",
-        flavourFlag: "activeFlavours",
         badge: "badge-used.svg",
         nextLabel: (hasWithdrawal) => hasWithdrawal ? "CYBERPUNK.Withdrawal" : "CYBERPUNK.WearOff"
       },
       withdrawal: {
         label: "CYBERPUNK.Withdrawal",
-        bonusFlag: "withdrawalChanges",
-        flavourFlag: "withdrawalFlavours",
         badge: "badge-withdrawal.svg",
         nextLabel: () => "CYBERPUNK.WearOff"
       }
@@ -1573,9 +1568,19 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       .map(e => {
         const phase = e.getFlag("cyberpunk", "phase") || "active";
         const p = DRUG_PHASE_MAP[phase] ?? DRUG_PHASE_MAP.active;
+        const flags = e.flags.cyberpunk;
 
-        const bonusList = p.bonusFlag ? (e.getFlag("cyberpunk", p.bonusFlag) || []) : [];
-        const subtext = [game.i18n.localize(p.label), ...summariseBonuses(bonusList)].join(" · ");
+        // Rows actually in force (phase, mixing potency, nullify) plus
+        // tags for the dose number and any mixing result on this dose.
+        const bonusList = drugRowsFromFlags(flags);
+        const tags = [];
+        if ((Number(flags.dose) || 1) > 1) tags.push(game.i18n.format("CYBERPUNK.DrugTagDose", { n: flags.dose }));
+        const potency = potencyOf(flags);
+        if (potency === 0.5) tags.push(game.i18n.localize("CYBERPUNK.DrugTagHalfStrength"));
+        else if (potency < 1) tags.push(game.i18n.format("CYBERPUNK.DrugTagStrengthFactor", { n: potency }));
+        if (phase !== "withdrawal" && flags.nullify === "all") tags.push(game.i18n.localize("CYBERPUNK.DrugTagNullified"));
+        if (phase !== "withdrawal" && flags.nullify === "positive") tags.push(game.i18n.localize("CYBERPUNK.DrugTagPositivesNullified"));
+        const subtext = [game.i18n.localize(p.label), ...tags, ...summariseBonuses(bonusList)].join(" · ");
 
         // "Next action" tooltip. Active's next step depends on whether
         // the drug has any withdrawal bonuses — no-withdrawal drugs
@@ -1588,12 +1593,12 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         // reads, so display and behaviour can't drift apart. Strength
         // is the drug's single unified value regardless of phase.
         const durationSeconds = getDrugRemainingSeconds(e);
-        const strength = e.getFlag("cyberpunk", "strength") ?? 0;
+        const strength = effectiveStrengthFromFlags(flags);
         const actionBadge = p.badge;
 
-        // Phase-scoped flavour hint icons — Onset shows none (bonusFlag
-        // is null); Active / Withdrawal read their own flag list.
-        const flavourIds = p.flavourFlag ? (e.getFlag("cyberpunk", p.flavourFlag) || []) : [];
+        // Phase-scoped flavour hint icons — Onset shows none; a fully
+        // nullified dose shows none either.
+        const flavourIds = drugFlavoursFromFlags(flags);
         const statusHints = flavourIds.map(id => {
           const meta = getFlavourMeta(id);
           if (!meta) return null;
@@ -1775,13 +1780,18 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
         const value = Number(cumBag[key]) || 0;
         if (value <= 0) return null;
         const label = game.i18n.localize(`CYBERPUNK.${meta.labelKey}`);
+        // The hint shows this actor's actual effect: `{floor}` is what the
+        // derive applies, `{ceil}` the DV a rollable checks against.
+        const calc = (meta.calc || "")
+          .replaceAll("{floor}", String(Math.floor(value)))
+          .replaceAll("{ceil}", String(Math.ceil(value)));
         return {
           key,
           label,
           value,
           valueDisplay: (Math.round(value * 10) / 10).toString(),
           flavor: meta.flavor,
-          calc: meta.calc,
+          calc,
           rollable: !!meta.roll
         };
       })
@@ -2710,7 +2720,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
 
     html.find('.sleep-down').click(async ev => {
       ev.preventDefault();
-      if (this.actor.statuses.has("insomnia")) {
+      if (this.actor.hasInsomnia()) {
         new SleepRollDialog(this.actor, "fallAsleep").render(true);
       } else {
         const current = this.actor.system.sleep || 0;
@@ -2837,7 +2847,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       const skillStat = skill?.system?.stat ?? virtual.stat;
 
       // If askMods is set, use legacy ModifiersDialog for backward compatibility
-      if (skill.system?.askMods) {
+      if (skill?.system?.askMods) {
         const dlg = new ModifiersDialog(this.actor, {
           title: localize("ModifiersSkillTitle"),
           showAdvDis: true,
@@ -3204,7 +3214,7 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       const roll = meta?.roll;
       if (!roll) return;
 
-      const strength = Number(effect.getFlag("cyberpunk", "strength")) || 0;
+      const strength = effectiveStrengthFromFlags(effect.flags.cyberpunk);
       const speaker = ChatMessage.getSpeaker({ actor: this.actor });
       const label = game.i18n.localize(`CYBERPUNK.${meta.labelKey}`);
 

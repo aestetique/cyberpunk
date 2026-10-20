@@ -594,20 +594,31 @@ export class CyberpunkActor extends Actor {
     // NOT restore humanity — the stored value stays where it last peaked.
     const emp = stats.emp;
     const empBase = Math.min(emp.base ?? 0, 10);
-    const baseHumanityLoss = Math.max(0, (10 - empBase) * 5);
     const stored = Number(emp.humanityDamage) || 0;
     const itemsSum = this.itemTypes?.cyberware
-      ?.reduce((sum, i) => sum + (Number(i.system?.humanityLoss) || 0), 0) ?? 0;
-    // Round .5 down on the distribution sum (Grimm's Cybertales doesn't
-    // specify, so we floor — keeps Y, tooltip, and statsrow as integers).
+        ?.reduce((sum, i) => sum + (Number(i.system?.humanityLoss) || 0), 0) ?? 0;
     const humanityDamage = Math.floor(Math.max(stored, itemsSum));
 
-    emp.humanity = {
-      base: 100 - baseHumanityLoss,                   // Practical max — what therapy can restore to
-      baseLoss: baseHumanityLoss,                     // EMP-derived starting loss (the gray dots)
-      damage: humanityDamage,                         // High-water mark
-      total: (100 - baseHumanityLoss) - humanityDamage  // Current humanity
-    };
+    if (game.settings.get('cyberpunk', 'useDefaultHumanity')) {
+      const baseActorHumanity = 10 * empBase;
+      emp.humanity = {
+        base: baseActorHumanity,                        // Practical max — what therapy can restore to
+        baseLoss: 0,                                    // EMP-derived starting loss (the gray dots)
+        damage: humanityDamage,                         // High-water mark
+        total: baseActorHumanity - humanityDamage       // Current humanity
+      };
+    } else {
+      const baseHumanityLoss = Math.max(0, (10 - empBase) * 5);
+      // Round .5 down on the distribution sum (Grimm's Cybertales doesn't
+      // specify, so we floor — keeps Y, tooltip, and statsrow as integers).
+      emp.humanity = {
+        base: 100 - baseHumanityLoss,                   // Practical max — what therapy can restore to
+        baseLoss: baseHumanityLoss,                     // EMP-derived starting loss (the gray dots)
+        damage: humanityDamage,                         // High-water mark
+        total: (100 - baseHumanityLoss) - humanityDamage  // Current humanity
+      };
+    }
+    
 
     // EMP reduction: -1 per 10 humanity lost. Apply the delta to the RUNNING
     // total — the bonus pipeline above may have already nudged emp.total with

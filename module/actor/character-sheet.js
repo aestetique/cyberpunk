@@ -718,9 +718,14 @@ export class CyberpunkCharacterSheet extends HandlebarsApplicationMixin(ActorShe
       const humanityBaseLoss = emp.humanity?.baseLoss ?? 0;
       const humanityTotalLoss = humanityBaseLoss + humanityDamage;
       sheetData.humanityFlavor = "Tracks humanity lost to low base EMP, cyberware, and trauma. Every 10 points of cyberware loss reduces current EMP by 1.";
-      sheetData.humanityCalc = humanityTotalLoss > 0
-        ? `100 \u2212 Base ${humanityBaseLoss} \u2212 Damage ${humanityDamage} = ${humanityTotal}`
-        : `100 / 100`;
+      sheetData.humanityCalc = `100 / 100`;
+      if (humanityTotalLoss > 0) {
+        if (game.settings.get('cyberpunk', 'useDefaultHumanity')){
+          sheetData.humanityCalc = `Base ${emp.base * 10} \u2212 Damage ${emp.humanity.damage} = ${humanityTotal}`;
+        } else {
+          sheetData.humanityCalc = `100 \u2212 Base ${humanityBaseLoss} \u2212 Damage ${humanityDamage} = ${humanityTotal}`;
+        }
+      }
 
       // Info blocks data for template
       const ma = stats.ma || {};

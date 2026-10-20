@@ -21,6 +21,18 @@ export function registerSystemSettings() {
   });
 
   /**
+   * Core hummanty tracking.
+   */
+  game.settings.register("cyberpunk", "useDefaultHumanity", {
+    name: "Use core 2020 hummanity",
+    hint: "Changes hummanity to 10pts per 1 EMP",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  /**
    * Game time offset from campaign start (ms). Hidden setting.
    * onChange: drug effects key their phase-expiration to this clock, so any
    * advancement (combat round, calendar dialog) re-checks every active drug
